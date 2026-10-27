@@ -3,6 +3,7 @@
 
 pub mod art;
 pub mod control;
+pub mod dbus;
 mod mpris;
 pub mod select;
 mod state;

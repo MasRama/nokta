@@ -23,6 +23,7 @@ pub struct Meta {
     pub track_id: String,
     pub title: String,
     pub artists: Vec<String>,
+    pub album: String,
     pub length_us: i64,
 }
 
@@ -32,6 +33,7 @@ impl Meta {
             track_id: format!("/org/nokta/track/{n}"),
             title: format!("Song {n}"),
             artists: vec!["Artist".into()],
+            album: format!("Album {n}"),
             length_us: 200_000_000,
         }
     }
@@ -83,6 +85,7 @@ impl Player {
             ),
             ("xesam:title".into(), owned(m.title.as_str().into())),
             ("xesam:artist".into(), owned(m.artists.clone().into())),
+            ("xesam:album".into(), owned(m.album.as_str().into())),
             ("mpris:length".into(), owned(m.length_us.into())),
         ])
     }

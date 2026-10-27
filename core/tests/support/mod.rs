@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 pub mod bus;
+pub mod daemon;
 pub mod fake_player;
 
 use std::time::Duration;

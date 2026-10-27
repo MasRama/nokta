@@ -1,6 +1,8 @@
 //! Feature `settings`: config.toml loading, validation, hot reload.
 
 mod config;
+pub mod dbus;
+pub mod service;
 mod store;
 mod watch;
 
