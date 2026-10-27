@@ -3,12 +3,13 @@ import Gio from 'gi://Gio';
 import GnomeDesktop from 'gi://GnomeDesktop';
 import St from 'gi://St';
 
-import { formatClock } from './logic/format.js';
+import { formatClock, uses24h } from './logic/format.js';
 
 /**
- * `HH:MM` (or `h:MM`, following GNOME's clock format) for the idle notch.
- * GnomeDesktop.WallClock, as used by the top bar, ticks once per minute and
- * follows time zone and format changes, so no timer of our own is needed.
+ * `HH:MM` or `h:MM` for the idle notch, as `clock_format` says (or GNOME's
+ * own clock format). GnomeDesktop.WallClock, as used by the top bar, ticks
+ * once per minute and follows time zone and format changes, so no timer of
+ * our own is needed. A hidden clock runs no WallClock at all.
  */
 export class IdleClock {
     /** A bin that centers the label in whatever size the notch gives it. */
@@ -17,6 +18,10 @@ export class IdleClock {
     private readonly interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
     private wallClock: GnomeDesktop.WallClock | null = null;
     private clockId = 0;
+    /** Whether the idle view is on screen (start/stop). */
+    private running = false;
+    private shown = true;
+    private format = 'system';
 
     constructor() {
         this.label = new St.Label({
@@ -28,13 +33,33 @@ export class IdleClock {
     }
 
     start(): void {
-        if (this.wallClock) return;
+        this.running = true;
+        this.startWallClock();
+    }
+
+    stop(): void {
+        this.running = false;
+        this.stopWallClock();
+    }
+
+    /** `clock_format` and `show_clock`; applies at once. */
+    setOptions(format: string, shown: boolean): void {
+        this.format = format;
+        this.shown = shown;
+        this.label.visible = shown;
+        if (!shown) this.stopWallClock();
+        else if (this.running) this.startWallClock();
+        if (this.wallClock) this.update();
+    }
+
+    private startWallClock(): void {
+        if (this.wallClock || !this.shown) return;
         this.wallClock = new GnomeDesktop.WallClock({ time_only: true });
         this.clockId = this.wallClock.connect('notify::clock', () => this.update());
         this.update();
     }
 
-    stop(): void {
+    private stopWallClock(): void {
         if (!this.wallClock) return;
         this.wallClock.disconnect(this.clockId);
         this.wallClock.run_dispose();
@@ -48,7 +73,7 @@ export class IdleClock {
     }
 
     private update(): void {
-        const use24h = this.interfaceSettings.get_string('clock-format') === '24h';
+        const use24h = uses24h(this.format, this.interfaceSettings.get_string('clock-format'));
         this.label.text = formatClock(new Date(), use24h);
     }
 }

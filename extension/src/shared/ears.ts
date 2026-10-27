@@ -2,7 +2,7 @@ import type Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
-import { parseHexColor } from './logic/color.js';
+import { clampAlpha, parseHexColor } from './logic/color.js';
 
 export type EarSide = 'left' | 'right';
 
@@ -16,13 +16,16 @@ type PaintContext = Cairo.Context & { $dispose(): void };
 export class Ear {
     readonly actor: St.DrawingArea;
     private color: string;
+    private alpha: number;
 
     constructor(
         private readonly side: EarSide,
         radius: number,
         color: string,
+        alpha: number,
     ) {
         this.color = color;
+        this.alpha = alpha;
         this.actor = new St.DrawingArea({
             width: radius,
             height: radius,
@@ -31,8 +34,9 @@ export class Ear {
         this.actor.connect('repaint', () => this.paint());
     }
 
-    setStyle(radius: number, color: string): void {
+    setStyle(radius: number, color: string, alpha: number): void {
         this.color = color;
+        this.alpha = alpha;
         this.actor.set_size(radius, radius);
         this.actor.queue_repaint();
     }
@@ -43,7 +47,7 @@ export class Ear {
         const cr = this.actor.get_context() as PaintContext;
         const r = Math.min(width, height);
         const { r: red, g: green, b: blue } = parseHexColor(this.color);
-        cr.setSourceRGBA(red, green, blue, 1);
+        cr.setSourceRGBA(red, green, blue, clampAlpha(this.alpha));
         // Fill the corner between the top edge and the body's side, minus a
         // quarter circle, so the edge curves smoothly into the notch.
         if (this.side === 'left') {

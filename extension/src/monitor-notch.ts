@@ -85,6 +85,7 @@ export class MonitorNotch {
         this.applyViewSizes();
         const [width, height] = this.sizeFor('idle');
         this.notch.jumpTo(width, height);
+        this.applyClockOptions();
         this.clock.start();
         this.applyOsdColors();
         this.onMedia();
@@ -111,8 +112,8 @@ export class MonitorNotch {
 
     onMedia(): void {
         const snapshot = this.sources.media.snapshot();
-        const { useAlbumAccent, foreground } = this.sources.settings.appearance;
-        const accent = accentFor(useAlbumAccent, snapshot.accentColor, foreground);
+        const { useAlbumAccent, foreground, accent: fallback } = this.sources.settings.appearance;
+        const accent = accentFor(useAlbumAccent, snapshot.accentColor, fallback);
         this.collapsed.update(snapshot, accent);
         this.collapsed.setActive(this.drawn === 'collapsed', snapshot);
         this.expanded.update(snapshot);
@@ -133,6 +134,7 @@ export class MonitorNotch {
         const [width, height] = this.sizeFor(this.drawn);
         this.notch.resizeTo(width, height, 'width');
         this.applyOsdColors();
+        this.applyClockOptions();
         this.onMedia();
     }
 
@@ -189,8 +191,13 @@ export class MonitorNotch {
     }
 
     private applyOsdColors(): void {
-        const { foreground } = this.sources.settings.appearance;
-        this.osdView.setColors(foreground, withAlpha(foreground, 0.25));
+        const { foreground, accent } = this.sources.settings.appearance;
+        this.osdView.setColors(accent, withAlpha(foreground, 0.25));
+    }
+
+    private applyClockOptions(): void {
+        const { clockFormat, showClock } = this.sources.settings.behavior;
+        this.clock.setOptions(clockFormat, showClock);
     }
 
     /** Fades the old content out and the new one in, sliding slightly. */

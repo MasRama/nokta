@@ -3,10 +3,13 @@ import St from 'gi://St';
 
 import { durationFor, modeFor, type ResizeKind } from './animation.js';
 import { Ear } from './ears.js';
+import { withAlpha } from './logic/color.js';
 
 /** The parts of the appearance config the notch shape uses. */
 export interface NotchStyle {
     background: string;
+    /** 0 = see-through, 1 = solid; only the background, not the content. */
+    backgroundOpacity: number;
     foreground: string;
     cornerRadius: number;
     earRadius: number;
@@ -41,8 +44,8 @@ export class Notch {
             reactive: true,
             track_hover: true,
         });
-        this.leftEar = new Ear('left', style.earRadius, style.background);
-        this.rightEar = new Ear('right', style.earRadius, style.background);
+        this.leftEar = new Ear('left', style.earRadius, style.background, style.backgroundOpacity);
+        this.rightEar = new Ear('right', style.earRadius, style.background, style.backgroundOpacity);
         this.body = new St.Widget({
             style_class: 'nokta-body',
             layout_manager: new Clutter.BinLayout(),
@@ -58,8 +61,8 @@ export class Notch {
 
     setAppearance(style: NotchStyle): void {
         this.style = style;
-        this.leftEar.setStyle(style.earRadius, style.background);
-        this.rightEar.setStyle(style.earRadius, style.background);
+        this.leftEar.setStyle(style.earRadius, style.background, style.backgroundOpacity);
+        this.rightEar.setStyle(style.earRadius, style.background, style.backgroundOpacity);
         this.applyBodyStyle();
         this.jumpTo(this.width, this.height);
     }
@@ -106,9 +109,9 @@ export class Notch {
     }
 
     private applyBodyStyle(): void {
-        const r = this.style.cornerRadius;
+        const { cornerRadius: r, background, backgroundOpacity, foreground } = this.style;
         this.body.style =
-            `background-color: ${this.style.background}; color: ${this.style.foreground};` +
+            `background-color: ${withAlpha(background, backgroundOpacity)}; color: ${foreground};` +
             ` border-radius: 0 0 ${r}px ${r}px;`;
     }
 }

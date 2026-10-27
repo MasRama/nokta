@@ -14,14 +14,18 @@ export function parseHexColor(hex: string, fallback: Rgb = { r: 0, g: 0, b: 0 })
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-/** The cover's accent when it is wanted and valid, else the foreground. */
-export function accentFor(useAlbumAccent: boolean, accent: string, foreground: string): string {
-    return useAlbumAccent && HEX.test(accent) ? accent : foreground;
+/** The cover's accent when it is wanted and valid, else `fallback` (the accent setting). */
+export function accentFor(useAlbumAccent: boolean, accent: string, fallback: string): string {
+    return useAlbumAccent && HEX.test(accent) ? accent : fallback;
 }
 
-/** `#rrggbb` as a CSS `rgba()` with the given alpha. */
+/** An alpha in 0..1; NaN counts as opaque. */
+export const clampAlpha = (alpha: number): number => (Number.isNaN(alpha) ? 1 : Math.min(1, Math.max(0, alpha)));
+
+/** `#rrggbb` as a CSS `rgba()` with the given alpha (clamped to 0..1). */
 export function withAlpha(hex: string, alpha: number): string {
     const { r, g, b } = parseHexColor(hex);
     const byte = (c: number) => Math.round(c * 255);
-    return `rgba(${byte(r)}, ${byte(g)}, ${byte(b)}, ${alpha})`;
+    const a = Math.round(clampAlpha(alpha) * 1000) / 1000;
+    return `rgba(${byte(r)}, ${byte(g)}, ${byte(b)}, ${a})`;
 }

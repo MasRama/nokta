@@ -15,3 +15,13 @@ export function formatClock(date: Date, use24h: boolean): string {
     const minutes = pad(date.getMinutes());
     return use24h ? `${pad(hours)}:${minutes}` : `${hours % 12 || 12}:${minutes}`;
 }
+
+/**
+ * Whether the clock is 24-hour: Nokta's `clock_format`, or GNOME's
+ * `clock-format` when it says "system" (or anything unknown).
+ */
+export function uses24h(clockFormat: string, gnomeClockFormat: string): boolean {
+    if (clockFormat === '24h') return true;
+    if (clockFormat === '12h') return false;
+    return gnomeClockFormat === '24h';
+}
