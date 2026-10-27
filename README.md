@@ -7,8 +7,9 @@ song's synced lyrics. When you change the volume or the brightness, or turn
 Caps Lock on or off, the notch shows it instead of the system popup. It also
 tells you when your Bluetooth headphones connect (with their battery), when
 the charger is plugged in or out, when the battery is low and when it is
-full. Every monitor has its own notch, and these messages show on the
-monitor you are working on.
+full. A focus timer from Quick Settings counts down in the notch and
+starts a short break when the session ends. Every monitor has its own notch,
+and these messages show on the monitor you are working on.
 
 ![The notch opened while a song plays](docs/images/expanded.png)
 
@@ -18,11 +19,13 @@ monitor you are working on.
 
 ![The notch showing connected earbuds and their battery](docs/images/device-alert.png)
 
+![The notch counting down a focus session while a song plays](docs/images/focus-timer.png)
+
 Nokta has two parts:
 
 - **`noktad`**, a small Rust daemon that follows your media players (MPRIS),
-  fetches lyrics, watches the battery (UPower) and Bluetooth (BlueZ), and
-  reads your settings.
+  fetches lyrics, watches the battery (UPower) and Bluetooth (BlueZ), runs
+  the focus timer, and reads your settings.
 - **A frontend** that draws the notch and talks to the daemon. On Linux it
   is a GNOME Shell extension, and they talk over D-Bus.
 
@@ -87,7 +90,8 @@ it. Open Just Perfection's settings and set **Clock Menu Position** to
 Open the settings window with the Settings button of Nokta in the
 Extensions app, or with `gnome-extensions prefs nokta@nokta.io`. It has every
 setting below: colors and background transparency, sizes, the clock format
-(24-hour, 12-hour or GNOME's), lyrics, popups and device alerts. A change
+(24-hour, 12-hour or GNOME's), lyrics, popups, device alerts and the focus
+timer. A change
 shows in the notch right away.
 
 The window saves to `~/.config/nokta/config.toml`, and you can edit that file
@@ -138,6 +142,18 @@ window then says what to fix before it saves anything.
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Look up lyrics on lrclib.net |
+
+### `[timer]`
+
+Start the timer with the **Focus** toggle in Quick Settings; its menu also
+starts a break, pauses and stops. The timer runs in the daemon, so it keeps
+going while the screen is locked.
+
+| Key | Default | What it does |
+|---|---|---|
+| `focus_minutes` | `25` | Length of a focus session, 1 to 180 |
+| `break_minutes` | `5` | Break that starts after a focus session, 0 to 60; `0` means no break |
+| `sound` | `true` | Play a sound when a focus session or a break ends |
 
 ## Privacy
 

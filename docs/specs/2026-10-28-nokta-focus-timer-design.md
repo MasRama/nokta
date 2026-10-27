@@ -91,8 +91,9 @@ change a running phase.
 - `features/timer/client.ts`: the `Timer1` proxy, like the other clients.
 - `features/timer/toggle.ts`: the Quick Settings indicator and menu toggle,
   added in `enable()` and destroyed in `disable()`.
-- The notch: a timer label shared by the idle and collapsed views; a 1 s
-  timer runs only while a timer is running and the notch shows it.
+- The notch: a timer label in the idle and in the collapsed view (lent the
+  equalizer's place). One timeout, set for when the shown second changes,
+  runs only while a timer runs.
 - `Finished` shows an alert through the OSD row, like device alerts, for
   `alert_duration_ms`.
 

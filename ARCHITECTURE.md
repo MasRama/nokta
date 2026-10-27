@@ -42,14 +42,14 @@ small public boundary, private internals, and a thin composition layer.
 contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binary noktad
   src/app/          composition: start the features, serve them, own the bus name
-  src/features/     media, lyrics, settings, devices
+  src/features/     media, lyrics, settings, devices, timer
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
-  src/features/     media, lyrics, settings, osd, devices
+  src/features/     media, lyrics, settings, osd, devices, timer
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -63,8 +63,10 @@ docs/               design spec, plans, manual test checklist
 - A feature exposes only what its `mod.rs` (Rust) or `index.ts` (TypeScript)
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
-  current track). `media`, `settings`, `osd` and `devices` depend on no
-  other feature; `extension.ts` shows device alerts through the OSD row.
+  current track). `media`, `settings`, `osd`, `devices` and `timer` depend
+  on no other feature; `extension.ts` shows device and timer alerts through
+  the OSD row, and `monitor-notch.ts` puts the timer where the clock or the
+  equalizer would be.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings.
@@ -101,6 +103,11 @@ docs/               design spec, plans, manual test checklist
   (10 %), or it is fully charged. The rules are pure (`rules.rs`); the state
   found at startup raises no alert. Without a system bus, UPower or BlueZ
   the daemon runs as before.
+- **timer** runs the focus timer: focus, then a break of its own, then
+  idle. A pure `Timer` takes `now` in every method; the task around it
+  sleeps until the deadline and emits `Finished`. Lengths come from the
+  `[timer]` table when a phase starts. It lives in the daemon because GNOME
+  disables extensions on the lock screen.
 - **settings** reads `$XDG_CONFIG_HOME/nokta/config.toml`, writes a commented
   default on first run, watches the file and republishes on change. A broken
   file never stops the daemon: it logs the error with its location and keeps
@@ -119,8 +126,9 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerName`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
+| `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -147,8 +155,9 @@ How both sides stay honest:
 - Animations use Clutter's `ease()`, so they run in the compositor and turn
   instant when GNOME animations are off.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
-  equalizer while collapsed and playing, and a 250 ms tick plus one exact
-  lyric timeout while expanded and playing. Nothing runs while paused.
+  equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
+  timeout while expanded and playing, and one timeout per second while a
+  focus timer runs. Nothing runs while paused.
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source and puts the clock back.
 

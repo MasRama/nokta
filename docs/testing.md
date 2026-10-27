@@ -53,6 +53,8 @@ tools/devshell/device.sh percent N    # the fake battery level
 tools/devshell/device.sh full         # charged to 100 % on AC
 tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none reported
 tools/devshell/device.sh disconnect
+tools/devshell/timer.sh start focus|break  # noktad's focus timer
+tools/devshell/timer.sh pause|resume|stop
 tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
 tools/devshell/smoke.sh               # start, check, stop (what CI runs per GNOME version)
@@ -162,6 +164,21 @@ Wait for each alert to close (`alert_duration_ms`, 3 s) before the next.
 - [ ] `device.sh full`: `Fully charged 100%`.
 - [ ] `device_alerts = false` while running: none of these show.
 - [ ] Real earbuds and a real charger *(real session)*.
+
+### Focus timer (focus timer spec)
+
+Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
+
+- [ ] `timer.sh start focus` while playing: a tomato dot and `24:59` replace
+      the equalizer; with nothing playing they replace the clock.
+- [ ] `timer.sh pause`: the time stops and dims; `resume` goes on.
+- [ ] Quick Settings has **Focus** with `25 min`, then `24 min left` while
+      running. Its menu starts focus and break, pauses, resumes and stops;
+      Start break is gone with `break_minutes = 0`.
+- [ ] When focus ends: `Focus done 1 min break`, then a green `0:59`. When the
+      break ends: `Break over`, then the clock.
+- [ ] The sound *(real session)*; lock the screen while running and unlock:
+      the timer went on *(real session)*.
 
 ### Appearance and clock (settings window spec)
 
