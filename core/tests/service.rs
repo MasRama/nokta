@@ -325,3 +325,50 @@ async fn play_pause_method_reaches_player() {
         ["PlayPause", "SetPosition /org/nokta/track/1 5000000"]
     );
 }
+
+#[tokio::test]
+async fn timer_starts_pauses_and_stops_over_dbus() {
+    let bus = TestBus::start();
+    let _daemon =
+        Daemon::start_with_config(&bus, NO_LRCLIB, Some("[timer]\nfocus_minutes = 50\n")).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Timer").await;
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let timer = zbus::Proxy::new(&conn, NAME, "/io/nokta/Timer", "io.nokta.Timer1")
+        .await
+        .unwrap();
+    assert_eq!(
+        String::try_from(get(&p, "io.nokta.Timer1", "State").await).unwrap(),
+        "idle"
+    );
+
+    let _: () = timer.call("Start", &("focus",)).await.unwrap();
+    let changed = next_change_with(&mut changes, "State").await;
+    let text = |key: &str| String::try_from(changed[key].try_clone().unwrap()).unwrap();
+    assert_eq!(
+        (text("State"), text("Phase")),
+        ("running".into(), "focus".into())
+    );
+    let duration = i64::try_from(changed["DurationUs"].try_clone().unwrap()).unwrap();
+    assert_eq!(duration, 50 * 60_000_000);
+
+    let _: () = timer.call("Pause", &()).await.unwrap();
+    let changed = next_change_with(&mut changes, "State").await;
+    assert_eq!(
+        String::try_from(changed["State"].try_clone().unwrap()).unwrap(),
+        "paused"
+    );
+
+    let _: () = timer.call("Stop", &()).await.unwrap();
+    let changed = next_change_with(&mut changes, "State").await;
+    assert_eq!(
+        String::try_from(changed["State"].try_clone().unwrap()).unwrap(),
+        "idle"
+    );
+
+    let err = timer
+        .call::<_, _, ()>("Start", &("nap",))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("InvalidArgs"), "{err}");
+}

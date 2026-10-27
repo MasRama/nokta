@@ -15,6 +15,7 @@ use crate::features::devices;
 use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings::{self, Config, Store};
+use crate::features::timer::{self, logic::Phase};
 use crate::shared::http;
 use crate::shared::paths::Paths;
 
@@ -66,6 +67,9 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         Arc::new(lrclib::Client::new(&options.lrclib_base_url, USER_AGENT)),
     );
 
+    let (timer_commands, timer_state, timer_finished) =
+        timer::service::spawn(phase_length(config.clone()));
+
     let system = match connect_system(options.system_bus_address.as_deref()).await {
         Ok(system) => Some(system),
         Err(err) => {
@@ -84,6 +88,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     lyrics::dbus::serve(&conn, lyrics_state).await?;
     settings::dbus::serve(&conn, config, paths.config_file.clone()).await?;
     devices::dbus::serve(&conn, alerts).await?;
+    timer::dbus::serve(&conn, timer_commands, timer_state, timer_finished).await?;
 
     match conn
         .request_name_with_flags(BUS_NAME, RequestNameFlags::DoNotQueue.into())
@@ -131,6 +136,20 @@ async fn connect_system(address: Option<&str>) -> anyhow::Result<Connection> {
 }
 
 /// Follows `lyrics.enabled` from the config.
+/// A timer phase's length from the current `[timer]` table.
+fn phase_length(
+    config: watch::Receiver<Config>,
+) -> impl Fn(Phase) -> std::time::Duration + Send + Sync + 'static {
+    move |phase| {
+        let timer = &config.borrow().timer;
+        let minutes = match phase {
+            Phase::Focus => timer.focus_minutes,
+            Phase::Break => timer.break_minutes,
+        };
+        std::time::Duration::from_secs(u64::from(minutes) * 60)
+    }
+}
+
 fn lyrics_enabled(mut config: watch::Receiver<Config>) -> watch::Receiver<bool> {
     let (tx, rx) = watch::channel(config.borrow().lyrics.enabled);
     tokio::spawn(async move {

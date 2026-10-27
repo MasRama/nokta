@@ -15,6 +15,7 @@ export const PATHS = {
     Lyrics1: '/io/nokta/Lyrics',
     Settings1: '/io/nokta/Settings',
     Devices1: '/io/nokta/Devices',
+    Timer1: '/io/nokta/Timer',
 } as const;
 
 export interface NoktaProps {
@@ -80,4 +81,25 @@ export interface SettingsProps {
 export const SETTINGS_METHODS = {
     Set: 'ssv',
     Reset: '',
+} as const;
+
+export interface TimerProps {
+    State: string;
+    Phase: string;
+    DurationUs: number;
+    RemainingUs: number;
+    TimestampUs: number;
+}
+
+/** io.nokta.Timer1 methods and the D-Bus signature of their arguments. */
+export const TIMER_METHODS = {
+    Start: 's',
+    Pause: '',
+    Resume: '',
+    Stop: '',
+} as const;
+
+/** io.nokta.Timer1 signals and the D-Bus signature of their arguments. */
+export const TIMER_SIGNALS = {
+    Finished: 's',
 } as const;

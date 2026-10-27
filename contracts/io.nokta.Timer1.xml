@@ -1,0 +1,51 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Timer. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Timer1">
+    <!-- "idle", "running" or "paused". -->
+    <property name="State" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- "focus" or "break"; empty when idle. -->
+    <property name="Phase" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Length of the current phase in microseconds, 0 when idle. -->
+    <property name="DurationUs" type="x" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Time left in microseconds at TimestampUs, 0 when idle. -->
+    <property name="RemainingUs" type="x" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      CLOCK_MONOTONIC in microseconds when RemainingUs was measured. While
+      running, the time left now is RemainingUs - (now - TimestampUs).
+    -->
+    <property name="TimestampUs" type="x" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      Starts phase "focus" or "break" with its length from the [timer] table
+      of config.toml, replacing any running timer. Fails with InvalidArgs for
+      another phase.
+    -->
+    <method name="Start">
+      <arg name="phase" type="s" direction="in"/>
+    </method>
+    <!-- Pauses a running timer; does nothing otherwise. -->
+    <method name="Pause"/>
+    <!-- Resumes a paused timer; does nothing otherwise. -->
+    <method name="Resume"/>
+    <!-- Stops the timer without Finished; does nothing when idle. -->
+    <method name="Stop"/>
+    <!--
+      A phase ran to its end. After "focus" the break starts on its own,
+      unless the break length is 0.
+    -->
+    <signal name="Finished">
+      <arg name="phase" type="s"/>
+    </signal>
+  </interface>
+</node>
