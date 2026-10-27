@@ -41,7 +41,7 @@ small public boundary, private internals, and a thin composition layer.
 ```
 contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binary noktad
-  src/app/          composition: start the features, serve them, own the bus name
+  src/app/          composition: start the features; on Linux serve them and own the bus name
   src/features/     media, lyrics, settings, devices, timer
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
@@ -108,12 +108,33 @@ docs/               design spec, plans, manual test checklist
   sleeps until the deadline and emits `Finished`. Lengths come from the
   `[timer]` table when a phase starts. It lives in the daemon because GNOME
   disables extensions on the lock screen.
-- **settings** reads `$XDG_CONFIG_HOME/nokta/config.toml`, writes a commented
+- **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
+  `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
+  Windows), writes a commented
   default on first run, watches the file and republishes on change. A broken
   file never stops the daemon: it logs the error with its location and keeps
   the last valid config. `Set` from the settings window checks the new value
   with the same validation, edits the file with `toml_edit` (comments kept)
   and writes it atomically; the watcher then republishes it.
+
+### Portable core and Linux adapters
+
+The daemon is meant to run on other systems, so D-Bus stays at the edge.
+Feature models, rules and services use plain Rust types and channels; only
+the Linux adapters touch D-Bus:
+
+- each feature's `dbus.rs`, which serves it;
+- the system sources: MPRIS in `media` (`mpris`, `watcher`, `control`) and
+  UPower and BlueZ in `devices` (`upower`, `bluez`, `watcher`);
+- `app/dbus.rs`, which starts those sources, serves everything and owns the
+  bus name.
+
+Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
+is a Linux-only dependency. `app::Services` starts the rest (settings,
+lyrics, timer) on any system. CI builds and tests the daemon on macOS and
+Windows, where `noktad` says it has no frontend yet. A new system adds its
+own sources and transport next to the Linux ones; nothing in a feature's
+model changes.
 
 ## The D-Bus contract (v1)
 

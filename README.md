@@ -38,11 +38,13 @@ nothing plays and about 10 MB of memory.
 |---|---|
 | Linux, GNOME 46 to 51 | Works (47 is untested: no supported distribution ships it) |
 | Linux, KDE Plasma, Hyprland, Sway | Planned |
-| Windows | Planned |
-| macOS | Planned |
+| Windows | Planned: the daemon's core builds and passes its tests there |
+| macOS | Planned: the daemon's core builds and passes its tests there |
 
 The plan is one daemon for every platform, with a small frontend for each
-desktop that draws the notch. Today both are Linux only.
+desktop that draws the notch. Today the only frontend, and the only media
+and device sources, are on Linux. CI builds and tests the rest of the daemon
+on macOS and Windows on every change.
 
 ## Requirements
 
