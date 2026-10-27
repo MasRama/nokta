@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0](https://github.com/MasRama/nokta/compare/v0.2.0...v0.3.0) (2026-10-27)
+
+
+### Features
+
+* **core:** use each system's folders for config and cache ([09dbda4](https://github.com/MasRama/nokta/commit/09dbda453bc6120e0ab26994ff21adbf2deb262b))
+* **extension:** run on GNOME 46 to 51 ([872c7c2](https://github.com/MasRama/nokta/commit/872c7c2c2fc359873a52ae30a62965ee64587287))
+* **osd:** take over the OSD on GNOME 49 and later ([eb25991](https://github.com/MasRama/nokta/commit/eb25991e13bc46508279a4ff4d8e8a7ce25fc092))
+* **settings:** add focus timer lengths and sound to the config ([160f322](https://github.com/MasRama/nokta/commit/160f32216ace88a089c39f2369863a65f12d65de))
+* **settings:** link to the install steps when Nokta's service is missing ([d9a9f3a](https://github.com/MasRama/nokta/commit/d9a9f3aed0412adb79663984e8f582faf1a2779a))
+* **settings:** set the focus timer in the settings window ([cdff536](https://github.com/MasRama/nokta/commit/cdff53642ab572c95c39e6a4cd14d8b75b738081))
+* **timer:** run a focus timer in noktad ([53f809d](https://github.com/MasRama/nokta/commit/53f809d4e26d971bcdcb1e878167bfab8640b357))
+* **timer:** show the focus timer in the notch and Quick Settings ([7ca975e](https://github.com/MasRama/nokta/commit/7ca975ef23f9aa018407e9f3fcc32c2bc044f958))
+
+
+### Bug Fixes
+
+* **app:** start without CA certificates on the system ([a661626](https://github.com/MasRama/nokta/commit/a661626f90f7924248e2834f94d1dd6873ddcf73))
+* **extension:** build vertical boxes and read Caps Lock on newer GNOME ([e14a0d0](https://github.com/MasRama/nokta/commit/e14a0d0b6180fb229e7a4953734c355da7f9bbfc))
+* **extension:** connect to Nokta's service the way GNOME 51 expects ([d17ccd3](https://github.com/MasRama/nokta/commit/d17ccd3de49f96f83e35564744ee429b586e28dc))
+* **extension:** leave the notch alone once GNOME Shell destroys it ([2779bdb](https://github.com/MasRama/nokta/commit/2779bdb001530152e48c49c8445464444701701c))
+
 ## [0.2.0](https://github.com/MasRama/nokta/compare/v0.1.0...v0.2.0) (2026-10-27)
 
 
