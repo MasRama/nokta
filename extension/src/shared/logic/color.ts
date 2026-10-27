@@ -12,6 +12,15 @@ export function parseHexColor(hex: string, fallback: Rgb = { r: 0, g: 0, b: 0 })
     return { r, g, b };
 }
 
+/** 0..1 channels as `#rrggbb`; out-of-range channels are clamped, NaN is 0. */
+export function toHexColor({ r, g, b }: Rgb): string {
+    const hex = (c: number) =>
+        Math.round(Number.isNaN(c) ? 0 : Math.min(1, Math.max(0, c)) * 255)
+            .toString(16)
+            .padStart(2, '0');
+    return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /** The cover's accent when it is wanted and valid, else `fallback` (the accent setting). */

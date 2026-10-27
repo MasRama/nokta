@@ -7,7 +7,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
-import type { SettingsClient } from './features/settings/client.js';
+import type { SettingsClient } from './features/settings/index.js';
 import { IdleClock } from './shared/clock.js';
 import { accentFor, withAlpha } from './shared/logic/color.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';

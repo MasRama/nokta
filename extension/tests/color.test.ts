@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { parseHexColor, withAlpha } from '../src/shared/logic/color.js';
+import { parseHexColor, toHexColor, withAlpha } from '../src/shared/logic/color.js';
 
 test('parse_hex_color_channels', () => {
     assert.deepEqual(parseHexColor('#000000'), { r: 0, g: 0, b: 0 });
@@ -25,4 +25,10 @@ test('alpha_is_clamped_and_rounded', () => {
     assert.equal(withAlpha('#000000', -1), 'rgba(0, 0, 0, 0)');
     assert.equal(withAlpha('#000000', 0.333333), 'rgba(0, 0, 0, 0.333)');
     assert.equal(withAlpha('#000000', Number.NaN), 'rgba(0, 0, 0, 1)');
+});
+
+test('channels_to_hex_round_trip', () => {
+    assert.equal(toHexColor({ r: 1, g: 0.5, b: 0 }), '#ff8000');
+    assert.equal(toHexColor({ r: 2, g: -1, b: Number.NaN }), '#ff0000');
+    assert.equal(toHexColor(parseHexColor('#12abef')), '#12abef');
 });

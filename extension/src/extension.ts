@@ -15,7 +15,7 @@ import {
     type OsdContent,
     type OsdRequest,
 } from './features/osd/index.js';
-import { SettingsClient } from './features/settings/client.js';
+import { SettingsClient } from './features/settings/index.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
