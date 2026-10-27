@@ -84,8 +84,10 @@ fi
 # Inside the private bus from here on.
 PIDS=""
 cleanup() {
-    # shellcheck disable=SC2086
-    [ -n "$PIDS" ] && kill $PIDS 2>/dev/null || true
+    if [ -n "$PIDS" ]; then
+        # shellcheck disable=SC2086
+        kill $PIDS 2>/dev/null || true
+    fi
     rm -f "$STATE/bus" "$STATE/run.pid"
 }
 trap cleanup EXIT
