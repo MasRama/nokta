@@ -1,8 +1,8 @@
-import Clutter from 'gi://Clutter';
+import { defaultSeat } from '../../shared/compat.js';
 
 /** Calls `onChange` when Caps Lock turns on or off; never for the start state. */
 export class CapsLockWatcher {
-    private readonly keymap = Clutter.get_default_backend().get_default_seat().get_keymap();
+    private readonly keymap = defaultSeat().get_keymap();
     private readonly changedId: number;
     private on: boolean;
 

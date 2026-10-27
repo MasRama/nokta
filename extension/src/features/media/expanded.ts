@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
+import { setVertical } from '../../shared/compat.js';
 import { Cover } from './cover.js';
 import type { MediaSnapshot } from './logic/snapshot.js';
 import { ProgressBar } from './progress.js';
@@ -36,10 +37,10 @@ export class ExpandedMediaView {
     private readonly playPauseIcon: St.Icon;
 
     constructor(controls: MediaControls) {
-        this.actor = new St.BoxLayout({ style_class: 'nokta-expanded', vertical: true, y_align: Clutter.ActorAlign.START });
+        this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));
 
         const top = new St.BoxLayout({ style_class: 'nokta-expanded-top' });
-        this.info = new St.BoxLayout({ vertical: true, x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+        this.info = setVertical(new St.BoxLayout({ x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
         this.info.add_child(this.title);
         this.info.add_child(this.artists);
         top.add_child(this.cover.actor);
