@@ -1,8 +1,9 @@
 //! Client for the LRCLIB lyrics API (<https://lrclib.net>).
 //!
 //! `lookup` tries the exact `/api/get` endpoint first and falls back to
-//! `/api/search` when the track is unknown, accepting only results whose
-//! duration is within [`DURATION_TOLERANCE_S`] of the playing track.
+//! `/api/search` when the track is unknown or `get` is overloaded, accepting
+//! only results whose duration is within [`DURATION_TOLERANCE_S`] of the
+//! playing track.
 
 use std::time::Duration;
 
@@ -84,9 +85,17 @@ impl Client {
     }
 
     pub async fn lookup(&self, q: &Query) -> Result<Lookup, FetchError> {
+        // `/api/get` answers 503 when it is busy asking upstream sources about a
+        // track it does not have; search may still know it.
+        let mut busy = None;
         if q.duration_s > 0 {
-            if let Some(record) = self.get(q).await? {
-                return Ok(record.into_lookup());
+            match self.get(q).await {
+                Ok(Some(record)) => return Ok(record.into_lookup()),
+                Ok(None) => {}
+                Err(FetchError::Status(status)) if status.is_server_error() => {
+                    busy = Some(FetchError::Status(status));
+                }
+                Err(err) => return Err(err),
             }
         }
         let records = self.search(q).await?;
@@ -96,7 +105,12 @@ impl Client {
                 || r.duration
                     .is_some_and(|d| (d - wanted).abs() <= DURATION_TOLERANCE_S)
         });
-        Ok(hit.map_or(Lookup::NotFound, Record::into_lookup))
+        match (hit, busy) {
+            (Some(record), _) => Ok(record.into_lookup()),
+            // Not "not found": that would be cached for a week.
+            (None, Some(err)) => Err(err),
+            (None, None) => Ok(Lookup::NotFound),
+        }
     }
 
     async fn get(&self, q: &Query) -> Result<Option<Record>, FetchError> {
@@ -333,6 +347,46 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(path("/api/get"))
             .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        assert!(client(&server).await.lookup(&query(369)).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn busy_get_falls_back_to_search() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([record(
+                368.0,
+                Some("[00:03.00]busy"),
+                None,
+                false
+            )])))
+            .mount(&server)
+            .await;
+        let got = client(&server).await.lookup(&query(369)).await.unwrap();
+        assert_eq!(
+            got,
+            Lookup::Synced(vec![Line {
+                start_us: 3_000_000,
+                text: "busy".into()
+            }])
+        );
+    }
+
+    #[tokio::test]
+    async fn busy_get_with_empty_search_is_an_error_not_not_found() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
             .mount(&server)
             .await;
         assert!(client(&server).await.lookup(&query(369)).await.is_err());
