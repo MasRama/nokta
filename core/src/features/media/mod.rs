@@ -2,9 +2,12 @@
 //! state the daemon publishes on `io.nokta.Media1`.
 
 pub mod art;
+pub mod control;
+mod mpris;
 pub mod select;
 mod state;
 mod track;
+pub mod watcher;
 
 pub use select::Selector;
 pub use state::MediaState;
