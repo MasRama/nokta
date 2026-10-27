@@ -11,6 +11,7 @@ import { errorMessage, SettingsService } from './service.js';
 const SEND_DELAY_MS = 250;
 
 const CONFIG_FILE = GLib.build_filenamev([GLib.get_user_config_dir(), 'nokta', 'config.toml']);
+const INSTALL_URL = 'https://github.com/MasRama/nokta#install';
 
 interface Pending {
     source: number;
@@ -59,7 +60,13 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
         const page = new Adw.PreferencesPage({ name: spec.name, title: spec.title, icon_name: spec.icon });
         // Shown only while the daemon is away; an empty group would still take space.
         const banner = new Adw.PreferencesGroup();
-        banner.add(new Adw.Banner({ title: "Nokta's service is not running, so changes can't be saved", revealed: true }));
+        const notice = new Adw.Banner({
+            title: "Nokta's service is not running, so changes can't be saved",
+            button_label: 'How to Install',
+            revealed: true,
+        });
+        notice.connect('button-clicked', () => openUri(window, INSTALL_URL, toast));
+        banner.add(notice);
         banners.push(banner);
         page.add(banner);
 
@@ -98,18 +105,20 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
 function openConfigRow(window: Gtk.Window, toast: (title: string) => void): Adw.ActionRow {
     const row = new Adw.ActionRow({ title: 'Open config.toml', subtitle: CONFIG_FILE, activatable: true });
     row.add_suffix(new Gtk.Image({ icon_name: 'adw-external-link-symbolic' }));
-    row.connect('activated', () => {
-        const uri = Gio.File.new_for_path(CONFIG_FILE).get_uri();
-        const context = window.get_display().get_app_launch_context();
-        Gio.AppInfo.launch_default_for_uri_async(uri, context, null, (_source, result) => {
-            try {
-                Gio.AppInfo.launch_default_for_uri_finish(result);
-            } catch (error) {
-                toast(errorMessage(error));
-            }
-        });
-    });
+    row.connect('activated', () => openUri(window, Gio.File.new_for_path(CONFIG_FILE).get_uri(), toast));
     return row;
+}
+
+/** Opens `uri` in the default app; a failure shows as a toast. */
+function openUri(window: Gtk.Widget, uri: string, toast: (title: string) => void): void {
+    const context = window.get_display().get_app_launch_context();
+    Gio.AppInfo.launch_default_for_uri_async(uri, context, null, (_source, result) => {
+        try {
+            Gio.AppInfo.launch_default_for_uri_finish(result);
+        } catch (error) {
+            toast(errorMessage(error));
+        }
+    });
 }
 
 function resetAllRow(window: Gtk.Widget, reset: () => Promise<void>, toast: (title: string) => void): Adw.ActionRow {
