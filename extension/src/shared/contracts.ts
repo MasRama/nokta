@@ -14,6 +14,7 @@ export const PATHS = {
     Media1: '/io/nokta/Media',
     Lyrics1: '/io/nokta/Lyrics',
     Settings1: '/io/nokta/Settings',
+    Devices1: '/io/nokta/Devices',
 } as const;
 
 export interface NoktaProps {
@@ -62,6 +63,11 @@ export type LyricsStatus =
     | 'instrumental'
     | 'not-found'
     | 'error';
+
+/** io.nokta.Devices1 signals and the D-Bus signature of their arguments. */
+export const DEVICES_SIGNALS = {
+    Alert: 'ssi',
+} as const;
 
 export interface SettingsProps {
     Appearance: Record<string, unknown>;

@@ -1,5 +1,6 @@
 // Fails when src/shared/contracts.ts drifts from ../contracts/*.xml:
-// property names and types, method names and argument signatures, object paths.
+// property names and types, method and signal names and argument signatures,
+// object paths.
 import { readdirSync, readFileSync } from 'node:fs';
 import { XMLParser } from 'fast-xml-parser';
 
@@ -44,6 +45,23 @@ function tsConstObject(name) {
     );
 }
 
+/** Compares XML [name, signature] pairs with `export const constName = { Name: 'sig', }`. */
+function checkMembers(ifaceName, file, constName, xmlPairs) {
+    const tsMembers = tsConstObject(constName);
+    if (!tsMembers) {
+        if (xmlPairs.length > 0) errors.push(`${ifaceName}: missing ${constName}`);
+        return;
+    }
+    const xmlMembers = new Map(xmlPairs);
+    for (const [name, signature] of xmlMembers) {
+        if (!(name in tsMembers)) errors.push(`${constName}: missing ${name}`);
+        else if (tsMembers[name] !== signature) errors.push(`${constName}.${name}: is '${tsMembers[name]}', contract says '${signature}'`);
+    }
+    for (const name of Object.keys(tsMembers)) {
+        if (!xmlMembers.has(name)) errors.push(`${constName}.${name}: not in ${file}`);
+    }
+}
+
 const paths = tsConstObject('PATHS') ?? {};
 const seen = new Set();
 
@@ -61,10 +79,10 @@ for (const file of readdirSync(contractsDir).filter((f) => f.endsWith('.xml')).s
         }
 
         const props = tsInterface(`${base}Props`);
+        const xmlProps = new Map((iface.property ?? []).map((p) => [p.name, p.type]));
         if (!props) {
-            errors.push(`${iface.name}: missing interface ${base}Props`);
+            if (xmlProps.size > 0) errors.push(`${iface.name}: missing interface ${base}Props`);
         } else {
-            const xmlProps = new Map((iface.property ?? []).map((p) => [p.name, p.type]));
             for (const [name, type] of xmlProps) {
                 const want = TS_TYPE[type];
                 if (!want) errors.push(`${iface.name}.${name}: no TypeScript mapping for "${type}"`);
@@ -76,26 +94,13 @@ for (const file of readdirSync(contractsDir).filter((f) => f.endsWith('.xml')).s
             }
         }
 
-        const methods = iface.method ?? [];
-        const constName = `${base.toUpperCase()}_METHODS`;
-        const tsMethods = tsConstObject(constName);
-        if (methods.length > 0 && !tsMethods) {
-            errors.push(`${iface.name}: missing ${constName}`);
-        } else if (tsMethods) {
-            const xmlMethods = new Map(
-                methods.map((m) => [
-                    m.name,
-                    (m.arg ?? []).filter((a) => (a.direction ?? 'in') === 'in').map((a) => a.type).join(''),
-                ]),
-            );
-            for (const [name, signature] of xmlMethods) {
-                if (!(name in tsMethods)) errors.push(`${constName}: missing ${name}`);
-                else if (tsMethods[name] !== signature) errors.push(`${constName}.${name}: is '${tsMethods[name]}', contract says '${signature}'`);
-            }
-            for (const name of Object.keys(tsMethods)) {
-                if (!xmlMethods.has(name)) errors.push(`${constName}.${name}: not in ${file}`);
-            }
-        }
+        const methods = (iface.method ?? []).map((m) => [
+            m.name,
+            (m.arg ?? []).filter((a) => (a.direction ?? 'in') === 'in').map((a) => a.type).join(''),
+        ]);
+        checkMembers(iface.name, file, `${base.toUpperCase()}_METHODS`, methods);
+        const signals = (iface.signal ?? []).map((s) => [s.name, (s.arg ?? []).map((a) => a.type).join('')]);
+        checkMembers(iface.name, file, `${base.toUpperCase()}_SIGNALS`, signals);
     }
 }
 

@@ -1,0 +1,19 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Devices. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Devices1">
+    <!--
+      Something happened to a device. kind is "bluetooth-connected",
+      "bluetooth-disconnected", "charger-plugged", "charger-unplugged",
+      "battery-low", "battery-critical" or "battery-full"; clients ignore kinds
+      they do not know. name is the Bluetooth device's alias, empty for battery
+      alerts. percentage is 0-100, or -1 when unknown.
+    -->
+    <signal name="Alert">
+      <arg name="kind" type="s"/>
+      <arg name="name" type="s"/>
+      <arg name="percentage" type="i"/>
+    </signal>
+  </interface>
+</node>
