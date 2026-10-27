@@ -17,8 +17,6 @@ declare module '@girs/clutter-14/clutter-14' {
             mode?: AnimationMode;
             onComplete?: () => void;
             onStopped?: (finished: boolean) => void;
-            repeatCount?: number;
-            autoReverse?: boolean;
         }
 
         // Merging requires the class's exact type parameters, used or not.

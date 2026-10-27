@@ -1,38 +1,40 @@
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import Graphene from 'gi://Graphene';
 import St from 'gi://St';
 
-/** Per bar: loop duration in ms and the height it rests at. */
-const BARS = [
-    { ms: 420, rest: 0.45 },
-    { ms: 330, rest: 0.75 },
-    { ms: 510, rest: 0.55 },
-    { ms: 380, rest: 0.35 },
-];
-const LOW = 0.25;
+import { BAR_COUNT, barLevels } from './logic/equalizer.js';
+
+/** Heights the bars rest at while paused. */
+const REST = [0.45, 0.75, 0.55, 0.35];
+
+/** About 12 steps a second. */
+const STEP_MS = 83;
 
 /**
- * Four bars that bounce while music plays: a playback indicator, not a
- * spectrum. The animation runs on the compositor, with no timers here, and
- * stays still when GNOME animations are off.
+ * Four bars stepped like a level meter while music plays: a playback
+ * indicator, not a spectrum. Easing them would make the compositor redraw at
+ * the full frame rate for as long as music plays (measured: ~24 % of a core
+ * for gnome-shell); stepping costs a fraction of that. Still when not
+ * playing or when GNOME animations are off.
  */
 export class Equalizer {
     readonly actor: St.BoxLayout;
-    private readonly bars: St.Widget[];
-    private playing = false;
+    private readonly bars: St.Widget[] = [];
+    private timerId = 0;
 
     constructor() {
         this.actor = new St.BoxLayout({ style_class: 'nokta-equalizer', y_align: Clutter.ActorAlign.CENTER });
-        this.bars = BARS.map(({ rest }) => {
+        for (let i = 0; i < BAR_COUNT; i++) {
             const bar = new St.Widget({
                 style_class: 'nokta-equalizer-bar',
                 y_align: Clutter.ActorAlign.END,
                 pivot_point: new Graphene.Point({ x: 0.5, y: 1 }),
-                scale_y: rest,
+                scale_y: REST[i],
             });
             this.actor.add_child(bar);
-            return bar;
-        });
+            this.bars.push(bar);
+        }
     }
 
     setColor(color: string): void {
@@ -40,28 +42,25 @@ export class Equalizer {
     }
 
     setPlaying(playing: boolean): void {
-        if (playing === this.playing) return;
-        this.playing = playing;
-        this.bars.forEach((bar, i) => {
-            bar.remove_all_transitions();
-            const { ms, rest } = BARS[i];
-            if (!playing || !St.Settings.get().enable_animations) {
-                bar.ease({ scale_y: rest, duration: 200, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-                return;
-            }
-            bar.scale_y = LOW;
-            bar.ease({
-                scale_y: 1,
-                duration: ms,
-                mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
-                repeatCount: -1,
-                autoReverse: true,
+        const animate = playing && St.Settings.get().enable_animations;
+        if (animate && !this.timerId) {
+            this.timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, STEP_MS, () => {
+                this.show(barLevels(GLib.get_monotonic_time() / 1000));
+                return GLib.SOURCE_CONTINUE;
             });
-        });
+        } else if (!animate && this.timerId) {
+            GLib.source_remove(this.timerId);
+            this.timerId = 0;
+            this.show(REST);
+        }
     }
 
     destroy(): void {
-        for (const bar of this.bars) bar.remove_all_transitions();
+        this.setPlaying(false);
         this.actor.destroy();
+    }
+
+    private show(levels: readonly number[]): void {
+        this.bars.forEach((bar, i) => (bar.scale_y = levels[i]));
     }
 }
