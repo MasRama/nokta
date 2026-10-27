@@ -1,0 +1,27 @@
+[package]
+name = "nokta-core"
+description = "Nokta daemon: media, lyrics and settings over D-Bus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "nokta_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "noktad"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.104"
+hex = "0.4.3"
+rustix = { version = "1.1.6", features = ["time"] }
+sha2 = "0.11.1"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[dev-dependencies]
+temp-env = "0.3.6"

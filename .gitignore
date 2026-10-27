@@ -1,0 +1,7 @@
+/target
+/build
+node_modules/
+/extension/dist
+/extension/.test-build
+/extension/src/generated
+/.superpowers
