@@ -1,9 +1,31 @@
-//! Where Nokta keeps its config and cache, following the XDG base directory spec.
+//! Where Nokta keeps its config and cache: the XDG base directories on
+//! Linux, `~/Library` on macOS, `%APPDATA%` and `%LOCALAPPDATA%` on Windows.
 
 use std::env;
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum System {
+    Linux,
+    MacOs,
+    Windows,
+}
+
+impl System {
+    /// The system noktad was built for. Other Unix systems count as Linux.
+    pub fn current() -> System {
+        if cfg!(windows) {
+            System::Windows
+        } else if cfg!(target_os = "macos") {
+            System::MacOs
+        } else {
+            System::Linux
+        }
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Paths {
@@ -12,6 +34,7 @@ pub struct Paths {
 }
 
 impl Paths {
+    /// The Linux layout under the given config and cache homes.
     pub fn new(config_home: &Path, cache_home: &Path) -> Paths {
         Paths {
             config_file: config_home.join("nokta").join("config.toml"),
@@ -20,29 +43,58 @@ impl Paths {
     }
 
     pub fn from_env() -> Result<Paths> {
-        let home = env::var_os("HOME")
-            .filter(|h| !h.is_empty())
-            .map(PathBuf::from);
-        let pick = |var: &str, fallback: &str| -> Result<PathBuf> {
-            match env::var_os(var).filter(|v| !v.is_empty()) {
-                Some(dir) => Ok(PathBuf::from(dir)),
-                None => match &home {
-                    Some(home) => Ok(home.join(fallback)),
-                    None => bail!("neither {var} nor HOME is set"),
-                },
-            }
+        Paths::for_system(System::current(), |name| env::var_os(name))
+    }
+
+    /// The folders on `system`, reading environment variables through `var`.
+    /// Empty variables count as unset.
+    pub fn for_system(system: System, var: impl Fn(&str) -> Option<OsString>) -> Result<Paths> {
+        let dir = |name: &str| var(name).filter(|v| !v.is_empty()).map(PathBuf::from);
+        let need = |name: &str| match dir(name) {
+            Some(dir) => Ok(dir),
+            None => bail!("{name} is not set"),
         };
-        Ok(Paths::new(
-            &pick("XDG_CONFIG_HOME", ".config")?,
-            &pick("XDG_CACHE_HOME", ".cache")?,
-        ))
+        Ok(match system {
+            System::Linux => {
+                let home = dir("HOME");
+                let pick = |name: &str, fallback: &str| match (dir(name), &home) {
+                    (Some(dir), _) => Ok(dir),
+                    (None, Some(home)) => Ok(home.join(fallback)),
+                    (None, None) => bail!("neither {name} nor HOME is set"),
+                };
+                Paths::new(
+                    &pick("XDG_CONFIG_HOME", ".config")?,
+                    &pick("XDG_CACHE_HOME", ".cache")?,
+                )
+            }
+            System::MacOs => {
+                let library = need("HOME")?.join("Library");
+                Paths {
+                    config_file: library
+                        .join("Application Support")
+                        .join("nokta")
+                        .join("config.toml"),
+                    cache_dir: library.join("Caches").join("nokta"),
+                }
+            }
+            System::Windows => Paths {
+                config_file: need("APPDATA")?.join("nokta").join("config.toml"),
+                cache_dir: need("LOCALAPPDATA")?.join("nokta").join("cache"),
+            },
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use std::path::Path;
+
+    fn env<'a>(vars: &'a [(&str, &str)]) -> impl Fn(&str) -> Option<OsString> + 'a {
+        let vars: HashMap<_, _> = vars.iter().copied().collect();
+        move |name| vars.get(name).map(OsString::from)
+    }
 
     #[test]
     fn paths_use_nokta_subdirs() {
@@ -52,37 +104,67 @@ mod tests {
     }
 
     #[test]
-    fn from_env_prefers_xdg_vars() {
-        temp_env::with_vars(
-            [
-                ("XDG_CONFIG_HOME", Some("/xc")),
-                ("XDG_CACHE_HOME", Some("/xk")),
-                ("HOME", Some("/home/u")),
-            ],
-            || {
-                let paths = Paths::from_env().unwrap();
-                assert_eq!(paths.config_file, Path::new("/xc/nokta/config.toml"));
-                assert_eq!(paths.cache_dir, Path::new("/xk/nokta"));
-            },
-        );
+    fn linux_prefers_xdg_vars() {
+        let vars = [
+            ("XDG_CONFIG_HOME", "/xc"),
+            ("XDG_CACHE_HOME", "/xk"),
+            ("HOME", "/home/u"),
+        ];
+        let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
+        assert_eq!(paths, Paths::new(Path::new("/xc"), Path::new("/xk")));
     }
 
     #[test]
-    fn from_env_falls_back_to_home() {
-        temp_env::with_vars(
-            [
-                ("XDG_CONFIG_HOME", None),
-                ("XDG_CACHE_HOME", Some("")),
-                ("HOME", Some("/home/u")),
-            ],
-            || {
-                let paths = Paths::from_env().unwrap();
-                assert_eq!(
-                    paths.config_file,
-                    Path::new("/home/u/.config/nokta/config.toml")
-                );
-                assert_eq!(paths.cache_dir, Path::new("/home/u/.cache/nokta"));
-            },
+    fn linux_falls_back_to_home() {
+        let vars = [("XDG_CACHE_HOME", ""), ("HOME", "/home/u")];
+        let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
+        let home = Path::new("/home/u");
+        assert_eq!(
+            paths,
+            Paths::new(&home.join(".config"), &home.join(".cache"))
         );
+        assert!(Paths::for_system(System::Linux, env(&[])).is_err());
+    }
+
+    #[test]
+    fn macos_uses_library() {
+        let vars = [("HOME", "/Users/u"), ("XDG_CONFIG_HOME", "/xc")];
+        let paths = Paths::for_system(System::MacOs, env(&vars)).unwrap();
+        let library = Path::new("/Users/u").join("Library");
+        assert_eq!(
+            paths.config_file,
+            library
+                .join("Application Support")
+                .join("nokta")
+                .join("config.toml")
+        );
+        assert_eq!(paths.cache_dir, library.join("Caches").join("nokta"));
+        assert!(Paths::for_system(System::MacOs, env(&[])).is_err());
+    }
+
+    #[test]
+    fn windows_uses_app_data() {
+        let vars = [
+            ("APPDATA", r"C:\Users\u\AppData\Roaming"),
+            ("LOCALAPPDATA", r"C:\Users\u\AppData\Local"),
+        ];
+        let paths = Paths::for_system(System::Windows, env(&vars)).unwrap();
+        let roaming = Path::new(vars[0].1);
+        let local = Path::new(vars[1].1);
+        assert_eq!(paths.config_file, roaming.join("nokta").join("config.toml"));
+        assert_eq!(paths.cache_dir, local.join("nokta").join("cache"));
+        assert!(Paths::for_system(System::Windows, env(&vars[..1])).is_err());
+    }
+
+    #[test]
+    fn current_system_reads_the_environment() {
+        let expected = if cfg!(windows) {
+            System::Windows
+        } else if cfg!(target_os = "macos") {
+            System::MacOs
+        } else {
+            System::Linux
+        };
+        assert_eq!(System::current(), expected);
     }
 }
