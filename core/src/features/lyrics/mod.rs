@@ -4,6 +4,7 @@ pub mod cache;
 pub mod key;
 pub mod lrc;
 pub mod lrclib;
+pub mod service;
 
 use serde::{Deserialize, Serialize};
 
@@ -22,4 +23,50 @@ pub enum Lookup {
     Plain,
     Instrumental,
     NotFound,
+}
+
+/// What `io.nokta.Lyrics1.Status` reports.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Status {
+    #[default]
+    None,
+    Loading,
+    Synced,
+    Plain,
+    Instrumental,
+    NotFound,
+    Error,
+}
+
+impl Status {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Status::None => "none",
+            Status::Loading => "loading",
+            Status::Synced => "synced",
+            Status::Plain => "plain",
+            Status::Instrumental => "instrumental",
+            Status::NotFound => "not-found",
+            Status::Error => "error",
+        }
+    }
+}
+
+/// Lyrics for the active track. `lines` is only filled when `status` is `Synced`.
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct LyricsState {
+    pub status: Status,
+    pub lines: Vec<Line>,
+}
+
+impl From<Lookup> for LyricsState {
+    fn from(lookup: Lookup) -> LyricsState {
+        let (status, lines) = match lookup {
+            Lookup::Synced(lines) => (Status::Synced, lines),
+            Lookup::Plain => (Status::Plain, Vec::new()),
+            Lookup::Instrumental => (Status::Instrumental, Vec::new()),
+            Lookup::NotFound => (Status::NotFound, Vec::new()),
+        };
+        LyricsState { status, lines }
+    }
 }
