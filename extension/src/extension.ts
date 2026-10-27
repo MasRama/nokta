@@ -16,12 +16,14 @@ import {
     type OsdRequest,
 } from './features/osd/index.js';
 import { SettingsClient } from './features/settings/index.js';
+import { finishedAlert, FocusToggle, msUntilNextSecond, TimerClient } from './features/timer/index.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const CAPS_LOCK_ICON = 'input-keyboard-symbolic';
+const TIMER_ICON = 'alarm-symbolic';
 
 const isCancelled = (error: unknown): boolean =>
     error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
@@ -43,9 +45,13 @@ class Session {
     private readonly media = new MediaClient();
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
+    private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
+    private readonly focusToggle: FocusToggle;
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly lyricsId: number;
+    private readonly timerId: number;
+    private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
     private allMonitors: boolean;
@@ -60,9 +66,17 @@ class Session {
         this.monitorsId = Main.layoutManager.connect('monitors-changed', () => this.buildNotches());
         this.mediaId = this.media.onChanged(() => this.notches.forEach((n) => n.onMedia()));
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
+        this.timerId = this.timer.onChanged(() => this.onTimer());
+        this.focusToggle = new FocusToggle({
+            start: (phase) => this.timer.start(phase),
+            pause: () => this.timer.pause(),
+            resume: () => this.timer.resume(),
+            stop: () => this.timer.stop(),
+        });
         this.buildNotches();
         this.applyClockPosition();
         this.applyOsdSettings();
+        this.onTimer();
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
             () => this.onDaemonVanished(),
@@ -75,8 +89,12 @@ class Session {
         this.destroyNotches();
         this.media.disconnect(this.mediaId);
         this.lyrics.disconnect(this.lyricsId);
+        this.timer.disconnect(this.timerId);
+        this.stopTimerTick();
         this.media.destroy();
         this.lyrics.destroy();
+        this.timer.destroy();
+        this.focusToggle.destroy();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -112,6 +130,7 @@ class Session {
             this.settings.attach(connection, cancellable),
             this.media.attach(connection, cancellable),
             this.lyrics.attach(connection, cancellable),
+            this.timer.attach(connection, cancellable),
         ]);
         if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
@@ -122,7 +141,41 @@ class Session {
         this.settings.detach();
         this.media.detach();
         this.lyrics.detach();
+        this.timer.detach();
         this.devices.detach();
+    }
+
+    // Focus timer (focus timer spec, section 6)
+
+    /** Redraws the timer, and again when the shown second changes. */
+    private onTimer(): void {
+        this.stopTimerTick();
+        const snapshot = this.timer.snapshot();
+        const now = GLib.get_monotonic_time();
+        const { focusMinutes, breakMinutes } = this.settings.timer;
+        this.focusToggle.update(snapshot, now, focusMinutes, breakMinutes);
+        this.notches.forEach((n) => n.onTimer());
+        const delay = msUntilNextSecond(snapshot, now);
+        if (delay === null) return;
+        this.timerTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.timerTickId = 0;
+            this.onTimer();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    private stopTimerTick(): void {
+        if (this.timerTickId) GLib.source_remove(this.timerTickId);
+        this.timerTickId = 0;
+    }
+
+    private onTimerFinished(phase: string): void {
+        const { breakMinutes, sound } = this.settings.timer;
+        const alert = finishedAlert(phase, breakMinutes);
+        if (!alert) return;
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs);
+        if (sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
 
     // Notches
@@ -131,7 +184,7 @@ class Session {
     private buildNotches(): void {
         this.destroyNotches();
         const { monitors, primaryIndex } = Main.layoutManager;
-        const sources = { settings: this.settings, media: this.media, lyrics: this.lyrics };
+        const sources = { settings: this.settings, media: this.media, lyrics: this.lyrics, timer: this.timer };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;
             const area = { x: monitor.x, y: monitor.y, width: monitor.width };
@@ -153,6 +206,7 @@ class Session {
         }
         this.applyClockPosition();
         this.applyOsdSettings();
+        this.onTimer();
     }
 
     // OSD (multi-monitor spec, section 3)

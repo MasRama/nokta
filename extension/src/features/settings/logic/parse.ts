@@ -37,6 +37,14 @@ export interface Lyrics {
     enabled: boolean;
 }
 
+/** io.nokta.Settings1.Timer in camelCase. */
+export interface TimerSettings {
+    focusMinutes: number;
+    /** 0 means no break after focus. */
+    breakMinutes: number;
+    sound: boolean;
+}
+
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     height: 32,
     idleWidth: 180,
@@ -73,6 +81,12 @@ export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
 
+export const DEFAULT_TIMER: Readonly<TimerSettings> = {
+    focusMinutes: 25,
+    breakMinutes: 5,
+    sound: true,
+};
+
 const isColor = (value: unknown): boolean => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 
 const snakeCase = (key: string): string => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
@@ -98,3 +112,4 @@ function fromTable<T extends object>(raw: unknown, defaults: Readonly<T>): T {
 export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAULT_APPEARANCE);
 export const behaviorFrom = (raw: unknown): Behavior => fromTable(raw, DEFAULT_BEHAVIOR);
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
+export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);

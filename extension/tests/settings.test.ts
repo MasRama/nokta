@@ -7,7 +7,9 @@ import {
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
+    DEFAULT_TIMER,
     lyricsFrom,
+    timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
 test('appearance_from_full_table', () => {
@@ -87,4 +89,14 @@ test('defaults_are_not_shared', () => {
     const appearance = appearanceFrom({});
     appearance.height = 99;
     assert.equal(DEFAULT_APPEARANCE.height, 32);
+});
+
+test('timer_settings_from_table', () => {
+    assert.deepEqual(DEFAULT_TIMER, { focusMinutes: 25, breakMinutes: 5, sound: true });
+    assert.deepEqual(timerFrom({ focus_minutes: 50, break_minutes: 0, sound: false }), {
+        focusMinutes: 50,
+        breakMinutes: 0,
+        sound: false,
+    });
+    assert.deepEqual(timerFrom(undefined), DEFAULT_TIMER);
 });

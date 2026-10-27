@@ -128,3 +128,19 @@
 .nokta-osd-urgent .nokta-osd-detail {
     color: #ff453a;
 }
+
+.nokta-timer-box {
+    spacing: 6px;
+}
+
+.nokta-timer-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 3.5px;
+}
+
+.nokta-timer {
+    font-size: 13px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}

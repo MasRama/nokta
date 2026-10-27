@@ -5,11 +5,15 @@ import { Cover } from './cover.js';
 import { Equalizer } from './equalizer.js';
 import type { MediaSnapshot } from './logic/snapshot.js';
 
-/** The collapsed notch while a player is active: small cover, equalizer. */
+/**
+ * The collapsed notch while a player is active: small cover, equalizer. The
+ * equalizer's place can be lent to another actor (setAside).
+ */
 export class CollapsedMediaView {
     readonly actor: St.BoxLayout;
     private readonly cover = new Cover(22, 6);
     private readonly equalizer = new Equalizer();
+    private aside: Clutter.Actor | null = null;
 
     constructor() {
         this.actor = new St.BoxLayout({ style_class: 'nokta-collapsed', y_align: Clutter.ActorAlign.START });
@@ -22,15 +26,28 @@ export class CollapsedMediaView {
     update(snapshot: MediaSnapshot, accent: string): void {
         this.cover.set(snapshot.artPath);
         this.equalizer.setColor(accent);
-        this.equalizer.setPlaying(snapshot.playbackStatus === 'Playing');
+        this.equalizer.setPlaying(!this.aside && snapshot.playbackStatus === 'Playing');
     }
 
     /** Stops the equalizer while the view is not on screen. */
     setActive(active: boolean, snapshot: MediaSnapshot): void {
-        this.equalizer.setPlaying(active && snapshot.playbackStatus === 'Playing');
+        this.equalizer.setPlaying(!this.aside && active && snapshot.playbackStatus === 'Playing');
+    }
+
+    /**
+     * Shows `actor` in place of the equalizer, or the equalizer again with
+     * null. The caller keeps owning the actor; call setActive afterwards.
+     */
+    setAside(actor: Clutter.Actor | null): void {
+        if (this.aside) this.actor.remove_child(this.aside);
+        this.aside = actor;
+        if (actor) this.actor.add_child(actor);
+        this.equalizer.actor.visible = !actor;
+        if (actor) this.equalizer.setPlaying(false);
     }
 
     destroy(): void {
+        this.setAside(null);
         this.equalizer.destroy();
         this.actor.destroy();
     }

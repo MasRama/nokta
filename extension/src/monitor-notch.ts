@@ -1,13 +1,14 @@
 import Clutter from 'gi://Clutter';
 import type Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import type St from 'gi://St';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import type { SettingsClient } from './features/settings/index.js';
+import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { accentFor, withAlpha } from './shared/logic/color.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
@@ -26,6 +27,7 @@ export interface NotchSources {
     settings: SettingsClient;
     media: MediaClient;
     lyrics: LyricsClient;
+    timer: TimerClient;
 }
 
 /**
@@ -35,6 +37,11 @@ export interface NotchSources {
 export class MonitorNotch {
     private readonly notch: Notch;
     private readonly clock = new IdleClock();
+    /** The clock, or the timer while one is set. */
+    private readonly idle = new St.Widget({ layout_manager: new Clutter.BinLayout() });
+    private readonly idleTimer = new TimerLabel();
+    private readonly collapsedTimer = new TimerLabel();
+    private timerShown = false;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
     private readonly lyricLine = new LyricLine();
@@ -58,8 +65,13 @@ export class MonitorNotch {
         this.notch = new Notch(settings.appearance);
         this.expanded = new ExpandedMediaView(media);
         this.expanded.infoBox.add_child(this.lyricLine.actor);
+        this.clock.actor.x_expand = true;
+        this.clock.actor.y_expand = true;
+        this.idle.add_child(this.clock.actor);
+        this.idle.add_child(this.idleTimer.actor);
+        this.idleTimer.actor.hide();
         this.views = {
-            idle: this.clock.actor,
+            idle: this.idle,
             collapsed: this.collapsed.actor,
             expanded: this.expanded.actor,
             osd: this.osdView.actor,
@@ -94,6 +106,7 @@ export class MonitorNotch {
         this.clock.start();
         this.applyOsdColors();
         this.onMedia();
+        this.onTimer();
     }
 
     /** False while a fullscreen app on this monitor hides the notch. */
@@ -110,7 +123,11 @@ export class MonitorNotch {
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
+        this.collapsed.setAside(null);
+        this.idleTimer.destroy();
+        this.collapsedTimer.destroy();
         this.clock.destroy();
+        this.idle.destroy();
         this.lyricLine.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
@@ -130,6 +147,26 @@ export class MonitorNotch {
         this.machine.setAvailable(snapshot.available);
         this.tick();
         this.updateTimers();
+    }
+
+    /** Draws the time left; the session calls it on each change and each second. */
+    onTimer(): void {
+        if (this.destroyed) return;
+        const timer = this.sources.timer.snapshot();
+        const active = timer.state !== 'idle';
+        if (active) {
+            const text = formatRemaining(remainingAt(timer, GLib.get_monotonic_time()));
+            const color = phaseColor(timer.phase);
+            const paused = timer.state === 'paused';
+            this.idleTimer.update(text, color, paused);
+            this.collapsedTimer.update(text, color, paused);
+        }
+        if (active === this.timerShown) return;
+        this.timerShown = active;
+        this.idleTimer.actor.visible = active;
+        this.clock.actor.visible = !active;
+        this.collapsed.setAside(active ? this.collapsedTimer.actor : null);
+        this.collapsed.setActive(this.drawn === 'collapsed', this.sources.media.snapshot());
     }
 
     onLyrics(): void {
