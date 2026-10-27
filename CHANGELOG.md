@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.0](https://github.com/MasRama/nokta/compare/v0.1.0...v0.2.0) (2026-10-27)
+
+
+### Features
+
+* **contracts:** add io.nokta.Devices1 with the Alert signal ([9f17062](https://github.com/MasRama/nokta/commit/9f1706260a7df07c25a3fc4042646060a11fed79))
+* **devices:** send Bluetooth, charger and battery alerts ([4eca95e](https://github.com/MasRama/nokta/commit/4eca95e05b26541e0fbe0dc6770011f3a2a46f63))
+* **devices:** show device alerts in the notch ([ab06cbb](https://github.com/MasRama/nokta/commit/ab06cbb91d254c7cc13bf8680459b586b123663b))
+* **extension:** see-through notch, accent color and 24-hour clock ([e614732](https://github.com/MasRama/nokta/commit/e61473238ef3cfb6f28a77236204db27ab46de14))
+* **extension:** show a notch on every monitor ([8cb910b](https://github.com/MasRama/nokta/commit/8cb910b7a17e4da61dd116d981ed18388bc66661))
+* **osd:** show volume, brightness and Caps Lock in the notch ([2774e0d](https://github.com/MasRama/nokta/commit/2774e0d630d57c982fb49d0ee64559905265b75b))
+* **settings:** add a settings window ([2f5b05a](https://github.com/MasRama/nokta/commit/2f5b05a73eef6e7cf5c8ba332ef591c962f6f7fc))
+* **settings:** add the all_monitors setting ([11383af](https://github.com/MasRama/nokta/commit/11383afd7503dca96f053238e55acc64daf75e0e))
+* **settings:** add the device alert settings ([1f8e29b](https://github.com/MasRama/nokta/commit/1f8e29bde7ffa892e12b6d06f40aa12a9671e6f7))
+* **settings:** add the OSD and Caps Lock settings ([a01dd11](https://github.com/MasRama/nokta/commit/a01dd11e533c2f792610501b4fce2741aef9d137))
+* **settings:** add transparency, accent color and clock settings ([e770fa0](https://github.com/MasRama/nokta/commit/e770fa089c2afb4f4ebcf48d2ed40d91d339f19f))
+* **settings:** change settings over D-Bus ([92ef1e8](https://github.com/MasRama/nokta/commit/92ef1e809d22f4b986647217533b1b2fa3a1810a))
+
 ## 0.1.0 (2026-10-27)
 
 
