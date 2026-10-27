@@ -52,6 +52,8 @@ tools/devshell/device.sh percent N    # the fake battery level
 tools/devshell/device.sh full         # charged to 100 % on AC
 tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none reported
 tools/devshell/device.sh disconnect
+tools/devshell/prefs.sh               # open the settings window there
+tools/devshell/click.sh X Y           # click at a point of the full screenshot
 tools/devshell/stop.sh
 ```
 
@@ -158,6 +160,31 @@ Wait for each alert to close (`alert_duration_ms`, 3 s) before the next.
 - [ ] `device.sh full`: `Fully charged 100%`.
 - [ ] `device_alerts = false` while running: none of these show.
 - [ ] Real earbuds and a real charger *(real session)*.
+
+### Appearance and clock (settings window spec)
+
+- [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;
+      `"12h"` shows `11:..`; `"system"` follows GNOME.
+- [ ] `show_clock = false`: the idle notch is empty.
+- [ ] `background_opacity = 0.4`: body and ears see-through, the clock text
+      solid.
+- [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
+      progress bar while playing, orange OSD bar.
+
+### Settings window (settings window spec)
+
+- [ ] `prefs.sh`: two pages, Appearance and Behavior, with the values of
+      `config.toml`; no banner.
+- [ ] Change a switch and a number (`click.sh`; the first click may only
+      focus the window): `config.toml` changes with its comments kept, the
+      notch follows, and `noktad.log` shows one `set` per change even after
+      several quick clicks.
+- [ ] Edit `config.toml` by hand: the open window follows.
+- [ ] Break `config.toml`, then change a setting: a message says what is
+      wrong and the row goes back.
+- [ ] Reset all settings: a confirmation, then the default `config.toml`.
+- [ ] Stop the daemon: a banner says so and the rows are dimmed.
+- [ ] The Settings button in the Extensions app opens it *(real session)*.
 
 ### Interaction
 

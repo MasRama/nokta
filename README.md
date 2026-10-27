@@ -71,10 +71,18 @@ it. Open Just Perfection's settings and set **Clock Menu Position** to
 
 ## Settings
 
-Settings live in `~/.config/nokta/config.toml`. The daemon writes a commented
+Open the settings window with the Settings button of Nokta in the
+Extensions app, or with `gnome-extensions prefs nokta@nokta.io`. It has every
+setting below: colors and background transparency, sizes, the clock format
+(24-hour, 12-hour or GNOME's), lyrics, popups and device alerts. A change
+shows in the notch right away.
+
+The window saves to `~/.config/nokta/config.toml`, and you can edit that file
+by hand too; your comments are kept either way. The daemon writes a commented
 copy with the defaults on first start. Changes apply as soon as you save the
 file. If the file has a mistake, Nokta keeps the last working settings and
-logs the line and column of the error (`journalctl --user -u nokta`).
+logs the line and column of the error (`journalctl --user -u nokta`); the
+window then says what to fix before it saves anything.
 
 ### `[appearance]`
 

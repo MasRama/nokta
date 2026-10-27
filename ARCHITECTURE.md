@@ -48,6 +48,7 @@ core/               crate nokta-core, binary noktad
 extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
+  src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
@@ -71,6 +72,10 @@ docs/               design spec, plans, manual test checklist
   Feature logic never goes there.
 - A feature has the same name on both sides, for example
   `core/src/features/media` and `extension/src/features/media`.
+- The settings window (`prefs.ts`, `prefs/`) runs in GNOME's own preferences
+  process, not in the shell. The shell side never imports it, and it never
+  imports shell-only modules (`St`, `Clutter`, `Main`). Its rows come from
+  `features/settings/logic/schema.ts`, one line per setting.
 - In the extension, decisions live in `logic/` folders: plain TypeScript with
   no `gi://` imports, tested with Node. The files around them turn those
   decisions into actors.
@@ -99,7 +104,9 @@ docs/               design spec, plans, manual test checklist
 - **settings** reads `$XDG_CONFIG_HOME/nokta/config.toml`, writes a commented
   default on first run, watches the file and republishes on change. A broken
   file never stops the daemon: it logs the error with its location and keeps
-  the last valid config.
+  the last valid config. `Set` from the settings window checks the new value
+  with the same validation, edits the file with `toml_edit` (comments kept)
+  and writes it atomically; the watcher then republishes it.
 
 ## The D-Bus contract (v1)
 
@@ -112,7 +119,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerName`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance` (`a{sv}`), `Behavior` (`a{sv}`) |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
