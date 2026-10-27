@@ -13,6 +13,10 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    ignore:
+      # zbus 6 is a large breaking rewrite; moving to it is planned work.
+      - dependency-name: zbus
+        update-types: ["version-update:semver-major"]
     groups:
       cargo:
         patterns: ["*"]
@@ -26,6 +30,12 @@ updates:
     ignore:
       # The @girs typings are pinned to the GNOME 46 generation on purpose.
       - dependency-name: "@girs/*"
+      # Types must match the Node version CI runs (22).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # typescript-eslint has to support a new TypeScript major first.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       npm:
         patterns: ["*"]
