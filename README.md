@@ -207,6 +207,12 @@ without touching your session.
   `journalctl --user -u nokta`.
 - **No lyrics.** LRCLIB does not know every song, and only time-synced lyrics
   are shown. A song that was not found is not looked up again for 7 days.
+  Songs played on YouTube in a browser work too: Nokta drops "(Official
+  Music Video)" and the like and reads the artist from the title.
+- **Your own lyrics.** Put a synced `.lrc` file next to a local music file
+  with the same name (`Song.flac` and `Song.lrc`), or name it
+  `Artist - Title.lrc` and put it in `~/.local/share/nokta/lyrics/`. Your
+  files always win over LRCLIB and show the next time the song plays.
 - **The extension does not show up in `gnome-extensions list`.** Log out and
   back in after installing.
 

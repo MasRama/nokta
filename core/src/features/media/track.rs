@@ -34,6 +34,8 @@ pub struct Track {
     pub album: String,
     pub length_us: i64,
     pub art_url: Option<String>,
+    /// Where the song is (MPRIS `xesam:url`), when the player says.
+    pub url: Option<String>,
 }
 
 impl Track {

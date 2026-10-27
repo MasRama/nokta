@@ -54,6 +54,7 @@ impl Services {
             lyrics_enabled(config.clone()),
             Cache::new(paths.cache_dir.join("lyrics")),
             Arc::new(lrclib::Client::new(lrclib_base_url, USER_AGENT)),
+            paths.lyrics_dir.clone(),
         );
 
         let (commands, state, finished) = timer::service::spawn(phase_length(config.clone()));
@@ -114,7 +115,11 @@ mod tests {
     #[tokio::test]
     async fn start_without_a_bus() {
         let dir = tempfile::tempdir().unwrap();
-        let paths = Paths::new(&dir.path().join("config"), &dir.path().join("cache"));
+        let paths = Paths::new(
+            &dir.path().join("config"),
+            &dir.path().join("cache"),
+            &dir.path().join("data"),
+        );
         let (_media, media) = watch::channel(MediaState::default());
         let mut services = Services::start(&paths, media, "http://127.0.0.1:9");
 

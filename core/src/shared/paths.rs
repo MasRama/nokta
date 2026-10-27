@@ -31,14 +31,17 @@ impl System {
 pub struct Paths {
     pub config_file: PathBuf,
     pub cache_dir: PathBuf,
+    /// The user's own `.lrc` files.
+    pub lyrics_dir: PathBuf,
 }
 
 impl Paths {
-    /// The Linux layout under the given config and cache homes.
-    pub fn new(config_home: &Path, cache_home: &Path) -> Paths {
+    /// The Linux layout under the given config, cache and data homes.
+    pub fn new(config_home: &Path, cache_home: &Path, data_home: &Path) -> Paths {
         Paths {
             config_file: config_home.join("nokta").join("config.toml"),
             cache_dir: cache_home.join("nokta"),
+            lyrics_dir: data_home.join("nokta").join("lyrics"),
         }
     }
 
@@ -65,22 +68,26 @@ impl Paths {
                 Paths::new(
                     &pick("XDG_CONFIG_HOME", ".config")?,
                     &pick("XDG_CACHE_HOME", ".cache")?,
+                    &pick("XDG_DATA_HOME", ".local/share")?,
                 )
             }
             System::MacOs => {
                 let library = need("HOME")?.join("Library");
+                let support = library.join("Application Support").join("nokta");
                 Paths {
-                    config_file: library
-                        .join("Application Support")
-                        .join("nokta")
-                        .join("config.toml"),
+                    config_file: support.join("config.toml"),
                     cache_dir: library.join("Caches").join("nokta"),
+                    lyrics_dir: support.join("lyrics"),
                 }
             }
-            System::Windows => Paths {
-                config_file: need("APPDATA")?.join("nokta").join("config.toml"),
-                cache_dir: need("LOCALAPPDATA")?.join("nokta").join("cache"),
-            },
+            System::Windows => {
+                let roaming = need("APPDATA")?.join("nokta");
+                Paths {
+                    config_file: roaming.join("config.toml"),
+                    cache_dir: need("LOCALAPPDATA")?.join("nokta").join("cache"),
+                    lyrics_dir: roaming.join("lyrics"),
+                }
+            }
         })
     }
 }
@@ -98,9 +105,10 @@ mod tests {
 
     #[test]
     fn paths_use_nokta_subdirs() {
-        let paths = Paths::new(Path::new("/c"), Path::new("/k"));
+        let paths = Paths::new(Path::new("/c"), Path::new("/k"), Path::new("/d"));
         assert_eq!(paths.config_file, Path::new("/c/nokta/config.toml"));
         assert_eq!(paths.cache_dir, Path::new("/k/nokta"));
+        assert_eq!(paths.lyrics_dir, Path::new("/d/nokta/lyrics"));
     }
 
     #[test]
@@ -108,10 +116,14 @@ mod tests {
         let vars = [
             ("XDG_CONFIG_HOME", "/xc"),
             ("XDG_CACHE_HOME", "/xk"),
+            ("XDG_DATA_HOME", "/xd"),
             ("HOME", "/home/u"),
         ];
         let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
-        assert_eq!(paths, Paths::new(Path::new("/xc"), Path::new("/xk")));
+        assert_eq!(
+            paths,
+            Paths::new(Path::new("/xc"), Path::new("/xk"), Path::new("/xd"))
+        );
     }
 
     #[test]
@@ -121,7 +133,11 @@ mod tests {
         let home = Path::new("/home/u");
         assert_eq!(
             paths,
-            Paths::new(&home.join(".config"), &home.join(".cache"))
+            Paths::new(
+                &home.join(".config"),
+                &home.join(".cache"),
+                &home.join(".local").join("share")
+            )
         );
         assert!(Paths::for_system(System::Linux, env(&[])).is_err());
     }
@@ -139,6 +155,13 @@ mod tests {
                 .join("config.toml")
         );
         assert_eq!(paths.cache_dir, library.join("Caches").join("nokta"));
+        assert_eq!(
+            paths.lyrics_dir,
+            library
+                .join("Application Support")
+                .join("nokta")
+                .join("lyrics")
+        );
         assert!(Paths::for_system(System::MacOs, env(&[])).is_err());
     }
 
@@ -153,6 +176,7 @@ mod tests {
         let local = Path::new(vars[1].1);
         assert_eq!(paths.config_file, roaming.join("nokta").join("config.toml"));
         assert_eq!(paths.cache_dir, local.join("nokta").join("cache"));
+        assert_eq!(paths.lyrics_dir, roaming.join("nokta").join("lyrics"));
         assert!(Paths::for_system(System::Windows, env(&vars[..1])).is_err());
     }
 

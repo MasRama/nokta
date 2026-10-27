@@ -51,6 +51,7 @@ pub fn track_from_metadata(map: &HashMap<String, OwnedValue>) -> Track {
         album: string("xesam:album").unwrap_or_default(),
         length_us: get("mpris:length").and_then(as_i64).unwrap_or(0).max(0),
         art_url: string("mpris:artUrl").filter(|s| !s.is_empty()),
+        url: string("xesam:url").filter(|s| !s.is_empty()),
     }
 }
 
@@ -121,6 +122,7 @@ mod tests {
             ("xesam:album", Value::from("Random Access Memories")),
             ("mpris:length", Value::from(369_000_000i64)),
             ("mpris:artUrl", Value::from("file:///tmp/cover.png")),
+            ("xesam:url", Value::from("file:///music/get-lucky.flac")),
         ]);
         assert_eq!(
             track_from_metadata(&map),
@@ -131,6 +133,7 @@ mod tests {
                 album: "Random Access Memories".into(),
                 length_us: 369_000_000,
                 art_url: Some("file:///tmp/cover.png".into()),
+                url: Some("file:///music/get-lucky.flac".into()),
             }
         );
     }

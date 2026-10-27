@@ -1,6 +1,8 @@
-//! Keeps `LyricsState` in step with the active track: cache first, then
-//! LRCLIB, and never publishes a result for a track that is no longer playing.
+//! Keeps `LyricsState` in step with the active track: the user's own `.lrc`
+//! file first, then the cache, then LRCLIB, and never publishes a result for
+//! a track that is no longer playing.
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -9,6 +11,7 @@ use tokio::sync::{mpsc, watch};
 
 use super::cache::Cache;
 use super::key::TrackKey;
+use super::local;
 use super::lrclib::{Client, FetchError, Query};
 use super::{Lookup, LyricsState, Status};
 use crate::features::media::MediaState;
@@ -29,15 +32,17 @@ pub fn spawn(
     enabled: watch::Receiver<bool>,
     cache: Cache,
     source: Arc<dyn LyricsSource>,
+    local_dir: PathBuf,
 ) -> watch::Receiver<LyricsState> {
     let (tx, rx) = watch::channel(LyricsState::default());
-    tokio::spawn(run(media, enabled, Arc::new(cache), source, tx));
+    tokio::spawn(run(media, enabled, Arc::new(cache), source, local_dir, tx));
     rx
 }
 
 struct Request {
     key: TrackKey,
     query: Query,
+    url: Option<String>,
 }
 
 fn request_for(media: &MediaState) -> Option<Request> {
@@ -58,7 +63,11 @@ fn request_for(media: &MediaState) -> Option<Request> {
         album: track.album.clone(),
         duration_s: u64::try_from((track.length_us + 500_000) / 1_000_000).unwrap_or(0),
     };
-    Some(Request { key, query })
+    Some(Request {
+        key,
+        query,
+        url: track.url.clone(),
+    })
 }
 
 async fn run(
@@ -66,6 +75,7 @@ async fn run(
     mut enabled: watch::Receiver<bool>,
     cache: Arc<Cache>,
     source: Arc<dyn LyricsSource>,
+    local_dir: PathBuf,
     tx: watch::Sender<LyricsState>,
 ) {
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<(TrackKey, LyricsState)>();
@@ -84,7 +94,7 @@ async fn run(
             current = wanted.as_ref().map(|r| r.key.clone());
             match wanted {
                 None => publish(&tx, LyricsState::default()),
-                Some(request) => start(request, &cache, &source, &tx, &done_tx),
+                Some(request) => start(request, &local_dir, &cache, &source, &tx, &done_tx),
             }
         }
         tokio::select! {
@@ -101,11 +111,23 @@ async fn run(
 
 fn start(
     request: Request,
+    local_dir: &Path,
     cache: &Arc<Cache>,
     source: &Arc<dyn LyricsSource>,
     tx: &watch::Sender<LyricsState>,
     done: &mpsc::UnboundedSender<(TrackKey, LyricsState)>,
 ) {
+    let q = &request.query;
+    if let Some(lines) = local::find(local_dir, request.url.as_deref(), &q.artist, &q.title) {
+        publish(
+            tx,
+            LyricsState {
+                status: Status::Synced,
+                lines,
+            },
+        );
+        return;
+    }
     if let Some(hit) = cache.get(&request.key, now_unix()) {
         publish(tx, hit.into());
         return;
@@ -119,7 +141,7 @@ fn start(
     );
     let (cache, source, done) = (cache.clone(), source.clone(), done.clone());
     tokio::spawn(async move {
-        let Request { key, query } = request;
+        let Request { key, query, .. } = request;
         let state = match source.lookup(&query).await {
             Ok(lookup) => {
                 let (cache, key, to_store) = (cache.clone(), key.clone(), lookup.clone());
@@ -209,6 +231,7 @@ mod tests {
             enabled_rx,
             Cache::new(dir.path().to_owned()),
             source,
+            dir.path().join("lyrics"),
         );
         Harness {
             media,
@@ -229,7 +252,7 @@ mod tests {
                 artists: vec!["Artist".into(), "Guest".into()],
                 album: "Album".into(),
                 length_us: 200_000_000,
-                art_url: None,
+                ..Track::default()
             },
             ..MediaState::default()
         }
@@ -276,6 +299,21 @@ mod tests {
                 .unwrap()
                 .clone()
         }
+    }
+
+    #[tokio::test]
+    async fn a_local_lrc_file_wins_over_the_cache_and_the_network() {
+        let mut h = start(true);
+        h.cache
+            .put(&key("A"), &synced("cached"), now_unix())
+            .unwrap();
+        let dir = h._dir.path().join("lyrics");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("Artist - A.lrc"), "[00:03.00]mine\n").unwrap();
+        h.media.send_replace(playing("A"));
+        let s = h.wait("local lyrics", |s| s.status == Status::Synced).await;
+        assert_eq!(s.lines[0].text, "mine");
+        h.no_request().await;
     }
 
     #[tokio::test]

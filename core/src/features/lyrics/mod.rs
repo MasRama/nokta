@@ -5,6 +5,7 @@ mod clean;
 #[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod key;
+pub mod local;
 pub mod lrc;
 pub mod lrclib;
 pub mod service;

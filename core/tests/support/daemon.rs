@@ -17,7 +17,11 @@ pub struct Daemon {
 
 impl Daemon {
     pub fn paths(&self) -> Paths {
-        Paths::new(self.config_home.path(), self.cache_home.path())
+        Paths::new(
+            self.config_home.path(),
+            self.cache_home.path(),
+            &self.config_home.path().join("data"),
+        )
     }
 
     pub fn options(bus: &TestBus, lrclib: &str) -> RunOptions {
@@ -39,7 +43,11 @@ impl Daemon {
             std::fs::create_dir_all(config_home.path().join("nokta")).unwrap();
             std::fs::write(config_home.path().join("nokta/config.toml"), text).unwrap();
         }
-        let paths = Paths::new(config_home.path(), cache_home.path());
+        let paths = Paths::new(
+            config_home.path(),
+            cache_home.path(),
+            &config_home.path().join("data"),
+        );
         let task = tokio::spawn(app::run(paths, Daemon::options(bus, lrclib)));
         wait_for_name(bus).await;
         Daemon {

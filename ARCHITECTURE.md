@@ -94,9 +94,12 @@ docs/               design spec, plans, manual test checklist
   that most recently paused, else none. Because MPRIS does not signal
   position changes, it publishes a position snapshot (position, monotonic
   timestamp, rate) and the extension extrapolates from it.
-- **lyrics** looks up synced lyrics on LRCLIB when the track changes, parses
-  the LRC text and caches the result per track. "Not found" is cached for 7
-  days, errors are not cached.
+- **lyrics** looks up synced lyrics when the track changes: the user's own
+  `.lrc` file (next to a local song, or `Artist - Title.lrc` in the lyrics
+  folder), then the cache, then LRCLIB. `clean.rs` turns browser and YouTube
+  titles into up to three candidates, and a search result counts only when
+  its title and artist match. LRCLIB results are cached per track; "not
+  found" for 7 days, errors not at all.
 - **devices** follows UPower and BlueZ on the system bus and emits an
   `Alert` signal when a Bluetooth audio device connects or disconnects, the
   charger is plugged or unplugged, the battery gets low (20 %) or critical
