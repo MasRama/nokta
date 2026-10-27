@@ -1,0 +1,9 @@
+/*
+ * Sizes, radii and colors that have a config key are set from code
+ * (io.nokta.Settings1.Appearance); only typography lives here.
+ */
+.nokta-clock {
+    font-size: 13px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}

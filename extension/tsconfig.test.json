@@ -7,5 +7,5 @@
     "rootDir": ".",
     "outDir": ".test-build"
   },
-  "include": ["src/shared/logic/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/**/logic/**/*.ts", "tests/**/*.ts"]
 }
