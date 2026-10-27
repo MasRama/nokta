@@ -1,6 +1,7 @@
 import type Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { replaceMethod as replace } from '../../shared/patch.js';
 import type { Restore } from '../../shared/topbar.js';
 import { fromLevels, type LevelRequest, type OsdLevel } from './logic/levels.js';
 
@@ -42,26 +43,8 @@ interface OsdWindowManager {
     hideAll: () => void;
 }
 
-/**
- * Sets `name` on the object itself, shadowing the class method. The undo
- * only removes Nokta's function: if something replaced it since, it is left
- * alone.
- */
-function replaceMethod(target: object, name: string, replacement: unknown): Restore {
-    const methods = target as Record<string, unknown>;
-    const hadOwn = Object.hasOwn(methods, name);
-    const original = methods[name];
-    methods[name] = replacement;
-    return () => {
-        if (methods[name] !== replacement) {
-            console.warn(`Nokta: osdWindowManager.${name} was replaced by someone else, leaving it alone`);
-        } else if (hadOwn) {
-            methods[name] = original;
-        } else {
-            delete methods[name];
-        }
-    };
-}
+const replaceMethod = (target: object, name: string, replacement: unknown): Restore =>
+    replace(target, 'osdWindowManager', name, replacement);
 
 /** Sends GNOME's OSD requests to `handlers` until the returned function runs. */
 export function takeOverOsd(handlers: OsdHandlers): Restore {
