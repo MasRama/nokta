@@ -33,7 +33,7 @@ nothing plays and about 10 MB of memory.
 
 | Platform | Status |
 |---|---|
-| Linux, GNOME 46 | Works |
+| Linux, GNOME 46 to 51 | Works (47 is untested: no supported distribution ships it) |
 | Linux, KDE Plasma, Hyprland, Sway | Planned |
 | Windows | Planned |
 | macOS | Planned |
@@ -43,8 +43,9 @@ desktop that draws the notch. Today both are Linux only.
 
 ## Requirements
 
-- GNOME Shell 46 (Ubuntu 24.04, Zorin OS 18, Fedora 40 and others). Other
-  versions are not supported yet.
+- GNOME Shell 46 to 51: Ubuntu 24.04 and 26.04, Zorin OS 18, Debian 13,
+  Fedora 43 to 45, RHEL and AlmaLinux 10, Arch and others. GNOME 45 and
+  older are not supported.
 - An x86_64 machine for the prebuilt daemon. On other architectures,
   [build from source](#build-from-source).
 - A music player that supports MPRIS. Spotify, Rhythmbox, Lollypop, VLC,

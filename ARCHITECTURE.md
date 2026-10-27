@@ -166,9 +166,14 @@ Changing anything in this table needs an issue and agreement first.
 | Images | `image` (accent color from the cover) |
 | Logging | `tracing` to stderr, read by journald |
 | Extension language | TypeScript compiled by `tsc` to readable ES modules, no bundler or minifier |
-| Extension types | `@girs/*` packages for GNOME 46 |
-| Supported shell | GNOME Shell 46 only |
+| Extension types | `@girs/*` packages for GNOME 46, the oldest supported |
+| Supported shell | GNOME Shell 46 to 51 |
 | License | GPL-3.0-or-later |
 
-A GNOME version is added to `shell-version` in `metadata.json` only after it
-has been tested on that version.
+A GNOME version is added to `shell-version` in `metadata.json` only after the
+smoke test passes on it in CI (`.github/workflows/gnome.yml`).
+
+Where GNOME versions differ, `extension/src/shared/compat.ts` and the OSD
+hook check for the feature (a property or a method), never the version
+number. Code is written against the GNOME 46 typings; anything newer goes
+through such a check.

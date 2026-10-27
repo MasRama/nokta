@@ -1,12 +1,13 @@
 # Testing Nokta
 
-Nokta has three layers of tests. The first two run in CI; the third is done by
+Nokta has four layers of tests. The first three run in CI; the last is done by
 hand before a release and after any change to the extension's UI.
 
 | Layer | Command | What it covers |
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -14,7 +15,7 @@ CI.
 
 ## The devshell
 
-`tools/devshell/run.sh` starts a headless GNOME Shell 46 with Nokta in it,
+`tools/devshell/run.sh` starts the installed GNOME Shell headless with Nokta in it,
 fully isolated from your session:
 
 - its own session bus (a bare `dbus-daemon` that cannot start system
@@ -54,6 +55,7 @@ tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none 
 tools/devshell/device.sh disconnect
 tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
+tools/devshell/smoke.sh               # start, check, stop (what CI runs per GNOME version)
 tools/devshell/stop.sh
 ```
 
