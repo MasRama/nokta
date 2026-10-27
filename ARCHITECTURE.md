@@ -111,8 +111,12 @@ docs/               design spec, plans, manual test checklist
 - **timer** runs the focus timer: focus, then a break of its own, then
   idle. A pure `Timer` takes `now` in every method; the task around it
   sleeps until the deadline and emits `Finished`. Lengths come from the
-  `[timer]` table when a phase starts. It lives in the daemon because GNOME
-  disables extensions on the lock screen.
+  `[timer]` table when a phase starts. The `Timer` also counts finished
+  focus sessions and makes every few breaks the long one. It lives in the
+  daemon because GNOME disables extensions on the lock screen. The
+  extension does the GNOME-only parts of focus mode: it turns notification
+  banners off during focus (and back on), and binds the shortcut through
+  its one GSettings key, which it copies from `config.toml`.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -154,7 +158,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
-| `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
+| `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
