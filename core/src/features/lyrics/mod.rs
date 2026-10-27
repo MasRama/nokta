@@ -1,6 +1,7 @@
 //! Feature `lyrics`: synced lyrics for the current track.
 
 pub mod cache;
+#[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod key;
 pub mod lrc;

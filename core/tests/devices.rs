@@ -1,6 +1,8 @@
 //! Device alerts end to end: a fake UPower and BlueZ on the bus noktad uses
 //! as its system bus, alerts read as `io.nokta.Devices1.Alert` signals.
 
+#![cfg(target_os = "linux")]
+
 mod support;
 
 use std::time::Duration;

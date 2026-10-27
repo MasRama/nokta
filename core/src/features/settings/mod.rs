@@ -1,6 +1,7 @@
 //! Feature `settings`: config.toml loading, validation, hot reload.
 
 mod config;
+#[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod edit;
 pub mod service;

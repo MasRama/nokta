@@ -1,5 +1,7 @@
 //! The daemon's introspection must match the published contracts exactly.
 
+#![cfg(target_os = "linux")]
+
 mod support;
 
 use std::collections::BTreeSet;

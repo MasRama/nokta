@@ -22,7 +22,6 @@ hex = "0.4.3"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
 notify = "8.2.1"
 reqwest = { version = "0.13", default-features = false, features = ["json", "query", "rustls", "stream", "http2"] }
-rustix = { version = "1.1.6", features = ["time"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_ignored = "0.1.14"
 serde_json = "1.0.154"
@@ -34,7 +33,13 @@ toml_edit = "0.25.17"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
+
+# D-Bus serves Nokta and reads the players and devices on Linux only.
+[target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5", default-features = false, features = ["tokio"] }
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.6", features = ["time"] }
 
 [dev-dependencies]
 quick-xml = "0.42.0"

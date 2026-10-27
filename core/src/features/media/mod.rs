@@ -2,12 +2,16 @@
 //! state the daemon publishes on `io.nokta.Media1`.
 
 pub mod art;
+#[cfg(target_os = "linux")]
 pub mod control;
+#[cfg(target_os = "linux")]
 pub mod dbus;
+#[cfg(target_os = "linux")]
 mod mpris;
 pub mod select;
 mod state;
 mod track;
+#[cfg(target_os = "linux")]
 pub mod watcher;
 
 pub use select::Selector;

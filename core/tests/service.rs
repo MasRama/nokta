@@ -1,5 +1,7 @@
 //! End-to-end tests of noktad on a private session bus.
 
+#![cfg(target_os = "linux")]
+
 mod support;
 
 use std::collections::HashMap;

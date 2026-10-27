@@ -3,6 +3,8 @@
 //!
 //! A test binary of its own because it changes the process environment.
 
+#![cfg(target_os = "linux")]
+
 mod support;
 
 use std::time::Duration;

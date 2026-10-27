@@ -1,0 +1,101 @@
+//! Serves Nokta on the session bus: the media players and device alerts
+//! from D-Bus, and the portable services.
+
+use anyhow::Context;
+use tokio::signal::unix::{signal, SignalKind};
+use zbus::fdo::{DBusProxy, RequestNameFlags, RequestNameReply};
+use zbus::names::BusName;
+use zbus::Connection;
+
+use super::{nokta_iface, RunOptions, Services, BUS_NAME, USER_AGENT};
+use crate::features::devices;
+use crate::features::lyrics;
+use crate::features::media::{self, art::ArtCache};
+use crate::features::settings;
+use crate::features::timer;
+use crate::shared::http;
+use crate::shared::paths::Paths;
+
+pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
+    let conn = connect(options.bus_address.as_deref()).await?;
+    let dbus = DBusProxy::new(&conn).await?;
+    if dbus.name_has_owner(BusName::try_from(BUS_NAME)?).await? {
+        tracing::info!("another noktad is running");
+        return Ok(());
+    }
+
+    let http = http::client(|b| b.user_agent(USER_AGENT));
+    let (media_state, control) =
+        media::watcher::spawn(conn.clone(), ArtCache::new(paths.cache_dir.clone(), http));
+    // Keeps watching config.toml until the daemon stops.
+    let services = Services::start(&paths, media_state.clone(), &options.lrclib_base_url);
+
+    let system = match connect_system(options.system_bus_address.as_deref()).await {
+        Ok(system) => Some(system),
+        Err(err) => {
+            tracing::warn!("no device alerts: {err:#}");
+            None
+        }
+    };
+    let alerts = devices::watcher::spawn(system);
+
+    // Objects first, name last: a client activated by the name never sees a
+    // half-served daemon.
+    conn.object_server()
+        .at(nokta_iface::PATH, nokta_iface::NoktaInterface)
+        .await?;
+    media::dbus::serve(&conn, media_state, control).await?;
+    lyrics::dbus::serve(&conn, services.lyrics.clone()).await?;
+    settings::dbus::serve(&conn, services.config.clone(), services.config_file.clone()).await?;
+    devices::dbus::serve(&conn, alerts).await?;
+    let super::Timer {
+        commands,
+        state,
+        finished,
+    } = services.timer;
+    timer::dbus::serve(&conn, commands, state, finished).await?;
+
+    match conn
+        .request_name_with_flags(BUS_NAME, RequestNameFlags::DoNotQueue.into())
+        .await
+    {
+        Ok(RequestNameReply::PrimaryOwner | RequestNameReply::AlreadyOwner) => {}
+        Ok(_) | Err(zbus::Error::NameTaken) => {
+            tracing::info!("another noktad is running");
+            return Ok(());
+        }
+        Err(err) => return Err(err).context("cannot request the bus name"),
+    }
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), "noktad is running");
+
+    let mut term = signal(SignalKind::terminate())?;
+    let mut int = signal(SignalKind::interrupt())?;
+    tokio::select! {
+        _ = term.recv() => {}
+        _ = int.recv() => {}
+    }
+    tracing::info!("noktad is stopping");
+    Ok(())
+}
+
+async fn connect(address: Option<&str>) -> anyhow::Result<Connection> {
+    let builder = match address {
+        Some(address) => zbus::connection::Builder::address(address)?,
+        None => zbus::connection::Builder::session()?,
+    };
+    builder
+        .build()
+        .await
+        .context("cannot connect to the session bus")
+}
+
+async fn connect_system(address: Option<&str>) -> anyhow::Result<Connection> {
+    let builder = match address {
+        Some(address) => zbus::connection::Builder::address(address)?,
+        None => zbus::connection::Builder::system()?,
+    };
+    builder
+        .build()
+        .await
+        .context("cannot connect to the system bus")
+}
