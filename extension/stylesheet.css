@@ -88,3 +88,32 @@
 .nokta-play-icon {
     icon-size: 20px;
 }
+
+.nokta-osd {
+    padding: 0 14px;
+    spacing: 10px;
+}
+
+.nokta-osd-icon {
+    icon-size: 16px;
+}
+
+.nokta-osd-track {
+    height: 4px;
+    border-radius: 2px;
+}
+
+.nokta-osd-fill {
+    border-radius: 2px;
+}
+
+.nokta-osd-text {
+    font-size: 12px;
+    font-feature-settings: "tnum";
+    min-width: 36px;
+    text-align: right;
+}
+
+.nokta-osd-text-only {
+    text-align: left;
+}
