@@ -31,6 +31,7 @@ pub struct Appearance {
     pub foreground: String,
     pub use_album_accent: bool,
     pub animation_speed: f64,
+    pub osd_width: u32,
 }
 
 impl Default for Appearance {
@@ -47,6 +48,7 @@ impl Default for Appearance {
             foreground: "#ffffff".into(),
             use_album_accent: true,
             animation_speed: 1.0,
+            osd_width: 300,
         }
     }
 }
@@ -58,6 +60,9 @@ pub struct Behavior {
     pub close_delay_ms: u32,
     pub move_clock: bool,
     pub show_lyrics: bool,
+    pub replace_osd: bool,
+    pub osd_duration_ms: u32,
+    pub show_caps_lock: bool,
 }
 
 impl Default for Behavior {
@@ -67,6 +72,9 @@ impl Default for Behavior {
             close_delay_ms: 300,
             move_clock: true,
             show_lyrics: true,
+            replace_osd: true,
+            osd_duration_ms: 1500,
+            show_caps_lock: true,
         }
     }
 }
@@ -149,6 +157,7 @@ impl Config {
             ("appearance.idle_width", a.idle_width),
             ("appearance.playing_width", a.playing_width),
             ("appearance.expanded_width", a.expanded_width),
+            ("appearance.osd_width", a.osd_width),
         ] {
             check_range(key, width, a.height, 2000)?;
         }
@@ -170,6 +179,7 @@ impl Config {
         }
         check_range("behavior.open_delay_ms", b.open_delay_ms, 0, 5000)?;
         check_range("behavior.close_delay_ms", b.close_delay_ms, 0, 5000)?;
+        check_range("behavior.osd_duration_ms", b.osd_duration_ms, 200, 10000)?;
         Ok(())
     }
 }
@@ -215,6 +225,7 @@ impl Appearance {
             ("foreground".into(), string_value(&self.foreground)),
             ("use_album_accent".into(), self.use_album_accent.into()),
             ("animation_speed".into(), self.animation_speed.into()),
+            ("osd_width".into(), self.osd_width.into()),
         ])
     }
 }
@@ -226,6 +237,9 @@ impl Behavior {
             ("close_delay_ms".into(), self.close_delay_ms.into()),
             ("move_clock".into(), self.move_clock.into()),
             ("show_lyrics".into(), self.show_lyrics.into()),
+            ("replace_osd".into(), self.replace_osd.into()),
+            ("osd_duration_ms".into(), self.osd_duration_ms.into()),
+            ("show_caps_lock".into(), self.show_caps_lock.into()),
         ])
     }
 }

@@ -81,6 +81,7 @@ logs the line and column of the error (`journalctl --user -u nokta`).
 | `foreground` | `"#ffffff"` | Text and icon color |
 | `use_album_accent` | `true` | Color the seek bar and the equalizer with the cover's color |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
+| `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 
 ### `[behavior]`
 
@@ -90,6 +91,9 @@ logs the line and column of the error (`journalctl --user -u nokta`).
 | `close_delay_ms` | `300` | How long the notch stays open after the pointer leaves |
 | `move_clock` | `true` | Move the GNOME clock to the right side of the top bar |
 | `show_lyrics` | `true` | Show the current lyric line in the open notch |
+| `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
+| `osd_duration_ms` | `1500` | How long the notch shows the volume or brightness after the last change |
+| `show_caps_lock` | `true` | Show a message in the notch when Caps Lock turns on or off |
 
 ### `[lyrics]`
 

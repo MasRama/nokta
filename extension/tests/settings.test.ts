@@ -21,6 +21,7 @@ test('appearance_from_full_table', () => {
         foreground: '#eeeeee',
         use_album_accent: false,
         animation_speed: 1.5,
+        osd_width: 320,
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -34,6 +35,7 @@ test('appearance_from_full_table', () => {
         foreground: '#eeeeee',
         useAlbumAccent: false,
         animationSpeed: 1.5,
+        osdWidth: 320,
     });
 });
 
@@ -47,6 +49,15 @@ test('missing_or_wrong_keys_keep_defaults', () => {
 test('behavior_from_table_ignores_unknown_keys', () => {
     const behavior = behaviorFrom({ open_delay_ms: 50, move_clock: false, future_key: 1 });
     assert.deepEqual(behavior, { ...DEFAULT_BEHAVIOR, openDelayMs: 50, moveClock: false });
+});
+
+test('behavior_reads_the_osd_keys', () => {
+    assert.equal(DEFAULT_BEHAVIOR.replaceOsd, true);
+    assert.equal(DEFAULT_BEHAVIOR.osdDurationMs, 1500);
+    assert.equal(DEFAULT_BEHAVIOR.showCapsLock, true);
+    assert.equal(DEFAULT_APPEARANCE.osdWidth, 300);
+    const behavior = behaviorFrom({ replace_osd: false, osd_duration_ms: 900, show_caps_lock: false });
+    assert.deepEqual(behavior, { ...DEFAULT_BEHAVIOR, replaceOsd: false, osdDurationMs: 900, showCapsLock: false });
 });
 
 test('defaults_are_not_shared', () => {

@@ -22,10 +22,14 @@ fn defaults_match_spec() {
     assert_eq!(a.foreground, "#ffffff");
     assert!(a.use_album_accent);
     assert_eq!(a.animation_speed, 1.0);
+    assert_eq!(a.osd_width, 300);
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
     assert!(b.move_clock);
     assert!(b.show_lyrics);
+    assert!(b.replace_osd);
+    assert_eq!(b.osd_duration_ms, 1500);
+    assert!(b.show_caps_lock);
     assert!(c.lyrics.enabled);
 }
 
@@ -53,6 +57,14 @@ fn invalid_color_is_rejected() {
 fn out_of_range_height_is_rejected() {
     let err = parse("[appearance]\nheight = 8\n").unwrap_err();
     assert!(err.message.contains("height"), "{err}");
+}
+
+#[test]
+fn out_of_range_osd_values_are_rejected() {
+    let err = parse("[appearance]\nosd_width = 10\n").unwrap_err();
+    assert!(err.message.contains("osd_width"), "{err}");
+    let err = parse("[behavior]\nosd_duration_ms = 50\n").unwrap_err();
+    assert!(err.message.contains("osd_duration_ms"), "{err}");
 }
 
 #[test]
@@ -136,6 +148,7 @@ fn appearance_to_dbus_has_all_keys() {
             "foreground",
             "height",
             "idle_width",
+            "osd_width",
             "playing_width",
             "use_album_accent",
         ]
@@ -155,6 +168,9 @@ fn behavior_to_dbus_has_all_keys() {
             "close_delay_ms",
             "move_clock",
             "open_delay_ms",
+            "osd_duration_ms",
+            "replace_osd",
+            "show_caps_lock",
             "show_lyrics"
         ]
     );

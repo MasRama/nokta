@@ -13,12 +13,16 @@ background = "#000000"
 foreground = "#ffffff"
 use_album_accent = true  # tint progress bar and equalizer with the cover color
 animation_speed = 1.0    # 0.5 = twice as fast, 2.0 = twice as slow
+osd_width = 300          # width while the notch shows volume, brightness or Caps Lock
 
 [behavior]
 open_delay_ms = 120      # hover time before the notch opens
 close_delay_ms = 300     # time after the pointer leaves before it closes
 move_clock = true        # move the GNOME clock to the right side of the top bar
 show_lyrics = true
+replace_osd = true       # show volume, brightness and other OSD in the notch instead of GNOME's popup
+osd_duration_ms = 1500   # how long the notch shows the OSD after the last change
+show_caps_lock = true    # show a message in the notch when Caps Lock turns on or off
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)

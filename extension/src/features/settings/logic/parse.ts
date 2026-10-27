@@ -11,6 +11,7 @@ export interface Appearance {
     foreground: string;
     useAlbumAccent: boolean;
     animationSpeed: number;
+    osdWidth: number;
 }
 
 export interface Behavior {
@@ -18,6 +19,9 @@ export interface Behavior {
     closeDelayMs: number;
     moveClock: boolean;
     showLyrics: boolean;
+    replaceOsd: boolean;
+    osdDurationMs: number;
+    showCapsLock: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
@@ -32,6 +36,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     foreground: '#ffffff',
     useAlbumAccent: true,
     animationSpeed: 1.0,
+    osdWidth: 300,
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
@@ -39,6 +44,9 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     closeDelayMs: 300,
     moveClock: true,
     showLyrics: true,
+    replaceOsd: true,
+    osdDurationMs: 1500,
+    showCapsLock: true,
 };
 
 const snakeCase = (key: string): string => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
