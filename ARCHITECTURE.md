@@ -49,7 +49,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
-  src/features/     media, lyrics, settings, osd, devices, timer
+  src/features/     media, lyrics, settings, osd, devices, timer, privacy
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -69,7 +69,9 @@ docs/               design spec, plans, manual test checklist
   equalizer would be.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
-  the daemon only publishes its settings.
+  the daemon only publishes its settings. `privacy` (the camera,
+  microphone and screen dots) is the same: it follows the indicators GNOME
+  Shell already shows in the top bar.
 - `shared/` holds infrastructure that knows nothing about music or lyrics.
   Feature logic never goes there.
 - A feature has the same name on both sides, for example
@@ -188,6 +190,8 @@ How both sides stay honest:
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, and one timeout per second while a
   focus timer runs. Nothing runs while paused.
+- Privacy dots follow the `visible` property of GNOME's own camera,
+  microphone and screen sharing indicators; no polling, no extra D-Bus.
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source and puts the clock back.
 
