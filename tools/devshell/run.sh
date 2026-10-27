@@ -5,12 +5,13 @@
 #
 # Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--monitors=N]
 #   --no-daemon   do not start noktad (the notch must stay idle)
+#                 nor the fake UPower and BlueZ (fake-devices.js)
 #   --no-player   do not start the fake MPRIS player
 #   --monitors=N  N virtual 1920x1080 monitors side by side (default 1)
 #
 # Needs: target/{release,debug}/noktad and the packed extension
-# (cd extension && npm run pack). Then use shot.sh, hover.sh, player.sh
-# and stop.sh.
+# (cd extension && npm run pack). Then use shot.sh, hover.sh, player.sh,
+# osd.sh, device.sh and stop.sh.
 set -eu
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -137,7 +138,12 @@ if [ "$START_DAEMON" = 1 ]; then
     until python3 -c "import socket, sys; socket.create_connection(('127.0.0.1', $PORT), 1)" 2>/dev/null; do
         sleep 0.1
     done
-    NOKTA_LRCLIB_URL="http://127.0.0.1:$PORT" "$NOKTAD" > "$STATE/noktad.log" 2>&1 &
+    # noktad's system bus is this bus, where fake-devices.js plays UPower and BlueZ.
+    gjs -m "$HERE/fake-devices.js" > "$STATE/devices.log" 2>&1 &
+    PIDS="$PIDS $!"
+    wait_name io.nokta.devshell.FakeDevices
+    DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" NOKTA_LRCLIB_URL="http://127.0.0.1:$PORT" \
+        "$NOKTAD" > "$STATE/noktad.log" 2>&1 &
     PIDS="$PIDS $!"
     echo "$!" > "$STATE/noktad.pid"
     wait_name io.nokta.Nokta
