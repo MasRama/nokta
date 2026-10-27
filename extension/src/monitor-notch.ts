@@ -43,6 +43,8 @@ export class MonitorNotch {
     private readonly osdTimer: OsdTimer;
     private readonly views: Record<Drawn, St.Widget>;
     private readonly hoverId: number;
+    private readonly destroyId: number;
+    private destroyed = false;
     private drawn: Drawn = 'idle';
     private tickId = 0;
     private lyricTimerId = 0;
@@ -81,6 +83,9 @@ export class MonitorNotch {
 
         Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: true });
         this.hoverId = this.notch.actor.connect('notify::hover', () => this.machine.pointer(this.notch.actor.hover));
+        // GNOME 50 and later destroy the notch themselves when the shell
+        // shuts down, while the clients may still report changes.
+        this.destroyId = this.notch.actor.connect('destroy', () => this.destroy());
         this.notch.setMonitor(area);
         this.applyViewSizes();
         const [width, height] = this.sizeFor('idle');
@@ -93,14 +98,17 @@ export class MonitorNotch {
 
     /** False while a fullscreen app on this monitor hides the notch. */
     get visible(): boolean {
-        return this.notch.actor.visible;
+        return !this.destroyed && this.notch.actor.visible;
     }
 
     destroy(): void {
+        if (this.destroyed) return;
+        this.destroyed = true;
         this.machine.destroy();
         this.osdTimer.destroy();
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
+        this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
         this.clock.destroy();
         this.lyricLine.destroy();
@@ -111,6 +119,7 @@ export class MonitorNotch {
     }
 
     onMedia(): void {
+        if (this.destroyed) return;
         const snapshot = this.sources.media.snapshot();
         const { useAlbumAccent, foreground, accent: fallback } = this.sources.settings.appearance;
         const accent = accentFor(useAlbumAccent, snapshot.accentColor, fallback);
@@ -124,11 +133,13 @@ export class MonitorNotch {
     }
 
     onLyrics(): void {
+        if (this.destroyed) return;
         this.tick();
         this.updateTimers();
     }
 
     applySettings(): void {
+        if (this.destroyed) return;
         this.notch.setAppearance(this.sources.settings.appearance);
         this.applyViewSizes();
         const [width, height] = this.sizeFor(this.drawn);
@@ -140,11 +151,13 @@ export class MonitorNotch {
 
     /** `durationMs` replaces osd_duration_ms, for device alerts. */
     showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number): void {
+        if (this.destroyed) return;
         this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
         this.osdTimer.show(durationMs);
     }
 
     hideOsd(): void {
+        if (this.destroyed) return;
         this.osdTimer.hide();
     }
 
