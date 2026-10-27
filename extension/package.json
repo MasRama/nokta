@@ -1,0 +1,39 @@
+{
+  "name": "nokta-extension",
+  "version": "0.0.0",
+  "private": true,
+  "description": "GNOME Shell extension for Nokta, a Mac-style notch for Linux",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MasRama/nokta.git",
+    "directory": "extension"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "gen-contracts": "node scripts/gen-contracts.mjs",
+    "build": "npm run gen-contracts && tsc -p tsconfig.json",
+    "check": "npm run gen-contracts && tsc -p tsconfig.json --noEmit && node scripts/check-contracts.mjs",
+    "lint": "eslint .",
+    "test": "tsc -p tsconfig.test.json && node --test \".test-build/tests/**/*.test.js\"",
+    "pack": "sh scripts/pack.sh"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@girs/clutter-14": "14.0.0-4.0.0-beta.12",
+    "@girs/gio-2.0": "2.80.3-4.0.0-beta.12",
+    "@girs/gjs": "4.0.0-beta.12",
+    "@girs/glib-2.0": "2.80.3-4.0.0-beta.12",
+    "@girs/gnome-shell": "46.0.2",
+    "@girs/st-14": "14.0.0-4.0.0-beta.12",
+    "@types/node": "22.20.5",
+    "eslint": "10.13.0",
+    "fast-xml-parser": "5.11.2",
+    "globals": "17.13.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
+  }
+}
