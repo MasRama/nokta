@@ -262,6 +262,7 @@ fn behavior_entries_have_all_keys() {
             "move_clock",
             "open_delay_ms",
             "osd_duration_ms",
+            "privacy_dots",
             "replace_osd",
             "show_caps_lock",
             "show_clock",

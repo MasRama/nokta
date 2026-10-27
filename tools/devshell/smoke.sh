@@ -74,6 +74,20 @@ wait_for "the idle notch shows the clock in 180 px" \
     "$FIND shown('nokta-clock') && /^[0-9]{1,2}:[0-9]{2}/.test(one('nokta-clock').text) && width() === 180" 10
 "$HERE/shot.sh" smoke-idle > /dev/null
 
+# GNOME's own privacy indicators drive the dots; showing one by hand must
+# show a dot. This also checks that this GNOME version has them where Nokta
+# looks.
+QS="Main.panel.statusArea.quickSettings"
+wait_for "GNOME has camera and microphone indicators" \
+    "!!($QS._camera?._indicator && $QS._volumeInput?._indicator)" 10
+js "$QS._camera._indicator.visible = true; $QS._volumeInput._indicator.visible = true; true" > /dev/null
+wait_for "the camera and microphone show two dots" \
+    "$FIND find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').filter((d) => d.mapped).length === 2" 5
+"$HERE/shot.sh" smoke-privacy > /dev/null
+js "$QS._camera._indicator.visible = false; $QS._volumeInput._indicator.visible = false; true" > /dev/null
+wait_for "the dots go away" \
+    "$FIND find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').every((d) => !d.mapped)" 5
+
 "$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
 wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && width() === 300" 5
 "$HERE/shot.sh" smoke-osd > /dev/null

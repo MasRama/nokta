@@ -15,6 +15,7 @@ import {
     type OsdContent,
     type OsdRequest,
 } from './features/osd/index.js';
+import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import {
     breakAfterFocus,
@@ -60,6 +61,7 @@ class Session {
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
+    private readonly privacy = new PrivacyMonitor(() => this.notches.forEach((n) => n.onPrivacy()));
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly lyricsId: number;
@@ -112,6 +114,7 @@ class Session {
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.focusShortcut.destroy();
+        this.privacy.destroy();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -206,7 +209,13 @@ class Session {
     private buildNotches(): void {
         this.destroyNotches();
         const { monitors, primaryIndex } = Main.layoutManager;
-        const sources = { settings: this.settings, media: this.media, lyrics: this.lyrics, timer: this.timer };
+        const sources = {
+            settings: this.settings,
+            media: this.media,
+            lyrics: this.lyrics,
+            timer: this.timer,
+            privacy: this.privacy,
+        };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;
             const area = { x: monitor.x, y: monitor.y, width: monitor.width };

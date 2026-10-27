@@ -72,6 +72,8 @@ test('clock_settings_and_free_strings', () => {
     assert.equal(DEFAULT_BEHAVIOR.showClock, true);
     assert.equal(DEFAULT_BEHAVIOR.clockFormat, 'system');
     assert.equal(behaviorFrom({ clock_format: '24h' }).clockFormat, '24h');
+    assert.equal(DEFAULT_BEHAVIOR.privacyDots, true);
+    assert.equal(behaviorFrom({ privacy_dots: false }).privacyDots, false);
     // Colors still must be #rrggbb; other strings pass through.
     assert.equal(appearanceFrom({ accent: 'orange' }).accent, '#ffffff');
 });

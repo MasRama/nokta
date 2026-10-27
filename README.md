@@ -9,7 +9,9 @@ Caps Lock on or off, the notch shows it instead of the system popup. It also
 tells you when your Bluetooth headphones connect (with their battery), when
 the charger is plugged in or out, when the battery is low and when it is
 full. A focus timer from Quick Settings counts down in the notch and
-starts a short break when the session ends. Every monitor has its own notch,
+starts a short break when the session ends. While an app uses the camera,
+the microphone or screen sharing, small green and orange dots sit at the
+left edge of the notch. Every monitor has its own notch,
 and these messages show on the monitor you are working on.
 
 ![The notch opened while a song plays](docs/images/expanded.png)
@@ -139,6 +141,7 @@ window then says what to fix before it saves anything.
 | `alert_duration_ms` | `3000` | How long a device alert stays |
 | `show_clock` | `true` | Show the time in the notch while nothing plays |
 | `clock_format` | `"system"` | `"24h"` (17:00), `"12h"` (5:00), or `"system"` to follow GNOME's setting |
+| `privacy_dots` | `true` | A green dot while the camera is on and an orange one while the microphone or screen sharing is in use |
 
 ### `[lyrics]`
 

@@ -7,6 +7,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
+import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
 import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
@@ -28,6 +29,7 @@ export interface NotchSources {
     media: MediaClient;
     lyrics: LyricsClient;
     timer: TimerClient;
+    privacy: PrivacyMonitor;
 }
 
 /**
@@ -46,6 +48,7 @@ export class MonitorNotch {
     private readonly expanded: ExpandedMediaView;
     private readonly lyricLine = new LyricLine();
     private readonly osdView = new OsdView();
+    private readonly privacyDots = new PrivacyDots();
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
     private readonly views: Record<Drawn, St.Widget>;
@@ -82,6 +85,8 @@ export class MonitorNotch {
             actor.visible = mode === 'idle';
             this.notch.body.add_child(actor);
         }
+        // Last, so the dots stay above every view.
+        this.notch.body.add_child(this.privacyDots.actor);
         this.machine = new NotchMachine(
             glibSchedule,
             () => ({ openMs: settings.behavior.openDelayMs, closeMs: settings.behavior.closeDelayMs }),
@@ -107,6 +112,7 @@ export class MonitorNotch {
         this.applyOsdColors();
         this.onMedia();
         this.onTimer();
+        this.onPrivacy();
     }
 
     /** False while a fullscreen app on this monitor hides the notch. */
@@ -123,6 +129,7 @@ export class MonitorNotch {
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
+        this.privacyDots.destroy();
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
         this.collapsedTimer.destroy();
@@ -184,6 +191,13 @@ export class MonitorNotch {
         this.applyOsdColors();
         this.applyClockOptions();
         this.onMedia();
+        this.onPrivacy();
+    }
+
+    onPrivacy(): void {
+        if (this.destroyed) return;
+        const { settings, privacy } = this.sources;
+        this.privacyDots.update(dotsFor(privacy.state(), settings.behavior.privacyDots), settings.appearance.height);
     }
 
     /** `durationMs` replaces osd_duration_ms, for device alerts. */

@@ -71,6 +71,8 @@ pub struct Behavior {
     pub alert_duration_ms: u32,
     pub show_clock: bool,
     pub clock_format: String,
+    /// Dots for the camera, microphone and screen sharing.
+    pub privacy_dots: bool,
 }
 
 impl Default for Behavior {
@@ -88,6 +90,7 @@ impl Default for Behavior {
             alert_duration_ms: 3000,
             show_clock: true,
             clock_format: "system".into(),
+            privacy_dots: true,
         }
     }
 }
@@ -395,6 +398,7 @@ impl Behavior {
             ("alert_duration_ms", self.alert_duration_ms.into()),
             ("show_clock", self.show_clock.into()),
             ("clock_format", (&self.clock_format).into()),
+            ("privacy_dots", self.privacy_dots.into()),
         ]
     }
 }

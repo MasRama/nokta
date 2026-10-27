@@ -30,6 +30,7 @@ device_alerts = true     # show Bluetooth audio, charger and battery alerts in t
 alert_duration_ms = 3000 # how long a device alert stays
 show_clock = true        # the time in the notch while nothing plays
 clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
+privacy_dots = true      # a green dot while the camera is on, orange while the microphone or screen is used
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)

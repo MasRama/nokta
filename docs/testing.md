@@ -199,6 +199,19 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 
+### Privacy dots
+
+`. tools/devshell/env.sh`, then with
+`QS=Main.panel.statusArea.quickSettings`:
+
+- [ ] `shell_eval "$QS._camera._indicator.visible = true"`: a green dot at
+      the left edge of the notch, idle, collapsed and expanded.
+- [ ] `shell_eval "$QS._volumeInput._indicator.visible = true"`: an orange
+      dot under the green one; turning both off removes them.
+- [ ] `privacy_dots = false` while running: no dots.
+- [ ] A real webcam, a call with the microphone and screen sharing
+      *(real session)*.
+
 ### Appearance and clock (settings window spec)
 
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;

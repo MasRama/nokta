@@ -30,6 +30,8 @@ export interface Behavior {
     showClock: boolean;
     /** "system", "24h" or "12h"; anything else counts as "system". */
     clockFormat: string;
+    /** Dots for the camera, microphone and screen sharing. */
+    privacyDots: boolean;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -82,6 +84,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     alertDurationMs: 3000,
     showClock: true,
     clockFormat: 'system',
+    privacyDots: true,
 };
 
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {

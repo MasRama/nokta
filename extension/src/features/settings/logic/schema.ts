@@ -187,6 +187,17 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Privacy',
+                rows: [
+                    behavior(
+                        'privacy_dots',
+                        'Privacy dots',
+                        bool(),
+                        'Green while the camera is on, orange while the microphone or screen is used',
+                    ),
+                ],
+            },
+            {
                 title: 'Focus timer',
                 rows: [
                     timer('focus_minutes', 'Focus length', int(1, 180), 'Minutes; start it from Quick Settings'),
