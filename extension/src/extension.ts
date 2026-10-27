@@ -7,6 +7,7 @@ import { SettingsClient } from './features/settings/client.js';
 import { IdleClock } from './shared/clock.js';
 import { unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { Notch } from './shared/notch.js';
+import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const isCancelled = (error: unknown): boolean =>
     error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
@@ -19,6 +20,7 @@ class Session {
     private readonly monitorsId: number;
     private readonly watchId: number;
     private cancellable = new Gio.Cancellable();
+    private restoreClock: Restore | null = null;
 
     constructor() {
         this.settings = new SettingsClient(() => this.applySettings());
@@ -30,6 +32,7 @@ class Session {
         const { idleWidth, height } = this.settings.appearance;
         this.notch.jumpTo(idleWidth, height);
         this.clock.start();
+        this.applyClockPosition();
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
             () => this.onDaemonVanished(),
@@ -41,6 +44,8 @@ class Session {
         this.cancellable.cancel();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
+        this.restoreClock?.();
+        this.restoreClock = null;
         this.clock.destroy();
         Main.layoutManager.removeChrome(this.notch.actor);
         this.notch.destroy();
@@ -62,6 +67,17 @@ class Session {
         const { idleWidth, height } = this.settings.appearance;
         this.notch.setAppearance(this.settings.appearance);
         this.notch.resizeTo(idleWidth, height, 'width');
+        this.applyClockPosition();
+    }
+
+    private applyClockPosition(): void {
+        const wanted = this.settings.behavior.moveClock;
+        if (wanted && !this.restoreClock) {
+            this.restoreClock = moveDateMenuRight();
+        } else if (!wanted && this.restoreClock) {
+            this.restoreClock();
+            this.restoreClock = null;
+        }
     }
 
     private placeOnMonitor(): void {
