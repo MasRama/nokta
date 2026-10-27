@@ -18,7 +18,9 @@ use zbus::{Connection, MatchRule, MessageStream};
 
 use super::art::{ArtCache, ArtInfo};
 use super::control::Controller;
-use super::mpris::{PlayerProxy, RootProxy, NAME_PREFIX, PATH, PLAYER_INTERFACE};
+use super::mpris::{
+    track_from_metadata, PlayerProxy, RootProxy, NAME_PREFIX, PATH, PLAYER_INTERFACE,
+};
 use super::{MediaState, PlaybackStatus, Selector, Track};
 use crate::shared::clock::monotonic_us;
 
@@ -177,7 +179,7 @@ impl Player {
                 }
                 ("Metadata", _) => {
                     let map = value.try_clone().ok().and_then(|v| Props::try_from(v).ok());
-                    let track = Track::from_metadata(&map.unwrap_or_default());
+                    let track = track_from_metadata(&map.unwrap_or_default());
                     if track.identity() != self.track.identity() {
                         self.set_position(0, now);
                         changes.refresh_position = true;
