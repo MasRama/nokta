@@ -16,7 +16,13 @@ import {
     type OsdRequest,
 } from './features/osd/index.js';
 import { SettingsClient } from './features/settings/index.js';
-import { finishedAlert, FocusToggle, msUntilNextSecond, TimerClient } from './features/timer/index.js';
+import {
+    breakAfterFocus,
+    finishedAlert,
+    FocusToggle,
+    msUntilNextSecond,
+    TimerClient,
+} from './features/timer/index.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
@@ -152,8 +158,7 @@ class Session {
         this.stopTimerTick();
         const snapshot = this.timer.snapshot();
         const now = GLib.get_monotonic_time();
-        const { focusMinutes, breakMinutes } = this.settings.timer;
-        this.focusToggle.update(snapshot, now, focusMinutes, breakMinutes);
+        this.focusToggle.update(snapshot, now, this.settings.timer);
         this.notches.forEach((n) => n.onTimer());
         const delay = msUntilNextSecond(snapshot, now);
         if (delay === null) return;
@@ -170,12 +175,12 @@ class Session {
     }
 
     private onTimerFinished(phase: string): void {
-        const { breakMinutes, sound } = this.settings.timer;
-        const alert = finishedAlert(phase, breakMinutes);
+        const settings = this.settings.timer;
+        const alert = finishedAlert(phase, breakAfterFocus(this.timer.snapshot(), settings));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs);
-        if (sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
+        if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
 
     // Notches

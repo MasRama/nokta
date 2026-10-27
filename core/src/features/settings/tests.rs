@@ -100,10 +100,17 @@ fn new_appearance_and_clock_values_are_checked() {
 fn timer_defaults_and_limits() {
     let t = Config::default().timer;
     assert_eq!((t.focus_minutes, t.break_minutes, t.sound), (25, 5, true));
+    assert_eq!(
+        (t.long_break_minutes, t.sessions_before_long_break),
+        (15, 4)
+    );
     for bad in [
         "focus_minutes = 0",
         "focus_minutes = 181",
         "break_minutes = 61",
+        "long_break_minutes = 0",
+        "long_break_minutes = 61",
+        "sessions_before_long_break = 13",
     ] {
         let err = parse(&format!("[timer]\n{bad}\n")).unwrap_err();
         let key = bad.split(' ').next().unwrap();
@@ -121,7 +128,16 @@ fn timer_entries_have_all_keys() {
     let map = entries(Config::default().timer.entries());
     let mut keys: Vec<_> = map.keys().copied().collect();
     keys.sort();
-    assert_eq!(keys, ["break_minutes", "focus_minutes", "sound"]);
+    assert_eq!(
+        keys,
+        [
+            "break_minutes",
+            "focus_minutes",
+            "long_break_minutes",
+            "sessions_before_long_break",
+            "sound"
+        ]
+    );
     assert_eq!(map["focus_minutes"], SettingValue::Uint(25));
 }
 

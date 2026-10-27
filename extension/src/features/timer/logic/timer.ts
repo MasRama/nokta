@@ -1,4 +1,5 @@
 import type { TimerProps } from '../../../shared/contracts.js';
+import type { TimerSettings } from '../../settings/logic/parse.js';
 
 export type TimerState = 'idle' | 'running' | 'paused';
 export type TimerPhase = 'focus' | 'break' | '';
@@ -10,6 +11,9 @@ export interface TimerSnapshot {
     durationUs: number;
     remainingUs: number;
     timestampUs: number;
+    /** Focus sessions finished since the last long break or stop. */
+    sessions: number;
+    longBreak: boolean;
 }
 
 export const EMPTY_TIMER: Readonly<TimerSnapshot> = {
@@ -18,6 +22,8 @@ export const EMPTY_TIMER: Readonly<TimerSnapshot> = {
     durationUs: 0,
     remainingUs: 0,
     timestampUs: 0,
+    sessions: 0,
+    longBreak: false,
 };
 
 const S = 1_000_000;
@@ -29,14 +35,17 @@ const number = (value: unknown): number => (typeof value === 'number' && Number.
 export function timerSnapshotFrom(read: (name: keyof TimerProps) => unknown): TimerSnapshot {
     const state = read('State');
     const phase = read('Phase');
+    const sessions = number(read('Sessions'));
     if ((state !== 'running' && state !== 'paused') || (phase !== 'focus' && phase !== 'break'))
-        return { ...EMPTY_TIMER };
+        return { ...EMPTY_TIMER, sessions };
     return {
         state,
         phase,
         durationUs: number(read('DurationUs')),
         remainingUs: number(read('RemainingUs')),
         timestampUs: number(read('TimestampUs')),
+        sessions,
+        longBreak: read('LongBreak') === true,
     };
 }
 
@@ -72,7 +81,37 @@ export function toggleSubtitle(timer: TimerSnapshot, nowUs: number, focusMinutes
     if (timer.state === 'idle') return `${focusMinutes} min`;
     const minutes = `${Math.max(1, Math.ceil(remainingAt(timer, nowUs) / MIN))} min left`;
     if (timer.state === 'paused') return `Paused, ${minutes}`;
-    return timer.phase === 'break' ? `Break, ${minutes}` : minutes;
+    if (timer.phase !== 'break') return minutes;
+    return timer.longBreak ? `Long break, ${minutes}` : `Break, ${minutes}`;
+}
+
+/** A break's length in minutes and whether it is the long one. */
+export interface BreakInfo {
+    minutes: number;
+    long: boolean;
+}
+
+const breakInfo = (long: boolean, settings: TimerSettings): BreakInfo => ({
+    minutes: long ? settings.longBreakMinutes : settings.breakMinutes,
+    long,
+});
+
+/** The break that "Start break" would start now. */
+export function nextBreak(timer: TimerSnapshot, settings: TimerSettings): BreakInfo {
+    const every = settings.sessionsBeforeLongBreak;
+    return breakInfo(every > 0 && timer.sessions >= every, settings);
+}
+
+/**
+ * The break that follows the focus session that just finished. Finished can
+ * arrive before or after the new state, so both are read: a running break
+ * says itself; a focus session still shown will count one more session; an
+ * idle timer means no break started, so the long one was not due.
+ */
+export function breakAfterFocus(timer: TimerSnapshot, settings: TimerSettings): BreakInfo {
+    if (timer.phase === 'break') return breakInfo(timer.longBreak, settings);
+    if (timer.phase === 'focus') return nextBreak({ ...timer, sessions: timer.sessions + 1 }, settings);
+    return breakInfo(false, settings);
 }
 
 export interface FinishedAlert {
@@ -81,9 +120,11 @@ export interface FinishedAlert {
 }
 
 /** The notch alert for io.nokta.Timer1.Finished, or null for an unknown phase. */
-export function finishedAlert(phase: string, breakMinutes: number): FinishedAlert | null {
-    if (phase === 'focus')
-        return { title: 'Focus done', detail: breakMinutes > 0 ? `${breakMinutes} min break` : 'Time for a break' };
+export function finishedAlert(phase: string, next: BreakInfo): FinishedAlert | null {
+    if (phase === 'focus') {
+        const kind = next.long ? 'long break' : 'break';
+        return { title: 'Focus done', detail: next.minutes > 0 ? `${next.minutes} min ${kind}` : 'Time for a break' };
+    }
     if (phase === 'break') return { title: 'Break over', detail: 'Ready to focus' };
     return null;
 }

@@ -1,6 +1,7 @@
 export { TimerClient } from './client.js';
 export { TimerLabel } from './label.js';
 export {
+    breakAfterFocus,
     EMPTY_TIMER,
     finishedAlert,
     formatRemaining,

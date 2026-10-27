@@ -110,6 +110,9 @@ pub struct TimerConfig {
     pub focus_minutes: u32,
     /// 0 means no break after focus.
     pub break_minutes: u32,
+    pub long_break_minutes: u32,
+    /// 0 means no long breaks.
+    pub sessions_before_long_break: u32,
     pub sound: bool,
 }
 
@@ -118,6 +121,8 @@ impl Default for TimerConfig {
         TimerConfig {
             focus_minutes: 25,
             break_minutes: 5,
+            long_break_minutes: 15,
+            sessions_before_long_break: 4,
             sound: true,
         }
     }
@@ -228,6 +233,18 @@ impl Config {
         )?;
         check_range("timer.focus_minutes", self.timer.focus_minutes, 1, 180)?;
         check_range("timer.break_minutes", self.timer.break_minutes, 0, 60)?;
+        check_range(
+            "timer.long_break_minutes",
+            self.timer.long_break_minutes,
+            1,
+            60,
+        )?;
+        check_range(
+            "timer.sessions_before_long_break",
+            self.timer.sessions_before_long_break,
+            0,
+            12,
+        )?;
         Ok(())
     }
 }
@@ -360,6 +377,11 @@ impl TimerConfig {
         vec![
             ("focus_minutes", self.focus_minutes.into()),
             ("break_minutes", self.break_minutes.into()),
+            ("long_break_minutes", self.long_break_minutes.into()),
+            (
+                "sessions_before_long_break",
+                self.sessions_before_long_break.into(),
+            ),
             ("sound", self.sound.into()),
         ]
     }

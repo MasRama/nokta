@@ -2,7 +2,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import { QuickMenuToggle, SystemIndicator } from 'resource:///org/gnome/shell/ui/quickSettings.js';
 
-import { toggleSubtitle, type TimerSnapshot } from './logic/timer.js';
+import type { TimerSettings } from '../settings/logic/parse.js';
+import { nextBreak, toggleSubtitle, type TimerSnapshot } from './logic/timer.js';
 
 const ICON = 'alarm-symbolic';
 
@@ -46,14 +47,15 @@ export class FocusToggle {
         Main.panel.statusArea.quickSettings.addExternalIndicator(this.indicator);
     }
 
-    update(timer: TimerSnapshot, nowUs: number, focusMinutes: number, breakMinutes: number): void {
+    update(timer: TimerSnapshot, nowUs: number, settings: TimerSettings): void {
         if (this.destroyed) return;
         this.idle = timer.state === 'idle';
         this.toggle.checked = !this.idle;
-        this.toggle.subtitle = toggleSubtitle(timer, nowUs, focusMinutes);
-        this.startFocus.label.text = `Start focus, ${focusMinutes} min`;
-        this.startBreak.label.text = `Start break, ${breakMinutes} min`;
-        this.startBreak.visible = breakMinutes > 0;
+        this.toggle.subtitle = toggleSubtitle(timer, nowUs, settings.focusMinutes);
+        this.startFocus.label.text = `Start focus, ${settings.focusMinutes} min`;
+        const next = nextBreak(timer, settings);
+        this.startBreak.label.text = `Start ${next.long ? 'long break' : 'break'}, ${next.minutes} min`;
+        this.startBreak.visible = next.minutes > 0;
         this.pause.visible = timer.state === 'running';
         this.resume.visible = timer.state === 'paused';
         this.stop.visible = !this.idle;

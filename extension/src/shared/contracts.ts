@@ -92,6 +92,8 @@ export interface TimerProps {
     DurationUs: number;
     RemainingUs: number;
     TimestampUs: number;
+    Sessions: number;
+    LongBreak: boolean;
 }
 
 /** io.nokta.Timer1 methods and the D-Bus signature of their arguments. */

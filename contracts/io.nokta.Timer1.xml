@@ -26,10 +26,19 @@
     <property name="TimestampUs" type="x" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- Focus sessions finished since the last long break or Stop. -->
+    <property name="Sessions" type="u" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- True while the break is the long one. -->
+    <property name="LongBreak" type="b" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!--
       Starts phase "focus" or "break" with its length from the [timer] table
-      of config.toml, replacing any running timer. Fails with InvalidArgs for
-      another phase.
+      of config.toml, replacing any running timer. A break is the long one
+      once sessions_before_long_break focus sessions have finished. Fails
+      with InvalidArgs for another phase.
     -->
     <method name="Start">
       <arg name="phase" type="s" direction="in"/>
@@ -38,11 +47,11 @@
     <method name="Pause"/>
     <!-- Resumes a paused timer; does nothing otherwise. -->
     <method name="Resume"/>
-    <!-- Stops the timer without Finished; does nothing when idle. -->
+    <!-- Stops the timer without Finished and resets Sessions. -->
     <method name="Stop"/>
     <!--
       A phase ran to its end. After "focus" the break starts on its own,
-      unless the break length is 0.
+      unless its length is 0.
     -->
     <signal name="Finished">
       <arg name="phase" type="s"/>

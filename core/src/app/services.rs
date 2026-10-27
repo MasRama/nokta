@@ -4,15 +4,13 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
-
 use tokio::sync::{mpsc, watch};
 
 use super::USER_AGENT;
 use crate::features::lyrics::{self, cache::Cache, lrclib, LyricsState};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
-use crate::features::timer::logic::{Phase, Snapshot};
+use crate::features::timer::logic::{Lengths, Phase, Snapshot};
 use crate::features::timer::{self, service::Command};
 use crate::shared::paths::Paths;
 
@@ -57,7 +55,7 @@ impl Services {
             paths.lyrics_dir.clone(),
         );
 
-        let (commands, state, finished) = timer::service::spawn(phase_length(config.clone()));
+        let (commands, state, finished) = timer::service::spawn(timer_lengths(config.clone()));
 
         Services {
             config,
@@ -73,17 +71,17 @@ impl Services {
     }
 }
 
-/// A timer phase's length from the current `[timer]` table.
-fn phase_length(
-    config: watch::Receiver<Config>,
-) -> impl Fn(Phase) -> Duration + Send + Sync + 'static {
-    move |phase| {
+/// The timer's phase lengths from the current `[timer]` table.
+fn timer_lengths(config: watch::Receiver<Config>) -> impl Fn() -> Lengths + Send + Sync + 'static {
+    const MINUTE_US: i64 = 60_000_000;
+    move || {
         let timer = &config.borrow().timer;
-        let minutes = match phase {
-            Phase::Focus => timer.focus_minutes,
-            Phase::Break => timer.break_minutes,
-        };
-        Duration::from_secs(u64::from(minutes) * 60)
+        Lengths {
+            focus_us: i64::from(timer.focus_minutes) * MINUTE_US,
+            break_us: i64::from(timer.break_minutes) * MINUTE_US,
+            long_break_us: i64::from(timer.long_break_minutes) * MINUTE_US,
+            sessions_before_long_break: timer.sessions_before_long_break,
+        }
     }
 }
 

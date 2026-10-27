@@ -92,10 +92,25 @@ test('defaults_are_not_shared', () => {
 });
 
 test('timer_settings_from_table', () => {
-    assert.deepEqual(DEFAULT_TIMER, { focusMinutes: 25, breakMinutes: 5, sound: true });
-    assert.deepEqual(timerFrom({ focus_minutes: 50, break_minutes: 0, sound: false }), {
+    assert.deepEqual(DEFAULT_TIMER, {
+        focusMinutes: 25,
+        breakMinutes: 5,
+        longBreakMinutes: 15,
+        sessionsBeforeLongBreak: 4,
+        sound: true,
+    });
+    const table = {
+        focus_minutes: 50,
+        break_minutes: 0,
+        long_break_minutes: 30,
+        sessions_before_long_break: 0,
+        sound: false,
+    };
+    assert.deepEqual(timerFrom(table), {
         focusMinutes: 50,
         breakMinutes: 0,
+        longBreakMinutes: 30,
+        sessionsBeforeLongBreak: 0,
         sound: false,
     });
     assert.deepEqual(timerFrom(undefined), DEFAULT_TIMER);

@@ -42,6 +42,9 @@ export interface TimerSettings {
     focusMinutes: number;
     /** 0 means no break after focus. */
     breakMinutes: number;
+    longBreakMinutes: number;
+    /** 0 means no long breaks. */
+    sessionsBeforeLongBreak: number;
     sound: boolean;
 }
 
@@ -84,6 +87,8 @@ export const DEFAULT_LYRICS: Readonly<Lyrics> = {
 export const DEFAULT_TIMER: Readonly<TimerSettings> = {
     focusMinutes: 25,
     breakMinutes: 5,
+    longBreakMinutes: 15,
+    sessionsBeforeLongBreak: 4,
     sound: true,
 };
 

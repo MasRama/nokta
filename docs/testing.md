@@ -182,6 +182,11 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       Start break is gone with `break_minutes = 0`.
 - [ ] When focus ends: `Focus done 1 min break`, then a green `0:59`. When the
       break ends: `Break over`, then the clock.
+- [ ] Long break: with `sessions_before_long_break = 2` and
+      `long_break_minutes = 2`, the second focus ends with
+      `Focus done 2 min long break`; Quick Settings says `Long break, 2 min
+      left`, and while idle before it the menu says `Start long break, 2 min`.
+      `timer.sh stop` starts the count again.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 

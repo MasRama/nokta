@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use tokio::sync::{mpsc, watch};
 
-use super::logic::{Phase, Snapshot, Timer};
+use super::logic::{Lengths, Phase, Snapshot, Timer};
 use crate::shared::clock::monotonic_us;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -16,11 +16,11 @@ pub enum Command {
     Stop,
 }
 
-/// Starts the timer task. `length` gives a phase's length when it starts; a
+/// Starts the timer task. `lengths` is read whenever a phase starts; a
 /// phase of length zero does not start. Returns the command sender, the
 /// published state and the finished phases.
 pub fn spawn(
-    length: impl Fn(Phase) -> Duration + Send + Sync + 'static,
+    lengths: impl Fn() -> Lengths + Send + Sync + 'static,
 ) -> (
     mpsc::Sender<Command>,
     watch::Receiver<Snapshot>,
@@ -31,13 +31,6 @@ pub fn spawn(
     let (finished_tx, finished) = mpsc::channel(16);
     tokio::spawn(async move {
         let mut timer = Timer::default();
-        let start = |timer: &mut Timer, phase: Phase, now: i64| {
-            let length = i64::try_from(length(phase).as_micros()).unwrap_or(i64::MAX);
-            if length > 0 {
-                timer.start(phase, length, now);
-            }
-            length > 0
-        };
         loop {
             let wait = timer
                 .deadline()
@@ -47,7 +40,7 @@ pub fn spawn(
                     let now = monotonic_us();
                     match command {
                         None => break,
-                        Some(Command::Start(phase)) => start(&mut timer, phase, now),
+                        Some(Command::Start(phase)) => timer.start(phase, &lengths(), now),
                         Some(Command::Pause) => timer.pause(now),
                         Some(Command::Resume) => timer.resume(now),
                         Some(Command::Stop) => timer.stop(),
@@ -55,12 +48,9 @@ pub fn spawn(
                 }
                 () = sleep(wait) => {
                     let now = monotonic_us();
-                    let ended = timer.expire(now);
+                    let ended = timer.expire(now, &lengths());
                     if let Some(phase) = ended {
                         tracing::info!("{} finished", phase.as_str());
-                        if phase == Phase::Focus {
-                            start(&mut timer, Phase::Break, now);
-                        }
                         let _ = finished_tx.send(phase).await;
                     }
                     ended.is_some()

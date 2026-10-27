@@ -46,6 +46,8 @@ fn properties(s: &Snapshot) -> PropertyList {
         ("DurationUs", owned(s.duration_us)),
         ("RemainingUs", owned(s.remaining_us)),
         ("TimestampUs", owned(s.timestamp_us)),
+        ("Sessions", owned(s.sessions)),
+        ("LongBreak", owned(s.long_break)),
     ]
 }
 
@@ -73,6 +75,16 @@ impl TimerInterface {
     #[zbus(property)]
     fn phase(&self) -> String {
         self.state.borrow().phase.map_or("", Phase::as_str).into()
+    }
+
+    #[zbus(property)]
+    fn sessions(&self) -> u32 {
+        self.state.borrow().sessions
+    }
+
+    #[zbus(property)]
+    fn long_break(&self) -> bool {
+        self.state.borrow().long_break
     }
 
     #[zbus(property)]

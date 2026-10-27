@@ -149,13 +149,16 @@ window then says what to fix before it saves anything.
 ### `[timer]`
 
 Start the timer with the **Focus** toggle in Quick Settings; its menu also
-starts a break, pauses and stops. The timer runs in the daemon, so it keeps
-going while the screen is locked.
+starts a break, pauses and stops. After every few focus sessions the break
+is a long one; stopping the timer starts the count again. The timer runs in
+the daemon, so it keeps going while the screen is locked.
 
 | Key | Default | What it does |
 |---|---|---|
 | `focus_minutes` | `25` | Length of a focus session, 1 to 180 |
 | `break_minutes` | `5` | Break that starts after a focus session, 0 to 60; `0` means no break |
+| `long_break_minutes` | `15` | Long break, 1 to 60 |
+| `sessions_before_long_break` | `4` | Focus sessions before a long break, 0 to 12; `0` means never |
 | `sound` | `true` | Play a sound when a focus session or a break ends |
 
 ## Privacy

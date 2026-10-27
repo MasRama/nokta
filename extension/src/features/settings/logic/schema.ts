@@ -189,6 +189,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 rows: [
                     timer('focus_minutes', 'Focus length', int(1, 180), 'Minutes; start it from Quick Settings'),
                     timer('break_minutes', 'Break length', int(0, 60), 'Minutes after each focus session; 0 for none'),
+                    timer('long_break_minutes', 'Long break length', int(1, 60), 'Minutes'),
+                    timer(
+                        'sessions_before_long_break',
+                        'Sessions before a long break',
+                        int(0, 12),
+                        'Focus sessions; 0 for no long breaks',
+                    ),
                     timer('sound', 'Play a sound', bool(), 'When a focus session or a break ends'),
                 ],
             },
