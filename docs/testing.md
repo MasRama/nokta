@@ -42,6 +42,9 @@ In another terminal:
 tools/devshell/shot.sh NAME           # build/shots/NAME.png and NAME-notch.png (crop)
 tools/devshell/hover.sh on|off        # pointer onto the notch / away from it
 tools/devshell/player.sh Playing|Paused|Stopped
+tools/devshell/osd.sh level ICON LEVEL [MAX]  # an OSD as gnome-settings-daemon sends it
+tools/devshell/osd.sh label ICON TEXT
+tools/devshell/osd.sh capslock        # toggle Caps Lock with a virtual keyboard
 tools/devshell/stop.sh
 ```
 
@@ -94,6 +97,28 @@ must curve inward, the notch must be centered, and no text may be clipped.
       no progress row.
 - [ ] Accent: progress fill and bars take the cover's color with
       `use_album_accent = true`, the foreground color otherwise.
+
+### OSD (v0.2 spec)
+
+- [ ] `osd.sh level audio-volume-medium-symbolic 0.45` from idle, collapsed
+      and expanded: the notch widens to `osd_width` with icon, bar and
+      `45%`; GNOME's popup at the bottom does not appear.
+- [ ] After `osd_duration_ms` the notch goes back to the state it was in
+      (expanded again when the pointer is still on it).
+- [ ] Several requests in a row: the bar moves in place, the notch does not
+      shrink in between.
+- [ ] `osd.sh level audio-volume-high-symbolic 1.2 1.5`: bar at 80 %, text
+      `120%`.
+- [ ] `osd.sh label airplane-mode-symbolic "Airplane mode on"`: no bar, the
+      text on the left.
+- [ ] `osd.sh capslock` twice: `Caps Lock on`, then `Caps Lock off`. No
+      message when the extension is enabled.
+- [ ] `replace_osd = false` while running: GNOME's popup again; back to
+      `true`: the notch again. `show_caps_lock = false`: no Caps Lock message.
+- [ ] Disabled extension: GNOME's popup again.
+- [ ] Volume keys during a fullscreen video *(real session)*: GNOME's popup.
+- [ ] Brightness and volume keys, mic mute key *(real session)*: in the
+      notch.
 
 ### Interaction
 

@@ -43,7 +43,7 @@ unusable.
   which runs on its own bus and its own config directories.
 - **Conventional Commits** with a real scope, for example
   `fix(media): keep the last paused player when another one stops`. Scopes in
-  use: `media`, `lyrics`, `settings`, `app`, `contracts`, `extension`,
+  use: `media`, `lyrics`, `settings`, `osd`, `app`, `contracts`, `extension`,
   `packaging`, `core`. The changelog is generated from these messages, so
   describe the change the user sees.
 - Do not edit `CHANGELOG.md` or version numbers by hand. release-please owns

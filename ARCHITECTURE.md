@@ -47,7 +47,7 @@ core/               crate nokta-core, binary noktad
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: build the notch, mount the features
-  src/features/     media, lyrics, settings
+  src/features/     media, lyrics, settings, osd
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -61,7 +61,10 @@ docs/               design spec, plans, manual test checklist
 - A feature exposes only what its `mod.rs` (Rust) or `index.ts` (TypeScript)
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
-  current track). `media` and `settings` depend on no other feature.
+  current track). `media`, `settings` and `osd` depend on no other feature.
+- `osd` (volume, brightness and Caps Lock in the notch) exists only in the
+  extension: its sources are GNOME Shell's own OSD calls and the keymap, so
+  the daemon only publishes its settings.
 - `shared/` holds infrastructure that knows nothing about music or lyrics.
   Feature logic never goes there.
 - A feature has the same name on both sides, for example
