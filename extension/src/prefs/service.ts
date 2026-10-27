@@ -4,6 +4,7 @@ import GLib from 'gi://GLib';
 import type { Table } from '../features/settings/index.js';
 import { SETTINGS1_XML } from '../generated/contracts.js';
 import { BUS_NAME, PATHS } from '../shared/contracts.js';
+import { newProxy } from '../shared/dbus.js';
 
 export type Tables = Partial<Record<Table, unknown>>;
 
@@ -35,8 +36,8 @@ export class SettingsService {
     private readonly cancellable = new Gio.Cancellable();
 
     constructor(private readonly onChanged: () => void) {
-        const Wrapper = Gio.DBusProxy.makeProxyWrapper(SETTINGS1_XML);
-        Wrapper(
+        newProxy(
+            SETTINGS1_XML,
             Gio.DBus.session,
             BUS_NAME,
             PATHS.Settings1,
