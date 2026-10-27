@@ -1,13 +1,17 @@
 // A scripted MPRIS player for the devshell: one 200 s track with a generated
 // cover. Its status follows <state>/player-status (see player.sh) and the
 // PlayPause, Next, Previous and SetPosition methods.
-// Usage: gjs -m fake-player.js STATE_DIR
+// Usage: gjs -m fake-player.js STATE_DIR [N]
+// N (2, 3, ...) starts another player with its own name, track and
+// <state>/player-N-status file.
 import Cairo from 'cairo';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import System from 'system';
 
 const state = System.programArgs[0] ?? GLib.get_tmp_dir();
+const number = System.programArgs[1] ?? '';
+const suffix = number ? `-${number}` : '';
 const LENGTH_US = 200_000_000;
 const TRACK_ID = '/io/nokta/devshell/track/1';
 
@@ -72,7 +76,7 @@ function drawCover(path) {
     cr.$dispose();
 }
 
-const coverPath = GLib.build_filenamev([state, 'cover.png']);
+const coverPath = GLib.build_filenamev([state, `cover${suffix}.png`]);
 drawCover(coverPath);
 
 let status = 'Playing';
@@ -85,7 +89,7 @@ const positionUs = () =>
         : anchorUs;
 
 const root = {
-    Identity: 'Nokta Fake Player',
+    Identity: number ? `Nokta Fake Player ${number}` : 'Nokta Fake Player',
     CanQuit: false,
     CanRaise: false,
     HasTrackList: false,
@@ -103,7 +107,7 @@ const player = {
     get Metadata() {
         return {
             'mpris:trackid': new GLib.Variant('o', TRACK_ID),
-            'xesam:title': new GLib.Variant('s', 'Midnight Static'),
+            'xesam:title': new GLib.Variant('s', number ? `Second Wind ${number}` : 'Midnight Static'),
             'xesam:artist': new GLib.Variant('as', ['The Paper Lanterns']),
             'xesam:album': new GLib.Variant('s', 'Night Drive'),
             'mpris:length': new GLib.Variant('x', LENGTH_US),
@@ -168,21 +172,24 @@ function seekTo(us) {
 // Start 50 s in, so a lyric line is current in screenshots.
 seekTo(50_000_000);
 
-const statusFile = Gio.File.new_for_path(GLib.build_filenamev([state, 'player-status']));
-const monitor = statusFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
-monitor.connect('changed', () => {
+const statusFile = Gio.File.new_for_path(GLib.build_filenamev([state, `player${suffix}-status`]));
+function readStatus() {
     try {
         const [, bytes] = statusFile.load_contents(null);
         const next = new TextDecoder().decode(bytes).trim();
         if (['Playing', 'Paused', 'Stopped'].includes(next)) setStatus(next);
     } catch {
-        // The file is being rewritten; the next change event reads it.
+        // Missing, or being rewritten; the next change event reads it.
     }
-});
+}
+const monitor = statusFile.monitor_file(Gio.FileMonitorFlags.NONE, null);
+monitor.connect('changed', readStatus);
 
 exportedRoot.export(Gio.DBus.session, '/org/mpris/MediaPlayer2');
 exported.export(Gio.DBus.session, '/org/mpris/MediaPlayer2');
-Gio.bus_own_name_on_connection(Gio.DBus.session, 'org.mpris.MediaPlayer2.noktafake',
+// A status written before start applies before the name is owned.
+readStatus();
+Gio.bus_own_name_on_connection(Gio.DBus.session, `org.mpris.MediaPlayer2.noktafake${number}`,
     Gio.BusNameOwnerFlags.NONE, null, null);
 
 new GLib.MainLoop(null, false).run();

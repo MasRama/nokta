@@ -3,10 +3,11 @@
 # temporary XDG directories and GSettings in a keyfile, so nothing touches
 # the real session or its settings. Stays in the foreground; Ctrl-C stops it.
 #
-# Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--monitors=N]
+# Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--players=N] [--monitors=N]
 #   --no-daemon   do not start noktad (the notch must stay idle)
 #                 nor the fake UPower and BlueZ (fake-devices.js)
 #   --no-player   do not start the fake MPRIS player
+#   --players=N   N fake players (default 1); the others start paused
 #   --monitors=N  N virtual 1920x1080 monitors side by side (default 1)
 #
 # Needs: target/{release,debug}/noktad and the packed extension
@@ -22,11 +23,13 @@ ZIP="$ROOT/build/nokta@nokta.io.shell-extension.zip"
 if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
     START_DAEMON=1
     START_PLAYER=1
+    PLAYERS=1
     MONITORS=1
     for arg in "$@"; do
         case "$arg" in
             --no-daemon) START_DAEMON=0 ;;
             --no-player) START_PLAYER=0 ;;
+            --players=[1-9]) PLAYERS=${arg#--players=} ;;
             --monitors=[1-9]) MONITORS=${arg#--monitors=} ;;
             *) echo "unknown option: $arg" >&2; exit 2 ;;
         esac
@@ -78,7 +81,7 @@ BUSCONF
 
     exec env -u DISPLAY -u WAYLAND_DISPLAY -u GNOME_SETUP_DISPLAY \
         NOKTA_DEVSHELL_INNER=1 START_DAEMON="$START_DAEMON" START_PLAYER="$START_PLAYER" \
-        MONITORS="$MONITORS" \
+        PLAYERS="$PLAYERS" MONITORS="$MONITORS" \
         NOKTAD="$NOKTAD" \
         XDG_CONFIG_HOME="$STATE/config" XDG_DATA_HOME="$STATE/data" \
         XDG_CACHE_HOME="$STATE/cache" XDG_RUNTIME_DIR="$STATE/runtime" \
@@ -131,6 +134,14 @@ if [ "$START_PLAYER" = 1 ]; then
     gjs -m "$HERE/fake-player.js" "$STATE" > "$STATE/player.log" 2>&1 &
     PIDS="$PIDS $!"
     wait_name org.mpris.MediaPlayer2.noktafake
+    n=2
+    while [ "$n" -le "$PLAYERS" ]; do
+        printf 'Paused\n' > "$STATE/player-$n-status"
+        gjs -m "$HERE/fake-player.js" "$STATE" "$n" > "$STATE/player-$n.log" 2>&1 &
+        PIDS="$PIDS $!"
+        wait_name "org.mpris.MediaPlayer2.noktafake$n"
+        n=$((n + 1))
+    done
 fi
 
 if [ "$START_DAEMON" = 1 ]; then

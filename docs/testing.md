@@ -44,7 +44,7 @@ In another terminal:
 ```sh
 tools/devshell/shot.sh NAME           # build/shots/NAME.png and NAME-notch.png (crop)
 tools/devshell/hover.sh on|off        # pointer onto the notch / away from it
-tools/devshell/player.sh Playing|Paused|Stopped
+tools/devshell/player.sh Playing|Paused|Stopped [N]  # N: player N from --players
 tools/devshell/osd.sh level ICON LEVEL [MAX]  # an OSD as gnome-settings-daemon sends it
 tools/devshell/osd.sh label ICON TEXT
 tools/devshell/osd.sh capslock        # toggle Caps Lock with a virtual keyboard
@@ -62,7 +62,7 @@ tools/devshell/stop.sh
 ```
 
 `run.sh --no-daemon` starts without `noktad`, `--no-player` without the fake
-player. Logs of every process are in `build/devshell/*.log`; the shell's is
+player, and `--players=N` with N fake players (the others start paused). Logs of every process are in `build/devshell/*.log`; the shell's is
 `shell.log`, and a clean run has no `JS ERROR` or `JS WARNING` lines.
 
 The daemon's config file in the devshell is
@@ -90,6 +90,11 @@ must curve inward, the notch must be centered, and no text may be clipped.
       title, artists, lyric line, progress with elapsed and total time,
       previous / play-pause / next.
 - [ ] Expanded and paused: play icon instead of pause, time stops.
+- [ ] **Players** (`run.sh --players=2`): expanded shows the player's name
+      with an arrow on each side under the artists; an arrow or a wheel
+      click over the cover switches to the paused player and it stays while
+      the other plays; `player.sh Paused` then `player.sh Playing` switches
+      back; `player.sh Stopped 2` hides the arrows.
 - [ ] Leaving (`hover.sh off`) closes after `close_delay_ms`; moving back on
       during that delay keeps it open.
 - [ ] Passing over the notch quickly (less than `open_delay_ms`) does not
