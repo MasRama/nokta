@@ -12,6 +12,7 @@ const PROPERTIES: Record<Table, string> = {
     appearance: 'Appearance',
     behavior: 'Behavior',
     lyrics: 'Lyrics',
+    timer: 'Timer',
 };
 
 /** The daemon's message without the `GDBus.Error:...:` prefix. */

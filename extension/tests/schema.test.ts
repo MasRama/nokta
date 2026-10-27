@@ -5,6 +5,7 @@ import {
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
+    DEFAULT_TIMER,
 } from '../src/features/settings/logic/parse.js';
 import { allRows, rowValue, SETTINGS_PAGES, variantType } from '../src/features/settings/logic/schema.js';
 
@@ -13,6 +14,7 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     appearance: { ...DEFAULT_APPEARANCE },
     behavior: { ...DEFAULT_BEHAVIOR },
     lyrics: { ...DEFAULT_LYRICS },
+    timer: { ...DEFAULT_TIMER },
 };
 
 test('every_setting_has_exactly_one_row', () => {

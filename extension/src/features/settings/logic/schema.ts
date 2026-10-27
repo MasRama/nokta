@@ -1,4 +1,4 @@
-import { appearanceFrom, behaviorFrom, lyricsFrom } from './parse.js';
+import { appearanceFrom, behaviorFrom, lyricsFrom, timerFrom } from './parse.js';
 
 /**
  * Every row of the settings window, in order. Adding a setting is one line
@@ -13,7 +13,7 @@ export type RowKind =
     | { type: 'color' }
     | { type: 'choice'; options: readonly { value: string; label: string }[] };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics';
+export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer';
 
 export interface Row {
     table: Table;
@@ -49,6 +49,14 @@ const appearance = (key: string, title: string, kind: RowKind, subtitle?: string
 });
 const behavior = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'behavior',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const timer = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'timer',
     key,
     title,
     kind,
@@ -176,6 +184,14 @@ export const SETTINGS_PAGES: readonly Page[] = [
                     behavior('alert_duration_ms', 'How long', int(500, 15000, 500), 'Milliseconds'),
                 ],
             },
+            {
+                title: 'Focus timer',
+                rows: [
+                    timer('focus_minutes', 'Focus length', int(1, 180), 'Minutes; start it from Quick Settings'),
+                    timer('break_minutes', 'Break length', int(0, 60), 'Minutes after each focus session; 0 for none'),
+                    timer('sound', 'Play a sound', bool(), 'When a focus session or a break ends'),
+                ],
+            },
         ],
     },
 ];
@@ -184,6 +200,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     appearance: appearanceFrom,
     behavior: behaviorFrom,
     lyrics: lyricsFrom,
+    timer: timerFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
