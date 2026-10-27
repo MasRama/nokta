@@ -4,12 +4,16 @@
 # Usage: tools/devshell/osd.sh level ICON LEVEL [MAX_LEVEL]
 #        tools/devshell/osd.sh label ICON TEXT
 #        tools/devshell/osd.sh capslock
+# With CONNECTOR=Meta-1 in the environment the OSD is for that monitor only,
+# as gnome-settings-daemon does for the brightness of one screen.
 set -eu
 # shellcheck source=tools/devshell/env.sh
 . "$(dirname "$0")/env.sh"
 show_osd() {
+    params=$1
+    [ -z "${CONNECTOR:-}" ] || params="{'connector': <'$CONNECTOR'>, ${params#\{}"
     gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell \
-        --method org.gnome.Shell.ShowOSD "$1" > /dev/null
+        --method org.gnome.Shell.ShowOSD "$params" > /dev/null
 }
 case "${1:-}" in
     level)

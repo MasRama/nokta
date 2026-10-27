@@ -1,6 +1,7 @@
 #!/bin/sh
 # Saves a screenshot of the devshell to build/shots/NAME.png and the top
-# center of the screen, where the notch is, to build/shots/NAME-notch.png.
+# center of each monitor, where the notch is, to build/shots/NAME-notch.png
+# (monitor 0) and NAME-notch-N.png (monitor N).
 # Usage: tools/devshell/shot.sh NAME
 set -eu
 # shellcheck source=tools/devshell/env.sh
@@ -10,11 +11,22 @@ OUT="$ROOT/build/shots/$1.png"
 mkdir -p "$ROOT/build/shots"
 gdbus call --session --dest org.gnome.Shell.Screenshot --object-path /org/gnome/Shell/Screenshot \
     --method org.gnome.Shell.Screenshot.Screenshot false false "$OUT" > /dev/null
-python3 - "$OUT" "$ROOT/build/shots/$1-notch.png" <<'PY'
+MONITORS=$(shell_eval "
+const d = global.display;
+JSON.stringify([...Array(d.get_n_monitors()).keys()].map((i) => {
+    const g = d.get_monitor_geometry(i);
+    return [g.x, g.y, g.width];
+}))")
+python3 - "$OUT" "$ROOT/build/shots/$1-notch" "$MONITORS" <<'PY'
+import re
 import sys
 from PIL import Image
 image = Image.open(sys.argv[1])
-width = image.width
-image.crop((width // 2 - 360, 0, width // 2 + 360, 240)).save(sys.argv[2])
+# Eval answers with a GVariant such as (true, '"[[0,0,1920],[1920,0,1920]]"').
+monitors = [tuple(map(int, m)) for m in re.findall(r'\[(-?\d+),(-?\d+),(\d+)\]', sys.argv[3])]
+for index, (x, y, width) in enumerate(monitors):
+    center = x + width // 2
+    suffix = '' if index == 0 else f'-{index}'
+    image.crop((center - 360, y, center + 360, y + 240)).save(f'{sys.argv[2]}{suffix}.png')
 PY
 echo "$OUT"

@@ -3,9 +3,10 @@
 # temporary XDG directories and GSettings in a keyfile, so nothing touches
 # the real session or its settings. Stays in the foreground; Ctrl-C stops it.
 #
-# Usage: tools/devshell/run.sh [--no-daemon] [--no-player]
-#   --no-daemon  do not start noktad (the notch must stay idle)
-#   --no-player  do not start the fake MPRIS player
+# Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--monitors=N]
+#   --no-daemon   do not start noktad (the notch must stay idle)
+#   --no-player   do not start the fake MPRIS player
+#   --monitors=N  N virtual 1920x1080 monitors side by side (default 1)
 #
 # Needs: target/{release,debug}/noktad and the packed extension
 # (cd extension && npm run pack). Then use shot.sh, hover.sh, player.sh
@@ -20,10 +21,12 @@ ZIP="$ROOT/build/nokta@nokta.io.shell-extension.zip"
 if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
     START_DAEMON=1
     START_PLAYER=1
+    MONITORS=1
     for arg in "$@"; do
         case "$arg" in
             --no-daemon) START_DAEMON=0 ;;
             --no-player) START_PLAYER=0 ;;
+            --monitors=[1-9]) MONITORS=${arg#--monitors=} ;;
             *) echo "unknown option: $arg" >&2; exit 2 ;;
         esac
     done
@@ -74,6 +77,7 @@ BUSCONF
 
     exec env -u DISPLAY -u WAYLAND_DISPLAY -u GNOME_SETUP_DISPLAY \
         NOKTA_DEVSHELL_INNER=1 START_DAEMON="$START_DAEMON" START_PLAYER="$START_PLAYER" \
+        MONITORS="$MONITORS" \
         NOKTAD="$NOKTAD" \
         XDG_CONFIG_HOME="$STATE/config" XDG_DATA_HOME="$STATE/data" \
         XDG_CACHE_HOME="$STATE/cache" XDG_RUNTIME_DIR="$STATE/runtime" \
@@ -108,7 +112,13 @@ wait_name() {
     done
 }
 
-gnome-shell --headless --wayland --no-x11 --virtual-monitor 1920x1080 \
+set --
+i=0
+while [ "$i" -lt "$MONITORS" ]; do
+    set -- "$@" --virtual-monitor 1920x1080
+    i=$((i + 1))
+done
+gnome-shell --headless --wayland --no-x11 "$@" \
     --wayland-display nokta-devshell > "$STATE/shell.log" 2>&1 &
 SHELL_PID=$!
 PIDS="$SHELL_PID"
