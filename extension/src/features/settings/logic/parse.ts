@@ -22,6 +22,7 @@ export interface Behavior {
     replaceOsd: boolean;
     osdDurationMs: number;
     showCapsLock: boolean;
+    allMonitors: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
@@ -47,6 +48,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     replaceOsd: true,
     osdDurationMs: 1500,
     showCapsLock: true,
+    allMonitors: true,
 };
 
 const snakeCase = (key: string): string => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);

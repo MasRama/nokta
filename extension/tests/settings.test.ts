@@ -55,6 +55,8 @@ test('behavior_reads_the_osd_keys', () => {
     assert.equal(DEFAULT_BEHAVIOR.replaceOsd, true);
     assert.equal(DEFAULT_BEHAVIOR.osdDurationMs, 1500);
     assert.equal(DEFAULT_BEHAVIOR.showCapsLock, true);
+    assert.equal(DEFAULT_BEHAVIOR.allMonitors, true);
+    assert.equal(behaviorFrom({ all_monitors: false }).allMonitors, false);
     assert.equal(DEFAULT_APPEARANCE.osdWidth, 300);
     const behavior = behaviorFrom({ replace_osd: false, osd_duration_ms: 900, show_caps_lock: false });
     assert.deepEqual(behavior, { ...DEFAULT_BEHAVIOR, replaceOsd: false, osdDurationMs: 900, showCapsLock: false });

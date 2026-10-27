@@ -30,6 +30,7 @@ fn defaults_match_spec() {
     assert!(b.replace_osd);
     assert_eq!(b.osd_duration_ms, 1500);
     assert!(b.show_caps_lock);
+    assert!(b.all_monitors);
     assert!(c.lyrics.enabled);
 }
 
@@ -165,6 +166,7 @@ fn behavior_to_dbus_has_all_keys() {
     assert_eq!(
         keys,
         [
+            "all_monitors",
             "close_delay_ms",
             "move_clock",
             "open_delay_ms",

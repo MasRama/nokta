@@ -63,6 +63,7 @@ pub struct Behavior {
     pub replace_osd: bool,
     pub osd_duration_ms: u32,
     pub show_caps_lock: bool,
+    pub all_monitors: bool,
 }
 
 impl Default for Behavior {
@@ -75,6 +76,7 @@ impl Default for Behavior {
             replace_osd: true,
             osd_duration_ms: 1500,
             show_caps_lock: true,
+            all_monitors: true,
         }
     }
 }
@@ -240,6 +242,7 @@ impl Behavior {
             ("replace_osd".into(), self.replace_osd.into()),
             ("osd_duration_ms".into(), self.osd_duration_ms.into()),
             ("show_caps_lock".into(), self.show_caps_lock.into()),
+            ("all_monitors".into(), self.all_monitors.into()),
         ])
     }
 }

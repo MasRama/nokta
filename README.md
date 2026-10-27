@@ -97,6 +97,7 @@ logs the line and column of the error (`journalctl --user -u nokta`).
 | `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
 | `osd_duration_ms` | `1500` | How long the notch shows the volume or brightness after the last change |
 | `show_caps_lock` | `true` | Show a message in the notch when Caps Lock turns on or off |
+| `all_monitors` | `true` | Show a notch on every monitor; `false` shows it only on the primary monitor |
 
 ### `[lyrics]`
 
