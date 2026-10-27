@@ -49,7 +49,8 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
-  src/features/     media, lyrics, settings, osd, devices, timer, privacy
+  src/features/     media, lyrics, settings, osd, devices, timer, privacy,
+                    notifications
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -63,15 +64,17 @@ docs/               design spec, plans, manual test checklist
 - A feature exposes only what its `mod.rs` (Rust) or `index.ts` (TypeScript)
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
-  current track). `media`, `settings`, `osd`, `devices` and `timer` depend
-  on no other feature; `extension.ts` shows device and timer alerts through
+  current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`
+  and `notifications` depend on no other feature; `extension.ts` shows device and timer alerts through
   the OSD row, and `monitor-notch.ts` puts the timer where the clock or the
   equalizer would be.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings. `privacy` (the camera,
   microphone and screen dots) is the same: it follows the indicators GNOME
-  Shell already shows in the top bar.
+  Shell already shows in the top bar. `notifications` too: it wraps
+  GNOME's `MessageTray._showNotification`, so the notch only gets the
+  banners GNOME has already decided to show.
 - `shared/` holds infrastructure that knows nothing about music or lyrics.
   Feature logic never goes there.
 - A feature has the same name on both sides, for example
@@ -158,7 +161,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 
