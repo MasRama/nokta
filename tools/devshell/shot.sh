@@ -3,6 +3,7 @@
 # center of the screen, where the notch is, to build/shots/NAME-notch.png.
 # Usage: tools/devshell/shot.sh NAME
 set -eu
+# shellcheck source=tools/devshell/env.sh
 . "$(dirname "$0")/env.sh"
 [ $# -eq 1 ] || { echo "usage: $0 NAME" >&2; exit 2; }
 OUT="$ROOT/build/shots/$1.png"

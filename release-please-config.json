@@ -1,0 +1,41 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": false,
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": false,
+  "packages": {
+    ".": {
+      "package-name": "nokta",
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        "Cargo.toml",
+        {
+          "type": "toml",
+          "path": "Cargo.lock",
+          "jsonpath": "$.package[?(@.name.value=='nokta-core')].version"
+        },
+        {
+          "type": "json",
+          "path": "extension/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "extension/package-lock.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "extension/package-lock.json",
+          "jsonpath": "$.packages[''].version"
+        },
+        {
+          "type": "json",
+          "path": "extension/metadata.json",
+          "jsonpath": "$['version-name']"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest something Nokta could do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do
+      description: Describe the situation and what you would like the notch to do in it.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: What you would see and do. Sketches and screenshots of similar apps help.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead

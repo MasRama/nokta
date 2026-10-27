@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      cargo:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /extension
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      # The @girs typings are pinned to the GNOME 46 generation on purpose.
+      - dependency-name: "@girs/*"
+    groups:
+      npm:
+        patterns: ["*"]

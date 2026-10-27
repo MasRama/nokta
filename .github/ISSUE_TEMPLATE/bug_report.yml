@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Nokta does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Play a song in ...
+        2. Hover over the notch
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Nokta version
+      description: Output of `noktad --version`
+      placeholder: noktad 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and GNOME Shell version
+      description: For example "Ubuntu 24.04, GNOME Shell 46.0". `gnome-shell --version` prints the second part.
+    validations:
+      required: true
+  - type: input
+    id: player
+    attributes:
+      label: Media player
+      description: Which app was playing, if the bug is about music or lyrics.
+  - type: textarea
+    id: extensions
+    attributes:
+      label: Other enabled extensions
+      description: Output of `gnome-extensions list --enabled`
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Daemon: `journalctl --user -u nokta --since "10 min ago"`
+        Extension: `journalctl --user -b /usr/bin/gnome-shell | grep -i nokta`
+      render: text

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Daemon
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install dbus-daemon and shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dbus shellcheck
+      - run: cargo fmt --check
+      - run: cargo clippy --all-targets --locked -- -D warnings
+      - run: cargo test --locked
+      - name: Lint shell scripts
+        run: shellcheck packaging/*.sh packaging/tests/*.sh tools/devshell/*.sh extension/scripts/*.sh
+      - name: Dry-run the installer
+        run: NOKTAD=target/debug/noktad packaging/tests/install-dry-run.sh
+
+  extension:
+    name: Extension
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run lint
+      - run: npm test

@@ -2,6 +2,7 @@
 # Moves the devshell's pointer onto the notch, or away from it.
 # Usage: tools/devshell/hover.sh [on|off]
 set -eu
+# shellcheck source=tools/devshell/env.sh
 . "$(dirname "$0")/env.sh"
 case "${1:-on}" in
     on) Y=12 ;;

@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Sourced by the helper scripts: points them at the running devshell's bus.
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STATE="$ROOT/build/devshell"
