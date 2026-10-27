@@ -7,7 +7,12 @@ import { accentFor } from '../src/shared/logic/color.js';
 
 const props: Record<string, unknown> = {
     Available: true,
+    PlayerId: ':1.5',
     PlayerName: 'Fake',
+    Players: [
+        [':1.4', 'Other'],
+        [':1.5', 'Fake'],
+    ],
     PlaybackStatus: 'Playing',
     Title: 'Midnight Static',
     Artists: ['A', 'B'],
@@ -28,7 +33,12 @@ test('snapshot_from_all_properties', () => {
     const s = snapshotFrom((name) => props[name]);
     assert.deepEqual(s, {
         available: true,
+        playerId: ':1.5',
         playerName: 'Fake',
+        players: [
+            [':1.4', 'Other'],
+            [':1.5', 'Fake'],
+        ],
         playbackStatus: 'Playing',
         title: 'Midnight Static',
         artists: ['A', 'B'],
@@ -48,8 +58,17 @@ test('snapshot_from_all_properties', () => {
 
 test('snapshot_missing_or_wrong_types_are_empty', () => {
     assert.deepEqual(snapshotFrom(() => undefined), EMPTY_SNAPSHOT);
-    const s = snapshotFrom((name) => (name === 'Artists' ? ['ok', 3] : name === 'Rate' ? 'fast' : undefined));
+    const s = snapshotFrom((name) =>
+        name === 'Artists'
+            ? ['ok', 3]
+            : name === 'Rate'
+              ? 'fast'
+              : name === 'Players'
+                ? [[':1.1', 'A'], [':1.2'], 'x']
+                : undefined,
+    );
     assert.deepEqual(s.artists, ['ok']);
+    assert.deepEqual(s.players, [[':1.1', 'A']]);
     assert.equal(s.rate, 1);
 });
 

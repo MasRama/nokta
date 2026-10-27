@@ -31,7 +31,9 @@ pub async fn serve(
 fn properties(s: &MediaState) -> PropertyList {
     vec![
         ("Available", owned(s.available)),
+        ("PlayerId", owned(s.player_id.as_str())),
         ("PlayerName", owned(s.player_name.as_str())),
+        ("Players", owned(s.players.clone())),
         ("PlaybackStatus", owned(s.status.as_str())),
         ("Title", owned(s.track.title.as_str())),
         ("Artists", owned(s.track.artists.clone())),
@@ -80,14 +82,28 @@ impl MediaInterface {
         self.control.refresh_position().await.map_err(failed)
     }
 
+    async fn select_player(&self, id: String) -> fdo::Result<()> {
+        self.control.select_player(&id).await.map_err(failed)
+    }
+
     #[zbus(property)]
     fn available(&self) -> bool {
         self.state.borrow().available
     }
 
     #[zbus(property)]
+    fn player_id(&self) -> String {
+        self.state.borrow().player_id.clone()
+    }
+
+    #[zbus(property)]
     fn player_name(&self) -> String {
         self.state.borrow().player_name.clone()
+    }
+
+    #[zbus(property)]
+    fn players(&self) -> Vec<(String, String)> {
+        self.state.borrow().players.clone()
     }
 
     #[zbus(property)]

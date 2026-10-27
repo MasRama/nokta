@@ -183,3 +183,32 @@ async fn can_control_false_disables_every_control() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn lists_players_and_switches_to_the_chosen_one() {
+    let bus = TestBus::start();
+    let cache = tempfile::tempdir().unwrap();
+    let (mut rx, ctl) = start_watcher(&bus, &cache).await;
+    let _a = FakePlayer::start(bus.address(), "a", "Paused", Meta::new(1)).await;
+    wait_for(&mut rx, "player a", |s| s.players.len() == 1).await;
+    let b = FakePlayer::start(bus.address(), "b", "Playing", Meta::new(2)).await;
+    let s = wait_for(&mut rx, "both players", |s| s.players.len() == 2).await;
+    let names: Vec<_> = s.players.iter().map(|(_, name)| name.as_str()).collect();
+    assert_eq!(names, ["Fake a", "Fake b"]);
+    assert_eq!(s.player_name, "Fake b");
+    assert_eq!(s.player_id, s.players[1].0);
+
+    let a_id = s.players[0].0.clone();
+    ctl.select_player(&a_id).await.unwrap();
+    let s = wait_for(&mut rx, "a chosen", |s| s.player_id == a_id).await;
+    assert_eq!(s.track.title, "Song 1");
+
+    b.set_status("Paused").await;
+    b.set_status("Playing").await;
+    wait_for(&mut rx, "b plays again", |s| s.player_name == "Fake b").await;
+
+    ctl.select_player(":1.999").await.unwrap();
+    b.set_meta(Meta::new(4)).await;
+    let s = wait_for(&mut rx, "b's new track", |s| s.track.title == "Song 4").await;
+    assert_eq!(s.player_name, "Fake b");
+}

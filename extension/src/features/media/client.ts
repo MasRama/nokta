@@ -61,6 +61,10 @@ export class MediaClient {
         this.call('SetPosition', new GLib.Variant('(x)', [Math.round(us)]));
     }
 
+    selectPlayer(id: string): void {
+        this.call('SelectPlayer', new GLib.Variant('(s)', [id]));
+    }
+
     refreshPosition(): void {
         this.call('RefreshPosition');
     }

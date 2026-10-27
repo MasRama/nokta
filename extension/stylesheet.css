@@ -43,6 +43,24 @@
     opacity: 0.7;
 }
 
+.nokta-player-row {
+    spacing: 2px;
+}
+
+.nokta-player-name {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.nokta-player-switch {
+    padding: 1px;
+}
+
+.nokta-player-switch-icon {
+    icon-size: 12px;
+    opacity: 0.7;
+}
+
 .nokta-lyric {
     font-size: 12px;
     font-style: italic;

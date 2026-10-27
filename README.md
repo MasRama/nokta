@@ -3,7 +3,8 @@
 An open-source dynamic island for the desktop. A black notch sits on the top
 edge of the screen and shows the song that is playing. Hover over it and it
 opens with the cover, controls, a seek bar and the current line of the
-song's synced lyrics. When you change the volume or the brightness, or turn
+song's synced lyrics. When several players are open, the arrows under the
+title (or scrolling over the cover) switch between them. When you change the volume or the brightness, or turn
 Caps Lock on or off, the notch shows it instead of the system popup. It also
 tells you when your Bluetooth headphones connect (with their battery), when
 the charger is plugged in or out, when the battery is low and when it is

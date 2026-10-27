@@ -25,7 +25,9 @@ export interface NoktaProps {
 
 export interface MediaProps {
     Available: boolean;
+    PlayerId: string;
     PlayerName: string;
+    Players: Array<[string, string]>;
     PlaybackStatus: string;
     Title: string;
     Artists: string[];
@@ -49,6 +51,7 @@ export const MEDIA_METHODS = {
     Previous: '',
     SetPosition: 'x',
     RefreshPosition: '',
+    SelectPlayer: 's',
 } as const;
 
 export interface LyricsProps {

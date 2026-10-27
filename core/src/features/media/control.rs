@@ -65,6 +65,12 @@ impl Controller {
             .await
     }
 
+    /// Makes the player with this id active; unknown ids are ignored.
+    pub async fn select_player(&self, id: &str) -> zbus::Result<()> {
+        let _ = self.tx.send(Event::Select(id.to_owned()));
+        Ok(())
+    }
+
     /// Asks the watcher to re-read the active player's position; the new
     /// snapshot arrives on the state channel.
     pub async fn refresh_position(&self) -> zbus::Result<()> {

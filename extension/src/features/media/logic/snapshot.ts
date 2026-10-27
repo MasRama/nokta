@@ -1,9 +1,12 @@
 import type { MediaProps } from '../../../shared/contracts.js';
+import type { PlayerEntry } from './players.js';
 
 /** io.nokta.Media1's properties in camelCase. */
 export interface MediaSnapshot {
     available: boolean;
+    playerId: string;
     playerName: string;
+    players: PlayerEntry[];
     playbackStatus: string;
     title: string;
     artists: string[];
@@ -22,7 +25,9 @@ export interface MediaSnapshot {
 
 export const EMPTY_SNAPSHOT: Readonly<MediaSnapshot> = {
     available: false,
+    playerId: '',
     playerName: '',
+    players: [],
     playbackStatus: 'Stopped',
     title: '',
     artists: [],
@@ -44,13 +49,22 @@ const str = (v: unknown, d: string): string => (typeof v === 'string' ? v : d);
 const num = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const strings = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((s): s is string => typeof s === 'string') : [];
+const pairs = (v: unknown): PlayerEntry[] =>
+    Array.isArray(v)
+        ? v.filter(
+              (p): p is PlayerEntry =>
+                  Array.isArray(p) && p.length === 2 && typeof p[0] === 'string' && typeof p[1] === 'string',
+          )
+        : [];
 
 /** Builds a snapshot from a property reader; anything missing or mistyped is empty. */
 export function snapshotFrom(read: (name: keyof MediaProps) => unknown): MediaSnapshot {
     const d = EMPTY_SNAPSHOT;
     return {
         available: bool(read('Available'), d.available),
+        playerId: str(read('PlayerId'), d.playerId),
         playerName: str(read('PlayerName'), d.playerName),
+        players: pairs(read('Players')),
         playbackStatus: str(read('PlaybackStatus'), d.playbackStatus),
         title: str(read('Title'), d.title),
         artists: strings(read('Artists')),

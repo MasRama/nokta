@@ -11,6 +11,15 @@
     <property name="PlayerName" type="s" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- Id of the active player (its unique bus name), empty when none. -->
+    <property name="PlayerId" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Every playing or paused player as (id, display name), in the order
+         they appeared. -->
+    <property name="Players" type="a(ss)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!-- "Playing", "Paused" or "Stopped". -->
     <property name="PlaybackStatus" type="s" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
@@ -69,5 +78,10 @@
     </method>
     <!-- Re-read the position from the player and publish a new snapshot. -->
     <method name="RefreshPosition"/>
+    <!-- Make a player from Players the active one. It stays active until
+         another player starts playing or it stops. Unknown ids are ignored. -->
+    <method name="SelectPlayer">
+      <arg name="id" type="s" direction="in"/>
+    </method>
   </interface>
 </node>

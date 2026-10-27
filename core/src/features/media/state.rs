@@ -4,7 +4,11 @@ use super::{PlaybackStatus, Track};
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct MediaState {
     pub available: bool,
+    /// The active player's id: its unique bus name.
+    pub player_id: String,
     pub player_name: String,
+    /// Every playing or paused player as (id, display name), oldest first.
+    pub players: Vec<(String, String)>,
     pub status: PlaybackStatus,
     pub track: Track,
     pub art_path: String,

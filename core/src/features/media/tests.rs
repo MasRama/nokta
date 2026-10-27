@@ -98,3 +98,71 @@ fn removing_active_reselects() {
     s.remove(A);
     assert_eq!(s.active(), None);
 }
+
+#[test]
+fn a_chosen_paused_player_wins_over_a_playing_one() {
+    let mut s = Selector::default();
+    s.set_status(A, PlaybackStatus::Playing);
+    s.set_status(B, PlaybackStatus::Paused);
+    assert!(s.select(B));
+    assert_eq!(s.active(), Some(B));
+    // Its own pause and play keep it chosen.
+    s.set_status(B, PlaybackStatus::Playing);
+    s.set_status(B, PlaybackStatus::Paused);
+    assert_eq!(s.active(), Some(B));
+}
+
+#[test]
+fn a_chosen_player_gives_way_when_another_starts_playing() {
+    let mut s = Selector::default();
+    s.set_status(A, PlaybackStatus::Paused);
+    s.set_status(B, PlaybackStatus::Playing);
+    s.select(A);
+    // Playing since before the choice does not count.
+    s.set_status(B, PlaybackStatus::Playing);
+    assert_eq!(s.active(), Some(A));
+    s.set_status(B, PlaybackStatus::Paused);
+    assert_eq!(s.active(), Some(A));
+    s.set_status(B, PlaybackStatus::Playing);
+    assert_eq!(s.active(), Some(B));
+}
+
+#[test]
+fn a_chosen_player_gives_way_when_it_stops_or_leaves() {
+    let mut s = Selector::default();
+    s.set_status(A, PlaybackStatus::Playing);
+    s.set_status(B, PlaybackStatus::Paused);
+    s.select(B);
+    s.set_status(B, PlaybackStatus::Stopped);
+    assert_eq!(s.active(), Some(A));
+    s.set_status(B, PlaybackStatus::Paused);
+    assert_eq!(s.active(), Some(A));
+
+    s.select(B);
+    s.remove(B);
+    s.set_status(B, PlaybackStatus::Paused);
+    assert_eq!(s.active(), Some(A));
+}
+
+#[test]
+fn only_known_running_players_can_be_chosen() {
+    let mut s = Selector::default();
+    s.set_status(A, PlaybackStatus::Playing);
+    s.set_status(B, PlaybackStatus::Stopped);
+    assert!(!s.select(B));
+    assert!(!s.select(":1.99"));
+    assert_eq!(s.active(), Some(A));
+}
+
+#[test]
+fn players_are_listed_in_the_order_they_appeared() {
+    let mut s = Selector::default();
+    s.set_status(B, PlaybackStatus::Paused);
+    s.set_status(A, PlaybackStatus::Playing);
+    s.set_status(":1.3", PlaybackStatus::Stopped);
+    s.set_status(B, PlaybackStatus::Playing);
+    assert_eq!(s.players(), vec![B, A]);
+    s.remove(B);
+    s.set_status(B, PlaybackStatus::Paused);
+    assert_eq!(s.players(), vec![A, B]);
+}

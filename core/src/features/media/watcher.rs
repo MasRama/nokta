@@ -58,6 +58,7 @@ pub(super) enum Event {
         info: Option<ArtInfo>,
     },
     Refresh,
+    Select(String),
     Active(oneshot::Sender<Option<Active>>),
 }
 
@@ -207,7 +208,9 @@ impl Player {
     fn to_state(&self) -> MediaState {
         MediaState {
             available: true,
+            player_id: String::new(),
             player_name: self.identity.clone(),
+            players: Vec::new(),
             status: self.status,
             track: self.track.clone(),
             art_path: self.art_path.clone(),
@@ -369,6 +372,11 @@ impl Actor {
                     self.request_position(&unique);
                 }
             }
+            Event::Select(unique) => {
+                if self.selector.select(&unique) {
+                    self.request_position(&unique);
+                }
+            }
             Event::Active(reply) => {
                 let active = self.active_player().map(|p| Active {
                     proxy: p.proxy.clone(),
@@ -385,8 +393,12 @@ impl Actor {
         self.slots.get_mut(unique)?.player.as_mut()
     }
 
+    fn player(&self, unique: &str) -> Option<&Player> {
+        self.slots.get(unique)?.player.as_ref()
+    }
+
     fn active_player(&self) -> Option<&Player> {
-        self.slots.get(self.selector.active()?)?.player.as_ref()
+        self.player(self.selector.active()?)
     }
 
     fn add_name(&mut self, unique: String, name: String) {
@@ -468,10 +480,19 @@ impl Actor {
     }
 
     fn publish(&self) {
-        let next = self
-            .active_player()
-            .map(Player::to_state)
-            .unwrap_or_default();
+        let mut next = MediaState::default();
+        if let Some(unique) = self.selector.active() {
+            if let Some(player) = self.player(unique) {
+                next = player.to_state();
+                next.player_id = unique.to_owned();
+            }
+        }
+        next.players = self
+            .selector
+            .players()
+            .into_iter()
+            .filter_map(|unique| Some((unique.to_owned(), self.player(unique)?.identity.clone())))
+            .collect();
         self.state.send_if_modified(|current| {
             if *current == next {
                 return false;

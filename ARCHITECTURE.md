@@ -91,7 +91,9 @@ docs/               design spec, plans, manual test checklist
   responses, and has no polling loops. It uses no CPU while nothing plays.
 - **media** follows every `org.mpris.MediaPlayer2.*` player and publishes one
   active player: the one that most recently started playing, else the one
-  that most recently paused, else none. Because MPRIS does not signal
+  that most recently paused, else none. A player the user picks
+  (`SelectPlayer`) stays active until another one starts playing or it
+  stops. Because MPRIS does not signal
   position changes, it publishes a position snapshot (position, monotonic
   timestamp, rate) and the extension extrapolates from it.
 - **lyrics** looks up synced lyrics when the track changes: the user's own
@@ -148,7 +150,7 @@ files in `contracts/` are the full definition; this is the overview.
 | Interface | Path | Members |
 |---|---|---|
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
-| `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerName`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()` |
+| `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
