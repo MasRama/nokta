@@ -200,6 +200,7 @@ class Session {
             this.restoreOsd = takeOverOsd({
                 show: (request) => this.onOsdRequest(request),
                 hideAll: () => this.notches.forEach((n) => n.hideOsd()),
+                focusedMonitor,
             });
         } else if (!replaceOsd && this.restoreOsd) {
             this.restoreOsd();
