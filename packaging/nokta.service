@@ -1,0 +1,11 @@
+[Unit]
+Description=Nokta daemon (media, lyrics and settings for the Nokta notch)
+Documentation=https://github.com/MasRama/nokta
+PartOf=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=io.nokta.Nokta
+ExecStart=@BINDIR@/noktad
+Restart=on-failure
+RestartSec=2

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=io.nokta.Nokta
+Exec=@BINDIR@/noktad
+SystemdService=nokta.service
