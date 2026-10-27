@@ -98,6 +98,7 @@ test('timer_settings_from_table', () => {
         longBreakMinutes: 15,
         sessionsBeforeLongBreak: 4,
         sound: true,
+        quietNotifications: true,
     });
     const table = {
         focus_minutes: 50,
@@ -105,6 +106,7 @@ test('timer_settings_from_table', () => {
         long_break_minutes: 30,
         sessions_before_long_break: 0,
         sound: false,
+        quiet_notifications: false,
     };
     assert.deepEqual(timerFrom(table), {
         focusMinutes: 50,
@@ -112,6 +114,7 @@ test('timer_settings_from_table', () => {
         longBreakMinutes: 30,
         sessionsBeforeLongBreak: 0,
         sound: false,
+        quietNotifications: false,
     });
     assert.deepEqual(timerFrom(undefined), DEFAULT_TIMER);
 });

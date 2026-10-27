@@ -197,6 +197,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         'Focus sessions; 0 for no long breaks',
                     ),
                     timer('sound', 'Play a sound', bool(), 'When a focus session or a break ends'),
+                    timer('quiet_notifications', 'Quiet notifications', bool(), 'No banners while you focus'),
                 ],
             },
         ],

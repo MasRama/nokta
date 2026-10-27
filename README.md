@@ -160,6 +160,7 @@ the daemon, so it keeps going while the screen is locked.
 | `long_break_minutes` | `15` | Long break, 1 to 60 |
 | `sessions_before_long_break` | `4` | Focus sessions before a long break, 0 to 12; `0` means never |
 | `sound` | `true` | Play a sound when a focus session or a break ends |
+| `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
 
 ## Privacy
 

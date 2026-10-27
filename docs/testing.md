@@ -187,6 +187,11 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       `Focus done 2 min long break`; Quick Settings says `Long break, 2 min
       left`, and while idle before it the menu says `Start long break, 2 min`.
       `timer.sh stop` starts the count again.
+- [ ] Quiet notifications: while focus runs,
+      `gsettings get org.gnome.desktop.notifications show-banners` in the
+      devshell says `false`; after `timer.sh pause`, `stop` or the break it
+      says `true` again, and also after disabling the extension mid-focus.
+      Banners already off before focus stay off.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 

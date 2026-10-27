@@ -114,6 +114,8 @@ pub struct TimerConfig {
     /// 0 means no long breaks.
     pub sessions_before_long_break: u32,
     pub sound: bool,
+    /// No notification banners while a focus session runs.
+    pub quiet_notifications: bool,
 }
 
 impl Default for TimerConfig {
@@ -124,6 +126,7 @@ impl Default for TimerConfig {
             long_break_minutes: 15,
             sessions_before_long_break: 4,
             sound: true,
+            quiet_notifications: true,
         }
     }
 }
@@ -383,6 +386,7 @@ impl TimerConfig {
                 self.sessions_before_long_break.into(),
             ),
             ("sound", self.sound.into()),
+            ("quiet_notifications", self.quiet_notifications.into()),
         ]
     }
 }

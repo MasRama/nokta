@@ -20,8 +20,11 @@ import {
     breakAfterFocus,
     finishedAlert,
     FocusToggle,
+    gnomeBanners,
     msUntilNextSecond,
+    QuietBanners,
     TimerClient,
+    wantsQuiet,
 } from './features/timer/index.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
@@ -53,6 +56,7 @@ class Session {
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
     private readonly focusToggle: FocusToggle;
+    private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly lyricsId: number;
@@ -101,6 +105,7 @@ class Session {
         this.lyrics.destroy();
         this.timer.destroy();
         this.focusToggle.destroy();
+        this.quietBanners.release();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -159,6 +164,7 @@ class Session {
         const snapshot = this.timer.snapshot();
         const now = GLib.get_monotonic_time();
         this.focusToggle.update(snapshot, now, this.settings.timer);
+        this.quietBanners.update(wantsQuiet(snapshot, this.settings.timer.quietNotifications));
         this.notches.forEach((n) => n.onTimer());
         const delay = msUntilNextSecond(snapshot, now);
         if (delay === null) return;

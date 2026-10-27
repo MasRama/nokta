@@ -104,6 +104,7 @@ fn timer_defaults_and_limits() {
         (t.long_break_minutes, t.sessions_before_long_break),
         (15, 4)
     );
+    assert!(t.quiet_notifications);
     for bad in [
         "focus_minutes = 0",
         "focus_minutes = 181",
@@ -134,6 +135,7 @@ fn timer_entries_have_all_keys() {
             "break_minutes",
             "focus_minutes",
             "long_break_minutes",
+            "quiet_notifications",
             "sessions_before_long_break",
             "sound"
         ]

@@ -46,6 +46,8 @@ export interface TimerSettings {
     /** 0 means no long breaks. */
     sessionsBeforeLongBreak: number;
     sound: boolean;
+    /** No notification banners while a focus session runs. */
+    quietNotifications: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
@@ -90,6 +92,7 @@ export const DEFAULT_TIMER: Readonly<TimerSettings> = {
     longBreakMinutes: 15,
     sessionsBeforeLongBreak: 4,
     sound: true,
+    quietNotifications: true,
 };
 
 const isColor = (value: unknown): boolean => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
