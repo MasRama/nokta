@@ -11,6 +11,7 @@ use zbus::fdo::{DBusProxy, RequestNameFlags, RequestNameReply};
 use zbus::names::BusName;
 use zbus::Connection;
 
+use crate::features::devices;
 use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings::{self, Config, Store};
@@ -27,6 +28,8 @@ pub const USER_AGENT: &str = concat!(
 pub struct RunOptions {
     /// Bus to connect to instead of the session bus (tests use a private one).
     pub bus_address: Option<String>,
+    /// System bus to watch UPower and BlueZ on instead of the real one.
+    pub system_bus_address: Option<String>,
     pub lrclib_base_url: String,
 }
 
@@ -62,6 +65,15 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         Arc::new(lrclib::Client::new(&options.lrclib_base_url, USER_AGENT)),
     );
 
+    let system = match connect_system(options.system_bus_address.as_deref()).await {
+        Ok(system) => Some(system),
+        Err(err) => {
+            tracing::warn!("no device alerts: {err:#}");
+            None
+        }
+    };
+    let alerts = devices::watcher::spawn(system);
+
     // Objects first, name last: a client activated by the name never sees a
     // half-served daemon.
     conn.object_server()
@@ -70,6 +82,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     media::dbus::serve(&conn, media_state, control).await?;
     lyrics::dbus::serve(&conn, lyrics_state).await?;
     settings::dbus::serve(&conn, config).await?;
+    devices::dbus::serve(&conn, alerts).await?;
 
     match conn
         .request_name_with_flags(BUS_NAME, RequestNameFlags::DoNotQueue.into())
@@ -103,6 +116,17 @@ async fn connect(address: Option<&str>) -> anyhow::Result<Connection> {
         .build()
         .await
         .context("cannot connect to the session bus")
+}
+
+async fn connect_system(address: Option<&str>) -> anyhow::Result<Connection> {
+    let builder = match address {
+        Some(address) => zbus::connection::Builder::address(address)?,
+        None => zbus::connection::Builder::system()?,
+    };
+    builder
+        .build()
+        .await
+        .context("cannot connect to the system bus")
 }
 
 /// Follows `lyrics.enabled` from the config.

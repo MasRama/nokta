@@ -57,6 +57,7 @@ fn run() -> anyhow::Result<()> {
         .unwrap_or_else(|| DEFAULT_LRCLIB_URL.to_owned());
     let options = RunOptions {
         bus_address: None,
+        system_bus_address: None,
         lrclib_base_url,
     };
     tokio::runtime::Builder::new_current_thread()

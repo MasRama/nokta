@@ -1,6 +1,6 @@
 [package]
 name = "nokta-core"
-description = "Nokta daemon: media, lyrics and settings over D-Bus"
+description = "Nokta daemon: media, lyrics, settings and device alerts over D-Bus"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

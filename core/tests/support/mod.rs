@@ -3,6 +3,7 @@
 
 pub mod bus;
 pub mod daemon;
+pub mod fake_devices;
 pub mod fake_player;
 
 use std::time::Duration;

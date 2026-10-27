@@ -23,6 +23,7 @@ impl Daemon {
     pub fn options(bus: &TestBus, lrclib: &str) -> RunOptions {
         RunOptions {
             bus_address: Some(bus.address().to_owned()),
+            system_bus_address: Some(bus.address().to_owned()),
             lrclib_base_url: lrclib.to_owned(),
         }
     }
