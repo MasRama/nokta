@@ -3,8 +3,10 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import type { Restore } from '../../shared/topbar.js';
 
-/** One osdWindowManager.show() call, without the monitor (spec 3.1). */
+/** One osdWindowManager.show() call. */
 export interface OsdRequest {
+    /** -1 when the request names no monitor. */
+    monitorIndex: number;
     icon: Gio.Icon | null;
     label: string | null | undefined;
     level: number | null | undefined;
@@ -12,9 +14,8 @@ export interface OsdRequest {
 }
 
 export interface OsdHandlers {
-    /** False sends the request to GNOME's own popup. */
-    wanted(): boolean;
-    show(request: OsdRequest): void;
+    /** Returns null when the notch drew it, else the monitor for GNOME's own popup. */
+    show(request: OsdRequest): number | null;
     hideAll(): void;
 }
 
@@ -62,8 +63,8 @@ export function takeOverOsd(handlers: OsdHandlers): Restore {
     const originalShow = manager.show;
     const originalHideAll = manager.hideAll;
     const restoreShow = replaceMethod(manager, 'show', (monitorIndex, icon, label, level, maxLevel) => {
-        if (handlers.wanted()) handlers.show({ icon, label, level, maxLevel });
-        else originalShow.call(manager, monitorIndex, icon, label, level, maxLevel);
+        const gnomeMonitor = handlers.show({ monitorIndex, icon, label, level, maxLevel });
+        if (gnomeMonitor !== null) originalShow.call(manager, gnomeMonitor, icon, label, level, maxLevel);
     });
     const restoreHideAll = replaceMethod(manager, 'hideAll', () => {
         originalHideAll.call(manager);

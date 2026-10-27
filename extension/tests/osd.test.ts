@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { capsLockContent, osdContent } from '../src/features/osd/logic/content.js';
+import { routeOsd } from '../src/features/osd/logic/route.js';
 import { OsdTimer } from '../src/features/osd/logic/timer.js';
 
 test('level_shows_bar_and_percent', () => {
@@ -107,4 +108,28 @@ test('destroy_cancels_without_change', () => {
     timer.destroy();
     assert.equal(pending(), 0);
     assert.deepEqual(changes, [true]);
+});
+
+test('route_explicit_monitor_with_notch', () => {
+    assert.deepEqual(routeOsd({ requested: 1, focused: 0, primary: 0, notches: [0, 1] }), { monitor: 1, notch: 1 });
+});
+
+test('route_no_monitor_goes_to_focused', () => {
+    assert.deepEqual(routeOsd({ requested: -1, focused: 1, primary: 0, notches: [0, 1] }), { monitor: 1, notch: 1 });
+});
+
+test('route_focused_without_notch_draws_on_primary', () => {
+    assert.deepEqual(routeOsd({ requested: -1, focused: 1, primary: 0, notches: [0] }), { monitor: 1, notch: 0 });
+});
+
+test('route_explicit_without_notch_keeps_monitor_for_gnome', () => {
+    assert.deepEqual(routeOsd({ requested: 2, focused: 0, primary: 0, notches: [0] }), { monitor: 2, notch: 0 });
+});
+
+test('route_invalid_focus_uses_primary', () => {
+    assert.deepEqual(routeOsd({ requested: -1, focused: -1, primary: 1, notches: [0, 1] }), { monitor: 1, notch: 1 });
+});
+
+test('route_without_notches_draws_nothing', () => {
+    assert.deepEqual(routeOsd({ requested: -1, focused: 0, primary: 0, notches: [] }), { monitor: 0, notch: null });
 });
