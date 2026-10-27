@@ -2,6 +2,9 @@
 
 use crate::shared::hash::sha256_hex;
 
+/// Bumped when lookups get better, so old "not found" answers are asked again.
+const VERSION: u32 = 2;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrackKey {
     normalized: String,
@@ -12,7 +15,7 @@ impl TrackKey {
         let seconds = length_us.max(0) / 1_000_000;
         TrackKey {
             normalized: format!(
-                "{}|{}|{}|{seconds}",
+                "v{VERSION}|{}|{}|{}|{seconds}",
                 normalize(artist),
                 normalize(title),
                 normalize(album)
@@ -49,6 +52,14 @@ mod tests {
         let a = TrackKey::new("a", "b", "c", 100_000_000);
         let b = TrackKey::new("a", "b", "c", 101_000_000);
         assert_ne!(a.cache_name(), b.cache_name());
+    }
+
+    #[test]
+    fn older_answers_are_not_reused() {
+        // Version 1 keys had no prefix; their "not found" came from a lookup
+        // that did not clean up browser titles.
+        let name = TrackKey::new("a", "b", "c", 0).cache_name();
+        assert_ne!(name, sha256_hex("a|b|c|0"));
     }
 
     #[test]

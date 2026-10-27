@@ -1,14 +1,17 @@
 //! Client for the LRCLIB lyrics API (<https://lrclib.net>).
 //!
-//! `lookup` tries the exact `/api/get` endpoint first and falls back to
-//! `/api/search` when the track is unknown, `get` is overloaded or the length
-//! is outside what `get` accepts, accepting only results whose duration is
-//! within [`DURATION_TOLERANCE_S`] of the playing track.
+//! `lookup` cleans the track up into candidates (see `clean`), tries the
+//! exact `/api/get` endpoint with the best one and falls back to
+//! `/api/search` for each candidate when the track is unknown, `get` is
+//! overloaded or the length is outside what `get` accepts. A search result
+//! counts only if its title and artist match the candidate and its duration
+//! is within [`DURATION_TOLERANCE_S`] of the playing track.
 
 use std::time::Duration;
 
 use serde::Deserialize;
 
+use super::clean::{self, normalized, Candidate};
 use super::{lrc, Lookup};
 use crate::shared::http;
 
@@ -39,6 +42,10 @@ pub enum FetchError {
 #[serde(rename_all = "camelCase")]
 struct Record {
     #[serde(default)]
+    track_name: String,
+    #[serde(default)]
+    artist_name: String,
+    #[serde(default)]
     duration: Option<f64>,
     #[serde(default)]
     instrumental: bool,
@@ -49,6 +56,20 @@ struct Record {
 }
 
 impl Record {
+    /// Whether this is the candidate's song at the playing length
+    /// (`duration_s == 0` when the player does not know it).
+    fn matches(&self, candidate: &Candidate, duration_s: u64) -> bool {
+        let artist = normalized(&candidate.artist);
+        let theirs = normalized(&self.artist_name);
+        normalized(&self.track_name) == normalized(&candidate.title)
+            && (artist.is_empty()
+                || (!theirs.is_empty() && (theirs.contains(&artist) || artist.contains(&theirs))))
+            && (duration_s == 0
+                || self
+                    .duration
+                    .is_some_and(|d| (d - duration_s as f64).abs() <= DURATION_TOLERANCE_S))
+    }
+
     fn into_lookup(self) -> Lookup {
         if self.instrumental {
             return Lookup::Instrumental;
@@ -84,31 +105,40 @@ impl Client {
     }
 
     pub async fn lookup(&self, q: &Query) -> Result<Lookup, FetchError> {
+        let candidates = clean::candidates(&q.artist, &q.title);
         // `/api/get` answers 503 when it is busy asking upstream sources about a
         // track it does not have; search may still know it.
         let mut busy = None;
-        if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) {
-            match self.get(q).await {
-                Ok(Some(record)) => return Ok(record.into_lookup()),
-                Ok(None) => {}
-                Err(FetchError::Status(status)) if status.is_server_error() => {
-                    busy = Some(FetchError::Status(status));
+        if let Some(best) = candidates.first() {
+            if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) {
+                let exact = Query {
+                    artist: best.artist.clone(),
+                    title: best.title.clone(),
+                    ..q.clone()
+                };
+                match self.get(&exact).await {
+                    Ok(Some(record)) => return Ok(record.into_lookup()),
+                    Ok(None) => {}
+                    Err(FetchError::Status(status)) if status.is_server_error() => {
+                        busy = Some(FetchError::Status(status));
+                    }
+                    Err(err) => return Err(err),
                 }
-                Err(err) => return Err(err),
             }
         }
-        let records = self.search(q).await?;
-        let wanted = q.duration_s as f64;
-        let hit = records.into_iter().find(|r| {
-            q.duration_s == 0
-                || r.duration
-                    .is_some_and(|d| (d - wanted).abs() <= DURATION_TOLERANCE_S)
-        });
-        match (hit, busy) {
-            (Some(record), _) => Ok(record.into_lookup()),
+        for candidate in &candidates {
+            let records = self.search(candidate).await?;
+            if let Some(record) = records
+                .into_iter()
+                .find(|r| r.matches(candidate, q.duration_s))
+            {
+                return Ok(record.into_lookup());
+            }
+        }
+        match busy {
             // Not "not found": that would be cached for a week.
-            (None, Some(err)) => Err(err),
-            (None, None) => Ok(Lookup::NotFound),
+            Some(err) => Err(err),
+            None => Ok(Lookup::NotFound),
         }
     }
 
@@ -131,13 +161,13 @@ impl Client {
         Ok(Some(checked(resp)?.json().await?))
     }
 
-    async fn search(&self, q: &Query) -> Result<Vec<Record>, FetchError> {
+    async fn search(&self, c: &Candidate) -> Result<Vec<Record>, FetchError> {
         let resp = self
             .http
             .get(format!("{}/api/search", self.base_url))
             .query(&[
-                ("track_name", q.title.as_str()),
-                ("artist_name", q.artist.as_str()),
+                ("track_name", c.title.as_str()),
+                ("artist_name", c.artist.as_str()),
             ])
             .send()
             .await?;
@@ -429,5 +459,92 @@ mod tests {
             .mount(&server)
             .await;
         client(&server).await.lookup(&query(369)).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_youtube_video_title_is_found_by_its_song() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("track_name", "Hati-Hati di Jalan"))
+            .and(query_param("artist_name", "TULUS"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([{
+                "trackName": "Hati\u{2010}Hati di Jalan", "artistName": "Tulus",
+                "duration": 262.0, "instrumental": false,
+                "syncedLyrics": "[00:12.00]Perjalanan membawamu"
+            }])))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let q = Query {
+            artist: "TULUS Official".into(),
+            title: "TULUS - Hati-Hati di Jalan (Official Music Video)".into(),
+            album: String::new(),
+            duration_s: 263,
+        };
+        assert_eq!(
+            client(&server).await.lookup(&q).await.unwrap(),
+            Lookup::Synced(vec![Line {
+                start_us: 12_000_000,
+                text: "Perjalanan membawamu".into()
+            }])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_search_result_for_another_song_is_not_taken() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                {"trackName": "Get Lucky Tonight", "artistName": "Daft Punk",
+                 "duration": 369.0, "syncedLyrics": "[00:01.00]other"},
+                {"trackName": "Get Lucky", "artistName": "Someone Else",
+                 "duration": 369.0, "syncedLyrics": "[00:01.00]cover"},
+            ])))
+            .mount(&server)
+            .await;
+        assert_eq!(
+            client(&server).await.lookup(&query(369)).await.unwrap(),
+            Lookup::NotFound
+        );
+    }
+
+    #[tokio::test]
+    async fn the_next_candidate_is_searched_when_the_first_has_nothing() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("artist_name", "Juicy Luicy"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("artist_name", "Lagu Hits"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([{
+                "trackName": "Juicy Luicy - Lantas", "artistName": "Lagu Hits",
+                "duration": 0.0, "syncedLyrics": "[00:03.00]Lantas"
+            }])))
+            .mount(&server)
+            .await;
+        let q = Query {
+            artist: "Lagu Hits".into(),
+            title: "Juicy Luicy - Lantas (Lirik)".into(),
+            album: String::new(),
+            duration_s: 0,
+        };
+        assert!(matches!(
+            client(&server).await.lookup(&q).await.unwrap(),
+            Lookup::Synced(_)
+        ));
     }
 }
