@@ -1,0 +1,24 @@
+# Nokta configuration. Changes apply as soon as the file is saved.
+# Delete a line to go back to its default value.
+
+[appearance]
+height = 32              # collapsed notch height in px, slightly above the 28 px top bar
+idle_width = 180         # collapsed width when nothing plays
+playing_width = 260      # collapsed width while music plays
+expanded_width = 420
+expanded_height = 150
+corner_radius = 14       # bottom corners of the notch body
+ear_radius = 8           # inward curves where the notch meets the top edge
+background = "#000000"
+foreground = "#ffffff"
+use_album_accent = true  # tint progress bar and equalizer with the cover color
+animation_speed = 1.0    # 0.5 = twice as fast, 2.0 = twice as slow
+
+[behavior]
+open_delay_ms = 120      # hover time before the notch opens
+close_delay_ms = 300     # time after the pointer leaves before it closes
+move_clock = true        # move the GNOME clock to the right side of the top bar
+show_lyrics = true
+
+[lyrics]
+enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)
