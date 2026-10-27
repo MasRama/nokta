@@ -5,12 +5,14 @@ import type St from 'gi://St';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { LyricLine, LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, MediaClient } from './features/media/index.js';
 import { SettingsClient } from './features/settings/client.js';
 import { IdleClock } from './shared/clock.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { accentFor, withAlpha } from './shared/logic/color.js';
+import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode, type Scheduler } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
 import { Notch } from './shared/notch.js';
@@ -39,24 +41,29 @@ let warnedApiVersion = false;
 class Session {
     private readonly settings: SettingsClient;
     private readonly media = new MediaClient();
+    private readonly lyrics = new LyricsClient();
     private readonly notch: Notch;
     private readonly clock = new IdleClock();
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
+    private readonly lyricLine = new LyricLine();
     private readonly machine: NotchMachine;
     private readonly views: Record<NotchMode, St.Widget>;
     private readonly monitorsId: number;
     private readonly hoverId: number;
     private readonly mediaId: number;
+    private readonly lyricsId: number;
     private readonly watchId: number;
     private cancellable = new Gio.Cancellable();
     private restoreClock: Restore | null = null;
     private tickId = 0;
+    private lyricTimerId = 0;
 
     constructor() {
         this.settings = new SettingsClient(() => this.applySettings());
         this.notch = new Notch(this.settings.appearance);
         this.expanded = new ExpandedMediaView(this.media);
+        this.expanded.infoBox.add_child(this.lyricLine.actor);
         this.views = { idle: this.clock.actor, collapsed: this.collapsed.actor, expanded: this.expanded.actor };
         for (const [mode, actor] of Object.entries(this.views)) {
             actor.x_align = Clutter.ActorAlign.CENTER;
@@ -74,6 +81,7 @@ class Session {
         this.monitorsId = Main.layoutManager.connect('monitors-changed', () => this.placeOnMonitor());
         this.hoverId = this.notch.actor.connect('notify::hover', () => this.machine.pointer(this.notch.actor.hover));
         this.mediaId = this.media.onChanged(() => this.onMedia());
+        this.lyricsId = this.lyrics.onChanged(() => this.onLyrics());
         this.placeOnMonitor();
         this.applyViewSizes();
         const [width, height] = this.sizeFor('idle');
@@ -93,12 +101,15 @@ class Session {
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.media.disconnect(this.mediaId);
+        this.lyrics.disconnect(this.lyricsId);
         this.media.destroy();
+        this.lyrics.destroy();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
         this.restoreClock?.();
         this.restoreClock = null;
         this.clock.destroy();
+        this.lyricLine.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
         Main.layoutManager.removeChrome(this.notch.actor);
@@ -128,6 +139,7 @@ class Session {
         await Promise.all([
             this.settings.attach(connection, cancellable),
             this.media.attach(connection, cancellable),
+            this.lyrics.attach(connection, cancellable),
         ]);
     }
 
@@ -136,6 +148,7 @@ class Session {
         this.cancellable = new Gio.Cancellable();
         this.settings.detach();
         this.media.detach();
+        this.lyrics.detach();
     }
 
     // State
@@ -164,6 +177,11 @@ class Session {
         this.expanded.update(snapshot);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.machine.setAvailable(snapshot.available);
+        this.tick();
+        this.updateTimers();
+    }
+
+    private onLyrics(): void {
         this.tick();
         this.updateTimers();
     }
@@ -243,6 +261,7 @@ class Session {
         const snapshot = this.media.snapshot();
         const position = this.positionNow();
         this.expanded.progress.update(position, snapshot.lengthUs, snapshot.canSeek);
+        this.lyricLine.show(visibleLyric(this.lyrics.status, this.lyrics.lines, this.settings.behavior.showLyrics, position));
     }
 
     private updateTimers(): void {
@@ -256,11 +275,31 @@ class Session {
             GLib.source_remove(this.tickId);
             this.tickId = 0;
         }
+        this.scheduleLyricTimer(run);
+    }
+
+    /** One exact timeout for the next lyric line, so lines change on time. */
+    private scheduleLyricTimer(run: boolean): void {
+        if (this.lyricTimerId) GLib.source_remove(this.lyricTimerId);
+        this.lyricTimerId = 0;
+        if (!run || !this.settings.behavior.showLyrics || this.lyrics.status !== 'synced') return;
+        const position = this.positionNow();
+        const next = nextLineStartUs(this.lyrics.lines, position);
+        if (next === null) return;
+        const delay = msUntilLine(next, position, this.media.snapshot().rate);
+        this.lyricTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.lyricTimerId = 0;
+            this.tick();
+            this.scheduleLyricTimer(true);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     private stopTimers(): void {
         if (this.tickId) GLib.source_remove(this.tickId);
+        if (this.lyricTimerId) GLib.source_remove(this.lyricTimerId);
         this.tickId = 0;
+        this.lyricTimerId = 0;
     }
 
     // Shell

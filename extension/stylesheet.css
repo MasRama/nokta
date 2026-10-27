@@ -43,6 +43,12 @@
     opacity: 0.7;
 }
 
+.nokta-lyric {
+    font-size: 12px;
+    font-style: italic;
+    padding-top: 4px;
+}
+
 .nokta-progress {
     spacing: 8px;
 }

@@ -24,3 +24,8 @@ export function nextLineStartUs(lines: LyricLines, positionUs: number): number |
     return next ? next[0] : null;
 }
 
+/** Milliseconds until the line at `startUs` begins, at playback `rate`. */
+export function msUntilLine(startUs: number, positionUs: number, rate: number): number {
+    const speed = rate > 0 ? rate : 1;
+    return Math.max(0, Math.ceil((startUs - positionUs) / speed / 1000));
+}
