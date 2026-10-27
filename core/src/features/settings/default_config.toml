@@ -24,6 +24,8 @@ replace_osd = true       # show volume, brightness and other OSD in the notch in
 osd_duration_ms = 1500   # how long the notch shows the OSD after the last change
 show_caps_lock = true    # show a message in the notch when Caps Lock turns on or off
 all_monitors = true      # a notch on every monitor; false = only on the primary monitor
+device_alerts = true     # show Bluetooth audio, charger and battery alerts in the notch
+alert_duration_ms = 3000 # how long a device alert stays
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)

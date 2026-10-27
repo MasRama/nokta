@@ -31,6 +31,8 @@ fn defaults_match_spec() {
     assert_eq!(b.osd_duration_ms, 1500);
     assert!(b.show_caps_lock);
     assert!(b.all_monitors);
+    assert!(b.device_alerts);
+    assert_eq!(b.alert_duration_ms, 3000);
     assert!(c.lyrics.enabled);
 }
 
@@ -66,6 +68,8 @@ fn out_of_range_osd_values_are_rejected() {
     assert!(err.message.contains("osd_width"), "{err}");
     let err = parse("[behavior]\nosd_duration_ms = 50\n").unwrap_err();
     assert!(err.message.contains("osd_duration_ms"), "{err}");
+    let err = parse("[behavior]\nalert_duration_ms = 100\n").unwrap_err();
+    assert!(err.message.contains("alert_duration_ms"), "{err}");
 }
 
 #[test]
@@ -166,8 +170,10 @@ fn behavior_to_dbus_has_all_keys() {
     assert_eq!(
         keys,
         [
+            "alert_duration_ms",
             "all_monitors",
             "close_delay_ms",
+            "device_alerts",
             "move_clock",
             "open_delay_ms",
             "osd_duration_ms",

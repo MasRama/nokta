@@ -64,6 +64,8 @@ pub struct Behavior {
     pub osd_duration_ms: u32,
     pub show_caps_lock: bool,
     pub all_monitors: bool,
+    pub device_alerts: bool,
+    pub alert_duration_ms: u32,
 }
 
 impl Default for Behavior {
@@ -77,6 +79,8 @@ impl Default for Behavior {
             osd_duration_ms: 1500,
             show_caps_lock: true,
             all_monitors: true,
+            device_alerts: true,
+            alert_duration_ms: 3000,
         }
     }
 }
@@ -182,6 +186,12 @@ impl Config {
         check_range("behavior.open_delay_ms", b.open_delay_ms, 0, 5000)?;
         check_range("behavior.close_delay_ms", b.close_delay_ms, 0, 5000)?;
         check_range("behavior.osd_duration_ms", b.osd_duration_ms, 200, 10000)?;
+        check_range(
+            "behavior.alert_duration_ms",
+            b.alert_duration_ms,
+            500,
+            15000,
+        )?;
         Ok(())
     }
 }
@@ -243,6 +253,8 @@ impl Behavior {
             ("osd_duration_ms".into(), self.osd_duration_ms.into()),
             ("show_caps_lock".into(), self.show_caps_lock.into()),
             ("all_monitors".into(), self.all_monitors.into()),
+            ("device_alerts".into(), self.device_alerts.into()),
+            ("alert_duration_ms".into(), self.alert_duration_ms.into()),
         ])
     }
 }
