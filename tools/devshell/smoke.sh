@@ -86,6 +86,12 @@ wait_for "a focus timer replaces the clock" \
 "$HERE/timer.sh" stop
 wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock') && !shown('nokta-timer')" 10
 
+BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
+"$HERE/keys.sh" Super_L Alt_L f
+wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10
+"$HERE/keys.sh" Super_L Alt_L f
+wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokta-clock') && $BANNERS" 10
+
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
 wait_for "the settings window opens" \

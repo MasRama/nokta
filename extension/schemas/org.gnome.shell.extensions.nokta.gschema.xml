@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <!--
+    GNOME binds keys only through GSettings. The extension copies
+    [timer] shortcut from config.toml here; config.toml is the place to
+    change it.
+  -->
+  <schema id="org.gnome.shell.extensions.nokta" path="/org/gnome/shell/extensions/nokta/">
+    <key name="focus-shortcut" type="as">
+      <default>[]</default>
+      <summary>Start focus or stop the timer</summary>
+    </key>
+  </schema>
+</schemalist>

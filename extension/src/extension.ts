@@ -19,10 +19,12 @@ import { SettingsClient } from './features/settings/index.js';
 import {
     breakAfterFocus,
     finishedAlert,
+    FocusShortcut,
     FocusToggle,
     gnomeBanners,
     msUntilNextSecond,
     QuietBanners,
+    shortcutAction,
     TimerClient,
     wantsQuiet,
 } from './features/timer/index.js';
@@ -57,6 +59,7 @@ class Session {
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
+    private readonly focusShortcut: FocusShortcut;
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly lyricsId: number;
@@ -70,7 +73,7 @@ class Session {
     private restoreOsd: Restore | null = null;
     private capsLock: CapsLockWatcher | null = null;
 
-    constructor() {
+    constructor(extensionSettings: Gio.Settings) {
         this.settings = new SettingsClient(() => this.applySettings());
         this.allMonitors = this.settings.behavior.allMonitors;
         this.monitorsId = Main.layoutManager.connect('monitors-changed', () => this.buildNotches());
@@ -83,6 +86,8 @@ class Session {
             resume: () => this.timer.resume(),
             stop: () => this.timer.stop(),
         });
+        this.focusShortcut = new FocusShortcut(extensionSettings, () => this.onFocusShortcut());
+        this.focusShortcut.set(this.settings.timer.shortcut);
         this.buildNotches();
         this.applyClockPosition();
         this.applyOsdSettings();
@@ -106,6 +111,7 @@ class Session {
         this.timer.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
+        this.focusShortcut.destroy();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -180,6 +186,11 @@ class Session {
         this.timerTickId = 0;
     }
 
+    private onFocusShortcut(): void {
+        if (shortcutAction(this.timer.snapshot()) === 'focus') this.timer.start('focus');
+        else this.timer.stop();
+    }
+
     private onTimerFinished(phase: string): void {
         const settings = this.settings.timer;
         const alert = finishedAlert(phase, breakAfterFocus(this.timer.snapshot(), settings));
@@ -217,6 +228,7 @@ class Session {
         }
         this.applyClockPosition();
         this.applyOsdSettings();
+        this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
     }
 
@@ -299,7 +311,7 @@ export default class NoktaExtension extends Extension {
     private session: Session | null = null;
 
     override enable(): void {
-        this.session = new Session();
+        this.session = new Session(this.getSettings());
     }
 
     override disable(): void {

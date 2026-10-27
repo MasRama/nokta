@@ -96,5 +96,11 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             };
             return { row, widget, show };
         }
+        case 'text': {
+            // An entry row has no subtitle; the hint goes in its tooltip.
+            const widget = new Adw.EntryRow({ title, show_apply_button: true, tooltip_text: subtitle });
+            widget.connect('apply', () => send(widget.text.trim()));
+            return { row, widget, show: (value) => quietly(() => (widget.text = String(value ?? ''))) };
+        }
     }
 }

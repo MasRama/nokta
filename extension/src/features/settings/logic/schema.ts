@@ -11,7 +11,8 @@ export type RowKind =
     | { type: 'int'; min: number; max: number; step: number }
     | { type: 'float'; min: number; max: number; step: number; percent?: boolean }
     | { type: 'color' }
-    | { type: 'choice'; options: readonly { value: string; label: string }[] };
+    | { type: 'choice'; options: readonly { value: string; label: string }[] }
+    | { type: 'text' };
 
 export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer';
 
@@ -39,6 +40,7 @@ export interface Page {
 const bool = (): RowKind => ({ type: 'bool' });
 const int = (min: number, max: number, step = 1): RowKind => ({ type: 'int', min, max, step });
 const color = (): RowKind => ({ type: 'color' });
+const text = (): RowKind => ({ type: 'text' });
 
 const appearance = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'appearance',
@@ -198,6 +200,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
                     ),
                     timer('sound', 'Play a sound', bool(), 'When a focus session or a break ends'),
                     timer('quiet_notifications', 'Quiet notifications', bool(), 'No banners while you focus'),
+                    timer('shortcut', 'Shortcut', text(), 'Starts focus or stops the timer, like <Super><Alt>f; empty for none'),
                 ],
             },
         ],
@@ -235,6 +238,7 @@ export function variantType(kind: RowKind): 'b' | 'u' | 'd' | 's' {
             return 'd';
         case 'color':
         case 'choice':
+        case 'text':
             return 's';
     }
 }

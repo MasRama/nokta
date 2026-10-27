@@ -148,8 +148,9 @@ window then says what to fix before it saves anything.
 
 ### `[timer]`
 
-Start the timer with the **Focus** toggle in Quick Settings; its menu also
-starts a break, pauses and stops. After every few focus sessions the break
+Start the timer with the **Focus** toggle in Quick Settings or with
+<kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>; the same keys stop it. The
+toggle's menu also starts a break, pauses and stops. After every few focus sessions the break
 is a long one; stopping the timer starts the count again. The timer runs in
 the daemon, so it keeps going while the screen is locked.
 
@@ -161,6 +162,7 @@ the daemon, so it keeps going while the screen is locked.
 | `sessions_before_long_break` | `4` | Focus sessions before a long break, 0 to 12; `0` means never |
 | `sound` | `true` | Play a sound when a focus session or a break ends |
 | `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
+| `shortcut` | `"<Super><Alt>f"` | Keys that start focus or stop the timer, written like GNOME's keyboard shortcuts (`<Control><Shift>F12`); `""` means no shortcut |
 
 ## Privacy
 

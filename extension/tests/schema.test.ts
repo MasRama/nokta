@@ -44,6 +44,9 @@ test('row_kinds_match_their_defaults', () => {
             case 'choice':
                 assert.ok(row.kind.options.some((o) => o.value === value), name);
                 break;
+            case 'text':
+                assert.equal(typeof value, 'string', name);
+                break;
         }
     }
 });
@@ -71,6 +74,7 @@ test('variant_types_follow_the_daemon', () => {
     assert.equal(type('appearance', 'background'), 's');
     assert.equal(type('behavior', 'clock_format'), 's');
     assert.equal(type('lyrics', 'enabled'), 'b');
+    assert.equal(type('timer', 'shortcut'), 's');
 });
 
 test('row_value_reads_the_daemon_tables', () => {

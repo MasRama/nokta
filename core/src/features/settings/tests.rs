@@ -105,6 +105,7 @@ fn timer_defaults_and_limits() {
         (15, 4)
     );
     assert!(t.quiet_notifications);
+    assert_eq!(t.shortcut, "<Super><Alt>f");
     for bad in [
         "focus_minutes = 0",
         "focus_minutes = 181",
@@ -137,6 +138,7 @@ fn timer_entries_have_all_keys() {
             "long_break_minutes",
             "quiet_notifications",
             "sessions_before_long_break",
+            "shortcut",
             "sound"
         ]
     );
@@ -396,5 +398,23 @@ mod edit {
         let text = "[appearance]\nheight = 40 # mine\n";
         let text = set_key(text, "appearance", "height", &Value::Uint(44)).unwrap();
         assert_eq!(text, "[appearance]\nheight = 44 # mine\n");
+    }
+}
+
+#[test]
+fn shortcut_is_an_accelerator_or_empty() {
+    for good in [
+        "",
+        "<Super><Alt>f",
+        "<Control><Shift>F12",
+        "<Primary>space",
+        "Pause",
+    ] {
+        let c = parse(&format!("[timer]\nshortcut = {good:?}\n")).unwrap();
+        assert_eq!(c.timer.shortcut, good);
+    }
+    for bad in ["<Super>", "<Super> f", "Super+F", "<Super><Alt", "f<Alt>"] {
+        let err = parse(&format!("[timer]\nshortcut = {bad:?}\n")).unwrap_err();
+        assert!(err.message.contains("timer.shortcut"), "{err}");
     }
 }

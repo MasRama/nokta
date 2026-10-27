@@ -46,6 +46,8 @@ if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
 
     EXT="$STATE/data/gnome-shell/extensions"
     unzip -q "$ZIP" -d "$EXT/nokta@nokta.io"
+    # What gnome-extensions install would do.
+    glib-compile-schemas "$EXT/nokta@nokta.io/schemas"
     cp -r "$HERE/devtools@nokta.io" "$EXT/"
 
     cat > "$STATE/config/glib-2.0/settings/keyfile" <<'KEYFILE'

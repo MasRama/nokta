@@ -57,6 +57,7 @@ tools/devshell/timer.sh start focus|break  # noktad's focus timer
 tools/devshell/timer.sh pause|resume|stop
 tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
+tools/devshell/keys.sh KEY...         # press keys together, e.g. Super_L Alt_L f
 tools/devshell/smoke.sh               # start, check, stop (what CI runs per GNOME version)
 tools/devshell/stop.sh
 ```
@@ -192,6 +193,9 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       devshell says `false`; after `timer.sh pause`, `stop` or the break it
       says `true` again, and also after disabling the extension mid-focus.
       Banners already off before focus stay off.
+- [ ] Shortcut: `<Super><Alt>f` starts focus, again stops it (pressed
+      with `tools/devshell/keys.sh`, or by hand in a real session). Setting
+      `shortcut = ""` frees the keys; `"<Control><Alt>t"` moves them.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 

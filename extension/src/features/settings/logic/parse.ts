@@ -48,6 +48,8 @@ export interface TimerSettings {
     sound: boolean;
     /** No notification banners while a focus session runs. */
     quietNotifications: boolean;
+    /** Starts focus or stops the timer, in GNOME's key syntax; empty for none. */
+    shortcut: string;
 }
 
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
@@ -93,6 +95,7 @@ export const DEFAULT_TIMER: Readonly<TimerSettings> = {
     sessionsBeforeLongBreak: 4,
     sound: true,
     quietNotifications: true,
+    shortcut: '<Super><Alt>f',
 };
 
 const isColor = (value: unknown): boolean => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);

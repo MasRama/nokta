@@ -116,6 +116,8 @@ pub struct TimerConfig {
     pub sound: bool,
     /// No notification banners while a focus session runs.
     pub quiet_notifications: bool,
+    /// Starts focus or stops the timer, as GNOME writes keys; empty for none.
+    pub shortcut: String,
 }
 
 impl Default for TimerConfig {
@@ -127,6 +129,7 @@ impl Default for TimerConfig {
             sessions_before_long_break: 4,
             sound: true,
             quiet_notifications: true,
+            shortcut: "<Super><Alt>f".into(),
         }
     }
 }
@@ -248,12 +251,33 @@ impl Config {
             0,
             12,
         )?;
+        if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
+            return Err(ConfigError::invalid(format!(
+                "timer.shortcut must be keys like \"<Super><Alt>f\" or empty, got {:?}",
+                self.timer.shortcut
+            )));
+        }
         Ok(())
     }
 }
 
 /// The values `behavior.clock_format` accepts.
 pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
+
+/// Modifiers in angle brackets, then one key name: `<Super><Alt>f`.
+fn is_accelerator(value: &str) -> bool {
+    let mut rest = value;
+    while let Some(after) = rest.strip_prefix('<') {
+        let Some((modifier, tail)) = after.split_once('>') else {
+            return false;
+        };
+        if modifier.is_empty() || !modifier.chars().all(|c| c.is_ascii_alphanumeric()) {
+            return false;
+        }
+        rest = tail;
+    }
+    !rest.is_empty() && rest.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
 
 fn check_float(key: &str, value: f64, min: f64, max: f64) -> Result<(), ConfigError> {
     if (min..=max).contains(&value) {
@@ -387,6 +411,7 @@ impl TimerConfig {
             ),
             ("sound", self.sound.into()),
             ("quiet_notifications", self.quiet_notifications.into()),
+            ("shortcut", (&self.shortcut).into()),
         ]
     }
 }
