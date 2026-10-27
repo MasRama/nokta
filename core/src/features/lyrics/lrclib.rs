@@ -1,9 +1,9 @@
 //! Client for the LRCLIB lyrics API (<https://lrclib.net>).
 //!
 //! `lookup` tries the exact `/api/get` endpoint first and falls back to
-//! `/api/search` when the track is unknown or `get` is overloaded, accepting
-//! only results whose duration is within [`DURATION_TOLERANCE_S`] of the
-//! playing track.
+//! `/api/search` when the track is unknown, `get` is overloaded or the length
+//! is outside what `get` accepts, accepting only results whose duration is
+//! within [`DURATION_TOLERANCE_S`] of the playing track.
 
 use std::time::Duration;
 
@@ -13,6 +13,8 @@ use super::{lrc, Lookup};
 
 /// Accepted difference between the player's track length and LRCLIB's.
 pub const DURATION_TOLERANCE_S: f64 = 2.0;
+/// `/api/get` rejects longer durations with 400; search still works for them.
+const MAX_GET_DURATION_S: u64 = 3600;
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// What to look up. `duration_s == 0` means the player did not report a length.
@@ -88,7 +90,7 @@ impl Client {
         // `/api/get` answers 503 when it is busy asking upstream sources about a
         // track it does not have; search may still know it.
         let mut busy = None;
-        if q.duration_s > 0 {
+        if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) {
             match self.get(q).await {
                 Ok(Some(record)) => return Ok(record.into_lookup()),
                 Ok(None) => {}
@@ -312,6 +314,34 @@ mod tests {
         assert_eq!(
             client(&server).await.lookup(&query(369)).await.unwrap(),
             Lookup::NotFound
+        );
+    }
+
+    #[tokio::test]
+    async fn over_an_hour_skips_get_and_searches() {
+        let server = MockServer::start().await;
+        // LRCLIB rejects get with duration above 3600 s: 400 ValidationError.
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(400))
+            .expect(0)
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([record(
+                8134.0,
+                Some("[00:01.00]x"),
+                None,
+                false
+            )])))
+            .mount(&server)
+            .await;
+        let got = client(&server).await.lookup(&query(8134)).await.unwrap();
+        assert_eq!(
+            got,
+            Lookup::Synced(vec![Line {
+                start_us: 1_000_000,
+                text: "x".into()
+            }])
         );
     }
 
