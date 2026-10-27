@@ -15,7 +15,7 @@ case "${1:-on}" in
 esac
 shell_eval "
 const Clutter = imports.gi.Clutter;
-const seat = Clutter.get_default_backend().get_default_seat();
+const seat = $SEAT_JS;
 global._noktaPointer ??= seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
 const index = ${2:-global.display.get_primary_monitor()};
 const monitor = global.display.get_monitor_geometry(index);

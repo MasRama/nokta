@@ -27,7 +27,7 @@ case "${1:-}" in
     capslock)
         shell_eval "
 const Clutter = imports.gi.Clutter;
-const seat = Clutter.get_default_backend().get_default_seat();
+const seat = $SEAT_JS;
 global._noktaKeyboard ??= seat.create_virtual_device(Clutter.InputDeviceType.KEYBOARD_DEVICE);
 const now = global.get_current_time() * 1000;
 global._noktaKeyboard.notify_keyval(now, Clutter.KEY_Caps_Lock, Clutter.KeyState.PRESSED);

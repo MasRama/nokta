@@ -11,3 +11,8 @@ shell_eval() {
     gdbus call --session --dest org.gnome.Shell --object-path /org/gnome/Shell \
         --method org.gnome.Shell.Eval "$1"
 }
+
+# JavaScript for the default seat: through the stage's context from GNOME 48,
+# the default backend before (GNOME versions spec, section 2).
+# shellcheck disable=SC2034 # used by the scripts that source this file
+SEAT_JS='(global.stage.get_context ? global.stage.get_context().get_backend() : imports.gi.Clutter.get_default_backend()).get_default_seat()'

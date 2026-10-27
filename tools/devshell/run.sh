@@ -119,7 +119,9 @@ while [ "$i" -lt "$MONITORS" ]; do
     set -- "$@" --virtual-monitor 1920x1080
     i=$((i + 1))
 done
-gnome-shell --headless --wayland --no-x11 "$@" \
+# The shell's system bus is this bus too: it never talks to the real logind,
+# and containers without a system bus work (GNOME versions spec, section 3).
+DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gnome-shell --headless --wayland --no-x11 "$@" \
     --wayland-display nokta-devshell > "$STATE/shell.log" 2>&1 &
 SHELL_PID=$!
 PIDS="$SHELL_PID"

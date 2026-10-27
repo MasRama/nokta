@@ -1,0 +1,94 @@
+name: GNOME versions
+
+# Runs Nokta in a headless GNOME Shell of every supported version
+# (docs/specs/2026-10-28-nokta-gnome-versions-design.md, section 3).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gnome-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - name: Install gnome-extensions
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gnome-shell
+      - run: cargo build --release --locked
+      - name: Pack the extension
+        working-directory: extension
+        run: |
+          npm ci
+          npm run pack
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nokta
+          path: |
+            target/release/noktad
+            build/nokta@nokta.io.shell-extension.zip
+
+  smoke:
+    name: GNOME ${{ matrix.gnome }}
+    needs: build
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { gnome: "46", image: "ubuntu:24.04", family: debian }
+          - { gnome: "48", image: "debian:trixie", family: debian }
+          - { gnome: "49", image: "fedora:43", family: fedora }
+          - { gnome: "50", image: "fedora:44", family: fedora }
+          - { gnome: "51", image: "fedora:45", family: fedora }
+    steps:
+      - name: Install GNOME Shell
+        if: matrix.family == 'debian'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends gnome-shell gnome-shell-common \
+            dbus-daemon libglib2.0-bin gjs gir1.2-adw-1 gir1.2-gtk-4.0 \
+            libgl1-mesa-dri adwaita-icon-theme python3 python3-pil unzip
+      - name: Install GNOME Shell
+        if: matrix.family == 'fedora'
+        run: |
+          dnf install -y --setopt=install_weak_deps=False gnome-shell dbus-daemon \
+            glib2 gjs libadwaita gtk4 mesa-dri-drivers adwaita-icon-theme \
+            python3 python3-pillow unzip
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: nokta
+      - name: Run the smoke test
+        run: |
+          chmod +x target/release/noktad
+          tools/devshell/smoke.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gnome-${{ matrix.gnome }}
+          path: |
+            build/shots/
+            build/devshell/*.log
+            build/smoke-run.log

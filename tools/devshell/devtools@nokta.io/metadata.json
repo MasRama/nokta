@@ -2,5 +2,12 @@
   "uuid": "devtools@nokta.io",
   "name": "Nokta devshell tools",
   "description": "Development only, never shipped: unlocks Screenshot and Eval in the isolated devshell and hides the startup overview.",
-  "shell-version": ["46"]
+  "shell-version": [
+    "46",
+    "47",
+    "48",
+    "49",
+    "50",
+    "51"
+  ]
 }

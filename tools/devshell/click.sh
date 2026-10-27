@@ -12,7 +12,7 @@ for n in "$1" "$2"; do
 done
 shell_eval "
 const Clutter = imports.gi.Clutter;
-const seat = Clutter.get_default_backend().get_default_seat();
+const seat = $SEAT_JS;
 global._noktaPointer ??= seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
 const now = () => global.get_current_time() * 1000;
 global._noktaPointer.notify_absolute_motion(now(), $1, $2);
