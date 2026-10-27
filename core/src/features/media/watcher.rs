@@ -95,7 +95,10 @@ struct Player {
     status: PlaybackStatus,
     track: Track,
     rate: f64,
-    can_play_pause: bool,
+    // Raw MPRIS flags; to_state() derives the io.nokta.Media1 capabilities.
+    can_play: bool,
+    can_pause: bool,
+    can_control: bool,
     can_go_next: bool,
     can_go_previous: bool,
     can_seek: bool,
@@ -121,7 +124,10 @@ impl Player {
             status: PlaybackStatus::Stopped,
             track: Track::default(),
             rate: 1.0,
-            can_play_pause: false,
+            can_play: false,
+            can_pause: false,
+            // Players that omit CanControl are assumed controllable.
+            can_control: true,
             can_go_next: false,
             can_go_previous: false,
             can_seek: false,
@@ -184,7 +190,9 @@ impl Player {
                     self.track = track;
                 }
                 ("Position", Value::I64(p)) => self.set_position(*p, now),
-                ("CanPlayPause", Value::Bool(b)) => self.can_play_pause = *b,
+                ("CanPlay", Value::Bool(b)) => self.can_play = *b,
+                ("CanPause", Value::Bool(b)) => self.can_pause = *b,
+                ("CanControl", Value::Bool(b)) => self.can_control = *b,
                 ("CanGoNext", Value::Bool(b)) => self.can_go_next = *b,
                 ("CanGoPrevious", Value::Bool(b)) => self.can_go_previous = *b,
                 ("CanSeek", Value::Bool(b)) => self.can_seek = *b,
@@ -205,10 +213,17 @@ impl Player {
             position_us: self.position_us,
             position_timestamp_us: self.position_timestamp_us,
             rate: self.rate,
-            can_play_pause: self.can_play_pause,
-            can_go_next: self.can_go_next,
-            can_go_previous: self.can_go_previous,
-            can_seek: self.can_seek,
+            // MPRIS has no CanPlayPause: the toggle needs CanPause while
+            // playing and CanPlay otherwise, and CanControl gates everything.
+            can_play_pause: self.can_control
+                && if self.status == PlaybackStatus::Playing {
+                    self.can_pause
+                } else {
+                    self.can_play
+                },
+            can_go_next: self.can_control && self.can_go_next,
+            can_go_previous: self.can_control && self.can_go_previous,
+            can_seek: self.can_control && self.can_seek,
         }
     }
 }

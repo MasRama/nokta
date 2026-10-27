@@ -39,10 +39,27 @@ impl Meta {
     }
 }
 
+/// MPRIS CanPlay, CanPause and CanControl.
+#[derive(Clone, Copy)]
+pub struct Caps {
+    pub play: bool,
+    pub pause: bool,
+    pub control: bool,
+}
+
+impl Caps {
+    pub const ALL: Caps = Caps {
+        play: true,
+        pause: true,
+        control: true,
+    };
+}
+
 struct Player {
     status: String,
     meta: Meta,
     position: i64,
+    caps: Caps,
     calls: Arc<Mutex<Vec<String>>>,
 }
 
@@ -98,20 +115,28 @@ impl Player {
         1.0
     }
     #[zbus(property)]
-    fn can_play_pause(&self) -> bool {
-        true
+    fn can_play(&self) -> bool {
+        self.caps.play
+    }
+    #[zbus(property)]
+    fn can_pause(&self) -> bool {
+        self.caps.pause
+    }
+    #[zbus(property)]
+    fn can_control(&self) -> bool {
+        self.caps.control
     }
     #[zbus(property)]
     fn can_go_next(&self) -> bool {
-        true
+        self.caps.control
     }
     #[zbus(property)]
     fn can_go_previous(&self) -> bool {
-        true
+        self.caps.control
     }
     #[zbus(property)]
     fn can_seek(&self) -> bool {
-        true
+        self.caps.control
     }
 }
 
@@ -128,6 +153,7 @@ impl FakePlayer {
             status: status.into(),
             meta,
             position: 0,
+            caps: Caps::ALL,
             calls: calls.clone(),
         };
         let conn = zbus::connection::Builder::address(address)
@@ -177,6 +203,17 @@ impl FakePlayer {
             .metadata_changed(iface.signal_emitter())
             .await
             .unwrap();
+    }
+
+    /// Sets CanPlay, CanPause and CanControl and announces them in one signal.
+    pub async fn set_caps(&self, caps: Caps) {
+        let iface = self.player().await;
+        iface.get_mut().await.caps = caps;
+        let player = iface.get().await;
+        let emitter = iface.signal_emitter();
+        player.can_play_changed(emitter).await.unwrap();
+        player.can_pause_changed(emitter).await.unwrap();
+        player.can_control_changed(emitter).await.unwrap();
     }
 
     /// Changes the position silently, as real players do during playback.

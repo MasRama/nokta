@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use nokta_core::features::media::{art::ArtCache, watcher, PlaybackStatus};
 use support::bus::TestBus;
-use support::fake_player::{FakePlayer, Meta};
+use support::fake_player::{Caps, FakePlayer, Meta};
 use support::wait_for;
 
 async fn start_watcher(
@@ -138,4 +138,46 @@ async fn controls_without_player_are_noops() {
     ctl.play_pause().await.unwrap();
     ctl.set_position(1).await.unwrap();
     tokio::time::sleep(Duration::from_millis(10)).await;
+}
+
+#[tokio::test]
+async fn play_pause_follows_can_play_and_can_pause() {
+    let bus = TestBus::start();
+    let cache = tempfile::tempdir().unwrap();
+    let a = FakePlayer::start(bus.address(), "a", "Playing", Meta::new(1)).await;
+    let (mut rx, _ctl) = start_watcher(&bus, &cache).await;
+    wait_for(&mut rx, "player", |s| s.available && s.can_play_pause).await;
+
+    // A live stream: it plays but cannot pause.
+    let live = Caps {
+        play: true,
+        pause: false,
+        control: true,
+    };
+    a.set_caps(live).await;
+    wait_for(&mut rx, "cannot pause while playing", |s| !s.can_play_pause).await;
+    a.set_status("Paused").await;
+    wait_for(&mut rx, "can play while paused", |s| {
+        s.status == PlaybackStatus::Paused && s.can_play_pause
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn can_control_false_disables_every_control() {
+    let bus = TestBus::start();
+    let cache = tempfile::tempdir().unwrap();
+    let a = FakePlayer::start(bus.address(), "a", "Playing", Meta::new(1)).await;
+    let (mut rx, _ctl) = start_watcher(&bus, &cache).await;
+    wait_for(&mut rx, "player", |s| s.available && s.can_play_pause).await;
+    a.set_caps(Caps {
+        play: true,
+        pause: true,
+        control: false,
+    })
+    .await;
+    wait_for(&mut rx, "no controls", |s| {
+        !s.can_play_pause && !s.can_go_next && !s.can_go_previous && !s.can_seek
+    })
+    .await;
 }
