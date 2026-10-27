@@ -14,6 +14,7 @@ pub struct Config {
     pub behavior: Behavior,
     pub lyrics: LyricsConfig,
     pub timer: TimerConfig,
+    pub notifications: NotificationsConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -137,6 +138,26 @@ impl Default for TimerConfig {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct NotificationsConfig {
+    /// Show the banners GNOME would show in the notch instead.
+    pub in_notch: bool,
+    pub duration_ms: u32,
+    /// Off shows only the app and the title.
+    pub show_body: bool,
+}
+
+impl Default for NotificationsConfig {
+    fn default() -> Self {
+        NotificationsConfig {
+            in_notch: true,
+            duration_ms: 5000,
+            show_body: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConfigError {
     pub message: String,
@@ -253,6 +274,12 @@ impl Config {
             self.timer.sessions_before_long_break,
             0,
             12,
+        )?;
+        check_range(
+            "notifications.duration_ms",
+            self.notifications.duration_ms,
+            1000,
+            30000,
         )?;
         if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
             return Err(ConfigError::invalid(format!(
@@ -416,6 +443,16 @@ impl TimerConfig {
             ("sound", self.sound.into()),
             ("quiet_notifications", self.quiet_notifications.into()),
             ("shortcut", (&self.shortcut).into()),
+        ]
+    }
+}
+
+impl NotificationsConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("in_notch", self.in_notch.into()),
+            ("duration_ms", self.duration_ms.into()),
+            ("show_body", self.show_body.into()),
         ]
     }
 }

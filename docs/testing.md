@@ -212,6 +212,28 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] A real webcam, a call with the microphone and screen sharing
       *(real session)*.
 
+### Notifications
+
+Send one with `. tools/devshell/env.sh`, then
+`gdbus call --session --dest org.gnome.Shell --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.Notify APP "uint32 0" "" TITLE BODY "@as []" "@a{sv} {}" "int32 -1"`
+(add `"@a{sv} {'urgency': <byte 2>}"` instead of `{}` for a critical one).
+
+- [ ] A notification shows in the notch, 420 px wide and two lines tall:
+      the title, then the body as plain text (markup removed, `&amp;` as
+      `&`). No GNOME banner. It closes after `duration_ms`.
+- [ ] With the pointer on it, it stays; it closes about 1.5 s after the
+      pointer leaves.
+- [ ] A click opens it like GNOME's banner: it leaves the message list and
+      the notch closes.
+- [ ] A volume OSD during a notification shows over it; the notification
+      comes back when the OSD ends.
+- [ ] A critical notification uses GNOME's banner.
+- [ ] `show_body = false`: the second line names the app.
+- [ ] `in_notch = false` while running: GNOME's banner again.
+- [ ] Do Not Disturb and a real app's notification *(real session)*: none
+      in the notch while Do Not Disturb is on; clicking a chat message
+      opens the chat.
+
 ### Appearance and clock (settings window spec)
 
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;

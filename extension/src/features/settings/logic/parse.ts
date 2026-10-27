@@ -87,6 +87,15 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     privacyDots: true,
 };
 
+/** io.nokta.Settings1.Notifications in camelCase. */
+export interface NotificationSettings {
+    /** Banners GNOME would show go to the notch. */
+    inNotch: boolean;
+    durationMs: number;
+    /** Off shows only the title and the app. */
+    showBody: boolean;
+}
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
@@ -99,6 +108,12 @@ export const DEFAULT_TIMER: Readonly<TimerSettings> = {
     sound: true,
     quietNotifications: true,
     shortcut: '<Super><Alt>f',
+};
+
+export const DEFAULT_NOTIFICATIONS: Readonly<NotificationSettings> = {
+    inNotch: true,
+    durationMs: 5000,
+    showBody: true,
 };
 
 const isColor = (value: unknown): boolean => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
@@ -127,3 +142,4 @@ export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAU
 export const behaviorFrom = (raw: unknown): Behavior => fromTable(raw, DEFAULT_BEHAVIOR);
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
 export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);
+export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);

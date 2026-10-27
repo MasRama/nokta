@@ -162,3 +162,21 @@
     font-weight: bold;
     font-feature-settings: "tnum";
 }
+
+.nokta-notification {
+    padding: 0 16px;
+    spacing: 12px;
+}
+
+.nokta-notification-icon {
+    icon-size: 28px;
+}
+
+.nokta-notification-title {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.nokta-notification-detail {
+    font-size: 12px;
+}

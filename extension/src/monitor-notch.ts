@@ -6,6 +6,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
+import { NotificationTimer, NotificationView } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
@@ -19,9 +20,11 @@ import { type MonitorArea, Notch } from './shared/notch.js';
 import { glibSchedule } from './shared/schedule.js';
 
 const TICK_MS = 250;
+/** A notification is two lines tall: this much taller than the closed notch. */
+const NOTIFICATION_EXTRA_HEIGHT = 28;
 
-/** What the notch draws: the state machine's mode, or the OSD over it. */
-type Drawn = NotchMode | 'osd';
+/** What the notch draws: the state machine's mode, or the OSD or a notification over it. */
+type Drawn = NotchMode | 'osd' | 'notification';
 
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
@@ -48,9 +51,12 @@ export class MonitorNotch {
     private readonly expanded: ExpandedMediaView;
     private readonly lyricLine = new LyricLine();
     private readonly osdView = new OsdView();
+    private readonly notificationView = new NotificationView(() => this.onNotificationClick());
+    private notificationClick: (() => void) | null = null;
     private readonly privacyDots = new PrivacyDots();
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
+    private readonly notificationTimer: NotificationTimer;
     private readonly views: Record<Drawn, St.Widget>;
     private readonly hoverId: number;
     private readonly destroyId: number;
@@ -78,6 +84,7 @@ export class MonitorNotch {
             collapsed: this.collapsed.actor,
             expanded: this.expanded.actor,
             osd: this.osdView.actor,
+            notification: this.notificationView.actor,
         };
         for (const [mode, actor] of Object.entries(this.views)) {
             actor.x_align = Clutter.ActorAlign.CENTER;
@@ -90,16 +97,21 @@ export class MonitorNotch {
         this.machine = new NotchMachine(
             glibSchedule,
             () => ({ openMs: settings.behavior.openDelayMs, closeMs: settings.behavior.closeDelayMs }),
-            (mode) => this.onMode(mode),
+            () => this.onMode(),
         );
         this.osdTimer = new OsdTimer(
             glibSchedule,
             () => settings.behavior.osdDurationMs,
-            (active) => this.draw(active ? 'osd' : this.machine.mode),
+            () => this.draw(this.overlay()),
         );
+        this.notificationTimer = new NotificationTimer(glibSchedule, () => this.draw(this.overlay()));
 
         Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: true });
-        this.hoverId = this.notch.actor.connect('notify::hover', () => this.machine.pointer(this.notch.actor.hover));
+        this.hoverId = this.notch.actor.connect('notify::hover', () => {
+            const { hover } = this.notch.actor;
+            this.notificationTimer.pointer(hover);
+            this.machine.pointer(hover);
+        });
         // GNOME 50 and later destroy the notch themselves when the shell
         // shuts down, while the clients may still report changes.
         this.destroyId = this.notch.actor.connect('destroy', () => this.destroy());
@@ -125,10 +137,13 @@ export class MonitorNotch {
         this.destroyed = true;
         this.machine.destroy();
         this.osdTimer.destroy();
+        this.notificationTimer.destroy();
+        this.notificationClick = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
+        this.notificationView.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
@@ -212,11 +227,37 @@ export class MonitorNotch {
         this.osdTimer.hide();
     }
 
+    /** A notification until its time runs out; a click calls `onClick` and closes it. */
+    showNotification(title: string, detail: string, icon: Gio.Icon | null, durationMs: number, onClick: () => void): void {
+        if (this.destroyed) return;
+        this.notificationView.show(title, detail, icon);
+        this.notificationClick = onClick;
+        this.notificationTimer.show(durationMs);
+    }
+
+    hideNotification(): void {
+        if (this.destroyed) return;
+        this.notificationTimer.hide();
+    }
+
     // State
 
-    /** The state machine keeps running under the OSD; it is drawn when the OSD ends. */
-    private onMode(mode: NotchMode): void {
-        if (!this.osdTimer.active) this.draw(mode);
+    private onNotificationClick(): void {
+        const click = this.notificationClick;
+        this.notificationClick = null;
+        this.notificationTimer.hide();
+        click?.();
+    }
+
+    /** The OSD over a notification over the state machine's mode, which keeps running underneath. */
+    private overlay(): Drawn {
+        if (this.osdTimer.active) return 'osd';
+        if (this.notificationTimer.active) return 'notification';
+        return this.machine.mode;
+    }
+
+    private onMode(): void {
+        this.draw(this.overlay());
     }
 
     private draw(mode: Drawn): void {
@@ -224,7 +265,8 @@ export class MonitorNotch {
         if (mode === previous) return;
         this.drawn = mode;
         const [width, height] = this.sizeFor(mode);
-        const kind = mode === 'expanded' ? 'open' : previous === 'expanded' ? 'close' : 'width';
+        const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'notification';
+        const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
         this.showView(mode);
         if (mode === 'idle') this.clock.start();
@@ -242,6 +284,7 @@ export class MonitorNotch {
     private sizeFor(mode: Drawn): [number, number] {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
+        if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
         if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight];
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }

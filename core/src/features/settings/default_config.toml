@@ -43,3 +43,8 @@ sessions_before_long_break = 4  # focus sessions before a long break, 0 to 12; 0
 sound = true             # play a sound when a focus session or a break ends
 quiet_notifications = true  # no notification banners while a focus session runs
 shortcut = "<Super><Alt>f"  # starts focus or stops the timer; "" = no shortcut
+
+[notifications]
+in_notch = true          # show notification banners in the notch instead of GNOME's banner
+duration_ms = 5000       # how long a notification stays, 1000 to 30000
+show_body = true         # false shows only the app and the title

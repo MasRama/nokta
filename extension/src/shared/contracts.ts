@@ -78,6 +78,7 @@ export interface SettingsProps {
     Behavior: Record<string, unknown>;
     Lyrics: Record<string, unknown>;
     Timer: Record<string, unknown>;
+    Notifications: Record<string, unknown>;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */

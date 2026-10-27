@@ -93,6 +93,20 @@ wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && wid
 "$HERE/shot.sh" smoke-osd > /dev/null
 wait_for "the OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
 
+# A notification GNOME would show as a banner shows in the notch instead.
+# This also checks that this GNOME version has the method Nokta wraps. The
+# devshell's shell does not own org.freedesktop.Notifications, but serves
+# the object on its own connection.
+gdbus call --session --dest org.gnome.Shell \
+    --object-path /org/freedesktop/Notifications \
+    --method org.freedesktop.Notifications.Notify \
+    "Nokta smoke" "uint32 0" "dialog-information-symbolic" "Hello from Nokta" "The body line" \
+    "@as []" "@a{sv} {}" "int32 -1" > /dev/null
+wait_for "a notification shows in a 420 px notch instead of GNOME's banner" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === 'Hello from Nokta' && width() === 420 && !find(Main.layoutManager.uiGroup, 'notification-banner').some((b) => b.mapped)" 10
+"$HERE/shot.sh" smoke-notification > /dev/null
+wait_for "the notification goes away" "$FIND !shown('nokta-notification') && width() === 180" 15
+
 "$HERE/timer.sh" start focus
 wait_for "a focus timer replaces the clock" \
     "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^2[45]:[0-9]{2}$/.test(one('nokta-timer').text)" 10

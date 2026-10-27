@@ -8,15 +8,18 @@ import {
     behaviorFrom,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
+    DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
+    notificationsFrom,
     timerFrom,
     type Appearance,
     type Behavior,
+    type NotificationSettings,
     type TimerSettings,
 } from './logic/parse.js';
 
 /**
- * The notch's appearance, behavior and timer lengths from io.nokta.Settings1. Until the
+ * The notch's appearance, behavior, timer and notification settings from io.nokta.Settings1. Until the
  * daemon answers it holds the spec defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
@@ -24,6 +27,7 @@ export class SettingsClient {
     appearance: Appearance = { ...DEFAULT_APPEARANCE };
     behavior: Behavior = { ...DEFAULT_BEHAVIOR };
     timer: TimerSettings = { ...DEFAULT_TIMER };
+    notifications: NotificationSettings = { ...DEFAULT_NOTIFICATIONS };
     private proxy: Gio.DBusProxy | null = null;
     private changedId = 0;
 
@@ -49,6 +53,7 @@ export class SettingsClient {
         this.appearance = appearanceFrom(cached(this.proxy, 'Appearance'));
         this.behavior = behaviorFrom(cached(this.proxy, 'Behavior'));
         this.timer = timerFrom(cached(this.proxy, 'Timer'));
+        this.notifications = notificationsFrom(cached(this.proxy, 'Notifications'));
         this.onChanged();
     }
 }

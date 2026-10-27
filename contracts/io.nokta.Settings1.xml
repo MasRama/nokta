@@ -19,9 +19,13 @@
     <property name="Timer" type="a{sv}" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- The [notifications] table of config.toml. -->
+    <property name="Notifications" type="a{sv}" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!--
       Changes one key of config.toml and saves it, keeping its comments. table
-      is "appearance", "behavior", "lyrics" or "timer". Fails with InvalidArgs,
+      is "appearance", "behavior", "lyrics", "timer" or "notifications". Fails with InvalidArgs,
       and writes nothing, for an unknown key, a value of the wrong type or a
       value the config does not accept. The new value is published like any
       edit.

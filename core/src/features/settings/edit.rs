@@ -56,6 +56,7 @@ fn expected_type(table: &str, key: &str) -> Result<SettingValue, ConfigError> {
         "behavior" => defaults.behavior.entries(),
         "lyrics" => defaults.lyrics.entries(),
         "timer" => defaults.timer.entries(),
+        "notifications" => defaults.notifications.entries(),
         _ => {
             return Err(ConfigError::invalid(format!(
                 "unknown settings table {table:?}"

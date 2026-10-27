@@ -1,4 +1,4 @@
-import { appearanceFrom, behaviorFrom, lyricsFrom, timerFrom } from './parse.js';
+import { appearanceFrom, behaviorFrom, lyricsFrom, notificationsFrom, timerFrom } from './parse.js';
 
 /**
  * Every row of the settings window, in order. Adding a setting is one line
@@ -14,7 +14,7 @@ export type RowKind =
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer';
+export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications';
 
 export interface Row {
     table: Table;
@@ -59,6 +59,14 @@ const behavior = (key: string, title: string, kind: RowKind, subtitle?: string):
 
 const timer = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'timer',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const notifications = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'notifications',
     key,
     title,
     kind,
@@ -180,6 +188,14 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Notifications',
+                rows: [
+                    notifications('in_notch', 'Notifications in the notch', bool(), "Instead of GNOME's banner"),
+                    notifications('duration_ms', 'How long', int(1000, 30000, 500), 'Milliseconds; hovering keeps it open'),
+                    notifications('show_body', 'Show the message', bool(), 'Off shows only who sent it and the app'),
+                ],
+            },
+            {
                 title: 'Device alerts',
                 rows: [
                     behavior('device_alerts', 'Show device alerts', bool(), 'Bluetooth audio, charger and battery'),
@@ -223,6 +239,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     behavior: behaviorFrom,
     lyrics: lyricsFrom,
     timer: timerFrom,
+    notifications: notificationsFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

@@ -7,8 +7,10 @@ import {
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
+    DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
     lyricsFrom,
+    notificationsFrom,
     timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
@@ -122,4 +124,14 @@ test('timer_settings_from_table', () => {
         shortcut: '',
     });
     assert.deepEqual(timerFrom(undefined), DEFAULT_TIMER);
+});
+
+test('notification_settings_from_table', () => {
+    assert.deepEqual(DEFAULT_NOTIFICATIONS, { inNotch: true, durationMs: 5000, showBody: true });
+    assert.deepEqual(notificationsFrom({ in_notch: false, duration_ms: 8000, show_body: false }), {
+        inNotch: false,
+        durationMs: 8000,
+        showBody: false,
+    });
+    assert.deepEqual(notificationsFrom({ duration_ms: 'long' }), DEFAULT_NOTIFICATIONS);
 });

@@ -11,7 +11,9 @@ the charger is plugged in or out, when the battery is low and when it is
 full. A focus timer from Quick Settings counts down in the notch and
 starts a short break when the session ends. While an app uses the camera,
 the microphone or screen sharing, small green and orange dots sit at the
-left edge of the notch. Every monitor has its own notch,
+left edge of the notch. Notifications show in the notch instead of GNOME's
+banner: hover to keep one open, click it to open the app. Every monitor has
+its own notch,
 and these messages show on the monitor you are working on.
 
 ![The notch opened while a song plays](docs/images/expanded.png)
@@ -166,6 +168,14 @@ the daemon, so it keeps going while the screen is locked.
 | `sound` | `true` | Play a sound when a focus session or a break ends |
 | `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
 | `shortcut` | `"<Super><Alt>f"` | Keys that start focus or stop the timer, written like GNOME's keyboard shortcuts (`<Control><Shift>F12`); `""` means no shortcut |
+
+### `[notifications]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `in_notch` | `true` | Show the notifications GNOME would show as a banner in the notch instead. Critical ones, and any while an app is fullscreen, still use GNOME's banner. Do Not Disturb and each app's notification settings still apply |
+| `duration_ms` | `5000` | How long a notification stays, 1000 to 30000; it stays while the pointer is on it |
+| `show_body` | `true` | Show the message; `false` shows only the title and the app |
 
 ## Privacy
 

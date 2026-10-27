@@ -146,6 +146,26 @@ fn timer_entries_have_all_keys() {
 }
 
 #[test]
+fn notifications_defaults_and_limits() {
+    let n = Config::default().notifications;
+    assert_eq!((n.in_notch, n.duration_ms, n.show_body), (true, 5000, true));
+    for bad in ["duration_ms = 999", "duration_ms = 30001"] {
+        let err = parse(&format!("[notifications]\n{bad}\n")).unwrap_err();
+        assert!(err.message.contains("notifications.duration_ms"), "{err}");
+    }
+    let c = parse("[notifications]\nin_notch = false\nshow_body = false\n").unwrap();
+    assert_eq!(
+        (c.notifications.in_notch, c.notifications.show_body),
+        (false, false)
+    );
+    let map = entries(Config::default().notifications.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["duration_ms", "in_notch", "show_body"]);
+    assert_eq!(map["duration_ms"], SettingValue::Uint(5000));
+}
+
+#[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
     let keys: Vec<_> = map.keys().copied().collect();
@@ -333,6 +353,9 @@ mod edit {
 
         let text = set_key("", "timer", "focus_minutes", &Value::Uint(50)).unwrap();
         assert_eq!(parse(&text).unwrap().timer.focus_minutes, 50);
+
+        let text = set_key("", "notifications", "in_notch", &Value::Bool(false)).unwrap();
+        assert!(!parse(&text).unwrap().notifications.in_notch);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);

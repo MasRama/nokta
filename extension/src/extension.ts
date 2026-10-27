@@ -6,6 +6,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
+import { notificationLines, takeOverBanners, takesBanner, type TrayNotification } from './features/notifications/index.js';
 import {
     CapsLockWatcher,
     capsLockContent,
@@ -74,6 +75,10 @@ class Session {
     private restoreClock: Restore | null = null;
     private restoreOsd: Restore | null = null;
     private capsLock: CapsLockWatcher | null = null;
+    private restoreBanners: Restore | null = null;
+    /** The notification in a notch, watched so the notch closes when it goes away. */
+    private shownNotification: { notification: TrayNotification; notch: MonitorNotch; destroyId: number } | null =
+        null;
 
     constructor(extensionSettings: Gio.Settings) {
         this.settings = new SettingsClient(() => this.applySettings());
@@ -93,6 +98,7 @@ class Session {
         this.buildNotches();
         this.applyClockPosition();
         this.applyOsdSettings();
+        this.applyNotificationSettings();
         this.onTimer();
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
@@ -124,6 +130,9 @@ class Session {
         this.restoreOsd = null;
         this.capsLock?.destroy();
         this.capsLock = null;
+        this.restoreBanners?.();
+        this.restoreBanners = null;
+        this.releaseNotification();
     }
 
     // Daemon
@@ -237,19 +246,15 @@ class Session {
         }
         this.applyClockPosition();
         this.applyOsdSettings();
+        this.applyNotificationSettings();
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
     }
 
     // OSD (multi-monitor spec, section 3)
 
-    /** Draws in the routed notch; returns the monitor for GNOME's popup when it cannot. */
-    private showOsd(
-        requested: number,
-        content: OsdContent,
-        icon: Gio.Icon | null,
-        durationMs?: number,
-    ): number | null {
+    /** The notch for a message, or null and the monitor for GNOME's popup when none can show it. */
+    private routeMessage(requested: number): { notch: MonitorNotch | null; monitor: number } {
         const route = routeOsd({
             requested,
             focused: focusedMonitor(),
@@ -258,7 +263,19 @@ class Session {
         });
         const notch = this.notches.find((n) => n.monitorIndex === route.notch);
         // A fullscreen app hides the notch; the lock screen covers it.
-        if (!notch?.visible || Main.sessionMode.isLocked) return route.monitor;
+        const shown = notch?.visible && !Main.sessionMode.isLocked;
+        return { notch: shown ? notch : null, monitor: route.monitor };
+    }
+
+    /** Draws in the routed notch; returns the monitor for GNOME's popup when it cannot. */
+    private showOsd(
+        requested: number,
+        content: OsdContent,
+        icon: Gio.Icon | null,
+        durationMs?: number,
+    ): number | null {
+        const { notch, monitor } = this.routeMessage(requested);
+        if (!notch) return monitor;
         notch.showOsd(content, icon, durationMs);
         return null;
     }
@@ -301,6 +318,53 @@ class Session {
             this.capsLock.destroy();
             this.capsLock = null;
         }
+    }
+
+    // Notifications (0.4 spec, section 5)
+
+    private applyNotificationSettings(): void {
+        const { inNotch } = this.settings.notifications;
+        if (inNotch && !this.restoreBanners) {
+            this.restoreBanners = takeOverBanners((notification) => this.onBanner(notification));
+        } else if (!inNotch && this.restoreBanners) {
+            this.restoreBanners();
+            this.restoreBanners = null;
+        }
+    }
+
+    /** Shows a banner GNOME was about to show in the focused notch; false leaves it to GNOME. */
+    private onBanner(notification: TrayNotification): boolean {
+        const { inNotch, durationMs, showBody } = this.settings.notifications;
+        const { notch } = this.routeMessage(-1);
+        if (!notch || !takesBanner({ inNotch, urgency: notification.urgency, notchShown: true })) return false;
+        const text = {
+            title: notification.title ?? '',
+            body: notification.body ?? '',
+            app: notification.source?.title ?? '',
+        };
+        const { title, detail } = notificationLines(text, showBody);
+        const icon = notification.gicon ?? notification.source?.icon ?? null;
+        const shown = this.shownNotification;
+        if (shown && (shown.notification !== notification || shown.notch !== notch)) {
+            if (shown.notch !== notch) shown.notch.hideNotification();
+            this.releaseNotification();
+        }
+        if (!this.shownNotification) {
+            const destroyId = notification.connect('destroy', () => {
+                notch.hideNotification();
+                this.releaseNotification();
+            });
+            this.shownNotification = { notification, notch, destroyId };
+        }
+        notch.showNotification(title, detail, icon, durationMs, () => notification.activate());
+        return true;
+    }
+
+    private releaseNotification(): void {
+        const shown = this.shownNotification;
+        if (!shown) return;
+        this.shownNotification = null;
+        shown.notification.disconnect(shown.destroyId);
     }
 
     // Shell
