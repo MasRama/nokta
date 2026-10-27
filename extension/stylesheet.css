@@ -1,9 +1,84 @@
 /*
  * Sizes, radii and colors that have a config key are set from code
- * (io.nokta.Settings1.Appearance); only typography lives here.
+ * (io.nokta.Settings1.Appearance); this file holds typography, spacing
+ * and the fixed parts of the media views.
  */
 .nokta-clock {
     font-size: 13px;
     font-weight: bold;
     font-feature-settings: "tnum";
+}
+
+.nokta-collapsed {
+    padding: 0 12px 0 10px;
+}
+
+.nokta-equalizer {
+    spacing: 2px;
+    height: 14px;
+}
+
+.nokta-equalizer-bar {
+    width: 3px;
+    height: 14px;
+    border-radius: 1.5px;
+}
+
+.nokta-expanded {
+    padding: 14px 18px 10px 18px;
+    spacing: 8px;
+}
+
+.nokta-expanded-top {
+    spacing: 12px;
+}
+
+.nokta-title {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.nokta-artists {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.nokta-progress {
+    spacing: 8px;
+}
+
+.nokta-time {
+    font-size: 10px;
+    font-feature-settings: "tnum";
+    opacity: 0.7;
+}
+
+.nokta-progress-track {
+    height: 4px;
+    border-radius: 2px;
+}
+
+.nokta-progress-fill {
+    border-radius: 2px;
+}
+
+.nokta-controls {
+    spacing: 18px;
+}
+
+.nokta-button {
+    padding: 4px;
+    border-radius: 99px;
+}
+
+.nokta-button:hover {
+    background-color: rgba(128, 128, 128, 0.25);
+}
+
+.nokta-button-icon {
+    icon-size: 16px;
+}
+
+.nokta-play-icon {
+    icon-size: 20px;
 }

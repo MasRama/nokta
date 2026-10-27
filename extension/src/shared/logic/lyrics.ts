@@ -23,3 +23,4 @@ export function nextLineStartUs(lines: LyricLines, positionUs: number): number |
     const next = lines[currentLineIndex(lines, positionUs) + 1];
     return next ? next[0] : null;
 }
+

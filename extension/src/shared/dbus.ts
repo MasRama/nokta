@@ -1,6 +1,8 @@
 import Gio from 'gi://Gio';
+import type GLib from 'gi://GLib';
 
-import { BUS_NAME } from './contracts.js';
+import { NOKTA1_XML } from '../generated/contracts.js';
+import { BUS_NAME, PATHS } from './contracts.js';
 
 /**
  * Follows io.nokta.Nokta on the session bus, starting the daemon through
@@ -49,4 +51,25 @@ export function makeProxy<T extends Gio.DBusProxy>(
 /** Unpacks one cached property, or undefined when the proxy has none. */
 export function cached(proxy: Gio.DBusProxy, name: string): unknown {
     return proxy.get_cached_property(name)?.recursiveUnpack();
+}
+
+/** Calls a method without waiting for it; failures are logged, not thrown. */
+export function callMethod(proxy: Gio.DBusProxy, method: string, params: GLib.Variant | null = null): void {
+    proxy.call(method, params, Gio.DBusCallFlags.NONE, -1, null, (source, result) => {
+        try {
+            source?.call_finish(result);
+        } catch (error) {
+            console.warn(`Nokta: ${method} failed`, error);
+        }
+    });
+}
+
+/** io.nokta.Nokta1.ApiVersion, or null when the daemon does not say. */
+export async function readApiVersion(
+    connection: Gio.DBusConnection,
+    cancellable: Gio.Cancellable,
+): Promise<number | null> {
+    const proxy = await makeProxy(NOKTA1_XML, PATHS.Nokta1, connection, cancellable);
+    const version = cached(proxy, 'ApiVersion');
+    return typeof version === 'number' ? version : null;
 }
