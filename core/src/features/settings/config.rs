@@ -32,6 +32,8 @@ pub struct Appearance {
     pub use_album_accent: bool,
     pub animation_speed: f64,
     pub osd_width: u32,
+    pub background_opacity: f64,
+    pub accent: String,
 }
 
 impl Default for Appearance {
@@ -49,6 +51,8 @@ impl Default for Appearance {
             use_album_accent: true,
             animation_speed: 1.0,
             osd_width: 300,
+            background_opacity: 1.0,
+            accent: "#ffffff".into(),
         }
     }
 }
@@ -66,6 +70,8 @@ pub struct Behavior {
     pub all_monitors: bool,
     pub device_alerts: bool,
     pub alert_duration_ms: u32,
+    pub show_clock: bool,
+    pub clock_format: String,
 }
 
 impl Default for Behavior {
@@ -81,6 +87,8 @@ impl Default for Behavior {
             all_monitors: true,
             device_alerts: true,
             alert_duration_ms: 3000,
+            show_clock: true,
+            clock_format: "system".into(),
         }
     }
 }
@@ -177,10 +185,18 @@ impl Config {
         check_range("appearance.ear_radius", a.ear_radius, 0, 64)?;
         check_color("appearance.background", &a.background)?;
         check_color("appearance.foreground", &a.foreground)?;
-        if !(0.1..=5.0).contains(&a.animation_speed) {
+        check_color("appearance.accent", &a.accent)?;
+        check_float("appearance.animation_speed", a.animation_speed, 0.1, 5.0)?;
+        check_float(
+            "appearance.background_opacity",
+            a.background_opacity,
+            0.0,
+            1.0,
+        )?;
+        if !CLOCK_FORMATS.contains(&b.clock_format.as_str()) {
             return Err(ConfigError::invalid(format!(
-                "appearance.animation_speed must be between 0.1 and 5.0, got {}",
-                a.animation_speed
+                "behavior.clock_format must be \"system\", \"24h\" or \"12h\", got {:?}",
+                b.clock_format
             )));
         }
         check_range("behavior.open_delay_ms", b.open_delay_ms, 0, 5000)?;
@@ -193,6 +209,19 @@ impl Config {
             15000,
         )?;
         Ok(())
+    }
+}
+
+/// The values `behavior.clock_format` accepts.
+pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
+
+fn check_float(key: &str, value: f64, min: f64, max: f64) -> Result<(), ConfigError> {
+    if (min..=max).contains(&value) {
+        Ok(())
+    } else {
+        Err(ConfigError::invalid(format!(
+            "{key} must be between {min:.1} and {max:.1}, got {value}"
+        )))
     }
 }
 
@@ -238,6 +267,8 @@ impl Appearance {
             ("use_album_accent".into(), self.use_album_accent.into()),
             ("animation_speed".into(), self.animation_speed.into()),
             ("osd_width".into(), self.osd_width.into()),
+            ("background_opacity".into(), self.background_opacity.into()),
+            ("accent".into(), string_value(&self.accent)),
         ])
     }
 }
@@ -255,6 +286,14 @@ impl Behavior {
             ("all_monitors".into(), self.all_monitors.into()),
             ("device_alerts".into(), self.device_alerts.into()),
             ("alert_duration_ms".into(), self.alert_duration_ms.into()),
+            ("show_clock".into(), self.show_clock.into()),
+            ("clock_format".into(), string_value(&self.clock_format)),
         ])
+    }
+}
+
+impl LyricsConfig {
+    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
+        HashMap::from([("enabled".into(), self.enabled.into())])
     }
 }

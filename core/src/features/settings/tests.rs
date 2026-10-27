@@ -23,6 +23,8 @@ fn defaults_match_spec() {
     assert!(a.use_album_accent);
     assert_eq!(a.animation_speed, 1.0);
     assert_eq!(a.osd_width, 300);
+    assert_eq!(a.background_opacity, 1.0);
+    assert_eq!(a.accent, "#ffffff");
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
     assert!(b.move_clock);
@@ -33,6 +35,8 @@ fn defaults_match_spec() {
     assert!(b.all_monitors);
     assert!(b.device_alerts);
     assert_eq!(b.alert_duration_ms, 3000);
+    assert!(b.show_clock);
+    assert_eq!(b.clock_format, "system");
     assert!(c.lyrics.enabled);
 }
 
@@ -70,6 +74,28 @@ fn out_of_range_osd_values_are_rejected() {
     assert!(err.message.contains("osd_duration_ms"), "{err}");
     let err = parse("[behavior]\nalert_duration_ms = 100\n").unwrap_err();
     assert!(err.message.contains("alert_duration_ms"), "{err}");
+}
+
+#[test]
+fn new_appearance_and_clock_values_are_checked() {
+    let err = parse("[appearance]\nbackground_opacity = 1.5\n").unwrap_err();
+    assert!(err.message.contains("background_opacity"), "{err}");
+    let err = parse("[appearance]\naccent = \"red\"\n").unwrap_err();
+    assert!(err.message.contains("accent"), "{err}");
+    let err = parse("[behavior]\nclock_format = \"24\"\n").unwrap_err();
+    assert!(err.message.contains("clock_format"), "{err}");
+    let c = parse("[appearance]\nbackground_opacity = 0.0\n[behavior]\nclock_format = \"24h\"\n")
+        .unwrap();
+    assert_eq!(c.appearance.background_opacity, 0.0);
+    assert_eq!(c.behavior.clock_format, "24h");
+}
+
+#[test]
+fn lyrics_to_dbus_has_all_keys() {
+    let map = Config::default().lyrics.to_dbus();
+    let keys: Vec<_> = map.keys().cloned().collect();
+    assert_eq!(keys, ["enabled"]);
+    assert!(bool::try_from(&map["enabled"]).unwrap());
 }
 
 #[test]
@@ -144,8 +170,10 @@ fn appearance_to_dbus_has_all_keys() {
     assert_eq!(
         keys,
         [
+            "accent",
             "animation_speed",
             "background",
+            "background_opacity",
             "corner_radius",
             "ear_radius",
             "expanded_height",
@@ -172,6 +200,7 @@ fn behavior_to_dbus_has_all_keys() {
         [
             "alert_duration_ms",
             "all_monitors",
+            "clock_format",
             "close_delay_ms",
             "device_alerts",
             "move_clock",
@@ -179,6 +208,7 @@ fn behavior_to_dbus_has_all_keys() {
             "osd_duration_ms",
             "replace_osd",
             "show_caps_lock",
+            "show_clock",
             "show_lyrics"
         ]
     );

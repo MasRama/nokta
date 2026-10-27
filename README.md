@@ -88,7 +88,9 @@ logs the line and column of the error (`journalctl --user -u nokta`).
 | `corner_radius` | `14` | Radius of the bottom corners |
 | `ear_radius` | `8` | Radius of the inward curves where the notch meets the top edge |
 | `background` | `"#000000"` | Notch color |
+| `background_opacity` | `1.0` | `0.0` makes the notch background see-through, `1.0` solid; text and icons stay solid |
 | `foreground` | `"#ffffff"` | Text and icon color |
+| `accent` | `"#ffffff"` | Color of the seek bar, the equalizer and the volume bar when the cover's color is not used |
 | `use_album_accent` | `true` | Color the seek bar and the equalizer with the cover's color |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
@@ -107,6 +109,8 @@ logs the line and column of the error (`journalctl --user -u nokta`).
 | `all_monitors` | `true` | Show a notch on every monitor; `false` shows it only on the primary monitor |
 | `device_alerts` | `true` | Show Bluetooth audio, charger and battery alerts in the notch |
 | `alert_duration_ms` | `3000` | How long a device alert stays |
+| `show_clock` | `true` | Show the time in the notch while nothing plays |
+| `clock_format` | `"system"` | `"24h"` (17:00), `"12h"` (5:00), or `"system"` to follow GNOME's setting |
 
 ### `[lyrics]`
 

@@ -10,7 +10,9 @@ expanded_height = 150
 corner_radius = 14       # bottom corners of the notch body
 ear_radius = 8           # inward curves where the notch meets the top edge
 background = "#000000"
+background_opacity = 1.0 # 0.0 = see-through, 1.0 = solid; text and icons stay solid
 foreground = "#ffffff"
+accent = "#ffffff"       # progress bar, equalizer and OSD bar when the cover color is not used
 use_album_accent = true  # tint progress bar and equalizer with the cover color
 animation_speed = 1.0    # 0.5 = twice as fast, 2.0 = twice as slow
 osd_width = 300          # width while the notch shows volume, brightness or Caps Lock
@@ -26,6 +28,8 @@ show_caps_lock = true    # show a message in the notch when Caps Lock turns on o
 all_monitors = true      # a notch on every monitor; false = only on the primary monitor
 device_alerts = true     # show Bluetooth audio, charger and battery alerts in the notch
 alert_duration_ms = 3000 # how long a device alert stays
+show_clock = true        # the time in the notch while nothing plays
+clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)

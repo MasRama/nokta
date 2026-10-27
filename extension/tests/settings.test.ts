@@ -6,6 +6,8 @@ import {
     behaviorFrom,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
+    DEFAULT_LYRICS,
+    lyricsFrom,
 } from '../src/features/settings/logic/parse.js';
 
 test('appearance_from_full_table', () => {
@@ -22,6 +24,8 @@ test('appearance_from_full_table', () => {
         use_album_accent: false,
         animation_speed: 1.5,
         osd_width: 320,
+        background_opacity: 0.5,
+        accent: '#ff8800',
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -36,6 +40,8 @@ test('appearance_from_full_table', () => {
         useAlbumAccent: false,
         animationSpeed: 1.5,
         osdWidth: 320,
+        backgroundOpacity: 0.5,
+        accent: '#ff8800',
     });
 });
 
@@ -58,6 +64,19 @@ test('behavior_reads_the_osd_keys', () => {
     assert.equal(DEFAULT_BEHAVIOR.allMonitors, true);
     assert.equal(DEFAULT_BEHAVIOR.deviceAlerts, true);
     assert.equal(DEFAULT_BEHAVIOR.alertDurationMs, 3000);
+});
+
+test('clock_settings_and_free_strings', () => {
+    assert.equal(DEFAULT_BEHAVIOR.showClock, true);
+    assert.equal(DEFAULT_BEHAVIOR.clockFormat, 'system');
+    assert.equal(behaviorFrom({ clock_format: '24h' }).clockFormat, '24h');
+    // Colors still must be #rrggbb; other strings pass through.
+    assert.equal(appearanceFrom({ accent: 'orange' }).accent, '#ffffff');
+});
+
+test('lyrics_table', () => {
+    assert.deepEqual(DEFAULT_LYRICS, { enabled: true });
+    assert.deepEqual(lyricsFrom({ enabled: false }), { enabled: false });
     assert.equal(behaviorFrom({ all_monitors: false }).allMonitors, false);
     assert.equal(DEFAULT_APPEARANCE.osdWidth, 300);
     const behavior = behaviorFrom({ replace_osd: false, osd_duration_ms: 900, show_caps_lock: false });

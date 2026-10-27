@@ -12,6 +12,8 @@ export interface Appearance {
     useAlbumAccent: boolean;
     animationSpeed: number;
     osdWidth: number;
+    backgroundOpacity: number;
+    accent: string;
 }
 
 export interface Behavior {
@@ -25,6 +27,14 @@ export interface Behavior {
     allMonitors: boolean;
     deviceAlerts: boolean;
     alertDurationMs: number;
+    showClock: boolean;
+    /** "system", "24h" or "12h"; anything else counts as "system". */
+    clockFormat: string;
+}
+
+/** io.nokta.Settings1.Lyrics in camelCase. */
+export interface Lyrics {
+    enabled: boolean;
 }
 
 export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
@@ -40,6 +50,8 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     useAlbumAccent: true,
     animationSpeed: 1.0,
     osdWidth: 300,
+    backgroundOpacity: 1.0,
+    accent: '#ffffff',
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
@@ -53,7 +65,15 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     allMonitors: true,
     deviceAlerts: true,
     alertDurationMs: 3000,
+    showClock: true,
+    clockFormat: 'system',
 };
+
+export const DEFAULT_LYRICS: Readonly<Lyrics> = {
+    enabled: true,
+};
+
+const isColor = (value: unknown): boolean => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
 
 const snakeCase = (key: string): string => key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 
@@ -69,7 +89,7 @@ function fromTable<T extends object>(raw: unknown, defaults: Readonly<T>): T {
         const valid =
             typeof value === typeof fallback &&
             (typeof value !== 'number' || Number.isFinite(value)) &&
-            (typeof value !== 'string' || /^#[0-9a-f]{6}$/i.test(value));
+            (typeof value !== 'string' || !isColor(fallback) || isColor(value));
         if (valid) out[key] = value;
     }
     return out as T;
@@ -77,3 +97,4 @@ function fromTable<T extends object>(raw: unknown, defaults: Readonly<T>): T {
 
 export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAULT_APPEARANCE);
 export const behaviorFrom = (raw: unknown): Behavior => fromTable(raw, DEFAULT_BEHAVIOR);
+export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
