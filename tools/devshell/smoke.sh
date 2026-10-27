@@ -79,6 +79,13 @@ wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && wid
 "$HERE/shot.sh" smoke-osd > /dev/null
 wait_for "the OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
 
+"$HERE/timer.sh" start focus
+wait_for "a focus timer replaces the clock" \
+    "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^2[45]:[0-9]{2}$/.test(one('nokta-timer').text)" 10
+"$HERE/shot.sh" smoke-timer > /dev/null
+"$HERE/timer.sh" stop
+wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock') && !shown('nokta-timer')" 10
+
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
 wait_for "the settings window opens" \
