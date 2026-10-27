@@ -10,6 +10,7 @@ use std::time::Duration;
 use serde::Deserialize;
 
 use super::{lrc, Lookup};
+use crate::shared::http;
 
 /// Accepted difference between the player's track length and LRCLIB's.
 pub const DURATION_TOLERANCE_S: f64 = 2.0;
@@ -75,11 +76,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(base_url: &str, user_agent: &str) -> Client {
-        let http = reqwest::Client::builder()
-            .user_agent(user_agent)
-            .timeout(TIMEOUT)
-            .build()
-            .expect("static reqwest configuration is valid");
+        let http = http::client(|b| b.user_agent(user_agent).timeout(TIMEOUT));
         Client {
             http,
             base_url: base_url.trim_end_matches('/').to_owned(),

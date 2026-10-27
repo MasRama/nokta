@@ -15,6 +15,7 @@ use crate::features::devices;
 use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings::{self, Config, Store};
+use crate::shared::http;
 use crate::shared::paths::Paths;
 
 pub const BUS_NAME: &str = "io.nokta.Nokta";
@@ -43,7 +44,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let http = reqwest::Client::builder().user_agent(USER_AGENT).build()?;
+    let http = http::client(|b| b.user_agent(USER_AGENT));
     let (media_state, control) =
         media::watcher::spawn(conn.clone(), ArtCache::new(paths.cache_dir.clone(), http));
 

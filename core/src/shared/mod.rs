@@ -3,4 +3,5 @@
 pub mod clock;
 pub mod dbus;
 pub mod hash;
+pub mod http;
 pub mod paths;
