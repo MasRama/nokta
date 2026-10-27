@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/MasRama/nokta/compare/v0.3.0...v0.4.0) (2026-10-27)
+
+
+### Features
+
+* **extension:** show privacy dots for the camera, microphone and screen sharing ([46e5875](https://github.com/MasRama/nokta/commit/46e5875310995c0f4fb4d7eb0316c56711ef4860))
+* **lyrics:** read lyrics from your own .lrc files ([90a408c](https://github.com/MasRama/nokta/commit/90a408c24c7457af46dfabad317ef922863f7fc2))
+* **media:** switch between players from the notch ([12c05e5](https://github.com/MasRama/nokta/commit/12c05e505c21403578a58958729c850eacd1f0eb))
+* **notifications:** show notifications in the notch ([14a306a](https://github.com/MasRama/nokta/commit/14a306a8acc004bec9286e5040378d1066d83e91))
+* **timer:** silence notification banners while focusing ([402db21](https://github.com/MasRama/nokta/commit/402db21c4f3e3d11d02cd89db1d42f39a6798a23))
+* **timer:** start and stop focus with a shortcut ([fe4b6dc](https://github.com/MasRama/nokta/commit/fe4b6dcbca352718a57abbf9116482672c49d87b))
+* **timer:** take a long break after four sessions ([fb84bee](https://github.com/MasRama/nokta/commit/fb84bee38f35ad8a1ce45c7383bf1ba90f6ff367))
+
+
+### Bug Fixes
+
+* **lyrics:** find lyrics for songs played on YouTube in a browser ([07e1a08](https://github.com/MasRama/nokta/commit/07e1a089d99245145eaf110de66c851c1d7eda7d))
+
 ## [0.3.0](https://github.com/MasRama/nokta/compare/v0.2.0...v0.3.0) (2026-10-27)
 
 
