@@ -1,0 +1,136 @@
+#!/bin/sh
+# Runs Nokta in an isolated, headless GNOME Shell: a private session bus,
+# temporary XDG directories and GSettings in a keyfile, so nothing touches
+# the real session or its settings. Stays in the foreground; Ctrl-C stops it.
+#
+# Usage: tools/devshell/run.sh [--no-daemon] [--no-player]
+#   --no-daemon  do not start noktad (the notch must stay idle)
+#   --no-player  do not start the fake MPRIS player
+#
+# Needs: target/{release,debug}/noktad and the packed extension
+# (cd extension && npm run pack). Then use shot.sh, hover.sh, player.sh
+# and stop.sh.
+set -eu
+
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+HERE="$ROOT/tools/devshell"
+STATE="$ROOT/build/devshell"
+ZIP="$ROOT/build/nokta@nokta.io.shell-extension.zip"
+
+if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
+    START_DAEMON=1
+    START_PLAYER=1
+    for arg in "$@"; do
+        case "$arg" in
+            --no-daemon) START_DAEMON=0 ;;
+            --no-player) START_PLAYER=0 ;;
+            *) echo "unknown option: $arg" >&2; exit 2 ;;
+        esac
+    done
+    [ -f "$ZIP" ] || { echo "missing $ZIP: run 'npm run pack' in extension/" >&2; exit 1; }
+    NOKTAD="$ROOT/target/release/noktad"
+    [ -x "$NOKTAD" ] || NOKTAD="$ROOT/target/debug/noktad"
+    [ -x "$NOKTAD" ] || { echo "missing noktad: run 'cargo build'" >&2; exit 1; }
+
+    rm -rf "$STATE"
+    mkdir -p "$STATE/config/glib-2.0/settings" "$STATE/data/gnome-shell/extensions" \
+        "$STATE/cache" "$STATE/runtime" "$STATE/lrclib/api" "$ROOT/build/shots"
+    chmod 700 "$STATE/runtime"
+
+    EXT="$STATE/data/gnome-shell/extensions"
+    unzip -q "$ZIP" -d "$EXT/nokta@nokta.io"
+    cp -r "$HERE/devtools@nokta.io" "$EXT/"
+
+    cat > "$STATE/config/glib-2.0/settings/keyfile" <<'KEYFILE'
+[org/gnome/shell]
+enabled-extensions=['devtools@nokta.io', 'nokta@nokta.io']
+disable-user-extensions=false
+welcome-dialog-last-shown-version='999'
+KEYFILE
+
+    # A bare session bus: no system service directories, so the shell does
+    # not start gvfs, portals or evolution (and their FUSE mounts) in here.
+    mkdir -p "$STATE/services"
+    cat > "$STATE/bus.conf" <<BUSCONF
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <type>session</type>
+  <keep_umask/>
+  <listen>unix:dir=$STATE/runtime</listen>
+  <auth>EXTERNAL</auth>
+  <servicedir>$STATE/services</servicedir>
+  <policy context="default">
+    <allow send_destination="*" eavesdrop="true"/>
+    <allow eavesdrop="true"/>
+    <allow own="*"/>
+  </policy>
+</busconfig>
+BUSCONF
+
+    # LRCLIB stand-in: http.server ignores the query, so /api/get always
+    # answers with this record and lyrics are the same on every run.
+    cp "$HERE/lyrics.json" "$STATE/lrclib/api/get"
+
+    exec env -u DISPLAY -u WAYLAND_DISPLAY -u GNOME_SETUP_DISPLAY \
+        NOKTA_DEVSHELL_INNER=1 START_DAEMON="$START_DAEMON" START_PLAYER="$START_PLAYER" \
+        NOKTAD="$NOKTAD" \
+        XDG_CONFIG_HOME="$STATE/config" XDG_DATA_HOME="$STATE/data" \
+        XDG_CACHE_HOME="$STATE/cache" XDG_RUNTIME_DIR="$STATE/runtime" \
+        GSETTINGS_BACKEND=keyfile \
+        dbus-run-session --config-file="$STATE/bus.conf" -- "$0"
+fi
+
+# Inside the private bus from here on.
+PIDS=""
+cleanup() {
+    # shellcheck disable=SC2086
+    [ -n "$PIDS" ] && kill $PIDS 2>/dev/null || true
+    rm -f "$STATE/bus" "$STATE/run.pid"
+}
+trap cleanup EXIT
+trap 'exit 0' INT TERM
+echo "$$" > "$STATE/run.pid"
+
+has_name() {
+    gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+        --method org.freedesktop.DBus.NameHasOwner "$1" 2>/dev/null | grep -q true
+}
+
+wait_name() {
+    i=0
+    until has_name "$1"; do
+        i=$((i + 1))
+        [ "$i" -le 150 ] || { echo "timed out waiting for $1" >&2; exit 1; }
+        sleep 0.2
+    done
+}
+
+gnome-shell --headless --wayland --no-x11 --virtual-monitor 1920x1080 \
+    --wayland-display nokta-devshell > "$STATE/shell.log" 2>&1 &
+SHELL_PID=$!
+PIDS="$SHELL_PID"
+wait_name org.gnome.Shell.Screenshot
+
+if [ "$START_PLAYER" = 1 ]; then
+    gjs -m "$HERE/fake-player.js" "$STATE" > "$STATE/player.log" 2>&1 &
+    PIDS="$PIDS $!"
+    wait_name org.mpris.MediaPlayer2.noktafake
+fi
+
+if [ "$START_DAEMON" = 1 ]; then
+    PORT=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+    python3 -m http.server -b 127.0.0.1 -d "$STATE/lrclib" "$PORT" > "$STATE/lrclib.log" 2>&1 &
+    PIDS="$PIDS $!"
+    until python3 -c "import socket, sys; socket.create_connection(('127.0.0.1', $PORT), 1)" 2>/dev/null; do
+        sleep 0.1
+    done
+    NOKTA_LRCLIB_URL="http://127.0.0.1:$PORT" "$NOKTAD" > "$STATE/noktad.log" 2>&1 &
+    PIDS="$PIDS $!"
+    echo "$!" > "$STATE/noktad.pid"
+    wait_name io.nokta.Nokta
+fi
+
+echo "$DBUS_SESSION_BUS_ADDRESS" > "$STATE/bus"
+echo "devshell ready (state in $STATE)"
+wait "$SHELL_PID"
