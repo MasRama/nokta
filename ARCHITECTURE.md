@@ -42,13 +42,13 @@ small public boundary, private internals, and a thin composition layer.
 contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binary noktad
   src/app/          composition: start the features, serve them, own the bus name
-  src/features/     media, lyrics, settings
+  src/features/     media, lyrics, settings, devices
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
-  src/features/     media, lyrics, settings, osd
+  src/features/     media, lyrics, settings, osd, devices
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -62,7 +62,8 @@ docs/               design spec, plans, manual test checklist
 - A feature exposes only what its `mod.rs` (Rust) or `index.ts` (TypeScript)
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
-  current track). `media`, `settings` and `osd` depend on no other feature.
+  current track). `media`, `settings`, `osd` and `devices` depend on no
+  other feature; `extension.ts` shows device alerts through the OSD row.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings.
@@ -89,6 +90,12 @@ docs/               design spec, plans, manual test checklist
 - **lyrics** looks up synced lyrics on LRCLIB when the track changes, parses
   the LRC text and caches the result per track. "Not found" is cached for 7
   days, errors are not cached.
+- **devices** follows UPower and BlueZ on the system bus and emits an
+  `Alert` signal when a Bluetooth audio device connects or disconnects, the
+  charger is plugged or unplugged, the battery gets low (20 %) or critical
+  (10 %), or it is fully charged. The rules are pure (`rules.rs`); the state
+  found at startup raises no alert. Without a system bus, UPower or BlueZ
+  the daemon runs as before.
 - **settings** reads `$XDG_CONFIG_HOME/nokta/config.toml`, writes a commented
   default on first run, watches the file and republishes on change. A broken
   file never stops the daemon: it logs the error with its location and keeps
@@ -106,6 +113,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerName`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance` (`a{sv}`), `Behavior` (`a{sv}`) |
+| `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with

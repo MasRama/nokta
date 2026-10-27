@@ -25,7 +25,9 @@ fully isolated from your session:
   read or written;
 - a fake MPRIS player (`fake-player.js`, one 200 s track with a generated
   cover) and a local LRCLIB stand-in that always answers with
-  `lyrics.json`.
+  `lyrics.json`;
+- a fake UPower and BlueZ (`fake-devices.js`: a battery at 76 % on AC and a
+  pair of earbuds), which `noktad` reaches as its system bus there.
 
 It also loads `devtools@nokta.io`, a development-only extension that allows
 screenshots and `Eval` inside that shell. It is never packed or installed.
@@ -45,6 +47,11 @@ tools/devshell/player.sh Playing|Paused|Stopped
 tools/devshell/osd.sh level ICON LEVEL [MAX]  # an OSD as gnome-settings-daemon sends it
 tools/devshell/osd.sh label ICON TEXT
 tools/devshell/osd.sh capslock        # toggle Caps Lock with a virtual keyboard
+tools/devshell/device.sh plug|unplug  # the fake charger
+tools/devshell/device.sh percent N    # the fake battery level
+tools/devshell/device.sh full         # charged to 100 % on AC
+tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none reported
+tools/devshell/device.sh disconnect
 tools/devshell/stop.sh
 ```
 
@@ -137,6 +144,20 @@ Start with `run.sh --monitors=2`; `shot.sh` then also writes
       session)*: the OSD follows the focused window, not the pointer.
 - [ ] Fullscreen app on one monitor *(real session)*: only that monitor's
       notch hides; volume keys there show GNOME's popup on that monitor.
+
+### Device alerts (device alerts spec)
+
+Wait for each alert to close (`alert_duration_ms`, 3 s) before the next.
+
+- [ ] `device.sh unplug`: `On battery 76%`; `device.sh plug`: `Charging 76%`.
+- [ ] `device.sh connect "Galaxy Buds2" 82`: `Galaxy Buds2 82%`;
+      `device.sh disconnect`: `Galaxy Buds2 Disconnected`.
+- [ ] `device.sh connect` without a battery: `Connected` after about 2 s.
+- [ ] Unplugged, `device.sh percent 20`: `Battery low 20%` once;
+      `percent 9`: `Battery critical 9%` in red, once.
+- [ ] `device.sh full`: `Fully charged 100%`.
+- [ ] `device_alerts = false` while running: none of these show.
+- [ ] Real earbuds and a real charger *(real session)*.
 
 ### Interaction
 

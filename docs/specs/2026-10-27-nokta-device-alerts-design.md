@@ -116,7 +116,7 @@ The 2 s wait is a single timer per connection, not polling.
 
 | kind | icon | title | detail |
 |---|---|---|---|
-| bluetooth-connected | `audio-headphones-symbolic` | name | `82%` or empty |
+| bluetooth-connected | `audio-headphones-symbolic` | name | `82%`, or `Connected` without a battery |
 | bluetooth-disconnected | `audio-headphones-symbolic` | name | `Disconnected` |
 | charger-plugged | `battery-good-charging-symbolic` | `Charging` | `76%` |
 | charger-unplugged | `battery-good-symbolic` | `On battery` | `76%` |
