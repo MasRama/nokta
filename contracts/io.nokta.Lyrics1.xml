@@ -1,0 +1,15 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Lyrics. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Lyrics1">
+    <!-- "none", "loading", "synced", "plain", "instrumental", "not-found" or "error". -->
+    <property name="Status" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- (start_us, text) pairs sorted by start; empty unless Status is "synced". -->
+    <property name="Lines" type="a(xs)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+  </interface>
+</node>
