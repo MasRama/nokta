@@ -72,4 +72,11 @@ export const DEVICES_SIGNALS = {
 export interface SettingsProps {
     Appearance: Record<string, unknown>;
     Behavior: Record<string, unknown>;
+    Lyrics: Record<string, unknown>;
 }
+
+/** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */
+export const SETTINGS_METHODS = {
+    Set: 'ssv',
+    Reset: '',
+} as const;

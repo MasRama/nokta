@@ -189,6 +189,85 @@ async fn settings_reload_emits_change() {
     assert!(!changed.contains_key("Behavior"));
 }
 
+async fn settings_proxy(conn: &zbus::Connection) -> zbus::Proxy<'static> {
+    zbus::Proxy::new(conn, NAME, "/io/nokta/Settings", "io.nokta.Settings1")
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn set_writes_the_file_and_publishes_it() {
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Settings").await;
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let settings = settings_proxy(&conn).await;
+
+    let value = zbus::zvariant::Value::from("24h");
+    let _: () = settings
+        .call("Set", &("behavior", "clock_format", value))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "Behavior").await;
+    let behavior =
+        HashMap::<String, OwnedValue>::try_from(changed["Behavior"].try_clone().unwrap()).unwrap();
+    assert_eq!(
+        String::try_from(behavior["clock_format"].try_clone().unwrap()).unwrap(),
+        "24h"
+    );
+    let text = std::fs::read_to_string(daemon.paths().config_file).unwrap();
+    assert!(text.contains("clock_format = \"24h\""), "{text}");
+    assert!(
+        text.starts_with("# Nokta configuration."),
+        "comments are kept"
+    );
+
+    let lyrics = zbus::zvariant::Value::from(false);
+    let _: () = settings
+        .call("Set", &("lyrics", "enabled", lyrics))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "Lyrics").await;
+    let table =
+        HashMap::<String, OwnedValue>::try_from(changed["Lyrics"].try_clone().unwrap()).unwrap();
+    assert!(!bool::try_from(table["enabled"].try_clone().unwrap()).unwrap());
+}
+
+#[tokio::test]
+async fn bad_set_changes_nothing_and_reset_restores_defaults() {
+    let bus = TestBus::start();
+    let daemon =
+        Daemon::start_with_config(&bus, NO_LRCLIB, Some("[appearance]\nheight = 40 # mine\n"))
+            .await;
+    let conn = bus.connect().await;
+    let settings = settings_proxy(&conn).await;
+    let path = daemon.paths().config_file;
+
+    let err = settings
+        .call::<_, _, ()>(
+            "Set",
+            &("appearance", "height", zbus::zvariant::Value::U32(5)),
+        )
+        .await
+        .unwrap_err();
+    let zbus::Error::MethodError(name, Some(message), _) = err else {
+        panic!("unexpected error {err:?}");
+    };
+    assert_eq!(name.as_str(), "org.freedesktop.DBus.Error.InvalidArgs");
+    assert!(message.contains("appearance.height"), "{message}");
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        "[appearance]\nheight = 40 # mine\n"
+    );
+
+    let _: () = settings.call("Reset", &()).await.unwrap();
+    assert_eq!(
+        std::fs::read_to_string(&path).unwrap(),
+        nokta_core::features::settings::DEFAULT_CONFIG_TOML
+    );
+}
+
 #[tokio::test]
 async fn invalid_config_keeps_last_good_settings() {
     let bus = TestBus::start();

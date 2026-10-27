@@ -237,3 +237,104 @@ async fn watch_ignores_other_files() {
     let got = tokio::time::timeout(Duration::from_millis(400), rx.recv()).await;
     assert!(got.is_err(), "unexpected event {got:?}");
 }
+
+mod edit {
+    use zbus::zvariant::Value;
+
+    use super::super::edit::set_key;
+    use super::*;
+
+    #[test]
+    fn replaces_a_value_and_keeps_its_comment() {
+        let text = set_key(DEFAULT_CONFIG_TOML, "appearance", "height", &Value::U32(40)).unwrap();
+        let line = text.lines().find(|l| l.starts_with("height")).unwrap();
+        assert!(line.starts_with("height = 40 "), "{line}");
+        assert!(line.contains("# collapsed notch height"), "{line}");
+        assert!(text.starts_with("# Nokta configuration."));
+        let mut expected = Config::default();
+        expected.appearance.height = 40;
+        assert_eq!(parse(&text).unwrap(), expected);
+    }
+
+    #[test]
+    fn adds_a_missing_key_and_table() {
+        let text = set_key(
+            "[appearance]\nheight = 40\n",
+            "behavior",
+            "clock_format",
+            &Value::from("24h"),
+        )
+        .unwrap();
+        let c = parse(&text).unwrap();
+        assert_eq!(c.behavior.clock_format, "24h");
+        assert_eq!(c.appearance.height, 40);
+
+        let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
+        assert!(!parse(&text).unwrap().lyrics.enabled);
+        let text = set_key(&text, "lyrics", "enabled", &Value::Bool(true)).unwrap();
+        assert_eq!(text.matches("enabled").count(), 1, "{text}");
+    }
+
+    #[test]
+    fn unknown_tables_and_keys_are_rejected() {
+        let err = set_key("", "colors", "height", &Value::U32(40)).unwrap_err();
+        assert!(err.message.contains("colors"), "{err}");
+        let err = set_key("", "appearance", "width", &Value::U32(40)).unwrap_err();
+        assert!(err.message.contains("appearance.width"), "{err}");
+    }
+
+    #[test]
+    fn wrong_types_are_rejected() {
+        let err = set_key("", "appearance", "height", &Value::from("tall")).unwrap_err();
+        assert!(err.message.contains("appearance.height"), "{err}");
+        let err = set_key("", "behavior", "move_clock", &Value::U32(1)).unwrap_err();
+        assert!(err.message.contains("behavior.move_clock"), "{err}");
+        let err = set_key("", "appearance", "height", &Value::F64(40.5)).unwrap_err();
+        assert!(err.message.contains("whole number"), "{err}");
+    }
+
+    #[test]
+    fn numbers_are_coerced() {
+        for value in [
+            Value::I32(40),
+            Value::I64(40),
+            Value::F64(40.0),
+            Value::U16(40),
+        ] {
+            let text = set_key("", "appearance", "height", &value).unwrap();
+            assert_eq!(parse(&text).unwrap().appearance.height, 40, "{value:?}");
+        }
+        let text = set_key("", "appearance", "animation_speed", &Value::U32(2)).unwrap();
+        assert_eq!(parse(&text).unwrap().appearance.animation_speed, 2.0);
+        let text = set_key("", "appearance", "background_opacity", &Value::F64(0.5)).unwrap();
+        assert_eq!(parse(&text).unwrap().appearance.background_opacity, 0.5);
+    }
+
+    #[test]
+    fn invalid_values_are_rejected() {
+        let err = set_key("", "appearance", "height", &Value::U32(5)).unwrap_err();
+        assert!(err.message.contains("appearance.height"), "{err}");
+        let err = set_key("", "appearance", "background", &Value::from("black")).unwrap_err();
+        assert!(err.message.contains("appearance.background"), "{err}");
+        let err = set_key("", "appearance", "height", &Value::I32(-3)).unwrap_err();
+        assert!(err.message.contains("height"), "{err}");
+    }
+
+    #[test]
+    fn a_broken_file_is_not_touched() {
+        let err = set_key("[appearance\n", "appearance", "height", &Value::U32(40)).unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.starts_with("config.toml has an error at line 1"),
+            "{message}"
+        );
+        assert!(message.ends_with("fix it first"), "{message}");
+    }
+
+    #[test]
+    fn a_value_line_is_replaced_not_duplicated() {
+        let text = "[appearance]\nheight = 40 # mine\n";
+        let text = set_key(text, "appearance", "height", &Value::U32(44)).unwrap();
+        assert_eq!(text, "[appearance]\nheight = 44 # mine\n");
+    }
+}

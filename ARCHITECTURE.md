@@ -155,7 +155,7 @@ Changing anything in this table needs an issue and agreement first.
 | Async runtime | `tokio` |
 | D-Bus | `zbus` |
 | HTTP | `reqwest` with `rustls` |
-| Config | `serde` and `toml`, file watching with `notify` |
+| Config | `serde` and `toml`, `toml_edit` for changes from the settings window, file watching with `notify` |
 | Images | `image` (accent color from the cover) |
 | Logging | `tracing` to stderr, read by journald |
 | Extension language | TypeScript compiled by `tsc` to readable ES modules, no bundler or minifier |

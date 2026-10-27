@@ -81,7 +81,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         .await?;
     media::dbus::serve(&conn, media_state, control).await?;
     lyrics::dbus::serve(&conn, lyrics_state).await?;
-    settings::dbus::serve(&conn, config).await?;
+    settings::dbus::serve(&conn, config, paths.config_file.clone()).await?;
     devices::dbus::serve(&conn, alerts).await?;
 
     match conn

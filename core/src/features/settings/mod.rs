@@ -2,6 +2,7 @@
 
 mod config;
 pub mod dbus;
+pub mod edit;
 pub mod service;
 mod store;
 mod watch;

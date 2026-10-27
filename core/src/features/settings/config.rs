@@ -113,7 +113,7 @@ pub struct ConfigError {
 }
 
 impl ConfigError {
-    fn invalid(message: String) -> ConfigError {
+    pub(super) fn invalid(message: String) -> ConfigError {
         ConfigError {
             message,
             line: None,
