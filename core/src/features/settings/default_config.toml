@@ -33,3 +33,8 @@ clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)
+
+[timer]
+focus_minutes = 25       # length of a focus session, 1 to 180
+break_minutes = 5        # break that follows a focus session, 0 to 60; 0 = no break
+sound = true             # play a sound when a focus session or a break ends

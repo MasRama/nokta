@@ -42,6 +42,7 @@ fn properties(c: &Config) -> PropertyList {
         ("Appearance", owned(c.appearance.to_dbus())),
         ("Behavior", owned(c.behavior.to_dbus())),
         ("Lyrics", owned(c.lyrics.to_dbus())),
+        ("Timer", owned(c.timer.to_dbus())),
     ]
 }
 
@@ -79,6 +80,11 @@ impl SettingsInterface {
     #[zbus(property)]
     fn lyrics(&self) -> HashMap<String, OwnedValue> {
         self.config.borrow().lyrics.to_dbus()
+    }
+
+    #[zbus(property)]
+    fn timer(&self) -> HashMap<String, OwnedValue> {
+        self.config.borrow().timer.to_dbus()
     }
 
     async fn set(&self, table: String, key: String, value: OwnedValue) -> fdo::Result<()> {

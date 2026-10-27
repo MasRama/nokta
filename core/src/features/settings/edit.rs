@@ -56,6 +56,7 @@ fn expected_type(table: &str, key: &str) -> Result<String, ConfigError> {
         "appearance" => defaults.appearance.to_dbus(),
         "behavior" => defaults.behavior.to_dbus(),
         "lyrics" => defaults.lyrics.to_dbus(),
+        "timer" => defaults.timer.to_dbus(),
         _ => {
             return Err(ConfigError::invalid(format!(
                 "unknown settings table {table:?}"

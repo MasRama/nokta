@@ -91,6 +91,35 @@ fn new_appearance_and_clock_values_are_checked() {
 }
 
 #[test]
+fn timer_defaults_and_limits() {
+    let t = Config::default().timer;
+    assert_eq!((t.focus_minutes, t.break_minutes, t.sound), (25, 5, true));
+    for bad in [
+        "focus_minutes = 0",
+        "focus_minutes = 181",
+        "break_minutes = 61",
+    ] {
+        let err = parse(&format!("[timer]\n{bad}\n")).unwrap_err();
+        let key = bad.split(' ').next().unwrap();
+        assert!(err.message.contains(&format!("timer.{key}")), "{err}");
+    }
+    let c = parse("[timer]\nfocus_minutes = 50\nbreak_minutes = 0\nsound = false\n").unwrap();
+    assert_eq!(
+        (c.timer.focus_minutes, c.timer.break_minutes, c.timer.sound),
+        (50, 0, false)
+    );
+}
+
+#[test]
+fn timer_to_dbus_has_all_keys() {
+    let map = Config::default().timer.to_dbus();
+    let mut keys: Vec<_> = map.keys().cloned().collect();
+    keys.sort();
+    assert_eq!(keys, ["break_minutes", "focus_minutes", "sound"]);
+    assert_eq!(u32::try_from(&map["focus_minutes"]).unwrap(), 25);
+}
+
+#[test]
 fn lyrics_to_dbus_has_all_keys() {
     let map = Config::default().lyrics.to_dbus();
     let keys: Vec<_> = map.keys().cloned().collect();
@@ -268,6 +297,9 @@ mod edit {
         let c = parse(&text).unwrap();
         assert_eq!(c.behavior.clock_format, "24h");
         assert_eq!(c.appearance.height, 40);
+
+        let text = set_key("", "timer", "focus_minutes", &Value::U32(50)).unwrap();
+        assert_eq!(parse(&text).unwrap().timer.focus_minutes, 50);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);

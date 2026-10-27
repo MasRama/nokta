@@ -15,6 +15,7 @@ pub struct Config {
     pub appearance: Appearance,
     pub behavior: Behavior,
     pub lyrics: LyricsConfig,
+    pub timer: TimerConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -102,6 +103,25 @@ pub struct LyricsConfig {
 impl Default for LyricsConfig {
     fn default() -> Self {
         LyricsConfig { enabled: true }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct TimerConfig {
+    pub focus_minutes: u32,
+    /// 0 means no break after focus.
+    pub break_minutes: u32,
+    pub sound: bool,
+}
+
+impl Default for TimerConfig {
+    fn default() -> Self {
+        TimerConfig {
+            focus_minutes: 25,
+            break_minutes: 5,
+            sound: true,
+        }
     }
 }
 
@@ -208,6 +228,8 @@ impl Config {
             500,
             15000,
         )?;
+        check_range("timer.focus_minutes", self.timer.focus_minutes, 1, 180)?;
+        check_range("timer.break_minutes", self.timer.break_minutes, 0, 60)?;
         Ok(())
     }
 }
@@ -288,6 +310,16 @@ impl Behavior {
             ("alert_duration_ms".into(), self.alert_duration_ms.into()),
             ("show_clock".into(), self.show_clock.into()),
             ("clock_format".into(), string_value(&self.clock_format)),
+        ])
+    }
+}
+
+impl TimerConfig {
+    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
+        HashMap::from([
+            ("focus_minutes".into(), self.focus_minutes.into()),
+            ("break_minutes".into(), self.break_minutes.into()),
+            ("sound".into(), self.sound.into()),
         ])
     }
 }
