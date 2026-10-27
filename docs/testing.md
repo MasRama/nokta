@@ -120,6 +120,24 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] Brightness and volume keys, mic mute key *(real session)*: in the
       notch.
 
+### Several monitors (multi-monitor spec)
+
+Start with `run.sh --monitors=2`; `shot.sh` then also writes
+`NAME-notch-1.png` for the second monitor.
+
+- [ ] Each monitor has a notch; `hover.sh on 1` opens only the second one,
+      `hover.sh on 0` only the first.
+- [ ] Pointer on monitor 1 (`hover.sh off 1`), `osd.sh level ... 0.5`: the OSD
+      shows only on monitor 1. Same for `osd.sh capslock`.
+- [ ] `CONNECTOR=Meta-1 osd.sh level display-brightness-symbolic 0.7` with the
+      pointer on monitor 0: the OSD shows only on monitor 1.
+- [ ] `all_monitors = false` while running: one notch on the primary; an OSD
+      from monitor 1 shows there. Back to `true`: two notches again.
+- [ ] Volume keys with a focused window on the other monitor *(real
+      session)*: the OSD follows the focused window, not the pointer.
+- [ ] Fullscreen app on one monitor *(real session)*: only that monitor's
+      notch hides; volume keys there show GNOME's popup on that monitor.
+
 ### Interaction
 
 - [ ] Play/pause, next and previous reach the player (`player.log` prints
@@ -146,8 +164,8 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] Fullscreen app *(real session)*: the notch hides and comes back when
       leaving fullscreen.
 - [ ] Monitor change *(real session)*: plugging or unplugging a monitor, or
-      changing the primary one, keeps the notch centered on the primary
-      monitor.
+      changing the primary one, gives every monitor a notch centered at its
+      top edge (only the primary with `all_monitors = false`).
 - [ ] GNOME animations off (Settings, Accessibility, Reduce Animation)
       *(real session)*: all changes are instant and the bars stay still.
 

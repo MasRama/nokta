@@ -4,7 +4,9 @@ A MacBook-style notch for the Linux desktop. A black notch sits on the top
 edge of the screen and shows the song that is playing. Hover over it and it
 opens with the cover, controls, a seek bar and the current line of the
 song's synced lyrics. When you change the volume or the brightness, or turn
-Caps Lock on or off, the notch shows it instead of GNOME's popup.
+Caps Lock on or off, the notch shows it instead of GNOME's popup. Every
+monitor has its own notch, and these messages show on the monitor you are
+working on.
 
 ![The notch opened while a song plays](docs/images/expanded.png)
 

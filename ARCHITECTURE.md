@@ -46,7 +46,8 @@ core/               crate nokta-core, binary noktad
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
-  src/extension.ts  composition: build the notch, mount the features
+  src/extension.ts  composition: shared clients and hooks, one notch per monitor
+  src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/features/     media, lyrics, settings, osd
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
