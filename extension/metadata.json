@@ -1,7 +1,7 @@
 {
   "uuid": "nokta@nokta.io",
   "name": "Nokta",
-  "description": "A Mac-style notch at the top of your screen: the song that is playing, its cover, controls and synced lyrics.\n\nNeeds the noktad daemon from https://github.com/MasRama/nokta/releases.",
+  "description": "A dynamic island at the top of your screen: the song that is playing with its cover, controls and synced lyrics, volume and brightness, and Bluetooth and battery alerts.\n\nNeeds the noktad daemon from https://github.com/MasRama/nokta/releases.",
   "shell-version": [
     "46"
   ],

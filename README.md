@@ -1,10 +1,10 @@
 # Nokta
 
-A MacBook-style notch for the Linux desktop. A black notch sits on the top
+An open-source dynamic island for the desktop. A black notch sits on the top
 edge of the screen and shows the song that is playing. Hover over it and it
 opens with the cover, controls, a seek bar and the current line of the
 song's synced lyrics. When you change the volume or the brightness, or turn
-Caps Lock on or off, the notch shows it instead of GNOME's popup. It also
+Caps Lock on or off, the notch shows it instead of the system popup. It also
 tells you when your Bluetooth headphones connect (with their battery), when
 the charger is plugged in or out, when the battery is low and when it is
 full. Every monitor has its own notch, and these messages show on the
@@ -23,11 +23,23 @@ Nokta has two parts:
 - **`noktad`**, a small Rust daemon that follows your media players (MPRIS),
   fetches lyrics, watches the battery (UPower) and Bluetooth (BlueZ), and
   reads your settings.
-- **A GNOME Shell extension** that draws the notch and talks to the daemon
-  over D-Bus.
+- **A frontend** that draws the notch and talks to the daemon. On Linux it
+  is a GNOME Shell extension, and they talk over D-Bus.
 
 The daemon does the work so the shell stays fast. It uses no CPU while
 nothing plays and about 10 MB of memory.
+
+## Platforms
+
+| Platform | Status |
+|---|---|
+| Linux, GNOME 46 | Works |
+| Linux, KDE Plasma, Hyprland, Sway | Planned |
+| Windows | Planned |
+| macOS | Planned |
+
+The plan is one daemon for every platform, with a small frontend for each
+desktop that draws the notch. Today both are Linux only.
 
 ## Requirements
 

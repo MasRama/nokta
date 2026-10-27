@@ -2,7 +2,7 @@
   "name": "nokta-extension",
   "version": "0.1.0",
   "private": true,
-  "description": "GNOME Shell extension for Nokta, a Mac-style notch for Linux",
+  "description": "GNOME Shell extension for Nokta, a dynamic island for the desktop",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
