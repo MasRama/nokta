@@ -1,6 +1,7 @@
 //! MPRIS media players: the track model, the active-player rules and the
 //! state the daemon publishes on `io.nokta.Media1`.
 
+pub mod art;
 pub mod select;
 mod state;
 mod track;
