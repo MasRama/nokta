@@ -3,6 +3,7 @@
 pub mod cache;
 pub mod key;
 pub mod lrc;
+pub mod lrclib;
 
 use serde::{Deserialize, Serialize};
 
