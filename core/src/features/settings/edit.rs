@@ -1,9 +1,8 @@
 //! Changes one key of config.toml, keeping the rest of the file as it is.
 
 use toml_edit::{DocumentMut, Item, Table};
-use zbus::zvariant::Value;
 
-use super::config::{parse, Config, ConfigError};
+use super::config::{parse, Config, ConfigError, SettingValue};
 
 /// `text` with `[table] key` set to `value`. The result is checked like a
 /// loaded file; on any error nothing is changed. Comments, order and the
@@ -12,7 +11,7 @@ pub fn set_key(
     text: &str,
     table: &str,
     key: &str,
-    value: &Value<'_>,
+    value: &SettingValue,
 ) -> Result<String, ConfigError> {
     // The window can only point at the file; the user fixes it there.
     parse(text).map_err(|err| {
@@ -49,64 +48,57 @@ pub fn set_key(
     Ok(text)
 }
 
-/// The D-Bus signature of the key's published value: `b`, `u`, `d` or `s`.
-fn expected_type(table: &str, key: &str) -> Result<String, ConfigError> {
+/// The key's default value, which gives the type a new value must have.
+fn expected_type(table: &str, key: &str) -> Result<SettingValue, ConfigError> {
     let defaults = Config::default();
-    let map = match table {
-        "appearance" => defaults.appearance.to_dbus(),
-        "behavior" => defaults.behavior.to_dbus(),
-        "lyrics" => defaults.lyrics.to_dbus(),
-        "timer" => defaults.timer.to_dbus(),
+    let entries = match table {
+        "appearance" => defaults.appearance.entries(),
+        "behavior" => defaults.behavior.entries(),
+        "lyrics" => defaults.lyrics.entries(),
+        "timer" => defaults.timer.entries(),
         _ => {
             return Err(ConfigError::invalid(format!(
                 "unknown settings table {table:?}"
             )))
         }
     };
-    map.get(key)
-        .map(|v| v.value_signature().to_string())
+    entries
+        .into_iter()
+        .find(|(name, _)| *name == key)
+        .map(|(_, value)| value)
         .ok_or_else(|| ConfigError::invalid(format!("unknown setting {table}.{key}")))
 }
 
 fn toml_value(
     name: &str,
-    expected: String,
-    value: &Value<'_>,
+    expected: SettingValue,
+    value: &SettingValue,
 ) -> Result<toml_edit::Value, ConfigError> {
     let wrong = |what: &str| ConfigError::invalid(format!("{name} must be {what}, got {value}"));
-    match expected.as_str() {
-        "b" => match value {
-            Value::Bool(b) => Ok((*b).into()),
+    match expected {
+        SettingValue::Bool(_) => match value {
+            SettingValue::Bool(b) => Ok((*b).into()),
             _ => Err(wrong("true or false")),
         },
-        "u" => match number(value) {
+        SettingValue::Uint(_) => match number(value) {
             Some(n) if n.fract() == 0.0 && n >= 0.0 => Ok((n as i64).into()),
             Some(_) => Err(wrong("a whole number from 0")),
             None => Err(wrong("a number")),
         },
-        "d" => number(value)
+        SettingValue::Float(_) => number(value)
             .map(Into::into)
             .ok_or_else(|| wrong("a number")),
-        "s" => match value {
-            Value::Str(s) => Ok(s.as_str().into()),
+        SettingValue::Text(_) => match value {
+            SettingValue::Text(s) => Ok(s.as_str().into()),
             _ => Err(wrong("a string")),
         },
-        other => Err(ConfigError::invalid(format!(
-            "{name} has unsupported type {other}"
-        ))),
     }
 }
 
-fn number(value: &Value<'_>) -> Option<f64> {
-    Some(match value {
-        Value::U8(n) => f64::from(*n),
-        Value::I16(n) => f64::from(*n),
-        Value::U16(n) => f64::from(*n),
-        Value::I32(n) => f64::from(*n),
-        Value::U32(n) => f64::from(*n),
-        Value::I64(n) => *n as f64,
-        Value::U64(n) => *n as f64,
-        Value::F64(n) if n.is_finite() => *n,
-        _ => return None,
-    })
+fn number(value: &SettingValue) -> Option<f64> {
+    match value {
+        SettingValue::Uint(n) => Some(f64::from(*n)),
+        SettingValue::Float(n) if n.is_finite() => Some(*n),
+        _ => None,
+    }
 }

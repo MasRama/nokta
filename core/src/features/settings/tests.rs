@@ -1,7 +1,13 @@
 use std::fs;
 use std::time::Duration;
 
+use std::collections::HashMap;
+
 use super::*;
+
+fn entries(list: Vec<(&'static str, SettingValue)>) -> HashMap<&'static str, SettingValue> {
+    list.into_iter().collect()
+}
 
 #[test]
 fn defaults_match_spec() {
@@ -111,20 +117,20 @@ fn timer_defaults_and_limits() {
 }
 
 #[test]
-fn timer_to_dbus_has_all_keys() {
-    let map = Config::default().timer.to_dbus();
-    let mut keys: Vec<_> = map.keys().cloned().collect();
+fn timer_entries_have_all_keys() {
+    let map = entries(Config::default().timer.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
     keys.sort();
     assert_eq!(keys, ["break_minutes", "focus_minutes", "sound"]);
-    assert_eq!(u32::try_from(&map["focus_minutes"]).unwrap(), 25);
+    assert_eq!(map["focus_minutes"], SettingValue::Uint(25));
 }
 
 #[test]
-fn lyrics_to_dbus_has_all_keys() {
-    let map = Config::default().lyrics.to_dbus();
-    let keys: Vec<_> = map.keys().cloned().collect();
+fn lyrics_entries_have_all_keys() {
+    let map = entries(Config::default().lyrics.entries());
+    let keys: Vec<_> = map.keys().copied().collect();
     assert_eq!(keys, ["enabled"]);
-    assert!(bool::try_from(&map["enabled"]).unwrap());
+    assert_eq!(map["enabled"], SettingValue::Bool(true));
 }
 
 #[test]
@@ -192,9 +198,9 @@ fn deleted_file_keeps_last_valid() {
 }
 
 #[test]
-fn appearance_to_dbus_has_all_keys() {
-    let map = Config::default().appearance.to_dbus();
-    let mut keys: Vec<_> = map.keys().cloned().collect();
+fn appearance_entries_have_all_keys() {
+    let map = entries(Config::default().appearance.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
     keys.sort();
     assert_eq!(
         keys,
@@ -215,14 +221,15 @@ fn appearance_to_dbus_has_all_keys() {
             "use_album_accent",
         ]
     );
-    assert_eq!(u32::try_from(&map["height"]).unwrap(), 32);
-    assert_eq!(f64::try_from(&map["animation_speed"]).unwrap(), 1.0);
+    assert_eq!(map["height"], SettingValue::Uint(32));
+    assert_eq!(map["animation_speed"], SettingValue::Float(1.0));
+    assert_eq!(map["background"], SettingValue::Text("#000000".into()));
 }
 
 #[test]
-fn behavior_to_dbus_has_all_keys() {
-    let map = Config::default().behavior.to_dbus();
-    let mut keys: Vec<_> = map.keys().cloned().collect();
+fn behavior_entries_have_all_keys() {
+    let map = entries(Config::default().behavior.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
     keys.sort();
     assert_eq!(
         keys,
@@ -241,7 +248,7 @@ fn behavior_to_dbus_has_all_keys() {
             "show_lyrics"
         ]
     );
-    assert!(bool::try_from(&map["move_clock"]).unwrap());
+    assert_eq!(map["move_clock"], SettingValue::Bool(true));
 }
 
 #[tokio::test]
@@ -268,14 +275,19 @@ async fn watch_ignores_other_files() {
 }
 
 mod edit {
-    use zbus::zvariant::Value;
-
     use super::super::edit::set_key;
     use super::*;
+    use SettingValue as Value;
 
     #[test]
     fn replaces_a_value_and_keeps_its_comment() {
-        let text = set_key(DEFAULT_CONFIG_TOML, "appearance", "height", &Value::U32(40)).unwrap();
+        let text = set_key(
+            DEFAULT_CONFIG_TOML,
+            "appearance",
+            "height",
+            &Value::Uint(40),
+        )
+        .unwrap();
         let line = text.lines().find(|l| l.starts_with("height")).unwrap();
         assert!(line.starts_with("height = 40 "), "{line}");
         assert!(line.contains("# collapsed notch height"), "{line}");
@@ -291,14 +303,14 @@ mod edit {
             "[appearance]\nheight = 40\n",
             "behavior",
             "clock_format",
-            &Value::from("24h"),
+            &Value::Text("24h".into()),
         )
         .unwrap();
         let c = parse(&text).unwrap();
         assert_eq!(c.behavior.clock_format, "24h");
         assert_eq!(c.appearance.height, 40);
 
-        let text = set_key("", "timer", "focus_minutes", &Value::U32(50)).unwrap();
+        let text = set_key("", "timer", "focus_minutes", &Value::Uint(50)).unwrap();
         assert_eq!(parse(&text).unwrap().timer.focus_minutes, 50);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
@@ -309,52 +321,50 @@ mod edit {
 
     #[test]
     fn unknown_tables_and_keys_are_rejected() {
-        let err = set_key("", "colors", "height", &Value::U32(40)).unwrap_err();
+        let err = set_key("", "colors", "height", &Value::Uint(40)).unwrap_err();
         assert!(err.message.contains("colors"), "{err}");
-        let err = set_key("", "appearance", "width", &Value::U32(40)).unwrap_err();
+        let err = set_key("", "appearance", "width", &Value::Uint(40)).unwrap_err();
         assert!(err.message.contains("appearance.width"), "{err}");
     }
 
     #[test]
     fn wrong_types_are_rejected() {
-        let err = set_key("", "appearance", "height", &Value::from("tall")).unwrap_err();
+        let err = set_key("", "appearance", "height", &Value::Text("tall".into())).unwrap_err();
         assert!(err.message.contains("appearance.height"), "{err}");
-        let err = set_key("", "behavior", "move_clock", &Value::U32(1)).unwrap_err();
+        let err = set_key("", "behavior", "move_clock", &Value::Uint(1)).unwrap_err();
         assert!(err.message.contains("behavior.move_clock"), "{err}");
-        let err = set_key("", "appearance", "height", &Value::F64(40.5)).unwrap_err();
+        let err = set_key("", "appearance", "height", &Value::Float(40.5)).unwrap_err();
         assert!(err.message.contains("whole number"), "{err}");
+        let err = set_key("", "appearance", "animation_speed", &Value::Float(f64::NAN));
+        assert!(err.unwrap_err().message.contains("a number"));
     }
 
     #[test]
     fn numbers_are_coerced() {
-        for value in [
-            Value::I32(40),
-            Value::I64(40),
-            Value::F64(40.0),
-            Value::U16(40),
-        ] {
+        for value in [Value::Uint(40), Value::Float(40.0)] {
             let text = set_key("", "appearance", "height", &value).unwrap();
             assert_eq!(parse(&text).unwrap().appearance.height, 40, "{value:?}");
         }
-        let text = set_key("", "appearance", "animation_speed", &Value::U32(2)).unwrap();
+        let text = set_key("", "appearance", "animation_speed", &Value::Uint(2)).unwrap();
         assert_eq!(parse(&text).unwrap().appearance.animation_speed, 2.0);
-        let text = set_key("", "appearance", "background_opacity", &Value::F64(0.5)).unwrap();
+        let text = set_key("", "appearance", "background_opacity", &Value::Float(0.5)).unwrap();
         assert_eq!(parse(&text).unwrap().appearance.background_opacity, 0.5);
     }
 
     #[test]
     fn invalid_values_are_rejected() {
-        let err = set_key("", "appearance", "height", &Value::U32(5)).unwrap_err();
+        let err = set_key("", "appearance", "height", &Value::Uint(5)).unwrap_err();
         assert!(err.message.contains("appearance.height"), "{err}");
-        let err = set_key("", "appearance", "background", &Value::from("black")).unwrap_err();
+        let err =
+            set_key("", "appearance", "background", &Value::Text("black".into())).unwrap_err();
         assert!(err.message.contains("appearance.background"), "{err}");
-        let err = set_key("", "appearance", "height", &Value::I32(-3)).unwrap_err();
+        let err = set_key("", "appearance", "height", &Value::Float(-3.0)).unwrap_err();
         assert!(err.message.contains("height"), "{err}");
     }
 
     #[test]
     fn a_broken_file_is_not_touched() {
-        let err = set_key("[appearance\n", "appearance", "height", &Value::U32(40)).unwrap_err();
+        let err = set_key("[appearance\n", "appearance", "height", &Value::Uint(40)).unwrap_err();
         let message = err.to_string();
         assert!(
             message.starts_with("config.toml has an error at line 1"),
@@ -366,7 +376,7 @@ mod edit {
     #[test]
     fn a_value_line_is_replaced_not_duplicated() {
         let text = "[appearance]\nheight = 40 # mine\n";
-        let text = set_key(text, "appearance", "height", &Value::U32(44)).unwrap();
+        let text = set_key(text, "appearance", "height", &Value::Uint(44)).unwrap();
         assert_eq!(text, "[appearance]\nheight = 44 # mine\n");
     }
 }

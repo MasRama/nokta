@@ -8,8 +8,8 @@ mod store;
 mod watch;
 
 pub use config::{
-    parse, Appearance, Behavior, Config, ConfigError, LyricsConfig, TimerConfig,
-    DEFAULT_CONFIG_TOML,
+    parse, Appearance, Behavior, Config, ConfigError, Entries, LyricsConfig, SettingValue,
+    TimerConfig, DEFAULT_CONFIG_TOML,
 };
 pub use store::Store;
 pub use watch::watch;

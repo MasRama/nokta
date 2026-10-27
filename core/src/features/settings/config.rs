@@ -1,10 +1,8 @@
 //! The config model, its defaults and validation.
 
-use std::collections::HashMap;
 use std::fmt;
 
 use serde::Deserialize;
-use zbus::zvariant::{OwnedValue, Str};
 
 /// The commented default file written on first run. It parses to [`Config::default`].
 pub const DEFAULT_CONFIG_TOML: &str = include_str!("default_config.toml");
@@ -270,62 +268,105 @@ fn check_color(key: &str, value: &str) -> Result<(), ConfigError> {
     }
 }
 
-fn string_value(s: &str) -> OwnedValue {
-    OwnedValue::from(Str::from(s.to_owned()))
+/// One setting's value, as the settings window reads and changes it.
+#[derive(Clone, Debug, PartialEq)]
+pub enum SettingValue {
+    Bool(bool),
+    Uint(u32),
+    Float(f64),
+    Text(String),
 }
 
+impl fmt::Display for SettingValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SettingValue::Bool(b) => write!(f, "{b}"),
+            SettingValue::Uint(n) => write!(f, "{n}"),
+            SettingValue::Float(n) => write!(f, "{n}"),
+            SettingValue::Text(s) => write!(f, "{s:?}"),
+        }
+    }
+}
+
+impl From<bool> for SettingValue {
+    fn from(b: bool) -> SettingValue {
+        SettingValue::Bool(b)
+    }
+}
+
+impl From<u32> for SettingValue {
+    fn from(n: u32) -> SettingValue {
+        SettingValue::Uint(n)
+    }
+}
+
+impl From<f64> for SettingValue {
+    fn from(n: f64) -> SettingValue {
+        SettingValue::Float(n)
+    }
+}
+
+impl From<&String> for SettingValue {
+    fn from(s: &String) -> SettingValue {
+        SettingValue::Text(s.clone())
+    }
+}
+
+/// A table's keys and their values.
+pub type Entries = Vec<(&'static str, SettingValue)>;
+
 impl Appearance {
-    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
-        HashMap::from([
-            ("height".into(), self.height.into()),
-            ("idle_width".into(), self.idle_width.into()),
-            ("playing_width".into(), self.playing_width.into()),
-            ("expanded_width".into(), self.expanded_width.into()),
-            ("expanded_height".into(), self.expanded_height.into()),
-            ("corner_radius".into(), self.corner_radius.into()),
-            ("ear_radius".into(), self.ear_radius.into()),
-            ("background".into(), string_value(&self.background)),
-            ("foreground".into(), string_value(&self.foreground)),
-            ("use_album_accent".into(), self.use_album_accent.into()),
-            ("animation_speed".into(), self.animation_speed.into()),
-            ("osd_width".into(), self.osd_width.into()),
-            ("background_opacity".into(), self.background_opacity.into()),
-            ("accent".into(), string_value(&self.accent)),
-        ])
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("height", self.height.into()),
+            ("idle_width", self.idle_width.into()),
+            ("playing_width", self.playing_width.into()),
+            ("expanded_width", self.expanded_width.into()),
+            ("expanded_height", self.expanded_height.into()),
+            ("corner_radius", self.corner_radius.into()),
+            ("ear_radius", self.ear_radius.into()),
+            ("background", (&self.background).into()),
+            ("foreground", (&self.foreground).into()),
+            ("use_album_accent", self.use_album_accent.into()),
+            ("animation_speed", self.animation_speed.into()),
+            ("osd_width", self.osd_width.into()),
+            ("background_opacity", self.background_opacity.into()),
+            ("accent", (&self.accent).into()),
+        ]
     }
 }
 
 impl Behavior {
-    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
-        HashMap::from([
-            ("open_delay_ms".into(), self.open_delay_ms.into()),
-            ("close_delay_ms".into(), self.close_delay_ms.into()),
-            ("move_clock".into(), self.move_clock.into()),
-            ("show_lyrics".into(), self.show_lyrics.into()),
-            ("replace_osd".into(), self.replace_osd.into()),
-            ("osd_duration_ms".into(), self.osd_duration_ms.into()),
-            ("show_caps_lock".into(), self.show_caps_lock.into()),
-            ("all_monitors".into(), self.all_monitors.into()),
-            ("device_alerts".into(), self.device_alerts.into()),
-            ("alert_duration_ms".into(), self.alert_duration_ms.into()),
-            ("show_clock".into(), self.show_clock.into()),
-            ("clock_format".into(), string_value(&self.clock_format)),
-        ])
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("open_delay_ms", self.open_delay_ms.into()),
+            ("close_delay_ms", self.close_delay_ms.into()),
+            ("move_clock", self.move_clock.into()),
+            ("show_lyrics", self.show_lyrics.into()),
+            ("replace_osd", self.replace_osd.into()),
+            ("osd_duration_ms", self.osd_duration_ms.into()),
+            ("show_caps_lock", self.show_caps_lock.into()),
+            ("all_monitors", self.all_monitors.into()),
+            ("device_alerts", self.device_alerts.into()),
+            ("alert_duration_ms", self.alert_duration_ms.into()),
+            ("show_clock", self.show_clock.into()),
+            ("clock_format", (&self.clock_format).into()),
+        ]
     }
 }
 
 impl TimerConfig {
-    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
-        HashMap::from([
-            ("focus_minutes".into(), self.focus_minutes.into()),
-            ("break_minutes".into(), self.break_minutes.into()),
-            ("sound".into(), self.sound.into()),
-        ])
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("focus_minutes", self.focus_minutes.into()),
+            ("break_minutes", self.break_minutes.into()),
+            ("sound", self.sound.into()),
+        ]
     }
 }
 
 impl LyricsConfig {
-    pub fn to_dbus(&self) -> HashMap<String, OwnedValue> {
-        HashMap::from([("enabled".into(), self.enabled.into())])
+    pub fn entries(&self) -> Entries {
+        vec![("enabled", self.enabled.into())]
     }
 }
