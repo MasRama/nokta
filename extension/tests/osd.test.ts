@@ -40,6 +40,11 @@ test('nothing_shows_icon_only', () => {
     assert.deepEqual(osdContent(undefined, undefined, ''), { fraction: null, text: '' });
 });
 
+test('content_detail_and_urgent_are_optional', () => {
+    assert.equal(osdContent(0.5, 1, null).detail, undefined);
+    assert.equal(capsLockContent(true).urgent, undefined);
+});
+
 test('caps_lock_text', () => {
     assert.deepEqual(capsLockContent(true), { fraction: null, text: 'Caps Lock on' });
     assert.deepEqual(capsLockContent(false), { fraction: null, text: 'Caps Lock off' });
@@ -108,6 +113,18 @@ test('destroy_cancels_without_change', () => {
     timer.destroy();
     assert.equal(pending(), 0);
     assert.deepEqual(changes, [true]);
+});
+
+test('show_with_duration_overrides_default', () => {
+    const { timer, advance, changes } = setup(1500);
+    timer.show(3000);
+    advance(2999);
+    assert.equal(timer.active, true);
+    advance(1);
+    assert.equal(timer.active, false);
+    timer.show();
+    advance(1500);
+    assert.deepEqual(changes, [true, false, true, false]);
 });
 
 test('route_explicit_monitor_with_notch', () => {

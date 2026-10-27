@@ -117,3 +117,14 @@
 .nokta-osd-text-only {
     text-align: left;
 }
+
+.nokta-osd-detail {
+    font-size: 12px;
+    font-feature-settings: "tnum";
+}
+
+.nokta-osd-urgent .nokta-osd-icon,
+.nokta-osd-urgent .nokta-osd-text,
+.nokta-osd-urgent .nokta-osd-detail {
+    color: #ff453a;
+}

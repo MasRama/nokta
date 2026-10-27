@@ -136,9 +136,10 @@ export class MonitorNotch {
         this.onMedia();
     }
 
-    showOsd(content: OsdContent, icon: Gio.Icon | null): void {
+    /** `durationMs` replaces osd_duration_ms, for device alerts. */
+    showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number): void {
         this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
-        this.osdTimer.show();
+        this.osdTimer.show(durationMs);
     }
 
     hideOsd(): void {

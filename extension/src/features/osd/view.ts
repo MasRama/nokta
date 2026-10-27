@@ -5,14 +5,17 @@ import St from 'gi://St';
 import type { OsdContent } from './logic/content.js';
 
 const BAR_EASE_MS = 100;
+/** The detail is dimmed next to the text, unless the row is urgent. */
+const DETAIL_OPACITY = 180;
 
-/** The OSD row (spec 3.4): icon, level bar, text. */
+/** The OSD row (spec 3.4): icon, level bar, text, and a detail on the right. */
 export class OsdView {
     readonly actor: St.BoxLayout;
     private readonly icon: St.Icon;
     private readonly track: St.Widget;
     private readonly fill: St.Widget;
     private readonly label: St.Label;
+    private readonly detail: St.Label;
 
     constructor() {
         this.actor = new St.BoxLayout({ style_class: 'nokta-osd', y_align: Clutter.ActorAlign.START });
@@ -31,7 +34,9 @@ export class OsdView {
         this.label = new St.Label({ style_class: 'nokta-osd-text', y_align: Clutter.ActorAlign.CENTER });
         this.actor.add_child(this.icon);
         this.actor.add_child(this.track);
+        this.detail = new St.Label({ style_class: 'nokta-osd-detail', y_align: Clutter.ActorAlign.CENTER });
         this.actor.add_child(this.label);
+        this.actor.add_child(this.detail);
     }
 
     setColors(fill: string, track: string): void {
@@ -44,6 +49,11 @@ export class OsdView {
         // The typings omit that gicon is nullable; null leaves the slot empty.
         this.icon.gicon = icon as Gio.Icon;
         this.label.text = content.text;
+        this.detail.text = content.detail ?? '';
+        this.detail.visible = Boolean(content.detail);
+        this.detail.opacity = content.urgent ? 255 : DETAIL_OPACITY;
+        if (content.urgent) this.actor.add_style_class_name('nokta-osd-urgent');
+        else this.actor.remove_style_class_name('nokta-osd-urgent');
         const hasBar = content.fraction !== null;
         this.track.visible = hasBar;
         this.label.x_expand = !hasBar;

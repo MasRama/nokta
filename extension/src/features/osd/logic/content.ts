@@ -1,7 +1,12 @@
-/** What the OSD row shows: a bar filled to `fraction` (none when null) and a text. */
+/**
+ * What the OSD row shows: a bar filled to `fraction` (none when null) and a
+ * text. Without a bar, `detail` is shown on the right; `urgent` turns it red.
+ */
 export interface OsdContent {
     fraction: number | null;
     text: string;
+    detail?: string;
+    urgent?: boolean;
 }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);

@@ -15,9 +15,10 @@ export class OsdTimer {
         private readonly onChange: (active: boolean) => void,
     ) {}
 
-    show(): void {
+    /** `ms` replaces the usual duration for this show. */
+    show(ms?: number): void {
         this.clearTimer();
-        this.cancelTimer = this.schedule(this.durationMs(), () => {
+        this.cancelTimer = this.schedule(ms ?? this.durationMs(), () => {
             this.cancelTimer = null;
             this.hide();
         });

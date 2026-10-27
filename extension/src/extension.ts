@@ -3,6 +3,7 @@ import GLib from 'gi://GLib';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
 import {
@@ -41,6 +42,7 @@ class Session {
     private readonly settings: SettingsClient;
     private readonly media = new MediaClient();
     private readonly lyrics = new LyricsClient();
+    private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly lyricsId: number;
@@ -75,6 +77,7 @@ class Session {
         this.lyrics.disconnect(this.lyricsId);
         this.media.destroy();
         this.lyrics.destroy();
+        this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
         this.restoreClock?.();
@@ -110,6 +113,7 @@ class Session {
             this.media.attach(connection, cancellable),
             this.lyrics.attach(connection, cancellable),
         ]);
+        if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
 
     private onDaemonVanished(): void {
@@ -118,6 +122,7 @@ class Session {
         this.settings.detach();
         this.media.detach();
         this.lyrics.detach();
+        this.devices.detach();
     }
 
     // Notches
@@ -153,7 +158,12 @@ class Session {
     // OSD (multi-monitor spec, section 3)
 
     /** Draws in the routed notch; returns the monitor for GNOME's popup when it cannot. */
-    private showOsd(requested: number, content: OsdContent, icon: Gio.Icon | null): number | null {
+    private showOsd(
+        requested: number,
+        content: OsdContent,
+        icon: Gio.Icon | null,
+        durationMs?: number,
+    ): number | null {
         const route = routeOsd({
             requested,
             focused: focusedMonitor(),
@@ -163,8 +173,17 @@ class Session {
         const notch = this.notches.find((n) => n.monitorIndex === route.notch);
         // A fullscreen app hides the notch; the lock screen covers it.
         if (!notch?.visible || Main.sessionMode.isLocked) return route.monitor;
-        notch.showOsd(content, icon);
+        notch.showOsd(content, icon, durationMs);
         return null;
+    }
+
+    /** A device alert in the focused notch; skipped when that notch cannot show it. */
+    private onDeviceAlert({ kind, name, percentage }: AlertSignal): void {
+        const { deviceAlerts, alertDurationMs } = this.settings.behavior;
+        const alert = deviceAlerts ? deviceAlert(kind, name, percentage) : null;
+        if (!alert) return;
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs);
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
