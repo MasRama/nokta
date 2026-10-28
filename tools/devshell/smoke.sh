@@ -186,6 +186,10 @@ wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-ti
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokta-clock') && $BANNERS" 10
 
+# On GNOME 49 and later the virtual Super key of the shortcut steps can
+# leave the overview open, which hides every window.
+js "Main.overview.hide(); true" > /dev/null
+wait_for "the overview is closed" "!Main.overview.visible" 10
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
 # The windows the shell has, printed when the settings window does not open.

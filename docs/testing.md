@@ -207,6 +207,9 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       `shortcut = ""` frees the keys; `"<Control><Alt>t"` moves them.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
+- [ ] On GNOME 49 or later, the shortcut does not open the overview
+      *(real session)*. The devshell's virtual Super key can, so the smoke
+      test closes it before the settings window.
 
 ### Shuffle, repeat and the lyrics view
 
