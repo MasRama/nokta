@@ -53,6 +53,7 @@ export interface PanelSource {
     content(): PanelContent;
     /** The panel just opened. */
     opened(): void;
+    openCalendar(): void;
     openNotifications(): void;
     toggleFocus(): void;
 }
@@ -96,6 +97,7 @@ export class MonitorNotch {
     private readonly privacyDots = new PrivacyDots();
     private privacyCount = 0;
     private readonly idlePanel = new IdlePanel({
+        openCalendar: () => this.onPanelClick(() => this.sources.panel.openCalendar()),
         openNotifications: () => this.onPanelClick(() => this.sources.panel.openNotifications()),
         toggleFocus: () => this.onPanelClick(() => this.sources.panel.toggleFocus()),
     });
@@ -260,8 +262,8 @@ export class MonitorNotch {
         this.applyIndicator();
     }
 
-    /** The weather beside the date changed. */
-    onWeather(): void {
+    /** The weather beside the date or the next event changed. */
+    onPanelContent(): void {
         if (this.destroyed) return;
         if (this.drawn === 'panel') this.refreshPanel();
     }
@@ -591,5 +593,6 @@ function trackKey(snapshot: { playerId: string; title: string; artists: readonly
 
 function panelRowsFor(content: PanelContent): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
-    return ['date', ...Array<PanelRow>(activities).fill('activity'), 'buttons'];
+    const event: PanelRow[] = content.event ? ['event'] : [];
+    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), 'buttons'];
 }

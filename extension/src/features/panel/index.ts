@@ -5,6 +5,7 @@ export {
     MAX_PANEL_ACTIVITIES,
     type PanelActivity,
     type PanelContent,
+    type PanelEvent,
     type PanelHandlers,
     type PanelWeather,
 } from './view.js';
