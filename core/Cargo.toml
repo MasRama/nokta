@@ -15,6 +15,10 @@ path = "src/lib.rs"
 name = "noktad"
 path = "src/main.rs"
 
+[[bin]]
+name = "nokta"
+path = "src/bin/nokta.rs"
+
 [dependencies]
 anyhow = "1.0.104"
 futures-util = "0.3.34"
