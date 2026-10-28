@@ -75,11 +75,19 @@ docs/               manual test checklist, screenshots
   else the newest live activity, else the shelf, and `monitor-notch.ts` puts it there.
   `monitor-notch.ts` also puts the shelf's row in the panel and in the open
   player, since `panel` cannot import `shelf`.
-  `panel` (what hovering the idle notch opens) only draws its rows (the
-  date and weather, live activities, two buttons) from plain data, and grows to fit
-  them (`panel/logic/height.ts`); `extension.ts` fills them from
-  `weather`, `calendar`, `activities`, `notifications` and `timer`, and asks `weather`
-  to refresh when the panel opens.
+  `panel` is home, the open notch's other page (the only one while nothing
+  plays; the player's grid button opens it, its music button goes back,
+  and closing the notch returns to the player). It only draws its rows (the
+  date and weather, live activities, the quick toggles and the tiles) from
+  plain data, and grows to fit them (`panel/logic/height.ts`);
+  `extension.ts` fills them from `weather`, `calendar`, `activities`,
+  `notifications`, `timer` and GNOME's settings, and asks `weather` to
+  refresh when home opens. The toggles change GNOME's settings only on a
+  click: Do Not Disturb is `show-banners`, set through the timer's
+  `QuietBanners` so a focus session never undoes it; Dark Style is
+  `color-scheme`; Caffeine holds an idle inhibitor of GNOME's session
+  manager (`panel/logic/caffeine.ts`, released in `disable()`). The
+  notch's right-click menu (`panel/menu.ts`) is a GNOME popup menu.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings. `privacy` (the camera,
@@ -146,6 +154,7 @@ docs/               manual test checklist, screenshots
   the task around it sleeps until the oldest one goes stale
   (`[activities] stale_minutes`) and ends it as failed. Every end emits
   `Ended`. The `nokta` command (`src/cli/`) is a thin client of it:
+  `nokta settings` (it runs `gnome-extensions prefs`),
   `nokta activity set|end` and `nokta run -- CMD`, which shows the command
   while it runs and passes its exit code through.
 - **weather** reads the current weather at `[weather] location` from

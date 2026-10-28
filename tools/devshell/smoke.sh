@@ -100,6 +100,14 @@ wait_for "a click on the lyric opens the lyrics view" \
 js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyrics view closes it" \
     "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5
+# The grid button at the player's top right opens home, whose music button
+# goes back to the player.
+js "$FIND one('nokta-home-button').emit('clicked', 1); true" > /dev/null
+wait_for "the grid button opens home over the player" \
+    "$FIND shown('nokta-panel') && shown('nokta-panel-player') && !shown('nokta-expanded')" 5
+"$HERE/shot.sh" smoke-home > /dev/null
+js "$FIND one('nokta-panel-player').emit('clicked', 1); true" > /dev/null
+wait_for "the music button goes back to the player" "$FIND shown('nokta-expanded') && !shown('nokta-panel')" 5
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 
@@ -108,8 +116,8 @@ wait_for "the idle notch shows the clock in 180 px" \
     "$FIND shown('nokta-clock') && /^[0-9]{1,2}:[0-9]{2}/.test(one('nokta-clock').text) && width() === 180" 10
 "$HERE/shot.sh" smoke-idle > /dev/null
 
-# Hovering the idle notch opens the panel; its notifications button opens
-# GNOME's calendar from the top bar and gives the menu back to the clock.
+# Hovering the idle notch opens home; its notifications tile opens GNOME's
+# calendar from the top bar and gives the menu back to the clock.
 # With a location set, the fake Open-Meteo's weather shows beside the date.
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
     --method io.nokta.Settings1.Set weather location "<'Jakarta'>" > /dev/null
@@ -120,9 +128,64 @@ wait_for "the panel shows the weather beside the date" \
     "$FIND shown('nokta-panel-weather') && one('nokta-panel-weather-temperature').text === '31°' && one('nokta-panel-weather-detail').text === 'Jakarta · 33° / 25°'" 5 \
     "$FIND JSON.stringify([shown('nokta-panel-weather'), one('nokta-panel-weather-temperature')?.text, one('nokta-panel-weather-detail')?.text])"
 "$HERE/shot.sh" smoke-panel > /dev/null
+
+# The quick toggles change the devshell's own GNOME settings; Caffeine holds
+# an idle inhibitor in the fake session manager.
+GSETTINGS='const g = (s) => new imports.gi.Gio.Settings({ schema_id: s });'
+BANNERS="g('org.gnome.desktop.notifications').get_boolean('show-banners')"
+SCHEME="g('org.gnome.desktop.interface').get_string('color-scheme')"
+pill() { js "$FIND find(Main.layoutManager.uiGroup, 'nokta-pill')[$1].emit('clicked', 1); true" > /dev/null; }
+inhibited() {
+    gdbus call --session --dest org.gnome.SessionManager --object-path /org/gnome/SessionManager \
+        --method org.gnome.SessionManager.IsInhibited 8
+}
+wait_inhibited() {
+    i=0
+    until inhibited | grep -q "$1"; do
+        i=$((i + 1))
+        [ "$i" -le 25 ] || fail "$2: $(inhibited)"
+        sleep 0.2
+    done
+    ok "$2"
+}
+pill 0
+wait_for "Do Not Disturb turns GNOME's banners off" "$GSETTINGS $FIND !$BANNERS && one('nokta-pill').checked" 5
+pill 0
+wait_for "and on again" "$GSETTINGS $FIND $BANNERS && !one('nokta-pill').checked" 5
+pill 2
+wait_for "Dark Style turns the dark style on" "$GSETTINGS $SCHEME === 'prefer-dark'" 5
+pill 2
+wait_for "and off again" "$GSETTINGS $SCHEME === 'default'" 5
+pill 1
+wait_inhibited true "Caffeine keeps the screen awake"
+pill 1
+wait_inhibited false "and lets it sleep again"
+
+# A right click opens the notch's menu at the pointer; its Do Not Disturb
+# switch is the same setting.
+NOTCH_AT=$(js "$FIND const [x, y] = one('nokta-body').get_transformed_position(); Math.round(x + 60) + ', ' + Math.round(y + 12)")
+NOTCH_AT=${NOTCH_AT#\"}
+NOTCH_AT=${NOTCH_AT%\"}
+js "const Clutter = imports.gi.Clutter;
+global._noktaPointer ??= $SEAT_JS.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
+const now = () => global.get_current_time() * 1000;
+global._noktaPointer.notify_absolute_motion(now(), $NOTCH_AT);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.PRESSED);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.RELEASED);
+true" > /dev/null
+MENU="one('nokta-menu')._delegate"
+wait_for "a right click opens the notch's menu" "$FIND shown('nokta-menu') && $MENU.isOpen" 5
+sleep 0.4
+"$HERE/shot.sh" smoke-menu > /dev/null
+js "$FIND $MENU._getMenuItems()[1].toggle(); true" > /dev/null
+wait_for "its Do Not Disturb switch turns banners off" "$GSETTINGS !$BANNERS" 5
+js "$FIND $MENU._getMenuItems()[1].toggle(); $MENU.close(); true" > /dev/null
+wait_for "the menu closes and banners are back on" "$GSETTINGS $FIND !$MENU.isOpen && $BANNERS" 5
+"$HERE/hover.sh" on > /dev/null
+
 DATE_MENU="Main.panel.statusArea.dateMenu.menu"
-js "$FIND one('nokta-panel-button').emit('clicked', 1); true" > /dev/null
-wait_for "the notifications button opens GNOME's calendar" "$DATE_MENU.isOpen" 5
+js "$FIND one('nokta-tile').emit('clicked', 1); true" > /dev/null
+wait_for "the notifications tile opens GNOME's calendar" "$DATE_MENU.isOpen" 5
 js "$DATE_MENU.close(); true" > /dev/null
 wait_for "the calendar belongs to the clock again" \
     "!$DATE_MENU.isOpen && $DATE_MENU.sourceActor === Main.panel.statusArea.dateMenu" 5
@@ -176,9 +239,9 @@ wait_for "a live activity replaces the clock with its percentage" \
     "$FIND shown('nokta-activity-badge') && !shown('nokta-clock') && one('nokta-activity-badge-label').text === '40%'" 10
 "$HERE/shot.sh" smoke-activity > /dev/null
 "$HERE/hover.sh" on > /dev/null
-# 32 px closed, 58 px for the date and the buttons, 46 px for one activity.
+# 32 px closed, 128 px for the date, toggles and tiles, 46 px for one activity.
 wait_for "the panel grows a row for the activity" \
-    "$FIND shown('nokta-panel-activity') && one('nokta-panel-activity-title').text === 'Smoke build' && Math.round(one('nokta-body').height) === 136" 5
+    "$FIND shown('nokta-panel-activity') && one('nokta-panel-activity-title').text === 'Smoke build' && Math.round(one('nokta-body').height) === 206" 5
 "$HERE/shot.sh" smoke-activity-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the panel closes over the activity" "$FIND shown('nokta-activity-badge') && width() === 180" 5
@@ -193,9 +256,9 @@ wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
 js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke', date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }]; $EVENTS.emit('changed'); true" > /dev/null
 "$HERE/hover.sh" on > /dev/null
-# 32 px closed, 58 px for the date and the buttons, 28 px for the event.
+# 32 px closed, 128 px for the date, toggles and tiles, 28 px for the event.
 wait_for "the panel shows the next calendar event" \
-    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 118" 5 \
+    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 188" 5 \
     "$FIND JSON.stringify([shown('nokta-panel-event'), one('nokta-panel-event-title')?.text, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
 "$HERE/shot.sh" smoke-calendar-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
@@ -241,9 +304,9 @@ wait_for "the closed notch shows one file on the shelf" \
     "$FIND any('nokta-shelf-badge') && one('nokta-shelf-badge-label').text === '1' && !shown('nokta-clock')" 5 \
     "$FIND JSON.stringify([any('nokta-shelf-badge'), one('nokta-shelf-badge-label')?.text, shown('nokta-clock'), shown('nokta-shelf-badge'), one('nokta-drop-content')?.mapped, one('nokta-body').width, one('nokta-body').height, one('nokta-clock')?.get_parent()?.get_parent()?.opacity])"
 "$HERE/hover.sh" on > /dev/null
-# 32 px closed, 58 px for the date and the buttons, 54 px for the shelf row.
+# 32 px closed, 128 px for the date, toggles and tiles, 54 px for the shelf row.
 wait_for "the panel shows the shelf row" \
-    "$FIND any('nokta-shelf-row') && find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).length === 2 && Math.round(one('nokta-body').height) === 144" 5 \
+    "$FIND any('nokta-shelf-row') && find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).length === 2 && Math.round(one('nokta-body').height) === 214" 5 \
     "$FIND JSON.stringify([any('nokta-shelf-row'), find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').length, Math.round(one('nokta-body').height)])"
 # The file's slot, the last one; its close button is in the top right corner.
 SLOT=$(js "$FIND const s = find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).pop(); const [x, y] = s.get_transformed_position(); Math.round(x + s.width - 6) + ' ' + Math.round(y + 6)")

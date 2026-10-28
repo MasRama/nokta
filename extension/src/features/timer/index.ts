@@ -12,6 +12,6 @@ export {
     type TimerSnapshot,
 } from './logic/timer.js';
 export { QuietBanners, wantsQuiet } from './logic/quiet.js';
-export { focusButtonLabel, shortcutAction } from './logic/shortcut.js';
+export { shortcutAction } from './logic/shortcut.js';
 export { FocusShortcut } from './shortcut.js';
 export { FocusToggle, type TimerControls } from './toggle.js';

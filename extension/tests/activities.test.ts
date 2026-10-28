@@ -73,9 +73,9 @@ test('the closed notch shows the timer, else an activity, else the shelf', () =>
     assert.equal(chooseIndicator({ timer: false, activity: false, shelf: false }), null);
 });
 
-test('the idle panel grows with its rows', () => {
-    assert.equal(panelHeight(32, ['date', 'buttons']), 90);
-    assert.equal(panelHeight(32, ['date', 'activity', 'buttons']), 136);
-    assert.equal(panelHeight(32, ['date', 'activity', 'activity', 'buttons']), 182);
-    assert.equal(panelHeight(40, ['date', 'buttons']), 98);
+test('home grows with its rows', () => {
+    assert.equal(panelHeight(32, ['date', 'controls']), 160);
+    assert.equal(panelHeight(32, ['date', 'activity', 'controls']), 206);
+    assert.equal(panelHeight(32, ['date', 'activity', 'activity', 'controls']), 252);
+    assert.equal(panelHeight(40, ['date', 'controls']), 168);
 });

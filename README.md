@@ -21,12 +21,14 @@ notch stay on its shelf until you drag them into another app (see
 [File shelf](#file-shelf)). After a screenshot, the notch shows it with
 buttons to open it, show it in Files or keep it on the shelf (see
 [Screenshots](#screenshots)). When nothing
-plays, hovering the notch opens the date with the weather (see
+plays, hovering the notch opens home: the date with the weather (see
 [`[weather]`](#weather)), the next event from GNOME's calendar, the
-running activities, the files on the shelf, a button
-to the notification list and one to start or stop focus. Every monitor has
-its own notch,
-and these messages show on the monitor you are working on.
+running activities, the files on the shelf, quick toggles for Do Not
+Disturb, Caffeine (the screen stays on) and the dark style, and tiles for
+the notification list, focus and Settings. While a song plays, the grid
+button at the player's top right opens home, and its music button goes
+back. Every monitor has its own notch, and these messages show on the
+monitor you are working on.
 
 ![The notch opened while a song plays](docs/images/expanded.png)
 
@@ -106,8 +108,11 @@ it. Open Just Perfection's settings and set **Clock Menu Position** to
 
 ## Settings
 
-Open the settings window with the Settings button of Nokta in the
-Extensions app, or with `gnome-extensions prefs nokta@nokta.io`. It has every
+Open the settings window from the notch: the Settings tile in home, or
+Settings in the menu a right click on the notch opens (it also has Do Not
+Disturb and, with files on the shelf, Clear shelf). `nokta settings`, the
+Settings button of Nokta in the Extensions app and
+`gnome-extensions prefs nokta@nokta.io` open it too. It has every
 setting below: colors and background transparency, sizes, the clock format
 (24-hour, 12-hour or GNOME's), lyrics, popups, device alerts and the focus
 timer. A change

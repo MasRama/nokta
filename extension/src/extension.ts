@@ -47,14 +47,19 @@ import {
     type OsdContent,
     type OsdRequest,
 } from './features/osd/index.js';
-import { MAX_PANEL_ACTIVITIES, notificationsLabel, type PanelContent } from './features/panel/index.js';
+import {
+    Caffeine,
+    MAX_PANEL_ACTIVITIES,
+    type PanelContent,
+    type QuickToggle,
+    sessionInhibitor,
+} from './features/panel/index.js';
 import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
 import {
     breakAfterFocus,
     finishedAlert,
-    focusButtonLabel,
     FocusShortcut,
     FocusToggle,
     gnomeBanners,
@@ -106,6 +111,10 @@ class Session {
         (alarm, nowMs) => this.onCalendarAlarm(alarm, nowMs),
     );
     private readonly interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
+    /** Watched for the Do Not Disturb toggle; QuietBanners writes it. */
+    private readonly notificationSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' });
+    private readonly togglesIds: Array<[Gio.Settings, number]>;
+    private readonly caffeine = new Caffeine(sessionInhibitor(), () => this.notches.forEach((n) => n.onPanelContent()));
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
@@ -138,11 +147,16 @@ class Session {
             this.restoreMessageList = openMessageList();
         },
         toggleFocus: () => this.onFocusShortcut(),
+        openSettings: () => this.openPreferences(),
+        toggle: (which) => this.toggle(which),
+        setDoNotDisturb: (on) => this.quietBanners.setDoNotDisturb(on),
+        iconsDir: '',
     };
     private readonly shelfSource: ShelfSource = {
         items: () => (this.settings.behavior.fileShelf ? this.shelf.items() : []),
         overRow: (notch, rect) => this.shelfCoordinator.overRow(notch, rect),
         rowGone: (notch) => this.shelfCoordinator.rowGone(notch),
+        clear: () => this.shelf.clear(),
     };
     /**
      * The notification in a notch, watched so the notch closes when it goes
@@ -157,7 +171,17 @@ class Session {
     private readonly screenshotFiles = new ScreenshotFiles();
     private readonly unwatchScreenshots: Restore | null;
 
-    constructor(extensionSettings: Gio.Settings, extensionPath: string) {
+    constructor(
+        extensionSettings: Gio.Settings,
+        extensionPath: string,
+        private readonly openPreferences: () => void,
+    ) {
+        this.panel.iconsDir = `${extensionPath}/icons`;
+        const refreshPanel = () => this.notches.forEach((n) => n.onPanelContent());
+        this.togglesIds = [
+            [this.notificationSettings, this.notificationSettings.connect('changed::show-banners', refreshPanel)],
+            [this.interfaceSettings, this.interfaceSettings.connect('changed::color-scheme', refreshPanel)],
+        ];
         this.shelfCoordinator = new ShelfCoordinator(`${extensionPath}/shelf-helper/main.js`, () => this.notches);
         this.settings = new SettingsClient(() => this.applySettings());
         this.allMonitors = this.settings.behavior.allMonitors;
@@ -214,6 +238,8 @@ class Session {
         this.shelf.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
+        this.caffeine.release();
+        for (const [settings, id] of this.togglesIds) settings.disconnect(id);
         this.focusShortcut.destroy();
         this.privacy.destroy();
         this.devices.detach();
@@ -498,9 +524,23 @@ class Session {
             weather: this.weather.line(),
             event: this.panelEvent(),
             activities: this.panelActivities(),
-            notifications: notificationsLabel(notificationCount()),
-            focus: focusButtonLabel(this.timer.snapshot(), this.settings.timer.focusMinutes),
+            notificationCount: notificationCount(),
+            focusActive: this.timer.snapshot().state !== 'idle',
+            toggles: {
+                doNotDisturb: this.quietBanners.doNotDisturb,
+                caffeine: this.caffeine.on,
+                dark: this.interfaceSettings.get_string('color-scheme') === 'prefer-dark',
+            },
+            player: this.media.snapshot().available,
         };
+    }
+
+    /** A quick toggle in home was clicked. */
+    private toggle(which: QuickToggle): void {
+        const { toggles } = this.panelContent();
+        if (which === 'doNotDisturb') this.quietBanners.setDoNotDisturb(!toggles.doNotDisturb);
+        else if (which === 'caffeine') this.caffeine.set(!toggles.caffeine);
+        else this.interfaceSettings.set_string('color-scheme', toggles.dark ? 'default' : 'prefer-dark');
     }
 
     private panelActivities(): PanelContent['activities'] {
@@ -618,7 +658,7 @@ export default class NoktaExtension extends Extension {
     private session: Session | null = null;
 
     override enable(): void {
-        this.session = new Session(this.getSettings(), this.path);
+        this.session = new Session(this.getSettings(), this.path, () => this.openPreferences());
     }
 
     override disable(): void {

@@ -9,6 +9,8 @@ cp metadata.json dist/
 if [ -f stylesheet.css ]; then
   cp stylesheet.css dist/
 fi
+# Icons the icon theme does not have.
+cp -r icons dist/
 
 # gnome-extensions pack only takes the well-known files by itself.
 set --

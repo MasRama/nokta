@@ -305,25 +305,69 @@
     font-feature-settings: "tnum";
 }
 
-.nokta-panel-buttons {
+.nokta-panel-player {
+    padding: 2px;
+}
+
+/* Home's quick toggles and tiles. */
+.nokta-panel-controls {
+    spacing: 12px;
+}
+
+.nokta-panel-toggles {
     spacing: 8px;
 }
 
-.nokta-panel-button {
-    border-radius: 10px;
-    padding: 7px 12px;
+.nokta-pill {
+    border-radius: 16px;
+    padding: 8px 10px;
 }
 
-.nokta-panel-button-box {
-    spacing: 8px;
+.nokta-pill-box {
+    spacing: 6px;
 }
 
-.nokta-panel-button-icon {
+.nokta-pill-icon {
     icon-size: 16px;
 }
 
-.nokta-panel-button-label {
+.nokta-pill-label {
     font-size: 12px;
+    font-weight: bold;
+}
+
+.nokta-tile-box {
+    spacing: 5px;
+}
+
+.nokta-tile-circle {
+    border-radius: 20px;
+}
+
+.nokta-tile-icon {
+    icon-size: 18px;
+}
+
+.nokta-tile-badge {
+    font-size: 9px;
+    font-weight: bold;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.nokta-tile-label {
+    font-size: 11px;
+}
+
+/* The player's way to home, at its top right. */
+.nokta-home-button {
+    padding: 2px;
+}
+
+.nokta-home-icon {
+    icon-size: 16px;
 }
 
 .nokta-activity-badge {
