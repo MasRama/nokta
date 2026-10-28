@@ -523,6 +523,15 @@ banner for a fake file.
       progress shows it; one without has no line.
 - [ ] A call or a screen recording: no line, not even the song's.
 - [ ] `progress_line = false`: no line anywhere.
+- [ ] **Alert bounce and glow**: `device.sh unplug`, then `device.sh plug`:
+      the notch opens to `Charging`, overshoots a little wider and springs
+      back, with a green glow under it that fades with the alert.
+      `device.sh percent 4` while unplugged: a red glow. A finished
+      countdown glows orange, a focus session in its phase color, a
+      notification or `Connected` in the accent.
+- [ ] A volume, brightness or Caps Lock popup neither bounces nor glows.
+- [ ] `alert_glow = false`: the bounce stays, no glow. GNOME's animations
+      off (Accessibility, Reduce Animation): the glow shows, no bounce.
 
 ### Settings window
 

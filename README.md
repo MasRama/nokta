@@ -79,6 +79,10 @@ notifications. Hover over it to open it.
 - **Progress line.** A thin line along the bottom of the closed notch fills
   up with the focus timer, a countdown, an activity's progress or, beside
   the cover, the song.
+- **Alerts that pop.** When an alert opens (a device, a timer, an
+  activity, an event or a notification), the notch bounces a little wider
+  and glows underneath: red when urgent, green when something finished or
+  the charger is in, in a timer's own color, else in the accent.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color) and paper, or your own colors.
 - **Every monitor** has its own notch, and alerts show on the one you are
@@ -253,6 +257,7 @@ Every key, by table:
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
+| `alert_glow` | `true` | A glow under the notch in an alert's color; the bounce stays either way, unless GNOME's animations are off |
 
 </details>
 
