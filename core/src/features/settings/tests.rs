@@ -181,6 +181,23 @@ fn activities_defaults_and_limits() {
 }
 
 #[test]
+fn weather_defaults_and_units() {
+    let w = Config::default().weather;
+    assert!(w.enabled);
+    assert_eq!(w.location, "");
+    assert_eq!(w.units, "celsius");
+    let c = parse("[weather]\nlocation = \"Jakarta\"\nunits = \"fahrenheit\"\n").unwrap();
+    assert_eq!(c.weather.location, "Jakarta");
+    assert_eq!(c.weather.units, "fahrenheit");
+    let err = parse("[weather]\nunits = \"kelvin\"\n").unwrap_err();
+    assert!(err.message.contains("weather.units"), "{err}");
+    let map = entries(Config::default().weather.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["enabled", "location", "units"]);
+}
+
+#[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
     let keys: Vec<_> = map.keys().copied().collect();
@@ -374,6 +391,8 @@ mod edit {
         assert!(!parse(&text).unwrap().notifications.in_notch);
         let text = set_key("", "activities", "stale_minutes", &Value::Uint(5)).unwrap();
         assert_eq!(parse(&text).unwrap().activities.stale_minutes, 5);
+        let text = set_key("", "weather", "location", &Value::Text("Bandung".into())).unwrap();
+        assert_eq!(parse(&text).unwrap().weather.location, "Bandung");
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);

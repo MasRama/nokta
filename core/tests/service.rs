@@ -13,7 +13,7 @@ use serde_json::json;
 use support::bus::TestBus;
 use support::daemon::{Daemon, NAME};
 use support::fake_player::{FakePlayer, Meta};
-use wiremock::matchers::path;
+use wiremock::matchers::{path, query_param};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 use zbus::fdo::PropertiesProxy;
 use zbus::names::InterfaceName;
@@ -506,4 +506,56 @@ async fn activities_set_and_end_over_dbus() {
         .await
         .unwrap_err();
     assert!(err.to_string().contains("InvalidArgs"), "{err}");
+}
+
+#[tokio::test]
+async fn weather_reaches_ready_and_refresh_keeps_a_fresh_reading() {
+    let server = MockServer::start().await;
+    Mock::given(path("/v1/forecast"))
+        .and(query_param("latitude", "-6.2"))
+        .and(query_param("temperature_unit", "celsius"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "current": {"temperature_2m": 31.2, "weather_code": 2, "is_day": 1},
+            "daily": {"temperature_2m_max": [33.4], "temperature_2m_min": [25.1]}
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let bus = TestBus::start();
+    let mut options = Daemon::options(&bus, NO_LRCLIB);
+    options.open_meteo = app::OpenMeteoUrls {
+        forecast: server.uri(),
+        geocoding: server.uri(),
+    };
+    let config = "[weather]\nlocation = \"-6.2,106.8\"\n";
+    let _daemon = Daemon::start_with(&bus, options, Some(config)).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Weather").await;
+    const WEATHER: &str = "io.nokta.Weather1";
+
+    for _ in 0..250 {
+        let status: String = get(&p, WEATHER, "Status").await.try_into().unwrap();
+        if status == "ready" {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let text = |v: OwnedValue| -> String { v.try_into().unwrap() };
+    let number = |v: OwnedValue| -> f64 { v.try_into().unwrap() };
+    assert_eq!(text(get(&p, WEATHER, "Status").await), "ready");
+    assert_eq!(number(get(&p, WEATHER, "Temperature").await), 31.2);
+    assert_eq!(number(get(&p, WEATHER, "High").await), 33.4);
+    assert_eq!(number(get(&p, WEATHER, "Low").await), 25.1);
+    assert_eq!(text(get(&p, WEATHER, "Units").await), "celsius");
+    assert_eq!(text(get(&p, WEATHER, "Condition").await), "partly-cloudy");
+    assert_eq!(text(get(&p, WEATHER, "Place").await), "");
+    let is_day: bool = get(&p, WEATHER, "IsDay").await.try_into().unwrap();
+    assert!(is_day);
+
+    let weather = zbus::Proxy::new(&conn, NAME, "/io/nokta/Weather", WEATHER)
+        .await
+        .unwrap();
+    let _: () = weather.call("Refresh", &()).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    // The mock's expect(1) fails the test on drop if a fresh reading was asked again.
 }

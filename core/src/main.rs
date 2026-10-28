@@ -3,7 +3,7 @@
 use std::io::IsTerminal;
 use std::process::ExitCode;
 
-use nokta_core::app::{self, RunOptions, DEFAULT_LRCLIB_URL};
+use nokta_core::app::{self, OpenMeteoUrls, RunOptions, DEFAULT_LRCLIB_URL};
 use nokta_core::shared::paths::Paths;
 use tracing_subscriber::EnvFilter;
 
@@ -14,8 +14,12 @@ Runs the Nokta daemon on the session bus. It is normally started by D-Bus
 activation through the nokta.service systemd user unit.
 
 Environment:
-  NOKTA_LOG         log filter, e.g. debug or nokta_core=trace (default: info)
-  NOKTA_LRCLIB_URL  LRCLIB base URL (default: https://lrclib.net)";
+  NOKTA_LOG                       log filter, e.g. debug or nokta_core=trace (default: info)
+  NOKTA_LRCLIB_URL                LRCLIB base URL (default: https://lrclib.net)
+  NOKTA_OPEN_METEO_URL            Open-Meteo forecast base URL
+                                  (default: https://api.open-meteo.com)
+  NOKTA_OPEN_METEO_GEOCODING_URL  Open-Meteo geocoding base URL
+                                  (default: https://geocoding-api.open-meteo.com)";
 
 fn main() -> ExitCode {
     match std::env::args().nth(1).as_deref() {
@@ -51,17 +55,26 @@ fn main() -> ExitCode {
 
 fn run() -> anyhow::Result<()> {
     let paths = Paths::from_env()?;
-    let lrclib_base_url = std::env::var("NOKTA_LRCLIB_URL")
-        .ok()
-        .filter(|url| !url.is_empty())
-        .unwrap_or_else(|| DEFAULT_LRCLIB_URL.to_owned());
+    let defaults = OpenMeteoUrls::default();
     let options = RunOptions {
         bus_address: None,
         system_bus_address: None,
-        lrclib_base_url,
+        lrclib_base_url: url_from_env("NOKTA_LRCLIB_URL", DEFAULT_LRCLIB_URL),
+        open_meteo: OpenMeteoUrls {
+            forecast: url_from_env("NOKTA_OPEN_METEO_URL", &defaults.forecast),
+            geocoding: url_from_env("NOKTA_OPEN_METEO_GEOCODING_URL", &defaults.geocoding),
+        },
     };
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?
         .block_on(app::run(paths, options))
+}
+
+/// The URL in `name`, or `default` when it is unset or empty.
+fn url_from_env(name: &str, default: &str) -> String {
+    std::env::var(name)
+        .ok()
+        .filter(|url| !url.is_empty())
+        .unwrap_or_else(|| default.to_owned())
 }

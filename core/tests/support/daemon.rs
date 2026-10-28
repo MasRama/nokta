@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use nokta_core::app::{self, RunOptions};
+use nokta_core::app::{self, OpenMeteoUrls, RunOptions};
 use nokta_core::shared::paths::Paths;
 use tokio::task::JoinHandle;
 
@@ -29,6 +29,11 @@ impl Daemon {
             bus_address: Some(bus.address().to_owned()),
             system_bus_address: Some(bus.address().to_owned()),
             lrclib_base_url: lrclib.to_owned(),
+            // Tests that want weather point these at their own server.
+            open_meteo: OpenMeteoUrls {
+                forecast: "http://127.0.0.1:9".into(),
+                geocoding: "http://127.0.0.1:9".into(),
+            },
         }
     }
 
@@ -37,6 +42,10 @@ impl Daemon {
     }
 
     pub async fn start_with_config(bus: &TestBus, lrclib: &str, config: Option<&str>) -> Daemon {
+        Daemon::start_with(bus, Daemon::options(bus, lrclib), config).await
+    }
+
+    pub async fn start_with(bus: &TestBus, options: RunOptions, config: Option<&str>) -> Daemon {
         let config_home = tempfile::tempdir().unwrap();
         let cache_home = tempfile::tempdir().unwrap();
         if let Some(text) = config {
@@ -48,7 +57,7 @@ impl Daemon {
             cache_home.path(),
             &config_home.path().join("data"),
         );
-        let task = tokio::spawn(app::run(paths, Daemon::options(bus, lrclib)));
+        let task = tokio::spawn(app::run(paths, options));
         wait_for_name(bus).await;
         Daemon {
             task,
