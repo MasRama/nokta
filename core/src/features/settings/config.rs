@@ -18,6 +18,7 @@ pub struct Config {
     pub activities: ActivitiesConfig,
     pub weather: WeatherConfig,
     pub calendar: CalendarConfig,
+    pub clipboard: ClipboardConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -203,6 +204,24 @@ impl Default for CalendarConfig {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct ClipboardConfig {
+    /// Keep a history of what is copied.
+    pub enabled: bool,
+    /// How many entries the history keeps besides the pinned ones.
+    pub max_items: u32,
+}
+
+impl Default for ClipboardConfig {
+    fn default() -> Self {
+        ClipboardConfig {
+            enabled: true,
+            max_items: 25,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct WeatherConfig {
@@ -365,6 +384,7 @@ impl Config {
             0,
             60,
         )?;
+        check_range("clipboard.max_items", self.clipboard.max_items, 5, 100)?;
         if !WEATHER_UNITS.contains(&self.weather.units.as_str()) {
             return Err(ConfigError::invalid(format!(
                 "weather.units must be \"celsius\" or \"fahrenheit\", got {:?}",
@@ -568,6 +588,15 @@ impl CalendarConfig {
         vec![
             ("enabled", self.enabled.into()),
             ("reminder_minutes", self.reminder_minutes.into()),
+        ]
+    }
+}
+
+impl ClipboardConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("enabled", self.enabled.into()),
+            ("max_items", self.max_items.into()),
         ]
     }
 }

@@ -5,6 +5,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
+import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
 import {
     LYRIC_ROW_EXTRA,
     LyricLine,
@@ -30,6 +31,8 @@ import {
     MAX_PANEL_ACTIVITIES,
     NotchMenu,
     panelHeight,
+    SubPage,
+    subPageHeight,
     type PanelContent,
     type PanelRow,
     type QuickToggle,
@@ -78,7 +81,10 @@ const VIEW_SCALE_FROM = 0.96;
  * What the notch draws: the state machine's mode (the idle panel when it
  * opens without a player), or the OSD or a notification over it.
  */
-type Drawn = NotchMode | 'panel' | 'osd' | 'notification' | 'screenshot' | 'drop';
+type Drawn = NotchMode | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
+
+/** The pages that home's tiles open. */
+type PageName = 'clipboard';
 
 /** What home shows and does; owned by the session. */
 export interface PanelSource {
@@ -106,6 +112,20 @@ export interface ShelfSource {
     clear(): void;
 }
 
+/** The clipboard history; owned by the session. */
+export interface ClipboardSource {
+    /** The history is on. */
+    enabled(): boolean;
+    /** Newest first; empty while the history is off. */
+    entries(): readonly ClipboardEntry[];
+    paused(): boolean;
+    copy(id: string): void;
+    pin(id: string, pinned: boolean): void;
+    remove(id: string): void;
+    clear(): void;
+    setPaused(paused: boolean): void;
+}
+
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
     settings: SettingsClient;
@@ -116,6 +136,7 @@ export interface NotchSources {
     privacy: PrivacyMonitor;
     panel: PanelSource;
     shelf: ShelfSource;
+    clipboard: ClipboardSource;
 }
 
 /**
@@ -164,6 +185,10 @@ export class MonitorNotch implements ShelfNotch {
     private readonly idlePanel: HomePanel;
     /** Home is open over the player, until the notch closes or its music button goes back. */
     private homeOpen = false;
+    /** A page a home tile opened, until the notch closes or its back arrow goes home. */
+    private page: PageName | null = null;
+    private readonly clipboardPage: ClipboardPage;
+    private readonly clipboardSubPage: SubPage;
     private readonly menu: NotchMenu;
     private readonly pressId: number;
     private readonly machine: NotchMachine;
@@ -196,6 +221,7 @@ export class MonitorNotch implements ShelfNotch {
                 openNotifications: () => this.onPanelClick(() => panel.openNotifications()),
                 toggleFocus: () => this.onPanelClick(() => panel.toggleFocus()),
                 openSettings: () => this.onPanelClick(() => panel.openSettings()),
+                openClipboard: () => this.setPage('clipboard'),
                 openPlayer: () => this.setHomeOpen(false),
                 // A toggle acts in place; home stays open to show it.
                 toggle: (which) => panel.toggle(which),
@@ -206,7 +232,18 @@ export class MonitorNotch implements ShelfNotch {
             openSettings: () => panel.openSettings(),
             setDoNotDisturb: (on) => panel.setDoNotDisturb(on),
             clearShelf: () => sources.shelf.clear(),
+            setClipboardPaused: (paused) => sources.clipboard.setPaused(paused),
         });
+        const { clipboard } = sources;
+        this.clipboardPage = new ClipboardPage({
+            copy: (id) => clipboard.copy(id),
+            pin: (id, pinned) => clipboard.pin(id, pinned),
+            remove: (id) => clipboard.remove(id),
+            clear: () => clipboard.clear(),
+            setPaused: (paused) => clipboard.setPaused(paused),
+        });
+        this.clipboardSubPage = new SubPage('Clipboard', this.clipboardPage.actor, () => this.setPage(null));
+        for (const action of this.clipboardPage.actions) this.clipboardSubPage.addAction(action);
         // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
         this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
@@ -226,6 +263,7 @@ export class MonitorNotch implements ShelfNotch {
             collapsed: this.collapsed.actor,
             expanded: this.expanded.actor,
             panel: this.idlePanel.actor,
+            page: this.clipboardSubPage.actor,
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
             screenshot: this.screenshotView.actor,
@@ -267,6 +305,7 @@ export class MonitorNotch implements ShelfNotch {
             this.menu.open(x, y, {
                 doNotDisturb: this.sources.panel.content().toggles.doNotDisturb,
                 shelfItems: this.sources.shelf.items().length,
+                clipboardPaused: this.sources.clipboard.enabled() ? this.sources.clipboard.paused() : null,
             });
             return Clutter.EVENT_STOP;
         });
@@ -284,6 +323,7 @@ export class MonitorNotch implements ShelfNotch {
         this.onTimer();
         this.onActivities();
         this.onShelf();
+        this.onClipboard();
         this.onPrivacy();
     }
 
@@ -311,6 +351,8 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationView.destroy();
         this.screenshotView.destroy();
         this.idlePanel.destroy();
+        this.clipboardPage.destroy();
+        this.clipboardSubPage.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
@@ -393,6 +435,21 @@ export class MonitorNotch implements ShelfNotch {
         this.resizeExpanded();
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
+    }
+
+    /** The clipboard history changed, or it was turned on or off. */
+    onClipboard(): void {
+        if (this.destroyed) return;
+        const { clipboard } = this.sources;
+        if (!clipboard.enabled() && this.page === 'clipboard') this.setPage(null);
+        const before = this.clipboardPage.height;
+        this.clipboardPage.show(clipboard.entries(), clipboard.paused());
+        if (this.clipboardPage.height !== before) {
+            const [width, height] = this.sizeFor('page');
+            this.clipboardSubPage.actor.set_size(width, height);
+            if (this.drawn === 'page') this.notch.resizeTo(width, height, 'width');
+        }
+        if (this.drawn === 'panel') this.refreshPanel();
     }
 
     // The file shelf: what the helper window needs from this notch.
@@ -651,12 +708,27 @@ export class MonitorNotch implements ShelfNotch {
         if (this.notificationTimer.active) return this.notificationKind;
         const { mode } = this.machine;
         if (mode !== 'expanded') return mode;
+        if (this.page) return 'page';
         return this.homeOpen || !this.sources.media.snapshot().available ? 'panel' : mode;
     }
 
     private onMode(): void {
         // Closing the notch goes back to its first page.
-        if (this.machine.mode !== 'expanded') this.homeOpen = false;
+        if (this.machine.mode !== 'expanded') {
+            this.homeOpen = false;
+            if (this.page) this.clipboardPage.reset();
+            this.page = null;
+        }
+        this.draw(this.overlay());
+    }
+
+    /** Opens a page over home, or goes back to home with null. */
+    private setPage(page: PageName | null): void {
+        if (this.page === page) return;
+        // Back from a page lands on home, also over a player.
+        if (page) this.homeOpen = true;
+        else this.clipboardPage.reset();
+        this.page = page;
         this.draw(this.overlay());
     }
 
@@ -681,6 +753,7 @@ export class MonitorNotch implements ShelfNotch {
         const tall = (drawn: Drawn) =>
             drawn === 'expanded' ||
             drawn === 'panel' ||
+            drawn === 'page' ||
             drawn === 'notification' ||
             drawn === 'screenshot' ||
             drawn === 'drop';
@@ -709,6 +782,7 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === 'screenshot') return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
         if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
+        if (mode === 'page') return [a.expandedWidth, subPageHeight(this.clipboardPage.height)];
         if (mode === 'expanded') {
             const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
             const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
@@ -757,6 +831,7 @@ export class MonitorNotch implements ShelfNotch {
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setColors({ foreground, accent, onAccent });
+        this.clipboardPage.setColors({ foreground, accent });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
     }

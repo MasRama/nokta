@@ -385,6 +385,82 @@ wait_for "the shelf row shows the thumbnail instead of the icon" \
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
 wait_for "the clock comes back when the shelf is cleared" "$FIND shown('nokta-clock')" 10
 
+# A copy goes to the clipboard history; its tile in home opens the list, a
+# row copies the entry back, and the menu pauses the history.
+clip_items() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard \
+        --method org.freedesktop.DBus.Properties.Get io.nokta.Clipboard1 Items
+}
+clip_copy() {
+    js "imports.gi.St.Clipboard.get_default().set_text(imports.gi.St.ClipboardType.CLIPBOARD, '$1'); true" > /dev/null
+}
+CLIP_TEXT="new Promise((r) => imports.gi.St.Clipboard.get_default().get_text(imports.gi.St.ClipboardType.CLIPBOARD, (_c, t) => r(t)))"
+clip_copy "Smoke clipboard text"
+i=0
+until clip_items | grep -q "'text', 'Smoke clipboard text', '', false"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the copy is not in the clipboard history: $(clip_items)"
+    sleep 0.2
+done
+ok "a copy goes to the clipboard history"
+"$HERE/hover.sh" on > /dev/null
+TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Clipboard')"
+wait_for "home has a clipboard tile" "$FIND shown('nokta-panel') && $TILE?.mapped === true" 5
+js "$FIND $TILE.emit('clicked', 1); true" > /dev/null
+CLIP_ROWS="find(Main.layoutManager.uiGroup, 'nokta-clip-preview').filter((l) => l.mapped).map((l) => l.text).join(' | ')"
+# The header and one 32 px row: 14 + 28 + 10 + 32 + 14.
+wait_for "the clipboard tile opens the history" \
+    "$FIND shown('nokta-subpage') && $CLIP_ROWS === 'Smoke clipboard text' && Math.round(one('nokta-body').height) === 98" 5 \
+    "$FIND JSON.stringify([shown('nokta-subpage'), $CLIP_ROWS, Math.round(one('nokta-body').height)])"
+clip_copy "Smoke second copy"
+wait_for "a new copy goes on top of the list" "$FIND $CLIP_ROWS === 'Smoke second copy | Smoke clipboard text'" 5
+# The notch grows for the new row first.
+sleep 0.4
+"$HERE/shot.sh" smoke-clipboard > /dev/null
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-clip-entry').filter((e) => e.mapped)[1].emit('clicked', 1); true" > /dev/null
+wait_for "a row copies its entry back" "$CLIP_TEXT.then((t) => t === 'Smoke clipboard text')" 5
+wait_for "and goes back on top" "$FIND $CLIP_ROWS === 'Smoke clipboard text | Smoke second copy'" 5
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-clip-pin').filter((e) => e.mapped)[0].emit('clicked', 1); true" > /dev/null
+i=0
+until clip_items | grep -q "'Smoke clipboard text', '', true"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the pin button did not pin the entry: $(clip_items)"
+    sleep 0.2
+done
+ok "the pin button pins the entry"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard --method io.nokta.Clipboard1.Clear > /dev/null
+wait_for "clearing keeps the pinned entry" "$FIND $CLIP_ROWS === 'Smoke clipboard text'" 5
+js "$FIND one('nokta-subpage-back').emit('clicked', 1); true" > /dev/null
+wait_for "the back arrow goes home" "$FIND shown('nokta-panel') && !shown('nokta-subpage')" 5
+"$HERE/hover.sh" off > /dev/null
+wait_for "the panel closes" "$FIND shown('nokta-clock') && width() === 180" 5
+# The middle of the closed notch: NOTCH_AT was taken on the open panel.
+js "$FIND const Clutter = imports.gi.Clutter;
+const now = () => global.get_current_time() * 1000;
+const [x, y] = one('nokta-body').get_transformed_position();
+global._noktaPointer.notify_absolute_motion(now(), Math.round(x + width() / 2), Math.round(y + 12));
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.PRESSED);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.RELEASED);
+true" > /dev/null
+PAUSE_ITEM="$MENU._getMenuItems().find((i) => i.label?.text === 'Pause clipboard')"
+wait_for "the menu has Pause clipboard" "$FIND $MENU.isOpen && $PAUSE_ITEM?.visible === true" 5 \
+    "$FIND JSON.stringify([any('nokta-menu'), global.get_pointer().slice(0, 2), width()])"
+js "$FIND $PAUSE_ITEM.toggle(); $MENU.close(); true" > /dev/null
+i=0
+until gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard \
+    --method org.freedesktop.DBus.Properties.Get io.nokta.Clipboard1 Paused | grep -q true; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "Pause clipboard did not pause the history"
+    sleep 0.2
+done
+ok "Pause clipboard pauses the history"
+clip_copy "Smoke copy while paused"
+sleep 0.5
+clip_items | grep -q "while paused" && fail "a copy was kept while paused: $(clip_items)"
+ok "copies are not kept while paused"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard --method io.nokta.Clipboard1.SetPaused false > /dev/null
+"$HERE/hover.sh" off > /dev/null
+
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10

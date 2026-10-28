@@ -61,6 +61,8 @@ export interface PanelContent {
     toggles: QuickToggles;
     /** A player is open, so home has a way back to it. */
     player: boolean;
+    /** The clipboard history is on, so home has its tile. */
+    clipboard: boolean;
 }
 
 export const MAX_PANEL_ACTIVITIES = 3;
@@ -70,6 +72,7 @@ export interface PanelHandlers {
     openNotifications(): void;
     toggleFocus(): void;
     openSettings(): void;
+    openClipboard(): void;
     openPlayer(): void;
     toggle(which: QuickToggle): void;
 }
@@ -226,6 +229,7 @@ export class HomePanel {
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly notifications: Tile;
     private readonly focus: Tile;
+    private readonly clipboard: Tile;
     private readonly settings: Tile;
     private readonly controls: St.BoxLayout;
 
@@ -258,9 +262,10 @@ export class HomePanel {
             handlers.openNotifications(),
         );
         this.focus = new Tile('alarm-symbolic', 'Focus', () => handlers.toggleFocus());
+        this.clipboard = new Tile('edit-paste-symbolic', 'Clipboard', () => handlers.openClipboard());
         this.settings = new Tile('emblem-system-symbolic', 'Settings', () => handlers.openSettings());
         const tiles = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
-        for (const tile of [this.notifications, this.focus, this.settings]) tiles.add_child(tile.actor);
+        for (const tile of this.tiles()) tiles.add_child(tile.actor);
         this.controls = setVertical(new St.BoxLayout({ style_class: 'nokta-panel-controls' }));
         this.controls.add_child(pills);
         this.controls.add_child(tiles);
@@ -289,16 +294,21 @@ export class HomePanel {
         for (const [which, pill] of this.toggles) pill.set(content.toggles[which]);
         this.notifications.set(false, notificationBadge(content.notificationCount));
         this.focus.set(content.focusActive);
+        this.clipboard.actor.visible = content.clipboard;
     }
 
     setColors(colors: ControlColors): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
-        for (const tile of [this.notifications, this.focus, this.settings]) tile.setColors(colors);
+        for (const tile of this.tiles()) tile.setColors(colors);
         for (const row of this.activities) row.setForeground(colors.foreground);
     }
 
     destroy(): void {
         this.event.destroy();
         this.actor.destroy();
+    }
+
+    private tiles(): Tile[] {
+        return [this.notifications, this.focus, this.clipboard, this.settings];
     }
 }

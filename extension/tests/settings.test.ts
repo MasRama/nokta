@@ -11,12 +11,14 @@ import {
     DEFAULT_LYRICS,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_CALENDAR,
+    DEFAULT_CLIPBOARD,
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
     lyricsFrom,
     notificationsFrom,
     weatherFrom,
     calendarFrom,
+    clipboardFrom,
     timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
@@ -169,6 +171,12 @@ test('weather settings from table', () => {
         units: 'fahrenheit',
     });
     assert.deepEqual(weatherFrom({ location: 3 }), DEFAULT_WEATHER);
+});
+
+test('clipboard settings from table', () => {
+    assert.deepEqual(DEFAULT_CLIPBOARD, { enabled: true, maxItems: 25 });
+    assert.deepEqual(clipboardFrom({ enabled: false, max_items: 50 }), { enabled: false, maxItems: 50 });
+    assert.deepEqual(clipboardFrom({ max_items: 'many' }), DEFAULT_CLIPBOARD);
 });
 
 test('calendar settings from table', () => {

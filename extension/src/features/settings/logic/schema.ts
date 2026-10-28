@@ -2,6 +2,7 @@ import {
     activitiesFrom,
     appearanceFrom,
     calendarFrom,
+    clipboardFrom,
     behaviorFrom,
     lyricsFrom,
     notificationsFrom,
@@ -23,7 +24,16 @@ export type RowKind =
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities' | 'weather' | 'calendar';
+export type Table =
+    | 'appearance'
+    | 'behavior'
+    | 'lyrics'
+    | 'timer'
+    | 'notifications'
+    | 'activities'
+    | 'weather'
+    | 'calendar'
+    | 'clipboard';
 
 export interface Row {
     table: Table;
@@ -84,6 +94,14 @@ const weather = (key: string, title: string, kind: RowKind, subtitle?: string): 
 
 const calendar = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'calendar',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const clipboard = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'clipboard',
     key,
     title,
     kind,
@@ -234,6 +252,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Clipboard',
+                rows: [
+                    clipboard('enabled', 'Keep a clipboard history', bool(), 'Text and pictures you copy, in memory only'),
+                    clipboard('max_items', 'Entries to keep', int(5, 100), 'Besides the pinned ones'),
+                ],
+            },
+            {
                 title: 'Music',
                 rows: [
                     behavior('show_lyrics', 'Show lyrics', bool()),
@@ -345,6 +370,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     activities: activitiesFrom,
     weather: weatherFrom,
     calendar: calendarFrom,
+    clipboard: clipboardFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

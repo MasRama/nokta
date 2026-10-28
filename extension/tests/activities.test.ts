@@ -9,7 +9,7 @@ import {
     progressLabel,
 } from '../src/features/activities/logic/activities.js';
 import { chooseIndicator } from '../src/shared/logic/indicator.js';
-import { panelHeight } from '../src/features/panel/logic/height.js';
+import { panelHeight, subPageHeight } from '../src/features/panel/logic/height.js';
 
 test('activities are read from the daemon rows, skipping broken ones', () => {
     assert.deepEqual(
@@ -78,4 +78,8 @@ test('home grows with its rows', () => {
     assert.equal(panelHeight(32, ['date', 'activity', 'controls']), 206);
     assert.equal(panelHeight(32, ['date', 'activity', 'activity', 'controls']), 252);
     assert.equal(panelHeight(40, ['date', 'controls']), 168);
+});
+
+test('a sub-page is its padding, its header and its body', () => {
+    assert.equal(subPageHeight(100), 14 + 28 + 10 + 100 + 14);
 });

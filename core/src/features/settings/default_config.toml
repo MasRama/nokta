@@ -64,3 +64,7 @@ units = "celsius"        # "celsius" or "fahrenheit"
 [calendar]
 enabled = true           # show the next event from GNOME's calendar when the notch opens
 reminder_minutes = 5     # show an event this many minutes before it starts, 0 to 60; 0 = no reminder
+
+[clipboard]
+enabled = true           # keep what you copy, text and pictures, in the open notch; in memory only
+max_items = 25           # entries kept besides the pinned ones, 5 to 100

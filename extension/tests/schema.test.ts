@@ -8,6 +8,7 @@ import {
     DEFAULT_LYRICS,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_CALENDAR,
+    DEFAULT_CLIPBOARD,
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
 } from '../src/features/settings/logic/parse.js';
@@ -23,6 +24,7 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     activities: { ...DEFAULT_ACTIVITIES },
     weather: { ...DEFAULT_WEATHER },
     calendar: { ...DEFAULT_CALENDAR },
+    clipboard: { ...DEFAULT_CLIPBOARD },
 };
 
 test('every_setting_has_exactly_one_row', () => {

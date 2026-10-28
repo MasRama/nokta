@@ -20,12 +20,13 @@ ended (see [Live activities](#live-activities)). Files dragged onto the
 notch stay on its shelf until you drag them into another app (see
 [File shelf](#file-shelf)). After a screenshot, the notch shows it with
 buttons to open it, show it in Files or keep it on the shelf (see
-[Screenshots](#screenshots)). When nothing
+[Screenshots](#screenshots)). What you copy is kept in a clipboard history
+that opens from home (see [Clipboard history](#clipboard-history)). When nothing
 plays, hovering the notch opens home: the date with the weather (see
 [`[weather]`](#weather)), the next event from GNOME's calendar, the
 running activities, the files on the shelf, quick toggles for Do Not
 Disturb, Caffeine (the screen stays on) and the dark style, and tiles for
-the notification list, focus and Settings. While a song plays, the grid
+the notification list, focus, the clipboard and Settings. While a song plays, the grid
 button at the player's top right opens home, and its music button goes
 back. Every monitor has its own notch, and these messages show on the
 monitor you are working on.
@@ -232,6 +233,13 @@ are left out.
 | `duration_ms` | `5000` | How long a notification stays, 1000 to 30000; it stays while the pointer is on it |
 | `show_body` | `true` | Show the message; `false` shows only the title and the app |
 
+### `[clipboard]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Keep a history of what you copy. Turning it off forgets the whole history, pinned entries too |
+| `max_items` | `25` | How many entries to keep, 5 to 100, besides the pinned ones |
+
 ## Live activities
 
 Any program can show what it is doing in the notch, and the `nokta`
@@ -278,6 +286,19 @@ screenshots taken with the screenshot UI (Print Screen): GNOME does not say
 which file the direct shortcuts (Shift+Print Screen, Alt+Print Screen)
 saved. With saving to disk turned off in GNOME, the preview has no buttons.
 
+## Clipboard history
+
+The `Clipboard` tile in home opens what you copied, newest first: text with
+its first line, pictures with a thumbnail. Click an entry to copy it again,
+ready to paste. Its pin keeps it when the history is full or cleared, and
+its `×` takes it out. Scroll over the list for older entries. The header's
+buttons pause the history (copies are not kept until you resume) and clear
+it, and the notch's right-click menu has `Pause clipboard` too.
+
+Nokta skips what a password manager marks as secret, and pictures larger
+than 8 MB. The history lives in `noktad`'s memory only, so it is empty
+again after you log out.
+
 ## Privacy
 
 To find lyrics, `noktad` sends the artist, title, album and length of the
@@ -294,6 +315,11 @@ For the weather, `noktad` sends the location you set to
 [Open-Meteo](https://open-meteo.com): a place name to find its coordinates,
 then the coordinates for the forecast. With `location = ""`, the default, it
 sends nothing.
+
+The clipboard history never leaves your computer and is never written to
+disk, except the small thumbnails of copied pictures, which go to
+`$XDG_RUNTIME_DIR/nokta/clipboard/` (memory, readable only by you, emptied
+when `noktad` starts and when an entry goes).
 
 Cover art that a player offers as a web address is downloaded to
 `~/.cache/nokta/art/`. Lyrics are cached in `~/.cache/nokta/lyrics/`.

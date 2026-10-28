@@ -1,3 +1,10 @@
 export { SettingsClient } from './client.js';
-export type { Appearance, Behavior, CalendarSettings, NotificationSettings, TimerSettings } from './logic/parse.js';
+export type {
+    Appearance,
+    Behavior,
+    CalendarSettings,
+    ClipboardSettings,
+    NotificationSettings,
+    TimerSettings,
+} from './logic/parse.js';
 export { allRows, rowValue, SETTINGS_PAGES, variantType, type Row, type Table } from './logic/schema.js';
