@@ -209,7 +209,7 @@ class Session {
         this.devices.detach();
     }
 
-    // Focus timer (focus timer spec, section 6)
+    // Focus timer
 
     /** Redraws the timer, and again when the shown second changes. */
     private onTimer(): void {
@@ -288,7 +288,7 @@ class Session {
         this.onTimer();
     }
 
-    // OSD (multi-monitor spec, section 3)
+    // OSD
 
     /** The notch for a message, or null and the monitor for GNOME's popup when none can show it. */
     private routeMessage(requested: number): { notch: MonitorNotch | null; monitor: number } {
@@ -392,7 +392,7 @@ class Session {
             }));
     }
 
-    // Notifications (0.4 spec, section 5)
+    // Notifications
 
     private applyNotificationSettings(): void {
         const { inNotch } = this.settings.notifications;

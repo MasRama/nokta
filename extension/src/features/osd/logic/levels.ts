@@ -12,9 +12,9 @@ export interface LevelRequest {
 }
 
 /**
- * Turns GNOME 49's per-monitor levels into one request (GNOME versions spec,
- * section 2.1). With several monitors the level of `preferred` (the focused
- * one) is shown when it has an entry, else that of the lowest index.
+ * Turns GNOME 49's per-monitor levels into one request. With several
+ * monitors the level of `preferred` (the focused one) is shown when it has
+ * an entry, else that of the lowest index.
  */
 export function fromLevels(
     levels: Readonly<Record<number, OsdLevel | null | undefined>> | null | undefined,

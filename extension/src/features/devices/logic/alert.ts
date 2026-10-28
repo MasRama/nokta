@@ -13,7 +13,7 @@ const percent = (value: number): string =>
     Number.isInteger(value) && value >= 0 && value <= 100 ? `${value}%` : '';
 
 /**
- * The alert for a (kind, name, percentage) signal (device alerts spec 5),
+ * The alert for a (kind, name, percentage) signal,
  * or null for a kind this extension does not know.
  */
 export function deviceAlert(kind: string, name: string, percentage: number): DeviceAlert | null {

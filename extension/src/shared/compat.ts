@@ -4,7 +4,7 @@ import type St from 'gi://St';
 /*
  * The few places where GNOME Shell 46 to 51 differ. Each helper checks for
  * the feature, never the version, so a patched shell still takes the right
- * path (GNOME versions spec, section 2).
+ * path.
  */
 
 /** Lays `box` out top to bottom: `orientation` from GNOME 48, `vertical` before (gone in 51). */

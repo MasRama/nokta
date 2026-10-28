@@ -20,7 +20,7 @@ import {
 
 /**
  * The notch's appearance, behavior, timer and notification settings from io.nokta.Settings1. Until the
- * daemon answers it holds the spec defaults; when the daemon goes away it
+ * daemon answers it holds the defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
 export class SettingsClient {

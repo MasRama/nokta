@@ -5,3 +5,6 @@ node_modules/
 /extension/.test-build
 /extension/src/generated
 /.superpowers
+/docs/specs
+/docs/plans
+/docs/superpowers

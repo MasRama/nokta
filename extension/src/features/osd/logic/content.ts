@@ -12,7 +12,7 @@ export interface OsdContent {
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 /**
- * The content for one osdWindowManager.show() request (spec 3.2). A level
+ * The content for one osdWindowManager.show() request. A level
  * shows the bar and the percentage, else the label is shown alone.
  */
 export function osdContent(

@@ -1,4 +1,4 @@
-//! Active player selection (spec 4.2).
+//! Active player selection.
 //!
 //! A playing player wins, the one that most recently started playing first.
 //! Otherwise the paused player that stopped playing most recently. A player that was

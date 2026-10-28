@@ -1,8 +1,8 @@
 #!/bin/sh
 # Starts the devshell, checks that Nokta works in this GNOME Shell, and stops
-# it again. CI runs it in a container for every GNOME version (GNOME
-# versions spec, section 3). Screenshots of each step go to
-# build/shots/smoke-*.png. Exits non-zero at the first failed check.
+# it again. CI runs it in a container for every GNOME version. Screenshots
+# of each step go to build/shots/smoke-*.png. Exits non-zero at the first
+# failed check.
 # Usage: tools/devshell/smoke.sh
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)

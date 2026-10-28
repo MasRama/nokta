@@ -13,6 +13,6 @@ shell_eval() {
 }
 
 # JavaScript for the default seat: through the stage's context from GNOME 48,
-# the default backend before (GNOME versions spec, section 2).
+# the default backend before.
 # shellcheck disable=SC2034 # used by the scripts that source this file
 SEAT_JS='(global.stage.get_context ? global.stage.get_context().get_backend() : imports.gi.Clutter.get_default_backend()).get_default_seat()'

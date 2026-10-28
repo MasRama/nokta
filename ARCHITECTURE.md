@@ -2,8 +2,7 @@
 
 This file is the authority on how Nokta is built. When code and this file
 disagree, one of them is wrong: fix the code, or change this file in the same
-pull request. The original design and its reasoning are in
-[docs/specs/2026-10-27-nokta-v0.1-design.md](docs/specs/2026-10-27-nokta-v0.1-design.md).
+pull request.
 
 ## Two processes, one contract
 
@@ -57,7 +56,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
 tools/devshell/     headless GNOME Shell for checking the UI
-docs/               design spec, plans, manual test checklist
+docs/               manual test checklist, screenshots
 ```
 
 ### Feature rules

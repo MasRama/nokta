@@ -8,9 +8,7 @@ like and how releases work.
 - For a bug, open an issue with the steps to reproduce it, unless the fix is
   small and obvious.
 - For a new feature, open an issue first and describe what you want to do.
-  The list of features planned after v0.1 is in section 11 of the
-  [design spec](docs/specs/2026-10-27-nokta-v0.1-design.md); each one gets
-  its own design before code.
+  Each one gets agreed on in the issue before code.
 - Read [ARCHITECTURE.md](ARCHITECTURE.md). Changes to the locked stack need
   agreement in an issue first.
 
