@@ -311,7 +311,10 @@ How both sides stay honest:
   `iconFor(name)` takes one of Nokta's names (`nokta-focus`) or a GNOME name
   it redraws (`shared/logic/icon-names.ts`) and falls back to the theme's
   icon for anything else (weather, files, apps); icons from GNOME, as an
-  OSD's or a notification's, go through `chromeIcon()`.
+  OSD's or a notification's, go through `chromeIcon()`. A notification's
+  symbolic icon sits on a 36 px square of the accent at 20 %, an app's
+  full-color one alone; a clipboard row shows a link for a copied address,
+  a picture or text (`entryIcon`).
 - Tones: each kind of thing has its own color (`shared/logic/tones.ts`): the
   focus timer tomato, a countdown amber, Do Not Disturb indigo, the
   clipboard teal and so on. A toggle or tile shows its icon in its tone and
