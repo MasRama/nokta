@@ -83,9 +83,14 @@ docs/               manual test checklist, screenshots
   progress, else the song beside its cover.
   `monitor-notch.ts` also puts the shelf's row in the panel and in the open
   player, since `panel` cannot import `shelf`. In the same way it opens the
-  clipboard's list, or the timer's presets, as a page over home
-  (`panel/page.ts` draws the header with the back arrow) when home's
-  `Clipboard` or `Timer` tile is clicked. While the
+  clipboard's list, the timer's presets, or the settings page, as a page
+  over home (`panel/page.ts` draws the header with the back arrow) when
+  home's `Clipboard`, `Timer` or `Settings` tile is clicked. The settings
+  page (`settings/page.ts`) shows the themes as small notches, switches for
+  the cover's color, the progress line and the alert glow, and three motion
+  speeds (`settings/logic/quick.ts`); a click shows at once and goes to the
+  daemon through `Settings1.Set`, and `All settings` opens the settings
+  window, as the right-click menu's `Settings` does. While the
   clipboard's search field is open, `monitor-notch.ts` holds the keyboard
   with `Main.pushModal` on the notch, keeps it open as if the pointer were
   on it, and lets go on Enter, Escape, a click outside or the notch
@@ -141,7 +146,10 @@ docs/               manual test checklist, screenshots
   `core/src/features/media` and `extension/src/features/media`.
 - The settings window (`prefs.ts`, `prefs/`) runs in GNOME's own preferences
   process, not in the shell. The shell side never imports it, and it never
-  imports shell-only modules (`St`, `Clutter`, `Main`). Its rows come from
+  imports shell-only modules (`St`, `Clutter`, `Main`); `prefs-imports.test.ts`
+  follows its imports to check. So `features/settings/index.ts` exports no
+  actors, and the notch imports the settings page from `settings/page.ts`
+  itself. Its rows come from
   `features/settings/logic/schema.ts`, one line per setting.
 - In the extension, decisions live in `logic/` folders: plain TypeScript with
   no `gi://` imports, tested with Node. The files around them turn those

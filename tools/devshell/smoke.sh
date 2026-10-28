@@ -846,6 +846,33 @@ sleep 0.4
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-panel-clock-remove').find((b) => b.mapped).emit('clicked', 1); true" > /dev/null
 wait_for "its remove button takes the row away" \
     "$FIND !any('nokta-panel-clock') && Math.round(one('nokta-body').height) === $HOME_HEIGHT" 5
+# The settings tile opens Nokta's own page: six theme swatches, three
+# switches, motion and a row for the settings window. A swatch and a switch
+# change the setting through the daemon at once.
+APPEARANCE="Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.settings?.appearance"
+SETTINGS_TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Settings')"
+THEME=$(js "$APPEARANCE.theme")
+js "$FIND $SETTINGS_TILE.emit('clicked', 1); true" > /dev/null
+# The header and the 240 px page: 14 + 28 + 10 + 240 + 14.
+wait_for "the settings tile opens the settings page" \
+    "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 6 && Math.round(one('nokta-body').height) === 306" 5 \
+    "$FIND JSON.stringify([any('nokta-subpage'), find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length, Math.round(one('nokta-body').height)])"
+sleep 0.4
+"$HERE/shot.sh" smoke-settings-page > /dev/null
+js "$FIND one('nokta-settings-theme-graphite').emit('clicked', 1); true" > /dev/null
+wait_for "a swatch sets the theme" "$APPEARANCE.theme === 'graphite'" 5
+GLOW="$APPEARANCE.alertGlow"
+GLOW_WAS=$(js "$GLOW")
+js "$FIND find(one('nokta-settings'), 'nokta-settings-row')[2].emit('clicked', 1); true" > /dev/null
+wait_for "a switch flips its setting" "$GLOW === !$GLOW_WAS" 5
+js "$FIND find(one('nokta-settings'), 'nokta-settings-row')[2].emit('clicked', 1); one('nokta-settings-theme-$(printf %s "$THEME" | tr -d '"')').emit('clicked', 1); true" > /dev/null
+wait_for "and both go back" "$APPEARANCE.theme === $THEME && $GLOW === $GLOW_WAS" 5
+# All settings closes the notch and asks the extension for its window; the
+# window itself opens through prefs.sh below.
+js "const e = Main.extensionManager.lookup('nokta@nokta.io').stateObj; global._noktaPrefs = 0; e.openPreferences = () => global._noktaPrefs++; true" > /dev/null
+js "$FIND one('nokta-settings-all').emit('clicked', 1); true" > /dev/null
+wait_for "All settings opens the settings window" "$FIND global._noktaPrefs === 1 && !any('nokta-subpage')" 5
+js "delete Main.extensionManager.lookup('nokta@nokta.io').stateObj.openPreferences; true" > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the panel closes" "$FIND shown('nokta-clock') && width() === 180" 5
 # The middle of the closed notch: NOTCH_AT was taken on the open panel.
@@ -960,6 +987,11 @@ wait_for "the settings window opens" \
     "$WINDOWS"
 sleep 2
 "$HERE/shot.sh" smoke-prefs > /dev/null
+# GNOME's error page has the same title: a failed import shows only in the log.
+if grep -q "Failed to open preferences" "$STATE/prefs.log"; then
+    fail "the settings window shows GNOME's error page: $(grep -A3 "Failed to open preferences" "$STATE/prefs.log")"
+fi
+ok "the settings window shows Nokta's settings"
 
 # Stop the shell first: shutting down must not log errors either.
 "$HERE/stop.sh"

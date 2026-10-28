@@ -12,3 +12,5 @@ export type {
 } from './logic/parse.js';
 export { moveItem, orderItems, switchItem, type OrderItem } from './logic/order.js';
 export { allRows, rowValue, SETTINGS_PAGES, variantType, type Row, type Table } from './logic/schema.js';
+// The settings window imports this index too, so the notch's settings page
+// (St) is imported from './page.js' on its own.
