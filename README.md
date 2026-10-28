@@ -16,7 +16,8 @@ notch's left corner. Notifications show in the notch instead of GNOME's
 banner: hover to keep one open, click it to open the app. A build, a
 download or a backup can show in the notch while it runs and say how it
 ended (see [Live activities](#live-activities)). When nothing
-plays, hovering the notch opens the date, the running activities, a button
+plays, hovering the notch opens the date with the weather (see
+[`[weather]`](#weather)), the running activities, a button
 to the notification list and one to start or stop focus. Every monitor has
 its own notch,
 and these messages show on the monitor you are working on.
@@ -181,6 +182,21 @@ the daemon, so it keeps going while the screen is locked.
 |---|---|---|
 | `stale_minutes` | `30` | An activity not updated for this long ends as failed, 1 to 1440 |
 
+### `[weather]`
+
+Set a location and the open notch shows the weather beside the date: the
+sky, the temperature, and the place with today's high and low. It comes
+from [Open-Meteo](https://open-meteo.com), which needs no account.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Show the weather when a location is set |
+| `location` | `""` | A place like `"Jakarta"`, or coordinates like `"-6.2,106.8"`; `""` shows no weather |
+| `units` | `"celsius"` | `"celsius"` or `"fahrenheit"` |
+
+`noktad` asks again when the notch opens and the reading is more than 30
+minutes old, or 5 minutes after a failed request.
+
 ### `[notifications]`
 
 | Key | Default | What it does |
@@ -218,6 +234,11 @@ off:
 [lyrics]
 enabled = false
 ```
+
+For the weather, `noktad` sends the location you set to
+[Open-Meteo](https://open-meteo.com): a place name to find its coordinates,
+then the coordinates for the forecast. With `location = ""`, the default, it
+sends nothing.
 
 Cover art that a player offers as a web address is downloaded to
 `~/.cache/nokta/art/`. Lyrics are cached in `~/.cache/nokta/lyrics/`.
