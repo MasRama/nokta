@@ -44,11 +44,12 @@ js() {
 
 # Waits up to $3 seconds until the JavaScript $2 returns true. Eval fails
 # while the shell is still starting, so a failure there only means "not yet".
+# On failure it prints the result of the JavaScript $4, when given.
 wait_for() {
     i=0
     until [ "$(js "$2" 2> /dev/null)" = true ]; do
         i=$((i + 1))
-        [ "$i" -le $(($3 * 5)) ] || fail "$1"
+        [ "$i" -le $(($3 * 5)) ] || fail "$1${4:+: $(js "$4" 2> /dev/null)}"
         sleep 0.2
     done
     ok "$1"
@@ -156,8 +157,11 @@ wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokt
 
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
+# The windows the shell has, printed when the settings window does not open.
+WINDOWS="global.get_window_actors().map((w) => [w.meta_window.get_title(), w.mapped, w.opacity].join(' ')).join('; ')"
 wait_for "the settings window opens" \
-    "global.get_window_actors().some((w) => w.meta_window.get_title() === 'Nokta' && w.mapped && w.opacity === 255)" 30
+    "global.get_window_actors().some((w) => w.meta_window.get_title() === 'Nokta' && w.mapped && w.opacity === 255)" 30 \
+    "$WINDOWS"
 sleep 2
 "$HERE/shot.sh" smoke-prefs > /dev/null
 
