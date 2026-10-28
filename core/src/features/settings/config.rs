@@ -43,6 +43,8 @@ pub struct Appearance {
     /// A line along the closed notch's bottom edge for the timer, countdown,
     /// activity or song.
     pub progress_line: bool,
+    /// A glow under the notch in the colour of an alert.
+    pub alert_glow: bool,
 }
 
 impl Default for Appearance {
@@ -64,6 +66,7 @@ impl Default for Appearance {
             accent: "#ffffff".into(),
             theme: "midnight".into(),
             progress_line: true,
+            alert_glow: true,
         }
     }
 }
@@ -536,6 +539,7 @@ impl Appearance {
             ("accent", (&self.accent).into()),
             ("theme", (&self.theme).into()),
             ("progress_line", self.progress_line.into()),
+            ("alert_glow", self.alert_glow.into()),
         ]
     }
 }

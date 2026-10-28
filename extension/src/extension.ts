@@ -79,6 +79,7 @@ import {
     gnomeBanners,
     msUntilClockChange,
     msUntilNextSecond,
+    phaseColor,
     QuietBanners,
     shortcutAction,
     TimerClient,
@@ -88,6 +89,7 @@ import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
+import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
@@ -456,7 +458,8 @@ class Session {
         const alert = finishedAlert(phase, breakAfterFocus(this.timer.snapshot(), settings));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs);
+        const tone = { color: phaseColor(phase === 'break' ? 'break' : 'focus') };
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs, tone);
         if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
 
@@ -466,7 +469,8 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const icon = kind === 'alarm' ? new Gio.ThemedIcon({ name: TIMER_ICON }) : this.extensionIcon(CLOCK_ICON);
-        this.showOsd(-1, content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs);
+        const tone = { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') };
+        this.showOsd(-1, content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs, tone);
         if (this.settings.timer.sound)
             global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', alert.title, null);
     }
@@ -544,16 +548,20 @@ class Session {
         return { notch: shown ? notch : null, monitor: route.monitor };
     }
 
-    /** Draws in the routed notch; returns the monitor for GNOME's popup when it cannot. */
+    /**
+     * Draws in the routed notch; returns the monitor for GNOME's popup when
+     * it cannot. An alert has a `tone`, for its glow.
+     */
     private showOsd(
         requested: number,
         content: OsdContent,
         icon: Gio.Icon | null,
         durationMs?: number,
+        tone?: AlertTone,
     ): number | null {
         const { notch, monitor } = this.routeMessage(requested);
         if (!notch) return monitor;
-        notch.showOsd(content, icon, durationMs);
+        notch.showOsd(content, icon, durationMs, tone);
         return null;
     }
 
@@ -563,7 +571,9 @@ class Session {
         const alert = deviceAlerts ? deviceAlert(kind, name, percentage) : null;
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs);
+        const charged = kind === 'charger-plugged' || kind === 'battery-full';
+        const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : 'accent';
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
     }
 
     /** An activity ended: a check mark or a red cross in the focused notch. */
@@ -572,7 +582,8 @@ class Session {
         if (!liveActivities) return;
         const alert = endedAlert(title, success, message, elapsedUs);
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs);
+        const tone = success ? 'success' : 'urgent';
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
@@ -636,7 +647,8 @@ class Session {
         const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), this.settings.behavior.alertDurationMs);
+        const tone = alert.urgent ? 'urgent' : 'accent';
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), this.settings.behavior.alertDurationMs, tone);
     }
 
     /** A time like the notch's clock shows it. */

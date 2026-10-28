@@ -33,6 +33,7 @@ fn defaults_match_spec() {
     assert_eq!(a.accent, "#ffffff");
     assert_eq!(a.theme, "midnight");
     assert!(a.progress_line);
+    assert!(a.alert_glow);
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
     assert!(b.move_clock);
@@ -332,6 +333,7 @@ fn appearance_entries_have_all_keys() {
         keys,
         [
             "accent",
+            "alert_glow",
             "animation_speed",
             "background",
             "background_opacity",

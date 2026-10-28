@@ -81,6 +81,7 @@ import {
 import { IdleClock } from './shared/clock.js';
 import { withAlpha } from './shared/logic/color.js';
 import { formatDuration } from './shared/logic/format.js';
+import { glowColor, type AlertTone } from './shared/logic/glow.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
@@ -106,6 +107,8 @@ const DROP_MARGIN = 24;
 const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
 /** A view comes in from, and goes out to, this scale. */
 const VIEW_SCALE_FROM = 0.96;
+/** An alert pushes the notch this much wider before it springs back. */
+const ALERT_KICK = 0.06;
 
 /**
  * What the notch draws: the state machine's mode (the idle panel when it
@@ -370,6 +373,9 @@ export class MonitorNotch implements ShelfNotch {
         );
         this.notificationTimer = new NotificationTimer(glibSchedule, () => this.draw(this.overlay()));
 
+        // The glow first, so it lies under the notch. It covers the body only, so it takes no
+        // input the notch does not; GNOME 50 dropped affectsInputRegion.
+        Main.layoutManager.addTopChrome(this.notch.glow, { affectsStruts: false, trackFullscreen: true });
         Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: true });
         this.hoverId = this.notch.actor.connect('notify::hover', () => {
             const { hover } = this.notch.actor;
@@ -461,6 +467,7 @@ export class MonitorNotch implements ShelfNotch {
         this.lyricsSheet.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
+        if (!this.notch.glowGone) Main.layoutManager.removeChrome(this.notch.glow);
         Main.layoutManager.removeChrome(this.notch.actor);
         this.notch.destroy();
     }
@@ -727,11 +734,16 @@ export class MonitorNotch implements ShelfNotch {
         this.showPrivacyDots();
     }
 
-    /** `durationMs` replaces osd_duration_ms, for device alerts. */
-    showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number): void {
+    /**
+     * `durationMs` replaces osd_duration_ms, for device alerts. An alert
+     * (`tone` set) kicks the notch and glows; a volume or a key does not.
+     */
+    showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number, tone?: AlertTone): void {
         if (this.destroyed) return;
         this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
         this.osdTimer.show(durationMs);
+        if (tone) this.alert(tone);
+        else this.notch.setGlow(null);
     }
 
     hideOsd(): void {
@@ -748,6 +760,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationKind = 'notification';
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
+        this.alert('accent');
     }
 
     /** A screenshot preview, timed like a notification; a button calls `onPress` and closes it. */
@@ -765,6 +778,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationKind = 'screenshot';
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
+        this.alert('accent');
     }
 
     /** The buttons of the screenshot preview while it shows. */
@@ -779,6 +793,13 @@ export class MonitorNotch implements ShelfNotch {
     }
 
     // State
+
+    /** The width overshoots and springs back, and the glow comes in the alert's colour. */
+    private alert(tone: AlertTone): void {
+        this.notch.kick(ALERT_KICK);
+        const { alertGlow } = this.sources.settings.appearance;
+        this.notch.setGlow(alertGlow ? glowColor(tone, this.shownPalette.accent) : null);
+    }
 
     private shownCall(): ReturnType<CallMonitor['call']> {
         return this.sources.settings.behavior.callIndicator ? this.sources.call.call() : null;
@@ -990,6 +1011,8 @@ export class MonitorNotch implements ShelfNotch {
             drawn === 'drop';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
+        // The glow goes with the alert.
+        if (mode !== 'osd' && mode !== 'notification' && mode !== 'screenshot') this.notch.setGlow(null);
         this.showView(mode);
         this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();

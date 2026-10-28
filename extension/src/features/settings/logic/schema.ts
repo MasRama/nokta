@@ -151,6 +151,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Along the closed notch: the focus timer, a countdown, an activity or the song',
                     ),
+                    appearance(
+                        'alert_glow',
+                        'Glow on alerts',
+                        bool(),
+                        'Under the notch: red when urgent, green when done or charging',
+                    ),
                 ],
             },
             {

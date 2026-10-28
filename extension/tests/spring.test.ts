@@ -2,7 +2,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { radiusAt } from '../src/shared/logic/shape.js';
-import { settled, springFor, stepSpring, type SpringParams, type SpringState } from '../src/shared/logic/spring.js';
+import {
+    kickVelocity,
+    settled,
+    springFor,
+    stepSpring,
+    type SpringParams,
+    type SpringState,
+} from '../src/shared/logic/spring.js';
 
 const FRAME_MS = 16;
 
@@ -78,4 +85,18 @@ test('the corners round more as the notch opens', () => {
     assert.ok(half > 14 && half < 22);
     // A large radius from the settings is kept.
     assert.equal(radiusAt(200, { height: 32, radius: 30 }), 30);
+});
+
+test('a kick overshoots the width by the fraction asked, then settles back', () => {
+    for (const kind of ['open', 'close', 'width'] as const) {
+        const params = springFor(kind, 1);
+        let state: SpringState = { value: 300, velocity: kickVelocity(300, params, 0.06) };
+        let peak = state.value;
+        for (let ms = 0; ms < 3000; ms += FRAME_MS) {
+            state = stepSpring(state, 300, FRAME_MS, params);
+            peak = Math.max(peak, state.value);
+        }
+        assert.ok(Math.abs(peak - 318) < 2, `${kind} peaked at ${peak}`);
+        assert.ok(settled(state, 300), kind);
+    }
 });

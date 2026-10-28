@@ -18,6 +18,8 @@ export interface Appearance {
     theme: string;
     /** A line along the closed notch for the timer, a countdown, an activity or the song. */
     progressLine: boolean;
+    /** A glow under the notch in the colour of an alert. */
+    alertGlow: boolean;
 }
 
 export interface Behavior {
@@ -86,6 +88,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     accent: '#ffffff',
     theme: 'midnight',
     progressLine: true,
+    alertGlow: true,
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
