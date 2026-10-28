@@ -109,6 +109,11 @@ must curve inward, the notch must be centered, and no text may be clipped.
       the player view without closing.
 - [ ] Passing over the notch quickly (less than `open_delay_ms`) does not
       open it.
+- [ ] **Motion**: opening, width and height grow together, overshoot a few
+      pixels and settle; the corners round more as it opens. Closing does
+      not overshoot. `hover.sh on`, then `hover.sh off` right after it
+      starts to open: it turns back from where it is, without a jump. The
+      ears stay attached to the body the whole time.
 
 ### Content
 

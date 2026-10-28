@@ -234,8 +234,11 @@ until shelf_items | grep -q "smoke-notes.txt', 'text-x-generic'"; do
     sleep 0.2
 done
 ok "the dropped file is on the shelf"
+# The drop left the pointer on the notch, which opens it.
+"$HERE/hover.sh" off > /dev/null
 wait_for "the closed notch shows one file on the shelf" \
-    "$FIND any('nokta-shelf-badge') && one('nokta-shelf-badge-label').text === '1' && !shown('nokta-clock')" 5
+    "$FIND any('nokta-shelf-badge') && one('nokta-shelf-badge-label').text === '1' && !shown('nokta-clock')" 5 \
+    "$FIND JSON.stringify([any('nokta-shelf-badge'), one('nokta-shelf-badge-label')?.text, shown('nokta-clock'), shown('nokta-shelf-badge'), one('nokta-drop-content')?.mapped, one('nokta-body').width, one('nokta-body').height, one('nokta-clock')?.get_parent()?.get_parent()?.opacity])"
 "$HERE/hover.sh" on > /dev/null
 # 32 px closed, 58 px for the date and the buttons, 54 px for the shelf row.
 wait_for "the panel shows the shelf row" \
