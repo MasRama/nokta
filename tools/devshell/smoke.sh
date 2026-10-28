@@ -460,6 +460,18 @@ wait_for "a layout switch shows the layout's name" \
     "$FIND one('nokta-osd-text')?.text"
 "$HERE/shot.sh" smoke-layout > /dev/null
 wait_for "the layout OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
+# A device with a battery shows it before its percentage, filled to the level;
+# one that reports none (a disconnect) shows no battery.
+"$HERE/device.sh" connect 'Smoke Buds' 15
+wait_for "a device alert shows its battery" \
+    "$FIND shown('nokta-osd-battery') && one('nokta-osd-detail').text === '15%' && Math.round(one('nokta-osd-battery-fill').width) === 3" 10 \
+    "$FIND JSON.stringify([shown('nokta-osd'), shown('nokta-osd-battery'), one('nokta-osd-detail')?.text, one('nokta-osd-battery-fill')?.width])"
+"$HERE/shot.sh" smoke-device > /dev/null
+wait_for "the device alert goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
+"$HERE/device.sh" disconnect
+wait_for "a disconnect shows no battery" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-detail').text === 'Disconnected' && !shown('nokta-osd-battery')" 10
+wait_for "the disconnect alert goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
 
 # A notification GNOME would show as a banner shows in the notch instead.
 # This also checks that this GNOME version has the method Nokta wraps. The

@@ -22,7 +22,7 @@ import {
     type Alarm,
     type CalendarEvent,
 } from './features/calendar/index.js';
-import { deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
+import { batteryLevel, deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
@@ -639,7 +639,13 @@ class Session {
         const { deviceAlerts, alertDurationMs } = this.settings.behavior;
         const alert = deviceAlerts ? deviceAlert(kind, name, percentage) : null;
         if (!alert) return;
-        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
+        const content = {
+            fraction: null,
+            text: alert.title,
+            detail: alert.detail,
+            urgent: alert.urgent,
+            battery: batteryLevel(percentage),
+        };
         const charged = kind === 'charger-plugged' || kind === 'battery-full';
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device };
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
