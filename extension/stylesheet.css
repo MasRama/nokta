@@ -181,12 +181,36 @@
 }
 
 .nokta-osd-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 6px;
+    border-radius: 3px;
 }
 
 .nokta-osd-fill {
-    border-radius: 2px;
+    border-radius: 3px;
+}
+
+/* A device's battery: an outline 22 x 11 with a fill in the level's tone (osd/view.ts). */
+.nokta-osd-battery {
+    spacing: 1px;
+}
+
+.nokta-osd-battery-case {
+    width: 22px;
+    height: 11px;
+    border: 1px solid;
+    border-radius: 3.5px;
+    padding: 1px;
+}
+
+.nokta-osd-battery-fill {
+    height: 7px;
+    border-radius: 1.5px;
+}
+
+.nokta-osd-battery-nub {
+    width: 2px;
+    height: 4px;
+    border-radius: 0 1px 1px 0;
 }
 
 .nokta-osd-text {

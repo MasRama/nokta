@@ -7,6 +7,8 @@ export interface OsdContent {
     text: string;
     detail?: string;
     urgent?: boolean;
+    /** A device's battery level, 0 to 100, drawn before the detail. */
+    battery?: number | null;
 }
 
 const isNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);

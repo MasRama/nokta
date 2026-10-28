@@ -318,7 +318,9 @@ How both sides stay honest:
   fills with it while on; alerts glow in the tone of what they are about.
   On a light notch a tone used for an icon is darkened until it reads
   (`toneOn`). The privacy colors stay the usual ones: an orange microphone,
-  a green camera. The OSD bar takes the text color, not the cover's.
+  a green camera. The OSD bar takes the text color, not the cover's. A
+  device alert draws the battery before its percentage, filled in red,
+  amber or green by level (`osd/logic/battery.ts`).
 - Text follows one type scale (caption 11, body 13, title 15, the sung
   lyric 17; semibold labels, bold digits). St CSS ignores `opacity`, so
   dimmed text is dimmed from code with the two levels in `shared/dim.ts`.
