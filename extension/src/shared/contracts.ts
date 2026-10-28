@@ -18,6 +18,7 @@ export const PATHS = {
     Timer1: '/io/nokta/Timer',
     Activities1: '/io/nokta/Activities',
     Weather1: '/io/nokta/Weather',
+    Shelf1: '/io/nokta/Shelf',
 } as const;
 
 export interface NoktaProps {
@@ -151,4 +152,16 @@ export interface WeatherProps {
 /** io.nokta.Weather1 methods and the D-Bus signature of their arguments. */
 export const WEATHER_METHODS = {
     Refresh: '',
+} as const;
+
+export interface ShelfProps {
+    /** URI, display name and icon name of each parked file, oldest first. */
+    Items: Array<[string, string, string]>;
+}
+
+/** io.nokta.Shelf1 methods and the D-Bus signature of their arguments. */
+export const SHELF_METHODS = {
+    Add: 'as',
+    Remove: 's',
+    Clear: '',
 } as const;

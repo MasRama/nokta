@@ -320,3 +320,60 @@
     font-size: 15px;
     font-weight: bold;
 }
+
+.nokta-shelf-slot {
+    border-radius: 10px;
+}
+
+.nokta-shelf-slot-hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.nokta-shelf-stack {
+    spacing: 2px;
+}
+
+.nokta-shelf-count {
+    font-size: 11px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
+.nokta-shelf-close {
+    icon-size: 10px;
+    padding: 2px;
+    border-radius: 7px;
+    color: #ffffff;
+    background-color: rgba(90, 90, 90, 0.95);
+}
+
+.nokta-shelf-close-hover {
+    background-color: #e01b24;
+}
+
+.nokta-shelf-badge {
+    spacing: 5px;
+}
+
+.nokta-shelf-badge-icon {
+    icon-size: 14px;
+}
+
+.nokta-shelf-badge-label {
+    font-size: 13px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
+.nokta-drop-content {
+    spacing: 4px;
+}
+
+.nokta-drop-icon {
+    icon-size: 22px;
+}
+
+.nokta-drop-label {
+    font-size: 13px;
+    font-weight: bold;
+}
