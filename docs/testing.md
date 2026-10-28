@@ -79,7 +79,7 @@ real GNOME 46 session with the extension installed. Look at the
 `*-notch.png` crops at full size: the notch must touch the top edge, the ears
 must curve inward, the notch must be centered, and no text may be clipped.
 
-### States (spec 6.2)
+### States
 
 - [ ] **Idle**, no player (`player.sh Stopped`): clock only, `idle_width` wide.
 - [ ] **Idle**, no daemon (`run.sh --no-daemon`): same as above, no errors in
@@ -126,7 +126,7 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] Accent: progress fill and bars take the cover's color with
       `use_album_accent = true`, the foreground color otherwise.
 
-### OSD (v0.2 spec)
+### OSD
 
 - [ ] `osd.sh level audio-volume-medium-symbolic 0.45` from idle, collapsed
       and expanded: the notch widens to `osd_width` with icon, bar and
@@ -148,7 +148,7 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] Brightness and volume keys, mic mute key *(real session)*: in the
       notch.
 
-### Several monitors (multi-monitor spec)
+### Several monitors
 
 Start with `run.sh --monitors=2`; `shot.sh` then also writes
 `NAME-notch-1.png` for the second monitor.
@@ -166,7 +166,7 @@ Start with `run.sh --monitors=2`; `shot.sh` then also writes
 - [ ] Fullscreen app on one monitor *(real session)*: only that monitor's
       notch hides; volume keys there show GNOME's popup on that monitor.
 
-### Device alerts (device alerts spec)
+### Device alerts
 
 Wait for each alert to close (`alert_duration_ms`, 3 s) before the next.
 
@@ -180,7 +180,7 @@ Wait for each alert to close (`alert_duration_ms`, 3 s) before the next.
 - [ ] `device_alerts = false` while running: none of these show.
 - [ ] Real earbuds and a real charger *(real session)*.
 
-### Focus timer (focus timer spec)
+### Focus timer
 
 Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 
@@ -208,7 +208,7 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 
-### Live activities (0.5 spec, part 1)
+### Live activities
 
 - [ ] `activity.sh set b Backup Photos 0.4`: an icon and `40%` replace the
       clock; while playing they replace the equalizer. A focus timer wins
@@ -265,7 +265,7 @@ Send one with `. tools/devshell/env.sh`, then
       in the notch while Do Not Disturb is on; clicking a chat message
       opens the chat.
 
-### Appearance and clock (settings window spec)
+### Appearance and clock
 
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;
       `"12h"` shows `11:..`; `"system"` follows GNOME.
@@ -275,7 +275,7 @@ Send one with `. tools/devshell/env.sh`, then
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
 
-### Settings window (settings window spec)
+### Settings window
 
 - [ ] `prefs.sh`: two pages, Appearance and Behavior, with the values of
       `config.toml`; no banner.
@@ -331,7 +331,7 @@ Send one with `. tools/devshell/env.sh`, then
       one line; with Just Perfection's clock position set to Right, the notch
       covers nothing.
 
-### Cost (spec 1, 6.5)
+### Cost
 
 Measure over 60 s windows with `/proc/<pid>/stat` or `pidstat`:
 

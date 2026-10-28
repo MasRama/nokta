@@ -12,7 +12,7 @@ export interface IndicatorInput {
 
 /**
  * The spot in place of the clock while idle, next to the equalizer while
- * music plays (0.5 spec, shared changes): the focus timer, else the newest
+ * music plays: the focus timer, else the newest
  * live activity, else the shelf badge.
  */
 export function chooseIndicator({ timer, activity, shelf }: IndicatorInput): Indicator | null {

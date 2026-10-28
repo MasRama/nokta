@@ -125,7 +125,7 @@ while [ "$i" -lt "$MONITORS" ]; do
     i=$((i + 1))
 done
 # The shell's system bus is this bus too: it never talks to the real logind,
-# and containers without a system bus work (GNOME versions spec, section 3).
+# and containers without a system bus work.
 DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gnome-shell --headless --wayland --no-x11 "$@" \
     --wayland-display nokta-devshell > "$STATE/shell.log" 2>&1 &
 SHELL_PID=$!

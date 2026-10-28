@@ -1,7 +1,7 @@
 import type { Scheduler } from '../../../shared/logic/machine.js';
 
 /**
- * Whether the OSD is on screen (spec 3.3). show() turns it on, or keeps it on
+ * Whether the OSD is on screen. show() turns it on, or keeps it on
  * and restarts the countdown; it turns off after the duration with no new
  * show(), or at once with hide().
  */

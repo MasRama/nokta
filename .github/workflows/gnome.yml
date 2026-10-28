@@ -1,7 +1,6 @@
 name: GNOME versions
 
-# Runs Nokta in a headless GNOME Shell of every supported version
-# (docs/specs/2026-10-28-nokta-gnome-versions-design.md, section 3).
+# Runs Nokta in a headless GNOME Shell of every supported version.
 
 on:
   push:

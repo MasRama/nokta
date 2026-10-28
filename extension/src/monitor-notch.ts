@@ -462,7 +462,7 @@ export class MonitorNotch {
         }
     }
 
-    // Timers: only while expanded and playing (spec 6.5).
+    // Timers: only while expanded and playing.
 
     private positionNow(): number {
         const s = this.sources.media.snapshot();

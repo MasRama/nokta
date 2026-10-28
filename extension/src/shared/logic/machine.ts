@@ -9,7 +9,7 @@ export interface HoverDelays {
 }
 
 /**
- * Which state the notch is in (spec 6.2, 6.3): Idle without a player,
+ * Which state the notch is in: Idle without a player,
  * Collapsed with one, Expanded after the pointer rests on it for the open
  * delay, with or without a player. Leaving closes after the close delay;
  * coming back cancels that. A player that comes or goes while the pointer

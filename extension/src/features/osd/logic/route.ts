@@ -15,7 +15,7 @@ export interface Route {
     notch: number | null;
 }
 
-/** Where an OSD request shows (multi-monitor spec, section 3). */
+/** Where an OSD request shows. */
 export function routeOsd({ requested, focused, primary, notches }: RouteInput): Route {
     const monitor = requested >= 0 ? requested : focused >= 0 ? focused : primary;
     if (notches.includes(monitor)) return { monitor, notch: monitor };

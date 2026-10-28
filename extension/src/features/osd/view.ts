@@ -8,7 +8,7 @@ const BAR_EASE_MS = 100;
 /** The detail is dimmed next to the text, unless the row is urgent. */
 const DETAIL_OPACITY = 180;
 
-/** The OSD row (spec 3.4): icon, level bar, text, and a detail on the right. */
+/** The OSD row: icon, level bar, text, and a detail on the right. */
 export class OsdView {
     readonly actor: St.BoxLayout;
     private readonly icon: St.Icon;

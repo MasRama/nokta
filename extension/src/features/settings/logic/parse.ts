@@ -1,4 +1,4 @@
-/** io.nokta.Settings1.Appearance in camelCase, with the spec defaults. */
+/** io.nokta.Settings1.Appearance in camelCase, with the defaults. */
 export interface Appearance {
     height: number;
     idleWidth: number;
