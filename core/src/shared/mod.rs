@@ -6,3 +6,4 @@ pub mod dbus;
 pub mod hash;
 pub mod http;
 pub mod paths;
+pub mod picture;
