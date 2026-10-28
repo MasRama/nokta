@@ -2,10 +2,15 @@
  * Sizes, radii and colors that have a config key are set from code
  * (io.nokta.Settings1.Appearance); this file holds typography, spacing
  * and the fixed parts of the media views.
+ *
+ * Type scale: caption 11, body 13, title 15, the sung lyric 17, hero 22,
+ * display 30; weights 400, 600 for labels and titles, 700 for the hero and
+ * for digits. St ignores `opacity` here: dimmed text is dimmed from code
+ * (shared/dim.ts).
  */
 .nokta-clock {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -34,13 +39,12 @@
 }
 
 .nokta-title {
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .nokta-artists {
-    font-size: 12px;
-    opacity: 0.7;
+    font-size: 13px;
 }
 
 .nokta-player-row {
@@ -49,7 +53,6 @@
 
 .nokta-player-name {
     font-size: 11px;
-    opacity: 0.7;
 }
 
 .nokta-player-switch {
@@ -58,7 +61,6 @@
 
 .nokta-player-switch-icon {
     icon-size: 12px;
-    opacity: 0.7;
 }
 
 /* The open player's lyric row: the line being sung, then the next one. */
@@ -68,12 +70,12 @@
 
 .nokta-lyric {
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .nokta-lyric-next {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-progress {
@@ -81,9 +83,8 @@
 }
 
 .nokta-time {
-    font-size: 10px;
+    font-size: 11px;
     font-feature-settings: "tnum";
-    opacity: 0.7;
 }
 
 .nokta-progress-track {
@@ -185,7 +186,8 @@
 }
 
 .nokta-osd-text {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
     font-feature-settings: "tnum";
     min-width: 36px;
     text-align: right;
@@ -196,7 +198,7 @@
 }
 
 .nokta-osd-detail {
-    font-size: 12px;
+    font-size: 13px;
     font-feature-settings: "tnum";
 }
 
@@ -234,7 +236,7 @@
 .nokta-timer,
 .nokta-call-time {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -248,17 +250,17 @@
 }
 
 .nokta-notification-title {
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .nokta-notification-detail {
-    font-size: 12px;
+    font-size: 13px;
 }
 
 .nokta-notification-badge {
-    font-size: 9px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 700;
     min-width: 15px;
     height: 15px;
     border-radius: 8px;
@@ -276,7 +278,8 @@
 }
 
 .nokta-notification-button-label {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-notification-close {
@@ -306,8 +309,8 @@
 }
 
 .nokta-screenshot-title {
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 15px;
+    font-weight: 600;
 }
 
 .nokta-screenshot-buttons {
@@ -328,7 +331,8 @@
 }
 
 .nokta-screenshot-button-label {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-panel {
@@ -338,7 +342,7 @@
 
 .nokta-panel-date {
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .nokta-panel-heading {
@@ -359,11 +363,11 @@
 
 .nokta-panel-event-title {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 .nokta-panel-event-when {
-    font-size: 12px;
+    font-size: 13px;
     font-feature-settings: "tnum";
 }
 
@@ -377,12 +381,12 @@
 
 .nokta-panel-weather-temperature {
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
 .nokta-panel-weather-detail {
-    font-size: 12px;
+    font-size: 13px;
     font-feature-settings: "tnum";
 }
 
@@ -413,8 +417,8 @@
 }
 
 .nokta-pill-label {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-tile-box {
@@ -430,8 +434,8 @@
 }
 
 .nokta-tile-badge {
-    font-size: 9px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 700;
     min-width: 15px;
     height: 15px;
     border-radius: 8px;
@@ -440,6 +444,7 @@
 
 .nokta-tile-label {
     font-size: 11px;
+    font-weight: 600;
 }
 
 /* The player's way to home, at its top right. */
@@ -461,7 +466,7 @@
 
 .nokta-activity-badge-label {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -479,8 +484,8 @@
 }
 
 .nokta-panel-activity-title {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-panel-activity-detail,
@@ -506,8 +511,8 @@
 .nokta-panel-clock-title,
 .nokta-panel-call-title,
 .nokta-panel-recording-title {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-panel-clock-detail,
@@ -518,7 +523,7 @@
 .nokta-panel-clock-time,
 .nokta-panel-recording-time {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -547,11 +552,12 @@
 
 .nokta-lyrics-row {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 .nokta-lyrics-current {
     font-size: 17px;
+    font-weight: 700;
 }
 
 /* The lyrics view's timing row: −, the offset, +. */
@@ -568,8 +574,8 @@
 }
 
 .nokta-lyrics-offset-label {
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
     font-feature-settings: "tnum";
 }
 
@@ -592,7 +598,7 @@
 
 .nokta-shelf-count {
     font-size: 11px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -618,7 +624,7 @@
 
 .nokta-shelf-badge-label {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 700;
     font-feature-settings: "tnum";
 }
 
@@ -632,7 +638,7 @@
 
 .nokta-drop-label {
     font-size: 13px;
-    font-weight: bold;
+    font-weight: 600;
 }
 
 /* A page that a tile on home opens: a header with a back arrow over its body. */
@@ -648,7 +654,7 @@
 
 .nokta-subpage-title {
     font-size: 15px;
-    font-weight: bold;
+    font-weight: 700;
 }
 
 .nokta-subpage-actions {
@@ -724,8 +730,8 @@
 /* The timer page's presets; painted from code like the toggles. */
 .nokta-timer-preset {
     border-radius: 10px;
-    font-size: 12px;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .nokta-timer-stopwatch {
