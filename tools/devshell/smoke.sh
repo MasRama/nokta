@@ -429,6 +429,24 @@ wait_for "a new copy goes on top of the list" "$FIND $CLIP_ROWS === 'Smoke secon
 # The notch grows for the new row first.
 sleep 0.4
 "$HERE/shot.sh" smoke-clipboard > /dev/null
+# The search field takes the keyboard and filters as you type; Enter copies
+# the first match and gives the keyboard back.
+SEARCH="one('nokta-clip-search')"
+js "$FIND one('nokta-clip-search-button').emit('clicked', 1); true" > /dev/null
+# The header, the 30 px field and two rows: 14 + 28 + 10 + 34 + 68 + 14.
+wait_for "the search button opens a field that has the keyboard" \
+    "$FIND $SEARCH.mapped && global.stage.key_focus === $SEARCH.clutter_text && Math.round(one('nokta-body').height) === 168" 5 \
+    "$FIND JSON.stringify([$SEARCH.mapped, global.stage.key_focus?.toString(), Math.round(one('nokta-body').height)])"
+js "$FIND $SEARCH.text = 'SECOND'; true" > /dev/null
+wait_for "typing filters the list" \
+    "$FIND $CLIP_ROWS === 'Smoke second copy' && Math.round(one('nokta-body').height) === 132" 5 \
+    "$FIND JSON.stringify([$CLIP_ROWS, Math.round(one('nokta-body').height)])"
+sleep 0.4
+"$HERE/shot.sh" smoke-clipboard-search > /dev/null
+js "$FIND $SEARCH.clutter_text.emit('activate'); true" > /dev/null
+wait_for "Enter copies the first match and closes the field" \
+    "$FIND !$SEARCH.mapped && global.stage.key_focus !== $SEARCH.clutter_text && $CLIP_ROWS === 'Smoke second copy | Smoke clipboard text'" 5
+wait_for "and that copy is on the clipboard" "$CLIP_TEXT.then((t) => t === 'Smoke second copy')" 5
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-clip-entry').filter((e) => e.mapped)[1].emit('clicked', 1); true" > /dev/null
 wait_for "a row copies its entry back" "$CLIP_TEXT.then((t) => t === 'Smoke clipboard text')" 5
 wait_for "and goes back on top" "$FIND $CLIP_ROWS === 'Smoke clipboard text | Smoke second copy'" 5

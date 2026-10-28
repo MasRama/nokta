@@ -7,10 +7,13 @@ import { setVertical } from '../../shared/compat.js';
 import { withAlpha } from '../../shared/logic/color.js';
 import {
     ageLabel,
-    listHeight,
+    entryText,
+    filterEntries,
     MAX_VISIBLE_ROWS,
+    pageHeight,
     ROW_HEIGHT,
     scrolled,
+    SEARCH_HEIGHT,
     type ClipboardEntry,
 } from './logic/entries.js';
 
@@ -20,6 +23,10 @@ export interface ClipboardPageHandlers {
     remove(id: string): void;
     clear(): void;
     setPaused(paused: boolean): void;
+    /** The search field opened, and wants the keyboard, or closed. */
+    searching(entry: St.Entry | null): void;
+    /** The page's height changed while it shows. */
+    resized(): void;
 }
 
 const THUMBNAIL_SIZE = 24;
@@ -27,13 +34,19 @@ const THUMBNAIL_SIZE = 24;
 /**
  * The clipboard page's body: the newest copies, five at a time (scroll for
  * older ones). A click puts one back on the clipboard; each row can be
- * pinned or removed. `actions` go in the page's header: pause and clear.
+ * pinned or removed. `actions` go in the page's header: search, pause and
+ * clear. While searching, a field over the list filters it as you type;
+ * Enter copies the first match, Escape closes the field.
  */
 export class ClipboardPage {
     readonly actor: St.BoxLayout;
     readonly actions: St.Button[];
+    private readonly list: St.BoxLayout;
+    private readonly search: St.Entry;
+    private readonly searchButton: St.Button;
     private readonly pauseButton: St.Button;
     private entries: readonly ClipboardEntry[] = [];
+    private searching = false;
     private paused = false;
     private offset = 0;
     private foreground = '#ffffff';
@@ -41,63 +54,130 @@ export class ClipboardPage {
     private smoothScroll = 0;
 
     constructor(private readonly handlers: ClipboardPageHandlers) {
-        this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-clip-list', reactive: true }));
-        this.actor.connect('scroll-event', (_actor, event: Clutter.Event) => this.onScroll(event));
+        this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-clip-page' }));
+        this.search = new St.Entry({
+            style_class: 'nokta-clip-search',
+            hint_text: 'Search copies',
+            can_focus: true,
+            height: SEARCH_HEIGHT,
+            visible: false,
+            primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'nokta-clip-search-icon' }),
+        });
+        this.search.clutter_text.connect('text-changed', () => this.onQuery());
+        this.search.clutter_text.connect('activate', () => this.copyFirstMatch());
+        this.search.clutter_text.connect('key-press-event', (_actor, event: Clutter.Event) => {
+            if (event.get_key_symbol() !== Clutter.KEY_Escape) return Clutter.EVENT_PROPAGATE;
+            this.setSearching(false);
+            return Clutter.EVENT_STOP;
+        });
+        this.list = setVertical(new St.BoxLayout({ style_class: 'nokta-clip-list', reactive: true }));
+        this.list.connect('scroll-event', (_actor, event: Clutter.Event) => this.onScroll(event));
+        this.actor.add_child(this.search);
+        this.actor.add_child(this.list);
+        this.searchButton = this.iconButton('edit-find-symbolic', () => this.setSearching(!this.searching));
+        this.searchButton.add_style_class_name('nokta-clip-search-button');
+        this.searchButton.opacity = 150;
         this.pauseButton = this.iconButton('media-playback-pause-symbolic', () => handlers.setPaused(!this.paused));
         const clear = this.iconButton('edit-clear-all-symbolic', () => handlers.clear());
-        this.actions = [this.pauseButton, clear];
+        this.actions = [this.searchButton, this.pauseButton, clear];
     }
 
     /** The body's height for the history now shown. */
     get height(): number {
-        return listHeight(this.entries.length);
+        return pageHeight(this.shown().length, this.searching);
     }
 
     show(entries: readonly ClipboardEntry[], paused: boolean): void {
         this.entries = entries;
         this.paused = paused;
-        this.offset = scrolled(this.offset, 0, entries.length);
+        this.offset = scrolled(this.offset, 0, this.shown().length);
         this.build();
     }
 
     setColors({ foreground, accent }: { foreground: string; accent: string }): void {
         this.foreground = foreground;
         this.accent = accent;
+        this.search.style =
+            `background-color: ${withAlpha(foreground, 0.1)}; color: ${foreground}; ` +
+            `border: 1px solid ${withAlpha(accent, 0.5)}; box-shadow: none; ` +
+            `caret-color: ${foreground}; selection-background-color: ${withAlpha(accent, 0.5)}; ` +
+            `selected-color: ${foreground};`;
+        const hint = this.search.hint_actor as St.Widget | null;
+        if (hint) hint.style = `color: ${withAlpha(foreground, 0.45)};`;
+        (this.search.primary_icon as St.Icon).style = `color: ${withAlpha(foreground, 0.6)};`;
         this.build();
     }
 
-    /** Back at the newest copy, for the next time the page opens. */
+    /** Back at the newest copy with no search, for the next time the page opens. */
     reset(): void {
         this.offset = 0;
+        this.setSearching(false);
         this.build();
     }
 
     destroy(): void {
+        this.setSearching(false);
         this.actor.destroy();
     }
 
+    /** The entries the list shows: all, or the matches while searching. */
+    private shown(): readonly ClipboardEntry[] {
+        return this.searching ? filterEntries(this.entries, this.search.text) : this.entries;
+    }
+
+    private setSearching(on: boolean): void {
+        if (on === this.searching) return;
+        this.searching = on;
+        this.search.visible = on;
+        this.search.text = '';
+        this.offset = 0;
+        const icon = this.searchButton.child as St.Icon;
+        icon.style = on ? `color: ${this.accent};` : '';
+        this.searchButton.opacity = on ? 255 : 150;
+        this.build();
+        this.handlers.searching(on ? this.search : null);
+        this.handlers.resized();
+    }
+
+    private onQuery(): void {
+        if (!this.searching) return;
+        this.offset = 0;
+        this.build();
+        // The text has already changed, so the height before it is unknown here.
+        this.handlers.resized();
+    }
+
+    private copyFirstMatch(): void {
+        const first = this.shown()[0];
+        if (!first) return;
+        this.setSearching(false);
+        this.handlers.copy(first.id);
+    }
+
     private build(): void {
-        this.actor.destroy_all_children();
+        this.list.destroy_all_children();
         // Paused shows the way back: a play button in the accent.
         const pauseIcon = this.pauseButton.child as St.Icon;
         pauseIcon.icon_name = this.paused ? 'media-playback-start-symbolic' : 'media-playback-pause-symbolic';
         pauseIcon.style = this.paused ? `color: ${this.accent};` : '';
         this.pauseButton.opacity = this.paused ? 255 : 150;
-        if (this.entries.length === 0) {
+        const shown = this.shown();
+        if (shown.length === 0) {
+            const empty = this.paused ? 'Paused: copies are not kept' : 'Nothing copied yet';
             const note = new St.Label({
                 style_class: 'nokta-clip-empty',
-                text: this.paused ? 'Paused: copies are not kept' : 'Nothing copied yet',
+                text: this.entries.length > 0 ? 'No match' : empty,
                 height: ROW_HEIGHT,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: `color: ${withAlpha(this.foreground, 0.6)};`,
             });
             note.clutter_text.y_align = Clutter.ActorAlign.CENTER;
-            this.actor.add_child(note);
+            this.list.add_child(note);
             return;
         }
         const nowUs = GLib.get_real_time();
-        for (const entry of this.entries.slice(this.offset, this.offset + MAX_VISIBLE_ROWS)) {
-            this.actor.add_child(this.row(entry, nowUs));
+        for (const entry of shown.slice(this.offset, this.offset + MAX_VISIBLE_ROWS)) {
+            this.list.add_child(this.row(entry, nowUs));
         }
     }
 
@@ -107,7 +187,7 @@ export class ClipboardPage {
         content.add_child(this.picture(entry));
         const preview = new St.Label({
             style_class: 'nokta-clip-preview',
-            text: entry.kind === 'image' ? `Picture · ${entry.preview}` : entry.preview,
+            text: entryText(entry),
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
@@ -182,7 +262,7 @@ export class ClipboardPage {
             step = Math.trunc(this.smoothScroll);
             this.smoothScroll -= step;
         }
-        const offset = scrolled(this.offset, step, this.entries.length);
+        const offset = scrolled(this.offset, step, this.shown().length);
         if (offset !== this.offset) {
             this.offset = offset;
             this.build();

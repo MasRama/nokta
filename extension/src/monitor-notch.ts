@@ -1,6 +1,7 @@
 import Clutter from 'gi://Clutter';
 import type Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -188,6 +189,9 @@ export class MonitorNotch implements ShelfNotch {
     /** A page a home tile opened, until the notch closes or its back arrow goes home. */
     private page: PageName | null = null;
     private readonly clipboardPage: ClipboardPage;
+    /** The keyboard, held while the clipboard's search field is open. */
+    private searchGrab: Clutter.Grab | null = null;
+    private searchPressId = 0;
     private readonly clipboardSubPage: SubPage;
     private readonly menu: NotchMenu;
     private readonly pressId: number;
@@ -241,6 +245,8 @@ export class MonitorNotch implements ShelfNotch {
             remove: (id) => clipboard.remove(id),
             clear: () => clipboard.clear(),
             setPaused: (paused) => clipboard.setPaused(paused),
+            searching: (entry) => this.setSearchField(entry),
+            resized: () => this.resizePage(),
         });
         this.clipboardSubPage = new SubPage('Clipboard', this.clipboardPage.actor, () => this.setPage(null));
         for (const action of this.clipboardPage.actions) this.clipboardSubPage.addAction(action);
@@ -293,7 +299,7 @@ export class MonitorNotch implements ShelfNotch {
         this.hoverId = this.notch.actor.connect('notify::hover', () => {
             const { hover } = this.notch.actor;
             this.notificationTimer.pointer(hover);
-            this.machine.pointer(hover || this.helperInside);
+            this.machine.pointer(this.pointerInside());
         });
         this.motionId = this.notch.actor.connect('motion-event', (_actor, event: Clutter.Event) => {
             this.onMotion(event);
@@ -347,6 +353,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.actor.disconnect(this.destroyId);
         this.menu.destroy();
         this.forgetStaleHover();
+        this.setSearchField(null);
         this.osdView.destroy();
         this.notificationView.destroy();
         this.screenshotView.destroy();
@@ -444,12 +451,47 @@ export class MonitorNotch implements ShelfNotch {
         if (!clipboard.enabled() && this.page === 'clipboard') this.setPage(null);
         const before = this.clipboardPage.height;
         this.clipboardPage.show(clipboard.entries(), clipboard.paused());
-        if (this.clipboardPage.height !== before) {
-            const [width, height] = this.sizeFor('page');
-            this.clipboardSubPage.actor.set_size(width, height);
-            if (this.drawn === 'page') this.notch.resizeTo(width, height, 'width');
-        }
+        if (this.clipboardPage.height !== before) this.resizePage();
         if (this.drawn === 'panel') this.refreshPanel();
+    }
+
+    /** The page's body changed height. */
+    private resizePage(): void {
+        if (this.destroyed) return;
+        const [width, height] = this.sizeFor('page');
+        this.clipboardSubPage.actor.set_size(width, height);
+        if (this.drawn === 'page') this.notch.resizeTo(width, height, 'width');
+    }
+
+    /** The pointer is on the notch, or it counts as on it: over the helper window, or typing a search. */
+    private pointerInside(): boolean {
+        return this.notch.actor.hover || this.helperInside || this.searchGrab !== null;
+    }
+
+    /**
+     * The clipboard's search field takes the keyboard while it is open, and
+     * keeps the notch open; a click outside the notch closes it.
+     */
+    private setSearchField(entry: St.Entry | null): void {
+        if (entry && !this.searchGrab && !this.destroyed) {
+            this.searchGrab = Main.pushModal(this.notch.actor, { actionMode: Shell.ActionMode.POPUP });
+            entry.grab_key_focus();
+            this.searchPressId = this.notch.actor.connect('captured-event', (_actor, event: Clutter.Event) => {
+                if (event.type() !== Clutter.EventType.BUTTON_PRESS) return Clutter.EVENT_PROPAGATE;
+                const [x, y] = event.get_coords();
+                const [ax, ay] = this.notch.body.get_transformed_position();
+                const [width, height] = this.notch.body.get_transformed_size();
+                if (pointIn({ x: ax, y: ay, width, height }, x, y)) return Clutter.EVENT_PROPAGATE;
+                this.clipboardPage.reset();
+                return Clutter.EVENT_STOP;
+            });
+        } else if (!entry && this.searchGrab) {
+            this.notch.actor.disconnect(this.searchPressId);
+            this.searchPressId = 0;
+            Main.popModal(this.searchGrab);
+            this.searchGrab = null;
+        }
+        if (!this.destroyed) this.machine.pointer(this.pointerInside());
     }
 
     // The file shelf: what the helper window needs from this notch.
@@ -484,7 +526,7 @@ export class MonitorNotch implements ShelfNotch {
         if (this.destroyed) return;
         this.helperInside = inside;
         if (!inside) this.checkHoverOnNextMotion();
-        this.machine.pointer(this.notch.actor.hover || inside);
+        this.machine.pointer(this.pointerInside());
     }
 
     /**
