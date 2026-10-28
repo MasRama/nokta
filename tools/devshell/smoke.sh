@@ -144,9 +144,9 @@ if [ -S "$STATE/runtime/pulse/native" ]; then
     MENU="$FIND const menu = () => find(Main.layoutManager.uiGroup, 'nokta-output-menu').find((a) => a.mapped);
 const items = () => find(menu(), 'popup-menu-item');"
     wait_for "the open player shows the speakers as the sound output" \
-        "$FIND shown('nokta-output-button') && one('nokta-output-button').child.icon_name === 'audio-speakers-symbolic'" 10 \
+        "$FIND shown('nokta-output-button') && one('nokta-output-button').child.gicon?.to_string().endsWith('/nokta-speaker-symbolic.svg')" 10 \
         "$FIND const c = Main.panel.statusArea.quickSettings._volumeOutput?._output?._control; JSON.stringify([shown('nokta-output-button'),
-one('nokta-output-button')?.child.icon_name, c?.get_state(), c?.get_default_sink()?.get_name(),
+one('nokta-output-button')?.child.gicon?.to_string(), c?.get_state(), c?.get_default_sink()?.get_name(),
 c?.get_sinks().map((s) => s.get_name())])"
     js "$FIND one('nokta-output-button').emit('clicked', 1); true" > /dev/null
     wait_for "the output button lists both outputs" \
@@ -160,7 +160,7 @@ c?.get_sinks().map((s) => s.get_name())])"
     ok "the output menu holds the notch open"
     js "$MENU items().find((i) => i.label_actor?.text === 'Headphones').activate(imports.gi.Clutter.get_current_event()); true" > /dev/null
     wait_for "picking the headphones switches the sound output" \
-        "$FIND one('nokta-output-button').child.icon_name === 'audio-headphones-symbolic'" 5
+        "$FIND one('nokta-output-button').child.gicon?.to_string().endsWith('/nokta-headphones-symbolic.svg')" 5
 else
     echo "smoke: skip: the devshell has no PipeWire, so no output switching"
 fi
