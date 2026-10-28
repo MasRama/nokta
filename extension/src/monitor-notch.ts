@@ -51,6 +51,8 @@ import {
     dotsFor,
     PrivacyDots,
     type PrivacyMonitor,
+    RecordingLabel,
+    type ScreenRecording,
 } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
 import {
@@ -77,6 +79,7 @@ import {
 } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { withAlpha } from './shared/logic/color.js';
+import { formatDuration } from './shared/logic/format.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
@@ -161,6 +164,7 @@ export interface NotchSources {
     activities: ActivitiesClient;
     privacy: PrivacyMonitor;
     call: CallMonitor;
+    recording: ScreenRecording;
     panel: PanelSource;
     shelf: ShelfSource;
     clipboard: ClipboardSource;
@@ -177,6 +181,8 @@ export class MonitorNotch implements ShelfNotch {
     private readonly idle = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly idleTimer = new TimerLabel();
     private readonly collapsedTimer = new TimerLabel();
+    private readonly idleRecording = new RecordingLabel();
+    private readonly collapsedRecording = new RecordingLabel();
     private readonly idleCall = new CallLabel();
     private readonly collapsedCall = new CallLabel();
     private readonly idleBadge = new ActivityBadge();
@@ -272,6 +278,7 @@ export class MonitorNotch implements ShelfNotch {
                 toggle: (which) => panel.toggle(which),
                 pauseClock: (id, pause) => (pause ? sources.timer.pauseClock(id) : sources.timer.resumeClock(id)),
                 removeClock: (id) => sources.timer.removeClock(id),
+                stopRecording: () => sources.recording.stop(),
                 toggleCallMute: () => sources.call.toggleMute(),
                 hideCall: () => sources.call.hide(),
             },
@@ -317,10 +324,12 @@ export class MonitorNotch implements ShelfNotch {
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
+        this.idle.add_child(this.idleRecording.actor);
         this.idle.add_child(this.idleCall.actor);
         this.idle.add_child(this.idleTimer.actor);
         this.idle.add_child(this.idleBadge.actor);
         this.idle.add_child(this.idleShelf.actor);
+        this.idleRecording.actor.hide();
         this.idleCall.actor.hide();
         this.idleTimer.actor.hide();
         this.idleBadge.actor.hide();
@@ -427,6 +436,8 @@ export class MonitorNotch implements ShelfNotch {
         this.pages.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
+        this.idleRecording.destroy();
+        this.collapsedRecording.destroy();
         this.idleCall.destroy();
         this.collapsedCall.destroy();
         this.idleTimer.destroy();
@@ -500,6 +511,19 @@ export class MonitorNotch implements ShelfNotch {
             const now = GLib.get_monotonic_time();
             this.idleCall.update(callText(call.startedUs, now), call.muted);
             this.collapsedCall.update(callText(call.startedUs, now), call.muted);
+        }
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
+    }
+
+    /** A screen recording started or stopped; the session calls it again when its shown second changes. */
+    onRecording(): void {
+        if (this.destroyed) return;
+        const since = this.sources.recording.since();
+        if (since !== null) {
+            const text = formatDuration(GLib.get_monotonic_time() - since);
+            this.idleRecording.update(text);
+            this.collapsedRecording.update(text);
         }
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
@@ -683,6 +707,7 @@ export class MonitorNotch implements ShelfNotch {
         this.onShelf();
         this.onPrivacy();
         this.onCall();
+        this.onRecording();
     }
 
     onPrivacy(): void {
@@ -759,6 +784,7 @@ export class MonitorNotch implements ShelfNotch {
     /** The one spot in the closed notch: the clock or the indicator in idle, next to the cover while playing. */
     private applyIndicator(): void {
         const indicator = chooseIndicator({
+            recording: this.sources.recording.since() !== null,
             call: this.shownCall() !== null,
             timer: this.sources.timer.snapshot().state !== 'idle',
             clock: indicatorClock(this.sources.timer.clocks(), GLib.get_monotonic_time()) !== null,
@@ -768,11 +794,13 @@ export class MonitorNotch implements ShelfNotch {
         if (indicator !== this.indicator) {
             this.indicator = indicator;
             this.clock.actor.visible = indicator === null;
+            this.idleRecording.actor.visible = indicator === 'recording';
             this.idleCall.actor.visible = indicator === 'call';
             this.idleTimer.actor.visible = indicator === 'timer' || indicator === 'clock';
             this.idleBadge.actor.visible = indicator === 'activity';
             this.idleShelf.actor.visible = indicator === 'shelf';
             const aside = {
+                recording: this.collapsedRecording.actor,
                 call: this.collapsedCall.actor,
                 timer: this.collapsedTimer.actor,
                 clock: this.collapsedTimer.actor,
@@ -800,9 +828,9 @@ export class MonitorNotch implements ShelfNotch {
         this.updatePanelTick();
     }
 
-    /** Once a second while the open panel shows a call's time, an activity's elapsed time or a clock. */
+    /** Once a second while the open panel shows a time that counts: a recording, a call, an activity or a clock. */
     private updatePanelTick(): void {
-        const ticking = (row: PanelRow): boolean => row === 'call' || row === 'activity' || row === 'clock';
+        const ticking = (row: PanelRow): boolean => row === 'recording' || row === 'call' || row === 'activity' || row === 'clock';
         const run = this.drawn === 'panel' && this.panelRows.some(ticking);
         if (run && !this.panelTickId) {
             this.panelTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PANEL_TICK_MS, () => {
@@ -1147,11 +1175,13 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const clocks = Math.min(content.clocks.length, MAX_PANEL_CLOCKS);
     const event: PanelRow[] = content.event ? ['event'] : [];
+    const recording: PanelRow[] = content.recording !== null ? ['recording'] : [];
     const call: PanelRow[] = content.call ? ['call'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
     return [
         'date',
         ...event,
+        ...recording,
         ...call,
         ...Array<PanelRow>(activities).fill('activity'),
         ...Array<PanelRow>(clocks).fill('clock'),

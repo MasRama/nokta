@@ -484,6 +484,45 @@ wait_for "the shelf row shows the thumbnail instead of the icon" \
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
 wait_for "the clock comes back when the shelf is cleared" "$FIND shown('nokta-clock')" 10
 
+# GNOME's screenshot UI says it records the screen: the closed notch shows a
+# red dot and how long, home a 26 px row whose stop button stops it. There
+# is no recorder here, so only GNOME's own state changes.
+UI="Main.screenshotUI"
+js "$UI._setScreencastInProgress(true); true" > /dev/null
+wait_for "a screen recording replaces the clock with a red dot and its time" \
+    "$FIND any('nokta-recording') && !shown('nokta-clock') && /^0:[0-9]{2}$/.test(find(Main.layoutManager.uiGroup, 'nokta-recording').find((a) => a.mapped).get_last_child().text)" 5
+"$HERE/shot.sh" smoke-recording > /dev/null
+"$HERE/hover.sh" on > /dev/null
+# 32 px closed, 128 px for the date, toggles and tiles, 36 px for the recording.
+wait_for "home shows the recording" \
+    "$FIND shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 196" 5 \
+    "$FIND JSON.stringify([shown('nokta-panel-recording'), Math.round(one('nokta-body').height)])"
+js "$FIND one('nokta-panel-recording-stop').emit('clicked', 1); true" > /dev/null
+wait_for "its stop button stops the recording" \
+    "$FIND !$UI.screencast_in_progress && !shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 160" 5
+"$HERE/hover.sh" off > /dev/null
+wait_for "the clock comes back after the recording" "$FIND shown('nokta-clock') && !any('nokta-recording')" 5
+# GNOME's own "Screencast recorded" banner, for a file it recorded, shows as
+# a preview with a video icon; Keep on shelf parks the video.
+printf 'not really a video' > "$STATE/files/smoke-recording.webm"
+js "$UI._screencastPath = '$STATE/files/smoke-recording.webm'; $UI._showNotification('Screencast recorded'); true" > /dev/null
+wait_for "a saved recording shows as a preview with a video icon and three buttons" \
+    "$FIND shown('nokta-screenshot') && shown('nokta-screenshot-video') && $SHOT_BUTTONS === 'true,true,true'" 10 \
+    "$FIND JSON.stringify([shown('nokta-screenshot'), shown('nokta-screenshot-video'), $SHOT_BUTTONS])"
+sleep 0.4
+"$HERE/shot.sh" smoke-recording-preview > /dev/null
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-screenshot-button')[2].emit('clicked', 1); true" > /dev/null
+i=0
+until shelf_items | grep -q "smoke-recording.webm'"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "Keep on shelf did not put the recording on the shelf: $(shelf_items)"
+    sleep 0.2
+done
+ok "Keep on shelf puts the recording on the shelf"
+wait_for "the recording preview closes" "$FIND !shown('nokta-screenshot')" 5
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
+wait_for "the clock comes back when the shelf is cleared again" "$FIND shown('nokta-clock')" 10
+
 # A copy goes to the clipboard history; its tile in home opens the list, a
 # row copies the entry back, and the menu pauses the history.
 clip_items() {

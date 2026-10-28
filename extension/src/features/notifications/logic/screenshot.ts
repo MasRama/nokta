@@ -18,6 +18,17 @@ export interface BannerShape {
 export const isScreenshotBanner = ({ sourceIcon, hasImage }: BannerShape): boolean =>
     hasImage && sourceIcon !== null && SCREENSHOT_SOURCE_ICONS.includes(sourceIcon);
 
+/** The icon of GNOME's screen recording notifications: GNOME 46 to 48, then 49 and later. */
+const RECORDING_SOURCE_ICONS = ['screencast-recorded-symbolic', 'screenshooter-symbolic'];
+
+/**
+ * Whether a banner is GNOME's "Screencast recorded": no image, from the
+ * screencast source, and `saved` (it has "Show in Files"). A recording that
+ * failed has no file and stays a plain notification.
+ */
+export const isRecordingBanner = ({ sourceIcon, hasImage }: BannerShape, saved: boolean): boolean =>
+    !hasImage && saved && sourceIcon !== null && RECORDING_SOURCE_ICONS.includes(sourceIcon);
+
 export type ScreenshotButton = 'open' | 'files' | 'keep';
 
 export interface ButtonRequest {

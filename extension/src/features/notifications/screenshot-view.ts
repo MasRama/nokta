@@ -23,6 +23,8 @@ const BUTTONS: Record<ScreenshotButton, { icon: string; label: string }> = {
 export class ScreenshotView {
     readonly actor: St.BoxLayout;
     private readonly thumb: St.Widget;
+    /** In the thumbnail's place for a screen recording, which has no picture. */
+    private readonly video: St.Icon;
     private readonly title: St.Label;
     private readonly buttons: Record<ScreenshotButton, TintedButton>;
     private readonly thumbClickId: number;
@@ -38,6 +40,16 @@ export class ScreenshotView {
             y_align: Clutter.ActorAlign.CENTER,
         });
         this.thumb.set_content_gravity(Clutter.ContentGravity.RESIZE_ASPECT);
+        this.video = new St.Icon({
+            icon_name: 'video-x-generic-symbolic',
+            style_class: 'nokta-screenshot-video',
+            x_expand: true,
+            y_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.thumb.layout_manager = new Clutter.BinLayout();
+        this.thumb.add_child(this.video);
         this.thumbClickId = this.thumb.connect('button-release-event', () => {
             if (this.canOpen) onPress('open');
             return Clutter.EVENT_STOP;
@@ -66,10 +78,15 @@ export class ScreenshotView {
         this.actor.add_child(side);
     }
 
-    /** `image` is GNOME's own picture of the screenshot, from its notification. */
+    /**
+     * `image` is GNOME's own picture of the screenshot, from its
+     * notification; a screen recording has none and shows a video icon.
+     */
     show(image: Clutter.Content | null, title: string, buttons: readonly ScreenshotButton[]): void {
-        // The typings omit that content is nullable; null leaves the box empty.
+        // The typings omit that content is nullable.
         this.thumb.content = image as Clutter.Content;
+        this.video.visible = image === null;
+        this.thumb.style = image === null ? 'background-color: rgba(255, 255, 255, 0.08);' : '';
         this.title.text = title;
         this.setButtons(buttons);
     }

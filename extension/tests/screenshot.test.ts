@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import {
     FILE_PAIR_MS,
+    isRecordingBanner,
     isScreenshotBanner,
     screenshotButtons,
     ScreenshotFiles,
@@ -16,6 +17,16 @@ test('a screenshot banner comes from GNOME screenshot source with an image', () 
     assert.equal(isScreenshotBanner({ sourceIcon: 'screenshooter-symbolic', hasImage: false }), false);
     assert.equal(isScreenshotBanner({ sourceIcon: 'org.gnome.Nautilus', hasImage: true }), false);
     assert.equal(isScreenshotBanner({ sourceIcon: null, hasImage: true }), false);
+});
+
+test('a saved screen recording comes from GNOME screencast source without an image', () => {
+    // GNOME 46 to 48, then 49 and later.
+    assert.equal(isRecordingBanner({ sourceIcon: 'screencast-recorded-symbolic', hasImage: false }, true), true);
+    assert.equal(isRecordingBanner({ sourceIcon: 'screenshooter-symbolic', hasImage: false }, true), true);
+    // A failed recording has no file to show.
+    assert.equal(isRecordingBanner({ sourceIcon: 'screencast-recorded-symbolic', hasImage: false }, false), false);
+    assert.equal(isRecordingBanner({ sourceIcon: 'screenshooter-symbolic', hasImage: true }, true), false);
+    assert.equal(isRecordingBanner({ sourceIcon: 'org.gnome.Nautilus', hasImage: false }, true), false);
 });
 
 test('the preview offers what it can do', () => {

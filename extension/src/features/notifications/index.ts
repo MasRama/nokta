@@ -8,6 +8,7 @@ export {
 } from './hook.js';
 export { notificationLines, takesBanner } from './logic/content.js';
 export {
+    isRecordingBanner,
     isScreenshotBanner,
     screenshotButtons,
     ScreenshotFiles,

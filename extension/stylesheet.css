@@ -187,8 +187,15 @@
     border-radius: 3.5px;
 }
 
-.nokta-call {
+.nokta-call,
+.nokta-recording {
     spacing: 6px;
+}
+
+.nokta-recording-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
 }
 
 .nokta-call-icon {
@@ -227,6 +234,10 @@
 
 .nokta-screenshot-thumb {
     border-radius: 8px;
+}
+
+.nokta-screenshot-video {
+    icon-size: 40px;
 }
 
 .nokta-screenshot-side {
@@ -419,18 +430,21 @@
 
 /* A countdown, stopwatch or alarm in home: one line. */
 .nokta-panel-clock,
-.nokta-panel-call {
+.nokta-panel-call,
+.nokta-panel-recording {
     height: 26px;
     spacing: 8px;
 }
 
 .nokta-panel-clock-icon,
-.nokta-panel-call-icon {
+.nokta-panel-call-icon,
+.nokta-panel-recording-icon {
     icon-size: 16px;
 }
 
 .nokta-panel-clock-title,
-.nokta-panel-call-title {
+.nokta-panel-call-title,
+.nokta-panel-recording-title {
     font-size: 12px;
     font-weight: bold;
 }
@@ -440,14 +454,16 @@
     font-size: 11px;
 }
 
-.nokta-panel-clock-time {
+.nokta-panel-clock-time,
+.nokta-panel-recording-time {
     font-size: 13px;
     font-weight: bold;
     font-feature-settings: "tnum";
 }
 
 .nokta-panel-clock .nokta-button-icon,
-.nokta-panel-call .nokta-button-icon {
+.nokta-panel-call .nokta-button-icon,
+.nokta-panel-recording .nokta-button-icon {
     icon-size: 14px;
 }
 
