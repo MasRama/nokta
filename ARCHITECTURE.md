@@ -56,7 +56,8 @@ extension/          GNOME Shell extension nokta@nokta.io
                     notifications, panel, activities, weather, calendar, shelf,
                     clipboard
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
-  src/shared/       notch shape, springs and layout, clock, top bar, D-Bus helpers
+  src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
+                    keyboard focus, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
@@ -87,7 +88,8 @@ docs/               manual test checklist, screenshots
   clipboard's search field is open, `monitor-notch.ts` holds the keyboard
   with `Main.pushModal` on the notch, keeps it open as if the pointer were
   on it, and lets go on Enter, Escape, a click outside or the notch
-  closing.
+  closing. It is the same grab the open shortcut takes (see
+  [The extension](#the-extension)): one `pushModal` while either wants it.
   `panel` is home, the open notch's other page (the only one while nothing
   plays; the player's grid button opens it, its music button goes back,
   and closing the notch returns to the player). It only draws its rows (the
@@ -186,7 +188,8 @@ docs/               manual test checklist, screenshots
   daemon because GNOME disables extensions on the lock screen. The
   extension does the GNOME-only parts of focus mode: it turns notification
   banners off during focus (and back on), and binds the shortcut through
-  its one GSettings key, which it copies from `config.toml`.
+  its GSettings key `focus-shortcut`, which it copies from `config.toml`
+  (`shared/keybinding.ts`).
   Beside it, a pure `Clocks` (`clocks.rs`) keeps up to six countdowns,
   stopwatches and alarms. They take the wall clock rather than the
   monotonic one, so time spent suspended counts; the task sleeps until the
@@ -312,6 +315,29 @@ How both sides stay honest:
   `0.5 s earlier`, `lyrics/logic/offset.ts`) resets it; the shifted lines
   come back from the daemon, and the fill restarts on them. A pure state
   machine (`shared/logic/machine.ts`) decides when to open and close.
+- **Opening.** `NotchMachine` opens the notch after the pointer rests on
+  it for `open_delay_ms`, or, with `[behavior] open_on = "click"`, on a
+  primary click on the closed notch (`click()`; a press on one of its
+  buttons stays the button's), and closes it `close_delay_ms` after the
+  pointer leaves. `open(true)` opens it held: only `close()` closes it
+  then, whatever the pointer or the player does. The open shortcut
+  (`[behavior] open_shortcut`, copied to the GSettings key `open-shortcut`
+  and bound by `shared/keybinding.ts` in the normal, overview and popup
+  action modes) opens the focused monitor's notch held (`routeOsd`, like
+  the OSD) and takes the keyboard with `Main.pushModal` in the popup action
+  mode, so GNOME's shortcuts for popups keep working and the open shortcut
+  itself reaches the notch again to close it. The clipboard's search shares
+  that grab. `shared/focus.ts` lets every reactive `St.Button` of the open
+  view take the focus and moves it with St's `navigate_focus` (Tab and
+  Shift+Tab go round, the arrows by direction, `shared/logic/keyboard.ts`);
+  St.Button presses itself on Enter and Space. The first button of the
+  view that shows has the focus, also after the view changes or the
+  focused button goes away. Escape, the shortcut again, a click outside
+  the notch (a `captured-event` on the grab) or the notch closing any other
+  way close it and pop the grab; a popup menu over it (the right-click
+  menu, the output menu) takes its own grab on top and gives the focus back
+  when it closes. Focused buttons get an inset ring from the stylesheet,
+  dark on a light palette (`nokta-light`).
 - The notch changes size on springs (`shared/logic/spring.ts`): width and
   height step on the same frames of one `Clutter.Timeline`, which runs only
   until both settle, so they move together and a new size mid-way bends the

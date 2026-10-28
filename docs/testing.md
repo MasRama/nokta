@@ -6,8 +6,8 @@ hand before a release and after any change to the extension's UI.
 | Layer | Command | What it covers |
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
-| Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, a fullscreen window hides the notch, a countdown alert shows over it (unredirection off, hover does not open it) and hides again while a volume OSD and, with `fullscreen_alerts = "none"`, an alert leave it hidden, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine (click mode, opening held from the keyboard), the keys of the keyboard mode, shortcut parsing, settings parsing, colors, progress math. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the open shortcut (a real key press) opens the notch and holds the keyboard, Tab and Shift+Tab move the focus, the output menu and the right-click menu still open over it, the pointer leaving keeps it open, Enter presses the focused button, Escape, the shortcut again and a click outside close it and let go, with `open_on = "click"` hovering does not open the notch and a click does, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, a fullscreen window hides the notch, a countdown alert shows over it (unredirection off, hover does not open it) and hides again while a volume OSD and, with `fullscreen_alerts = "none"`, an alert leave it hidden, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -578,6 +578,37 @@ banner for a fake file.
 - [ ] Reset all settings: a confirmation, then the default `config.toml`.
 - [ ] Stop the daemon: a banner says so and the rows are dimmed.
 - [ ] The Settings button in the Extensions app opens it *(real session)*.
+
+### Keyboard and click to open
+
+- [ ] `keys.sh Super_L Alt_L n` while playing: the player opens and its
+      first button has a focus ring; with nothing playing, home opens. In
+      Looking Glass (or `shell_eval`), `Main.actionMode` is `128` (popup)
+      and `global.stage.key_focus` is a button in the notch.
+- [ ] `keys.sh Tab` and `keys.sh Shift_L Tab` move the ring round the
+      buttons; `keys.sh Left`, `Right`, `Up` and `Down` move it to the
+      nearest button that way.
+- [ ] `keys.sh Return` (or `space`) presses the focused button: the grid
+      button opens home, whose first button takes the ring; a home tile
+      that leaves the notch (Settings, Notifications) closes it and lets go
+      of the keyboard.
+- [ ] `hover.sh on`, then `hover.sh off`: the notch stays open.
+- [ ] `keys.sh Escape`, the shortcut again, or `click.sh 200 600` (outside):
+      it closes and `Main.actionMode` is `1` again.
+- [ ] While held: a right click opens the menu and the speaker button its
+      output menu; Escape closes that menu first, and the ring comes back.
+- [ ] The clipboard's search while held (`Tab` to the Clipboard tile,
+      Enter, then the magnifier): typing goes to the field, Escape closes
+      the field and the ring goes back to the page, a second Escape closes
+      the notch.
+- [ ] The ring with each theme: light on the dark ones, dark on `paper`
+      and a light `custom` background, grey on the play button.
+- [ ] `open_shortcut = ""` frees the keys; `"<Control><Alt>space"` moves
+      them. GNOME binds nothing to `<Super><Alt>n` (`<Super>n` is its
+      "focus the notification" shortcut).
+- [ ] `open_on = "click"`: `hover.sh on` does not open the notch; a click
+      on it does; `hover.sh off` closes it after `close_delay_ms`. A right
+      click still opens the menu.
 
 ### Interaction
 

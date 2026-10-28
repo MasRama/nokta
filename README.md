@@ -3,7 +3,8 @@
 An open-source dynamic island for the desktop. A small black notch sits on
 the top edge of the screen. It shows the song that is playing with its
 lyrics, the volume, your earbuds' battery, a focus timer and your
-notifications. Hover over it to open it.
+notifications. Hover over it to open it, or press
+<kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>.
 
 <p align="center">
   <img src="docs/images/player.png" width="49%" alt="The open notch playing a song, with its lyric line">
@@ -98,6 +99,9 @@ notifications. Hover over it to open it.
   Choose all alerts or none with `fullscreen_alerts`.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color) and paper, or your own colors.
+- **[Keyboard](#keyboard).** <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>
+  opens the notch on the monitor you are working on, ready for Tab, Enter
+  and Escape. Or have it open on a click instead of on hover.
 - **Every monitor** has its own notch, and alerts show on the one you are
   working on.
 
@@ -145,6 +149,19 @@ enabled, Nokta leaves the clock alone so the two don't fight over it. Set
 Just Perfection's **Clock Menu Position** to **Right** instead.
 
 ## Using Nokta
+
+### Keyboard
+
+<kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> opens the notch on the monitor
+you are working on (the player while a song plays, else home) and gives it
+the keyboard: the first button has a focus ring, <kbd>Tab</kbd> and
+<kbd>Shift</kbd>+<kbd>Tab</kbd> or the arrow keys move it, and
+<kbd>Enter</kbd> or <kbd>Space</kbd> press it. The notch stays open while
+the pointer comes and goes. <kbd>Escape</kbd>, the shortcut again or a click
+outside close it. Change the keys with `open_shortcut`.
+
+With `open_on = "click"`, resting the pointer on the notch no longer opens
+it; click it instead. It still closes when the pointer leaves.
 
 ### Live activities
 
@@ -279,8 +296,10 @@ Every key, by table:
 
 | Key | Default | What it does |
 |---|---|---|
+| `open_on` | `"hover"` | `"hover"` opens the notch when the pointer rests on it, `"click"` only when you click it |
 | `open_delay_ms` | `120` | How long the pointer must rest on the notch before it opens |
 | `close_delay_ms` | `300` | How long the notch stays open after the pointer leaves |
+| `open_shortcut` | `"<Super><Alt>n"` | Keys that open the notch for the keyboard (see [Keyboard](#keyboard)), written like GNOME's keyboard shortcuts; `""` means no shortcut |
 | `move_clock` | `true` | Move the GNOME clock to the right side of the top bar |
 | `show_lyrics` | `true` | Show the current lyric line in the open notch |
 | `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
