@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.0](https://github.com/MasRama/nokta/compare/v0.4.0...v0.5.0) (2026-10-28)
+
+
+### Features
+
+* **activities:** add the nokta command for scripts ([6fc8317](https://github.com/MasRama/nokta/commit/6fc831791960a98bde4b5d3623e2f06b7d3348a3))
+* **activities:** let apps and scripts report live activities to noktad ([19f1d79](https://github.com/MasRama/nokta/commit/19f1d79bb444daedbd14d4148b5ea88ec43a373c))
+* **activities:** show live activities in the notch and the idle panel ([a92c42e](https://github.com/MasRama/nokta/commit/a92c42e178b0f4411b4fe6a67ec025a56b6ed0ea))
+* **calendar:** add the [calendar] settings for the next event and its reminder ([a929d2b](https://github.com/MasRama/nokta/commit/a929d2b2d452432fbc235c4f47ba82cba19d65d0))
+* **calendar:** show the next event in the open notch and remind before it starts ([7b7cc74](https://github.com/MasRama/nokta/commit/7b7cc7439f0dba0acc171c6f2f5c33721caca936))
+* **extension:** open the date, notifications and focus when hovering the idle notch ([a09db95](https://github.com/MasRama/nokta/commit/a09db950d906bb8f48d1ca6900c68ab213d622ad))
+* **lyrics:** open the full lyrics from the lyric line ([b47d893](https://github.com/MasRama/nokta/commit/b47d893aade8fd68aee77d8c021b203491cbfca0))
+* **media:** add shuffle and repeat buttons to the open player ([d30abfa](https://github.com/MasRama/nokta/commit/d30abfa859eec75b0a8b980a03918bcfffcbe6ed))
+* **media:** publish and set the player's shuffle and repeat ([e5e6c74](https://github.com/MasRama/nokta/commit/e5e6c747e7fa97a4ba5a5fa8c06e5405f62022b9))
+* **screenshots:** show a new screenshot in the notch with Open, Show in Files and Keep on shelf ([6a69c1e](https://github.com/MasRama/nokta/commit/6a69c1eab4c46feab49d755888f939074bc98046))
+* **shelf:** drop files on the notch and drag them out again ([460cd62](https://github.com/MasRama/nokta/commit/460cd6213c328d5ff0e0c45044d21ed3a2e60fdc))
+* **shelf:** keep files parked on the shelf in noktad ([34df2d4](https://github.com/MasRama/nokta/commit/34df2d4f137f6b5ae8ab7efdc8446b9953150500))
+* **weather:** fetch the weather for the configured place from Open-Meteo ([cd473c4](https://github.com/MasRama/nokta/commit/cd473c445c71aa16b6ca6d445853a4d087219fa2))
+* **weather:** show the weather beside the date in the open notch ([5d17133](https://github.com/MasRama/nokta/commit/5d17133e8fe6881db4fea9ba1c406ebbbc1c7432))
+
+
+### Bug Fixes
+
+* **extension:** center the privacy dots in the notch's rounded corner ([bd80c91](https://github.com/MasRama/nokta/commit/bd80c914778bcea9555bfbfe3f110d1e6ddabd4f))
+* **shelf:** close the notch after the pointer leaves the shelf on GNOME 49 and later ([5df116e](https://github.com/MasRama/nokta/commit/5df116eb19017b211ed417192166f93e57102b22))
+
 ## [0.4.0](https://github.com/MasRama/nokta/compare/v0.3.0...v0.4.0) (2026-10-27)
 
 
