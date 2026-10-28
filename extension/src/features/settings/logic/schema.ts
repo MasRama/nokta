@@ -4,11 +4,15 @@ import {
     calendarFrom,
     clipboardFrom,
     behaviorFrom,
+    homeFrom,
     lyricsFrom,
     notificationsFrom,
     timerFrom,
     weatherFrom,
+    MAX_HOME_TILES,
+    MAX_HOME_TOGGLES,
 } from './parse.js';
+import type { OrderOption } from './order.js';
 
 /**
  * Every row of the settings window, in order. Adding a setting is one line
@@ -22,7 +26,9 @@ export type RowKind =
     | { type: 'float'; min: number; max: number; step: number; percent?: boolean }
     | { type: 'color' }
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
-    | { type: 'text' };
+    | { type: 'text' }
+    /** A list of names from `options`, at most `max`, in the order shown. */
+    | { type: 'order'; options: readonly OrderOption[]; max: number };
 
 export type Table =
     | 'appearance'
@@ -33,7 +39,8 @@ export type Table =
     | 'activities'
     | 'weather'
     | 'calendar'
-    | 'clipboard';
+    | 'clipboard'
+    | 'home';
 
 export interface Row {
     table: Table;
@@ -46,6 +53,7 @@ export interface Row {
 
 export interface Group {
     title: string;
+    description?: string;
     rows: readonly Row[];
 }
 
@@ -107,6 +115,8 @@ const clipboard = (key: string, title: string, kind: RowKind, subtitle?: string)
     kind,
     subtitle,
 });
+
+const home = (key: string, title: string, kind: RowKind): Row => ({ table: 'home', key, title, kind });
 
 const notifications = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'notifications',
@@ -379,6 +389,47 @@ export const SETTINGS_PAGES: readonly Page[] = [
             },
         ],
     },
+    {
+        name: 'home',
+        title: 'Home',
+        icon: 'user-home-symbolic',
+        groups: [
+            {
+                title: 'Quick toggles',
+                description: `Up to ${MAX_HOME_TOGGLES}, in this order`,
+                rows: [
+                    home('toggles', 'Quick toggles', {
+                        type: 'order',
+                        max: MAX_HOME_TOGGLES,
+                        options: [
+                            { value: 'do_not_disturb', label: 'Do Not Disturb' },
+                            { value: 'caffeine', label: 'Caffeine' },
+                            { value: 'dark_style', label: 'Dark Style' },
+                            { value: 'night_light', label: 'Night Light' },
+                        ],
+                    }),
+                ],
+            },
+            {
+                title: 'Tiles',
+                description: `Up to ${MAX_HOME_TILES}, in this order`,
+                rows: [
+                    home('tiles', 'Tiles', {
+                        type: 'order',
+                        max: MAX_HOME_TILES,
+                        options: [
+                            { value: 'notifications', label: 'Notifications' },
+                            { value: 'focus', label: 'Focus' },
+                            { value: 'timer', label: 'Timer' },
+                            { value: 'clipboard', label: 'Clipboard' },
+                            { value: 'settings', label: 'Settings' },
+                            { value: 'screenshot', label: 'Screenshot' },
+                        ],
+                    }),
+                ],
+            },
+        ],
+    },
 ];
 
 const READERS: Record<Table, (raw: unknown) => object> = {
@@ -391,6 +442,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     weather: weatherFrom,
     calendar: calendarFrom,
     clipboard: clipboardFrom,
+    home: homeFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -407,7 +459,7 @@ export function rowValue(row: Row, tables: Partial<Record<Table, unknown>>): unk
 export const allRows = (): Row[] => SETTINGS_PAGES.flatMap((page) => page.groups.flatMap((group) => group.rows));
 
 /** The GVariant type to send a row's value in, as the daemon publishes it. */
-export function variantType(kind: RowKind): 'b' | 'u' | 'd' | 's' {
+export function variantType(kind: RowKind): 'b' | 'u' | 'd' | 's' | 'as' {
     switch (kind.type) {
         case 'bool':
             return 'b';
@@ -419,5 +471,7 @@ export function variantType(kind: RowKind): 'b' | 'u' | 'd' | 's' {
         case 'choice':
         case 'text':
             return 's';
+        case 'order':
+            return 'as';
     }
 }

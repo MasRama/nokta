@@ -19,6 +19,7 @@ pub struct Config {
     pub weather: WeatherConfig,
     pub calendar: CalendarConfig,
     pub clipboard: ClipboardConfig,
+    pub home: HomeConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -237,6 +238,28 @@ impl Default for ClipboardConfig {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct HomeConfig {
+    /// The quick toggles, in the order shown; names from [`HOME_TOGGLES`].
+    pub toggles: Vec<String>,
+    /// The tiles, in the order shown; names from [`HOME_TILES`].
+    pub tiles: Vec<String>,
+}
+
+impl Default for HomeConfig {
+    fn default() -> Self {
+        HomeConfig {
+            toggles: ["do_not_disturb", "caffeine", "dark_style"]
+                .map(String::from)
+                .to_vec(),
+            tiles: ["notifications", "focus", "timer", "clipboard", "settings"]
+                .map(String::from)
+                .to_vec(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct WeatherConfig {
@@ -406,6 +429,8 @@ impl Config {
                 self.weather.units
             )));
         }
+        check_names("home.toggles", &self.home.toggles, &HOME_TOGGLES, 3)?;
+        check_names("home.tiles", &self.home.tiles, &HOME_TILES, 5)?;
         if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
             return Err(ConfigError::invalid(format!(
                 "timer.shortcut must be keys like \"<Super><Alt>f\" or empty, got {:?}",
@@ -414,6 +439,50 @@ impl Config {
         }
         Ok(())
     }
+}
+
+/// The names `home.toggles` accepts.
+pub const HOME_TOGGLES: [&str; 4] = ["do_not_disturb", "caffeine", "dark_style", "night_light"];
+
+/// The names `home.tiles` accepts.
+pub const HOME_TILES: [&str; 6] = [
+    "notifications",
+    "focus",
+    "timer",
+    "clipboard",
+    "settings",
+    "screenshot",
+];
+
+/// At most `max` names from `known`, each once.
+fn check_names(key: &str, names: &[String], known: &[&str], max: usize) -> Result<(), ConfigError> {
+    let list = || {
+        known
+            .iter()
+            .map(|n| format!("{n:?}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    if let Some(name) = names.iter().find(|n| !known.contains(&n.as_str())) {
+        return Err(ConfigError::invalid(format!(
+            "{key} takes names from {}, got {name:?}",
+            list()
+        )));
+    }
+    if let Some((_, name)) = names
+        .iter()
+        .enumerate()
+        .find(|(i, n)| names[..*i].contains(n))
+    {
+        return Err(ConfigError::invalid(format!("{key} has {name:?} twice")));
+    }
+    if names.len() > max {
+        return Err(ConfigError::invalid(format!(
+            "{key} takes at most {max} names, got {}",
+            names.len()
+        )));
+    }
+    Ok(())
 }
 
 /// The values `weather.units` accepts.
@@ -480,6 +549,7 @@ pub enum SettingValue {
     Uint(u32),
     Float(f64),
     Text(String),
+    List(Vec<String>),
 }
 
 impl fmt::Display for SettingValue {
@@ -489,6 +559,7 @@ impl fmt::Display for SettingValue {
             SettingValue::Uint(n) => write!(f, "{n}"),
             SettingValue::Float(n) => write!(f, "{n}"),
             SettingValue::Text(s) => write!(f, "{s:?}"),
+            SettingValue::List(names) => write!(f, "{names:?}"),
         }
     }
 }
@@ -514,6 +585,12 @@ impl From<f64> for SettingValue {
 impl From<&String> for SettingValue {
     fn from(s: &String) -> SettingValue {
         SettingValue::Text(s.clone())
+    }
+}
+
+impl From<&Vec<String>> for SettingValue {
+    fn from(names: &Vec<String>) -> SettingValue {
+        SettingValue::List(names.clone())
     }
 }
 
@@ -617,6 +694,15 @@ impl ClipboardConfig {
         vec![
             ("enabled", self.enabled.into()),
             ("max_items", self.max_items.into()),
+        ]
+    }
+}
+
+impl HomeConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("toggles", (&self.toggles).into()),
+            ("tiles", (&self.tiles).into()),
         ]
     }
 }

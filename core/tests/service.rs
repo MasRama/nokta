@@ -234,6 +234,19 @@ async fn set_writes_the_file_and_publishes_it() {
     let table =
         HashMap::<String, OwnedValue>::try_from(changed["Lyrics"].try_clone().unwrap()).unwrap();
     assert!(!bool::try_from(table["enabled"].try_clone().unwrap()).unwrap());
+
+    let tiles = zbus::zvariant::Value::new(vec!["screenshot", "settings"]);
+    let _: () = settings
+        .call("Set", &("home", "tiles", tiles))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "Home").await;
+    let table =
+        HashMap::<String, OwnedValue>::try_from(changed["Home"].try_clone().unwrap()).unwrap();
+    assert_eq!(
+        Vec::<String>::try_from(table["tiles"].try_clone().unwrap()).unwrap(),
+        ["screenshot", "settings"]
+    );
 }
 
 #[tokio::test]

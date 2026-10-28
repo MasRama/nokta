@@ -61,6 +61,7 @@ fn expected_type(table: &str, key: &str) -> Result<SettingValue, ConfigError> {
         "weather" => defaults.weather.entries(),
         "calendar" => defaults.calendar.entries(),
         "clipboard" => defaults.clipboard.entries(),
+        "home" => defaults.home.entries(),
         _ => {
             return Err(ConfigError::invalid(format!(
                 "unknown settings table {table:?}"
@@ -96,6 +97,10 @@ fn toml_value(
         SettingValue::Text(_) => match value {
             SettingValue::Text(s) => Ok(s.as_str().into()),
             _ => Err(wrong("a string")),
+        },
+        SettingValue::List(_) => match value {
+            SettingValue::List(names) => Ok(names.iter().collect::<toml_edit::Array>().into()),
+            _ => Err(wrong("a list of names")),
         },
     }
 }

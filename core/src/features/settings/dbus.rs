@@ -48,6 +48,7 @@ fn properties(c: &Config) -> PropertyList {
         ("Weather", owned(dbus_map(c.weather.entries()))),
         ("Calendar", owned(dbus_map(c.calendar.entries()))),
         ("Clipboard", owned(dbus_map(c.clipboard.entries()))),
+        ("Home", owned(dbus_map(c.home.entries()))),
     ]
 }
 
@@ -61,6 +62,7 @@ fn dbus_map(entries: Entries) -> HashMap<String, OwnedValue> {
                 SettingValue::Uint(n) => n.into(),
                 SettingValue::Float(n) => n.into(),
                 SettingValue::Text(s) => OwnedValue::from(Str::from(s)),
+                SettingValue::List(names) => owned(names),
             };
             (key.to_owned(), value)
         })
@@ -81,6 +83,15 @@ fn setting_value(value: &Value<'_>) -> Option<SettingValue> {
         Value::I64(n) => SettingValue::Float(*n as f64),
         Value::U64(n) => SettingValue::Float(*n as f64),
         Value::F64(n) => SettingValue::Float(*n),
+        Value::Array(names) if names.element_signature() == "s" => SettingValue::List(
+            names
+                .iter()
+                .filter_map(|name| match name {
+                    Value::Str(s) => Some(s.as_str().to_owned()),
+                    _ => None,
+                })
+                .collect(),
+        ),
         _ => return None,
     })
 }
@@ -149,6 +160,11 @@ impl SettingsInterface {
     #[zbus(property)]
     fn clipboard(&self) -> HashMap<String, OwnedValue> {
         dbus_map(self.config.borrow().clipboard.entries())
+    }
+
+    #[zbus(property)]
+    fn home(&self) -> HashMap<String, OwnedValue> {
+        dbus_map(self.config.borrow().home.entries())
     }
 
     async fn set(&self, table: String, key: String, value: OwnedValue) -> fdo::Result<()> {
@@ -223,6 +239,14 @@ mod tests {
             Some(SettingValue::Float(0.5))
         );
         assert_eq!(setting_value(&Value::new(vec![1u32])), None);
+        assert_eq!(
+            setting_value(&Value::new(vec!["focus", "timer"])),
+            Some(SettingValue::List(vec!["focus".into(), "timer".into()]))
+        );
+        assert_eq!(
+            setting_value(&Value::new(Vec::<String>::new())),
+            Some(SettingValue::List(vec![]))
+        );
     }
 
     #[test]
@@ -232,5 +256,7 @@ mod tests {
         assert_eq!(map["animation_speed"].value_signature(), "d");
         assert_eq!(map["background"].value_signature(), "s");
         assert_eq!(map["use_album_accent"].value_signature(), "b");
+        let map = dbus_map(Config::default().home.entries());
+        assert_eq!(map["tiles"].value_signature(), "as");
     }
 }

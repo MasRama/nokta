@@ -19,6 +19,8 @@ import {
     weatherFrom,
     calendarFrom,
     clipboardFrom,
+    DEFAULT_HOME,
+    homeFrom,
     timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
@@ -190,6 +192,22 @@ test('clipboard settings from table', () => {
     assert.deepEqual(DEFAULT_CLIPBOARD, { enabled: true, maxItems: 25 });
     assert.deepEqual(clipboardFrom({ enabled: false, max_items: 50 }), { enabled: false, maxItems: 50 });
     assert.deepEqual(clipboardFrom({ max_items: 'many' }), DEFAULT_CLIPBOARD);
+});
+
+test('home layout from table', () => {
+    assert.deepEqual(DEFAULT_HOME, {
+        toggles: ['do_not_disturb', 'caffeine', 'dark_style'],
+        tiles: ['notifications', 'focus', 'timer', 'clipboard', 'settings'],
+    });
+    assert.deepEqual(homeFrom({ toggles: ['night_light'], tiles: [] }), { toggles: ['night_light'], tiles: [] });
+    // Unknown names and repeats are dropped, the lists cut to their size.
+    assert.deepEqual(homeFrom({ toggles: ['wifi', 'caffeine', 'caffeine'] }).toggles, ['caffeine']);
+    assert.deepEqual(
+        homeFrom({ tiles: ['screenshot', 'settings', 'timer', 'focus', 'clipboard', 'notifications'] }).tiles,
+        ['screenshot', 'settings', 'timer', 'focus', 'clipboard'],
+    );
+    assert.deepEqual(homeFrom({ toggles: 'caffeine', tiles: [3] }), { toggles: DEFAULT_HOME.toggles, tiles: [] });
+    assert.notEqual(homeFrom(undefined).tiles, DEFAULT_HOME.tiles);
 });
 
 test('calendar settings from table', () => {

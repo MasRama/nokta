@@ -39,10 +39,15 @@
     <property name="Clipboard" type="a{sv}" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- The [home] table of config.toml. Its lists are "as". -->
+    <property name="Home" type="a{sv}" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!--
       Changes one key of config.toml and saves it, keeping its comments. table
       is "appearance", "behavior", "lyrics", "timer", "notifications",
-      "activities", "weather", "calendar" or "clipboard". Fails with InvalidArgs,
+      "activities", "weather", "calendar", "clipboard" or "home"; a list such
+      as home.tiles is sent as "as". Fails with InvalidArgs,
       and writes nothing, for an unknown key, a value of the wrong type or a
       value the config does not accept. The new value is published like any
       edit.

@@ -193,6 +193,47 @@ wait_inhibited true "Caffeine keeps the screen awake"
 pill 1
 wait_inhibited false "and lets it sleep again"
 
+# home.toggles and home.tiles choose home's controls and their order. Night
+# Light shows only where gnome-settings-daemon's schema is installed.
+set_home() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set home "$1" "$2" > /dev/null
+}
+LABELS="const labels = (cls) => find(Main.layoutManager.uiGroup, cls).filter((a) => a.mapped).map((a) => a.text).join(',');"
+NIGHT_SCHEMA='org.gnome.settings-daemon.plugins.color'
+HAS_NIGHT=$(js "imports.gi.Gio.SettingsSchemaSource.get_default().lookup('$NIGHT_SCHEMA', true) !== null")
+NIGHT="g('$NIGHT_SCHEMA').get_boolean('night-light-enabled')"
+PILLS='Caffeine'
+[ "$HAS_NIGHT" = true ] && PILLS='Night Light,Caffeine'
+set_home toggles "<['night_light', 'caffeine']>"
+set_home tiles "<['screenshot', 'settings']>"
+wait_for "home shows the chosen toggles and tiles in their order" \
+    "$LABELS $FIND labels('nokta-pill-label') === '$PILLS' && labels('nokta-tile-label') === 'Screenshot,Settings' && Math.round(one('nokta-body').height) === 160" 5 \
+    "$LABELS $FIND JSON.stringify([labels('nokta-pill-label'), labels('nokta-tile-label'), Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-home-layout > /dev/null
+FIRST_PILL="find(Main.layoutManager.uiGroup, 'nokta-pill').find((a) => a.mapped)"
+if [ "$HAS_NIGHT" = true ]; then
+    js "$FIND $FIRST_PILL.emit('clicked', 1); true" > /dev/null
+    wait_for "Night Light turns GNOME's night light on" "$GSETTINGS $FIND $NIGHT && $FIRST_PILL.checked" 5
+    js "$FIND $FIRST_PILL.emit('clicked', 1); true" > /dev/null
+    wait_for "and off again" "$GSETTINGS !$NIGHT" 5
+else
+    echo "smoke: skip: no Night Light without gnome-settings-daemon's schema"
+fi
+set_home toggles "<@as []>"
+wait_for "home without toggles is shorter" \
+    "$FIND !shown('nokta-panel-toggles') && shown('nokta-panel-tiles') && Math.round(one('nokta-body').height) === 116" 5
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-tile').find((a) => a.mapped).emit('clicked', 1); true" > /dev/null
+wait_for "the screenshot tile closes the notch and opens GNOME's screenshot UI" \
+    "$FIND Main.screenshotUI.visible && Math.round(one('nokta-body').height) === 32" 5
+js "Main.screenshotUI.close(true); true" > /dev/null
+set_home toggles "<['do_not_disturb', 'caffeine', 'dark_style']>"
+set_home tiles "<['notifications', 'focus', 'timer', 'clipboard', 'settings']>"
+"$HERE/hover.sh" off > /dev/null
+"$HERE/hover.sh" on > /dev/null
+wait_for "home is back to its default toggles and tiles" \
+    "$LABELS $FIND labels('nokta-pill-label') === 'Do Not Disturb,Caffeine,Dark Style' && Math.round(one('nokta-body').height) === 160" 5
+
 # A right click opens the notch's menu at the pointer; its Do Not Disturb
 # switch is the same setting.
 NOTCH_AT=$(js "$FIND const [x, y] = one('nokta-body').get_transformed_position(); Math.round(x + 60) + ', ' + Math.round(y + 12)")

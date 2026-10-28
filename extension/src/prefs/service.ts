@@ -18,6 +18,7 @@ const PROPERTIES: Record<Table, string> = {
     weather: 'Weather',
     calendar: 'Calendar',
     clipboard: 'Clipboard',
+    home: 'Home',
 };
 
 /** The daemon's message without the `GDBus.Error:...:` prefix. */
