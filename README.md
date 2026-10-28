@@ -260,6 +260,13 @@ Extensions app. A change shows in the notch right away. The window is
 dark whatever your system style, and its Appearance page starts with a
 preview of the notch in the theme you pick.
 
+<p align="center">
+  <img src="docs/images/settings-page.png" width="49%" alt="The settings page in the notch: the themes, three switches and the motion speed">
+</p>
+<p align="center">
+  <img src="docs/images/settings-window.png" width="80%" alt="The settings window: a sidebar of pages, a preview of the notch, the theme gallery and the theme switches">
+</p>
+
 The window saves to `~/.config/nokta/config.toml`. You can edit that file
 by hand too, and your comments are kept either way. The daemon writes a
 commented copy with the defaults on first start, and applies changes as
