@@ -72,3 +72,30 @@ export function listHeight(count: number): number {
 export function scrolled(offset: number, step: number, count: number): number {
     return Math.max(0, Math.min(offset + step, count - MAX_VISIBLE_ROWS));
 }
+
+/** The search field over the list while searching, and the gap under it. */
+export const SEARCH_HEIGHT = 30;
+const SEARCH_SPACING = 4;
+
+/** The page's height: the search field while searching, then the list. */
+export function pageHeight(count: number, searching: boolean): number {
+    return (searching ? SEARCH_HEIGHT + SEARCH_SPACING : 0) + listHeight(count);
+}
+
+/** What a row says, as the search reads it. */
+export const entryText = (entry: ClipboardEntry): string =>
+    entry.kind === 'image' ? `Picture · ${entry.preview}` : entry.preview;
+
+/** Lower case without accents, so `CAFÉ` finds `cafe`. */
+const fold = (text: string): string =>
+    text
+        .normalize('NFD')
+        .replace(/\p{Diacritic}/gu, '')
+        .toLowerCase();
+
+/** The entries whose text has `query`, in their order; all of them for a blank query. */
+export function filterEntries(entries: readonly ClipboardEntry[], query: string): readonly ClipboardEntry[] {
+    const wanted = fold(query.trim());
+    if (!wanted) return entries;
+    return entries.filter((entry) => fold(entryText(entry)).includes(wanted));
+}

@@ -5,7 +5,10 @@ import {
     ageLabel,
     captureKind,
     entriesFrom,
+    filterEntries,
     listHeight,
+    pageHeight,
+    SEARCH_HEIGHT,
     MAX_IMAGE_BYTES,
     scrolled,
     visibleRows,
@@ -61,4 +64,53 @@ test('the list is as tall as its rows, and a scroll moves one row inside the his
     assert.equal(scrolled(0, -1, 12), 0);
     assert.equal(scrolled(9, 0, 6), 1, 'a shorter history pulls it back');
     assert.equal(scrolled(3, 1, 4), 0, 'all of it fits');
+});
+
+const entry = (id: string, kind: 'text' | 'image', preview: string) => ({
+    id,
+    kind,
+    preview,
+    thumbnail: null,
+    pinned: false,
+    timeUs: 0,
+});
+
+test('a search keeps the entries whose text has the query, in order', () => {
+    const entries = [entry('1', 'text', 'Hello World'), entry('2', 'text', 'goodbye'), entry('3', 'text', 'WORLD cup')];
+    assert.deepEqual(
+        filterEntries(entries, 'world').map((e) => e.id),
+        ['1', '3'],
+    );
+});
+
+test('an empty or blank search keeps everything', () => {
+    const entries = [entry('1', 'text', 'a'), entry('2', 'image', '10 × 10')];
+    assert.equal(filterEntries(entries, '').length, 2);
+    assert.equal(filterEntries(entries, '   ').length, 2);
+});
+
+test('a search ignores case and accents and trims the query', () => {
+    const entries = [entry('1', 'text', 'Café crème'), entry('2', 'text', 'cafe'), entry('3', 'text', 'tea')];
+    assert.deepEqual(
+        filterEntries(entries, '  CAFE ').map((e) => e.id),
+        ['1', '2'],
+    );
+});
+
+test('pictures match picture and their size', () => {
+    const entries = [entry('1', 'image', '400 × 200'), entry('2', 'text', 'a picture frame'), entry('3', 'text', 'x')];
+    assert.deepEqual(
+        filterEntries(entries, 'picture').map((e) => e.id),
+        ['1', '2'],
+    );
+    assert.deepEqual(
+        filterEntries(entries, '400').map((e) => e.id),
+        ['1'],
+    );
+});
+
+test('the search row adds its height to the page', () => {
+    assert.equal(pageHeight(3, false), listHeight(3));
+    assert.equal(pageHeight(3, true), SEARCH_HEIGHT + 4 + listHeight(3));
+    assert.equal(pageHeight(0, true), SEARCH_HEIGHT + 4 + listHeight(0));
 });

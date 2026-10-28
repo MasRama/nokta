@@ -516,8 +516,21 @@
     spacing: 2px;
 }
 
+.nokta-clip-page,
 .nokta-clip-list {
     spacing: 4px;
+}
+
+.nokta-clip-search {
+    padding: 0 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    caret-size: 1px;
+}
+
+.nokta-clip-search-icon {
+    icon-size: 14px;
+    padding-right: 6px;
 }
 
 .nokta-clip-row {
