@@ -102,12 +102,36 @@ wait_for "a click on the lyrics view closes it" \
     "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5
 # The grid button at the player's top right opens home, whose music button
 # goes back to the player.
-js "$FIND one('nokta-home-button').emit('clicked', 1); true" > /dev/null
+js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null
 wait_for "the grid button opens home over the player" \
     "$FIND shown('nokta-panel') && shown('nokta-panel-player') && !shown('nokta-expanded')" 5
 "$HERE/shot.sh" smoke-home > /dev/null
 js "$FIND one('nokta-panel-player').emit('clicked', 1); true" > /dev/null
 wait_for "the music button goes back to the player" "$FIND shown('nokta-expanded') && !shown('nokta-panel')" 5
+# With the devshell's own PipeWire and its two silent outputs, the speaker
+# button lists both; the menu holds the notch open after the pointer leaves,
+# and picking the headphones switches the output and lets the notch close.
+if [ -S "$STATE/runtime/pulse/native" ]; then
+    MENU="$FIND const menu = () => find(Main.layoutManager.uiGroup, 'nokta-output-menu').find((a) => a.mapped);
+const items = () => find(menu(), 'popup-menu-item');"
+    wait_for "the open player shows the speakers as the sound output" \
+        "$FIND shown('nokta-output-button') && one('nokta-output-button').child.icon_name === 'audio-speakers-symbolic'" 10
+    js "$FIND one('nokta-output-button').emit('clicked', 1); true" > /dev/null
+    wait_for "the output button lists both outputs" \
+        "$MENU menu() !== undefined && items().map((i) => i.label_actor?.text).join() === 'Headphones,Speakers'" 5 \
+        "$MENU JSON.stringify(menu() && items().map((i) => i.label_actor?.text))"
+    sleep 0.4
+    "$HERE/shot.sh" smoke-outputs > /dev/null
+    "$HERE/hover.sh" off > /dev/null
+    sleep 1
+    [ "$(js "$FIND shown('nokta-expanded')")" = true ] || fail "the notch closed under the output menu"
+    ok "the output menu holds the notch open"
+    js "$MENU items().find((i) => i.label_actor?.text === 'Headphones').activate(imports.gi.Clutter.get_current_event()); true" > /dev/null
+    wait_for "picking the headphones switches the sound output" \
+        "$FIND one('nokta-output-button').child.icon_name === 'audio-headphones-symbolic'" 5
+else
+    echo "smoke: skip: the devshell has no PipeWire, so no output switching"
+fi
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 

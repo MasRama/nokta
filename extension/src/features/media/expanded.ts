@@ -7,8 +7,10 @@ import { setVertical } from '../../shared/compat.js';
 import { mix } from '../../shared/logic/color.js';
 import { Cover } from './cover.js';
 import { loopIcon, nextLoopStatus, shuffleIcon, type LoopStatus, type ToggleIcon } from './logic/loop.js';
+import { outputIcon, type AudioOutput } from './logic/outputs.js';
 import { neighbour, playerLabels, scrollStep, type PlayerEntry, type ScrollDirection } from './logic/players.js';
 import type { MediaSnapshot } from './logic/snapshot.js';
+import { OutputMenu, type OutputMenuHandlers } from './output-menu.js';
 import { ProgressBar } from './progress.js';
 
 export interface MediaControls {
@@ -64,9 +66,14 @@ export class ExpandedMediaView {
     private playerId = '';
     private lastScrollMs = 0;
     private accent = '#ffffff';
+    private readonly outputButton: St.Button;
+    private readonly outputIcon: St.Icon;
+    private readonly outputMenu: OutputMenu;
+    private outputs: readonly AudioOutput[] = [];
+    private activeOutput: number | null = null;
 
-    /** `openHome` goes to the open notch's other page. */
-    constructor(controls: MediaControls, openHome: () => void) {
+    /** `openHome` goes to the open notch's other page; `outputs` switches the sound output. */
+    constructor(controls: MediaControls, openHome: () => void, outputs: OutputMenuHandlers) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));
 
         const top = new St.BoxLayout({ style_class: 'nokta-expanded-top' });
@@ -92,12 +99,23 @@ export class ExpandedMediaView {
         top.add_child(this.cover.actor);
         top.add_child(this.info);
         const home = new St.Button({
-            style_class: 'nokta-button nokta-home-button',
+            style_class: 'nokta-button nokta-home-button nokta-grid-button',
             child: new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'nokta-home-icon' }),
             y_align: Clutter.ActorAlign.START,
             can_focus: true,
         });
         home.connect('clicked', openHome);
+        this.outputIcon = new St.Icon({ icon_name: outputIcon(null), style_class: 'nokta-home-icon' });
+        this.outputButton = new St.Button({
+            style_class: 'nokta-button nokta-home-button nokta-output-button',
+            child: this.outputIcon,
+            y_align: Clutter.ActorAlign.START,
+            can_focus: true,
+            visible: false,
+        });
+        this.outputMenu = new OutputMenu(this.outputButton, outputs);
+        this.outputButton.connect('clicked', () => this.outputMenu.open(this.outputs, this.activeOutput));
+        top.add_child(this.outputButton);
         top.add_child(home);
 
         this.progress = new ProgressBar((us) => controls.setPosition(us));
@@ -164,7 +182,22 @@ export class ExpandedMediaView {
         this.showToggle(this.loop, this.loop.visible, loopIcon(this.loopStatus));
     }
 
+    /** The speaker button shows the output in use; it hides with one output or none. */
+    setOutputs(outputs: readonly AudioOutput[], activeId: number | null): void {
+        this.outputs = outputs;
+        this.activeOutput = activeId;
+        this.outputIcon.icon_name = outputIcon(outputs.find((o) => o.id === activeId) ?? null);
+        this.outputButton.visible = outputs.length > 1;
+        if (!this.outputButton.visible) this.outputMenu.close();
+    }
+
+    /** The notch is closing: the menu goes with it. */
+    closeMenus(): void {
+        this.outputMenu.close();
+    }
+
     destroy(): void {
+        this.outputMenu.destroy();
         this.progress.destroy();
         this.actor.destroy();
     }
