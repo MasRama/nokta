@@ -189,7 +189,7 @@ wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokt
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
 # The windows the shell has, printed when the settings window does not open.
-WINDOWS="global.get_window_actors().map((w) => [w.meta_window.get_title(), w.mapped, w.opacity].join(' ')).join('; ')"
+WINDOWS="JSON.stringify({overview: Main.overview.visible, group: global.window_group.visible, windows: global.get_window_actors().map((w) => [w.meta_window.get_title(), w.mapped, w.visible, w.opacity, w.meta_window.minimized, w.meta_window.get_workspace()?.index(), global.workspace_manager.get_active_workspace_index()].join(' '))})"
 wait_for "the settings window opens" \
     "global.get_window_actors().some((w) => w.meta_window.get_title() === 'Nokta' && w.mapped && w.opacity === 255)" 30 \
     "$WINDOWS"
