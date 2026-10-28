@@ -63,7 +63,7 @@ notifications. Hover over it to open it.
 - **[Screenshots](#screenshots).** After a screenshot, the notch shows it
   with buttons to open it, show it in Files or keep it on the shelf.
 - **[Clipboard history](#clipboard-history).** What you copy, text and
-  pictures, ready to copy again from home.
+  pictures, ready to search and copy again from home.
 - **Privacy dots.** A green dot while an app uses the camera, an orange
   one for the microphone or screen sharing.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
@@ -171,8 +171,10 @@ its first line, pictures with a thumbnail. Click an entry to copy it again,
 ready to paste. Its pin keeps it when the history is full or cleared, and
 its `×` takes it out. Scroll over the list for older entries.
 
-The buttons in the header pause the history (copies are not kept until you
-resume) and clear it. The notch's right-click menu has `Pause clipboard`
+The magnifier in the header searches: type to filter the list (case and
+accents do not matter, and `picture` finds pictures), press Enter to copy
+the first match, or Escape to close the search. The other buttons pause the
+history (copies are not kept until you resume) and clear it. The notch's right-click menu has `Pause clipboard`
 too. Nokta skips what a password manager marks as secret, and pictures
 larger than 8 MB. The history is kept in memory only, so it is empty again
 after you log out.
