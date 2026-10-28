@@ -50,7 +50,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
-                    notifications
+                    notifications, panel
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -64,10 +64,12 @@ docs/               design spec, plans, manual test checklist
 - A feature exposes only what its `mod.rs` (Rust) or `index.ts` (TypeScript)
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
-  current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`
-  and `notifications` depend on no other feature; `extension.ts` shows device and timer alerts through
+  current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`,
+  `notifications` and `panel` depend on no other feature; `extension.ts` shows device and timer alerts through
   the OSD row, and `monitor-notch.ts` puts the timer where the clock or the
-  equalizer would be.
+  equalizer would be. `panel` (what hovering the idle notch opens) only
+  draws the date and two buttons; `extension.ts` fills them from
+  `notifications` and `timer`.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings. `privacy` (the camera,
