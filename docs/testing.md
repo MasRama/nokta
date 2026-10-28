@@ -31,6 +31,9 @@ fully isolated from your session:
   pair of earbuds), which `noktad` reaches as its system bus there;
 - a fake GNOME session manager (`fake-session.js`) that only keeps
   inhibitors, for the Caffeine toggle.
+- its own PipeWire (`pipewire.conf`) with two silent outputs, Speakers and
+  Headphones, when `pipewire-pulse` and `pw-metadata` are installed. It sits
+  in the devshell's runtime directory, so your real sound is never touched.
 
 It also loads `devtools@nokta.io`, a development-only extension that allows
 screenshots and `Eval` inside that shell. It is never packed or installed.
@@ -70,7 +73,7 @@ tools/devshell/stop.sh
 ```
 
 `run.sh --no-daemon` starts without `noktad`, `--no-player` without the fake
-player, and `--players=N` with N fake players (the others start paused). Logs of every process are in `build/devshell/*.log`; the shell's is
+player, `--no-audio` without the private PipeWire, and `--players=N` with N fake players (the others start paused). Logs of every process are in `build/devshell/*.log`; the shell's is
 `shell.log`, and a clean run has no `JS ERROR` or `JS WARNING` lines.
 
 The daemon's config file in the devshell is
@@ -276,6 +279,18 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       the current one larger and lit as it is sung; they slide up as lines
       change.
       A click on them, the next track or moving the pointer away closes it.
+
+### Sound output
+
+- [ ] Hover while the fake player plays: a speaker button left of the grid
+      button. A click opens a menu with Headphones and Speakers, Speakers
+      checked; the notch stays open while it shows, even with the pointer
+      away.
+- [ ] Pick Headphones: the menu closes, the button shows headphones, and
+      Quick Settings' sound menu shows the same output.
+- [ ] `run.sh --no-audio`: no speaker button.
+- [ ] Plug in or connect headphones *(real session)*: they show in the menu
+      right away; picking them moves the sound like Quick Settings does.
 
 ### Live activities
 
