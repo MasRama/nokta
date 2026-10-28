@@ -8,6 +8,7 @@ import {
     DEFAULT_LYRICS,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
+    DEFAULT_WEATHER,
 } from '../src/features/settings/logic/parse.js';
 import { allRows, rowValue, SETTINGS_PAGES, variantType } from '../src/features/settings/logic/schema.js';
 
@@ -19,6 +20,7 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     timer: { ...DEFAULT_TIMER },
     notifications: { ...DEFAULT_NOTIFICATIONS },
     activities: { ...DEFAULT_ACTIVITIES },
+    weather: { ...DEFAULT_WEATHER },
 };
 
 test('every_setting_has_exactly_one_row', () => {

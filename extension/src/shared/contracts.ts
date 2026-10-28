@@ -17,6 +17,7 @@ export const PATHS = {
     Devices1: '/io/nokta/Devices',
     Timer1: '/io/nokta/Timer',
     Activities1: '/io/nokta/Activities',
+    Weather1: '/io/nokta/Weather',
 } as const;
 
 export interface NoktaProps {
@@ -87,6 +88,7 @@ export interface SettingsProps {
     Timer: Record<string, unknown>;
     Notifications: Record<string, unknown>;
     Activities: Record<string, unknown>;
+    Weather: Record<string, unknown>;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */
@@ -132,4 +134,20 @@ export const ACTIVITIES_METHODS = {
 /** io.nokta.Activities1 signals and the D-Bus signature of their arguments. */
 export const ACTIVITIES_SIGNALS = {
     Ended: 'ssbsx',
+} as const;
+
+export interface WeatherProps {
+    Status: string;
+    Place: string;
+    Temperature: number;
+    High: number;
+    Low: number;
+    Units: string;
+    Condition: string;
+    IsDay: boolean;
+}
+
+/** io.nokta.Weather1 methods and the D-Bus signature of their arguments. */
+export const WEATHER_METHODS = {
+    Refresh: '',
 } as const;

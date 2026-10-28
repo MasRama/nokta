@@ -108,9 +108,15 @@ wait_for "the idle notch shows the clock in 180 px" \
 
 # Hovering the idle notch opens the panel; its notifications button opens
 # GNOME's calendar from the top bar and gives the menu back to the clock.
+# With a location set, the fake Open-Meteo's weather shows beside the date.
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set weather location "<'Jakarta'>" > /dev/null
 "$HERE/hover.sh" on > /dev/null
 wait_for "hovering the idle notch opens the panel with the date" \
     "$FIND shown('nokta-panel') && one('nokta-panel-date').text.length > 0 && width() === 420" 5
+wait_for "the panel shows the weather beside the date" \
+    "$FIND shown('nokta-panel-weather') && one('nokta-panel-weather-temperature').text === '31°' && one('nokta-panel-weather-detail').text === 'Jakarta · 33° / 25°'" 5 \
+    "$FIND JSON.stringify([shown('nokta-panel-weather'), one('nokta-panel-weather-temperature')?.text, one('nokta-panel-weather-detail')?.text])"
 "$HERE/shot.sh" smoke-panel > /dev/null
 DATE_MENU="Main.panel.statusArea.dateMenu.menu"
 js "$FIND one('nokta-panel-button').emit('clicked', 1); true" > /dev/null
