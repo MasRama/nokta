@@ -95,13 +95,37 @@ done
 ok "the repeat button turns the player's repeat on"
 "$HERE/shot.sh" smoke-expanded > /dev/null
 # The fake LRCLIB has synced lyrics for the fake track: they add a 44 px lyric
-# row to the 150 px player, a click on it opens the 310 px lyrics view, and a
-# click on that closes it.
+# row to the 150 px player, a click on it opens the 336 px lyrics view (with
+# its timing row), and a click on that closes it.
 wait_for "the open player shows a synced lyric line" "$FIND shown('nokta-lyric') && one('nokta-lyric').text.length > 0" 10
 js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyric opens the lyrics view" \
-    "$FIND shown('nokta-lyrics-current') && one('nokta-lyrics-current').text.length > 0 && !shown('nokta-lyric') && Math.round(one('nokta-body').height) === 310" 5
+    "$FIND shown('nokta-lyrics-current') && one('nokta-lyrics-current').text.length > 0 && !shown('nokta-lyric') && Math.round(one('nokta-body').height) === 336" 5
+wait_for "the lyrics view's timing row says the lyrics are on time" \
+    "$FIND shown('nokta-lyrics-footer') && one('nokta-lyrics-offset-label').text === 'On time'" 5
 "$HERE/shot.sh" smoke-lyrics > /dev/null
+# + shows the lyrics a quarter second earlier: noktad keeps the offset and
+# sends the lines shifted (the second line starts at 15 s), and the view
+# stays open. A click on the label puts it back.
+lyrics_prop() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Lyrics \
+        --method org.freedesktop.DBus.Properties.Get io.nokta.Lyrics1 "$1"
+}
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-lyrics-step')[1].emit('clicked', 1); true" > /dev/null
+wait_for "+ moves the lyrics 0.25 s earlier and keeps the view open" \
+    "$FIND one('nokta-lyrics-offset-label').text === '0.25 s earlier' && shown('nokta-lyrics-current') && Math.round(one('nokta-body').height) === 336" 5 \
+    "$FIND one('nokta-lyrics-offset-label')?.text"
+lyrics_prop OffsetMs | grep -q "<int64 250>" || fail "OffsetMs is not 250: $(lyrics_prop OffsetMs)"
+lyrics_prop Lines | grep -q "14750000" || fail "the lines did not move: $(lyrics_prop Lines)"
+ok "noktad keeps the offset and shifts the lines"
+sleep 0.5
+"$HERE/shot.sh" smoke-lyrics-offset > /dev/null
+js "$FIND one('nokta-lyrics-offset').emit('clicked', 1); true" > /dev/null
+wait_for "a click on the label puts the lyrics back on time" \
+    "$FIND one('nokta-lyrics-offset-label').text === 'On time' && shown('nokta-lyrics-current')" 5
+lyrics_prop OffsetMs | grep -q "<int64 0>" || fail "OffsetMs is not 0: $(lyrics_prop OffsetMs)"
+lyrics_prop Lines | grep -q "15000000" || fail "the lines did not move back: $(lyrics_prop Lines)"
+ok "the offset is back to 0"
 js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyrics view closes it" \
     "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5

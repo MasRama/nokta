@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, watch};
 use super::{OpenMeteoUrls, USER_AGENT};
 use crate::features::activities;
 use crate::features::clipboard;
-use crate::features::lyrics::{self, cache::Cache, lrclib, LyricsState};
+use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
 use crate::features::shelf;
@@ -23,7 +23,7 @@ use crate::shared::paths::Paths;
 pub struct Services {
     pub config: watch::Receiver<Config>,
     pub config_file: PathBuf,
-    pub lyrics: watch::Receiver<LyricsState>,
+    pub lyrics: lyrics::service::Handle,
     pub timer: Timer,
     pub activities: activities::service::Handle,
     pub weather: weather::service::Handle,
@@ -66,6 +66,7 @@ impl Services {
             Cache::new(paths.cache_dir.join("lyrics")),
             Arc::new(lrclib::Client::new(lrclib_base_url, USER_AGENT)),
             paths.lyrics_dir.clone(),
+            paths.lyrics_offsets_file.clone(),
         );
 
         let (commands, state, finished) = timer::service::spawn(timer_lengths(config.clone()));
@@ -189,7 +190,7 @@ mod tests {
 
         assert!(paths.config_file.exists(), "the default config is written");
         assert_eq!(services.config.borrow().timer.focus_minutes, 25);
-        assert_eq!(services.lyrics.borrow().status, Status::None);
+        assert_eq!(services.lyrics.state.borrow().status, Status::None);
         assert_eq!(
             services.weather.state.borrow().status,
             weather::Status::Off,

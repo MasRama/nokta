@@ -232,7 +232,10 @@ export class MonitorNotch implements ShelfNotch {
     private shownPalette: Palette;
     private readonly lyricLine = new LyricLine(() => this.setLyricsOpen(!this.lyricsOpen));
     /** The lyrics view, open in place of the lyric line until a click, the track changing or the notch closing. */
-    private readonly lyricsSheet = new LyricsSheet(() => this.setLyricsOpen(false));
+    private readonly lyricsSheet = new LyricsSheet(
+        () => this.setLyricsOpen(false),
+        (offsetMs) => this.sources.lyrics.setOffset(offsetMs),
+    );
     private lyricsOpen = false;
     /** The track the lyrics view opened for. */
     private lyricsTrack = '';
@@ -1287,7 +1290,7 @@ export class MonitorNotch implements ShelfNotch {
         const progress = lineProgress(lyrics.lines, position, snapshot.rate);
         if (this.lyricsOpen) {
             this.lyricLine.show(null);
-            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS), progress, playing);
+            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS), progress, playing, lyrics.offsetMs);
             return;
         }
         const text = visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position);

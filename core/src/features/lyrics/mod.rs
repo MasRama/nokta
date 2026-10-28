@@ -8,6 +8,7 @@ pub mod key;
 pub mod local;
 pub mod lrc;
 pub mod lrclib;
+pub mod offsets;
 pub mod service;
 
 use serde::{Deserialize, Serialize};
@@ -56,11 +57,14 @@ impl Status {
     }
 }
 
-/// Lyrics for the active track. `lines` is only filled when `status` is `Synced`.
+/// Lyrics for the active track. `lines` is only filled when `status` is
+/// `Synced`, and is already shifted by `offset_ms`.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct LyricsState {
     pub status: Status,
     pub lines: Vec<Line>,
+    /// The user's timing for the track; positive shows the lyrics earlier.
+    pub offset_ms: i64,
 }
 
 impl From<Lookup> for LyricsState {
@@ -71,6 +75,10 @@ impl From<Lookup> for LyricsState {
             Lookup::Instrumental => (Status::Instrumental, Vec::new()),
             Lookup::NotFound => (Status::NotFound, Vec::new()),
         };
-        LyricsState { status, lines }
+        LyricsState {
+            status,
+            lines,
+            offset_ms: 0,
+        }
     }
 }

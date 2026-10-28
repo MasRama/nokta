@@ -525,6 +525,25 @@
     font-size: 17px;
 }
 
+/* The lyrics view's timing row: −, the offset, +. */
+.nokta-lyrics-footer {
+    spacing: 6px;
+}
+
+.nokta-lyrics-step .nokta-button-icon {
+    icon-size: 14px;
+}
+
+.nokta-lyrics-offset {
+    padding: 4px 10px;
+}
+
+.nokta-lyrics-offset-label {
+    font-size: 12px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
 .nokta-shelf-slot {
     border-radius: 10px;
 }
