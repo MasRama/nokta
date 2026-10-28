@@ -99,10 +99,10 @@ set_key weather location "<'Jakarta'>"
 # The player and its lyrics.
 "$HERE/hover.sh" on > /dev/null
 wait_for "the player" "$FIND shown('nokta-expanded') && shown('nokta-lyric') && one('nokta-lyric').text.length > 0" 15
-shot player 340
+shot player 360
 js "$FIND one('nokta-lyric-button').emit('clicked', 1); true"
-wait_for "the lyrics" "$FIND shown('nokta-lyrics-current') && Math.round(one('nokta-body').height) === 310" 5
-shot lyrics 340
+wait_for "the lyrics" "$FIND shown('nokta-lyrics-current') && Math.round(one('nokta-body').height) === 336" 5
+shot lyrics 360
 js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true"
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 10
