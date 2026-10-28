@@ -75,7 +75,10 @@ impl Services {
             )),
             monotonic_us,
         );
-        let shelf = shelf::service::spawn();
+        let shelf = shelf::service::spawn(shelf::ThumbnailDirs {
+            system: paths.system_thumbnails.clone(),
+            own: paths.cache_dir.join("thumbnails"),
+        });
 
         Services {
             config,

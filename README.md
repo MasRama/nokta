@@ -255,7 +255,8 @@ notch, with its percentage when it reports one; hover to see up to three.
 Drag files from Files, a browser or any other app to the notch: it opens
 with `Drop to keep here`, and the files you drop stay on its shelf. The
 closed notch then shows how many there are, and the open notch lists them,
-newest first, after a stack that holds them all. Drag a file (or the
+newest first, after a stack that holds them all. Pictures and the files
+Files has a thumbnail for show that thumbnail in place of their icon. Drag a file (or the
 stack, for all of them) into another app, for example a chat, to send it;
 it leaves the shelf once the app takes it. Click a file to open it, or its
 `×` to take it off. The shelf keeps up to 30 files, forgets one that is

@@ -5,8 +5,10 @@
 pub mod dbus;
 pub mod model;
 pub mod service;
+pub mod thumbnails;
 
 #[cfg(test)]
 mod tests;
 
 pub use model::Item;
+pub use thumbnails::ThumbnailDirs;

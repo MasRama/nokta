@@ -33,6 +33,8 @@ pub struct Paths {
     pub cache_dir: PathBuf,
     /// The user's own `.lrc` files.
     pub lyrics_dir: PathBuf,
+    /// The freedesktop thumbnail cache that Files fills; Linux only.
+    pub system_thumbnails: Option<PathBuf>,
 }
 
 impl Paths {
@@ -42,6 +44,7 @@ impl Paths {
             config_file: config_home.join("nokta").join("config.toml"),
             cache_dir: cache_home.join("nokta"),
             lyrics_dir: data_home.join("nokta").join("lyrics"),
+            system_thumbnails: Some(cache_home.join("thumbnails")),
         }
     }
 
@@ -78,6 +81,7 @@ impl Paths {
                     config_file: support.join("config.toml"),
                     cache_dir: library.join("Caches").join("nokta"),
                     lyrics_dir: support.join("lyrics"),
+                    system_thumbnails: None,
                 }
             }
             System::Windows => {
@@ -86,6 +90,7 @@ impl Paths {
                     config_file: roaming.join("config.toml"),
                     cache_dir: need("LOCALAPPDATA")?.join("nokta").join("cache"),
                     lyrics_dir: roaming.join("lyrics"),
+                    system_thumbnails: None,
                 }
             }
         })
@@ -109,6 +114,10 @@ mod tests {
         assert_eq!(paths.config_file, Path::new("/c/nokta/config.toml"));
         assert_eq!(paths.cache_dir, Path::new("/k/nokta"));
         assert_eq!(paths.lyrics_dir, Path::new("/d/nokta/lyrics"));
+        assert_eq!(
+            paths.system_thumbnails.as_deref(),
+            Some(Path::new("/k/thumbnails"))
+        );
     }
 
     #[test]

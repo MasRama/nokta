@@ -157,6 +157,8 @@ export const WEATHER_METHODS = {
 export interface ShelfProps {
     /** URI, display name and icon name of each parked file, oldest first. */
     Items: Array<[string, string, string]>;
+    /** URI to the path of a PNG, for the items that have a picture. */
+    Thumbnails: Record<string, string>;
 }
 
 /** io.nokta.Shelf1 methods and the D-Bus signature of their arguments. */

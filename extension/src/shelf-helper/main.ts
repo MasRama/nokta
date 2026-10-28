@@ -5,6 +5,7 @@
 // noktad for the items and tells the shell what the pointer does on its
 // standard output (see features/shelf/logic/protocol.ts).
 import Gdk from 'gi://Gdk?version=4.0';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
@@ -18,6 +19,7 @@ import { watchDaemon } from '../shared/dbus.js';
 
 const URI_LIST = 'text/uri-list';
 const DRAG_ICON_SIZE = 32;
+const DRAG_THUMBNAIL_SIZE = 64;
 
 function tell(event: HelperEvent): void {
     print(helperLine(event));
@@ -155,6 +157,26 @@ function readUris(gdkDrop: Gdk.Drop): Promise<string[]> {
     });
 }
 
+/** The file's thumbnail under the pointer, or its icon when it has none. */
+function setDragIcon(item: ShelfItem, theme: Gtk.IconTheme): void {
+    if (item.thumbnail) {
+        try {
+            const picture = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+                item.thumbnail,
+                DRAG_THUMBNAIL_SIZE,
+                DRAG_THUMBNAIL_SIZE,
+                true,
+            );
+            drag.set_icon(Gdk.Texture.new_for_pixbuf(picture), picture.width / 2, picture.height / 2);
+            return;
+        } catch (error) {
+            console.warn('nokta-shelf: no thumbnail', error);
+        }
+    }
+    const icon = theme.lookup_icon(item.icon, null, DRAG_ICON_SIZE, 1, Gtk.TextDirection.NONE, 0);
+    drag.set_icon(icon, DRAG_ICON_SIZE / 2, DRAG_ICON_SIZE / 2);
+}
+
 // Dragging a file out moves it off the shelf once an app has taken it.
 // The stack drags every file at once.
 let dragged: readonly ShelfItem[] = [];
@@ -165,15 +187,7 @@ drag.connect('prepare', (_s, x: number, y: number) => {
     if (!hit || hit.close) return null;
     dragged = hit.kind === 'stack' ? [...items] : [items[hit.index]];
     if (dragged.length === 0) return null;
-    const icon = Gtk.IconTheme.get_for_display(display).lookup_icon(
-        dragged[dragged.length - 1].icon,
-        null,
-        DRAG_ICON_SIZE,
-        1,
-        Gtk.TextDirection.NONE,
-        0,
-    );
-    drag.set_icon(icon, DRAG_ICON_SIZE / 2, DRAG_ICON_SIZE / 2);
+    setDragIcon(dragged[dragged.length - 1], Gtk.IconTheme.get_for_display(display));
     const files = new GObject.Value();
     files.init(Gdk.FileList.$gtype);
     files.set_boxed(Gdk.FileList.new_from_array(dragged.map((item) => Gio.File.new_for_uri(item.uri))));

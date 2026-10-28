@@ -4,6 +4,8 @@ export interface ShelfItem {
     name: string;
     /** An icon name from the icon theme. */
     icon: string;
+    /** A PNG to show instead of the icon (io.nokta.Shelf1.Thumbnails), or null. */
+    thumbnail: string | null;
 }
 
 export interface Rect {
@@ -13,14 +15,16 @@ export interface Rect {
     height: number;
 }
 
-/** Items, oldest first; anything malformed is skipped. */
-export function itemsFrom(raw: unknown): ShelfItem[] {
+/** Items, oldest first, with their thumbnails; anything malformed is skipped. */
+export function itemsFrom(raw: unknown, thumbnails: unknown = {}): ShelfItem[] {
     if (!Array.isArray(raw)) return [];
+    const pictures = (typeof thumbnails === 'object' && thumbnails) || {};
     const items: ShelfItem[] = [];
     for (const row of raw) {
         if (!Array.isArray(row) || row.length !== 3 || !row.every((v) => typeof v === 'string')) continue;
         const [uri, name, icon] = row as [string, string, string];
-        items.push({ uri, name, icon });
+        const picture: unknown = Object.hasOwn(pictures, uri) ? (pictures as Record<string, unknown>)[uri] : null;
+        items.push({ uri, name, icon, thumbnail: typeof picture === 'string' && picture !== '' ? picture : null });
     }
     return items;
 }

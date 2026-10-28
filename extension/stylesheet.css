@@ -442,6 +442,11 @@
     background-color: rgba(255, 255, 255, 0.14);
 }
 
+.nokta-shelf-thumbnail {
+    border-radius: 8px;
+    background-color: rgba(128, 128, 128, 0.3);
+}
+
 .nokta-shelf-stack {
     spacing: 2px;
 }

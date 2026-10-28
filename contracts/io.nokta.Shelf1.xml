@@ -25,5 +25,14 @@
     <property name="Items" type="a(sss)" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!--
+      A picture for the items that have one: URI to the path of a PNG of at
+      most 256 px. It is the thumbnail Files made (the freedesktop cache) when
+      that is newer than the file, else one noktad made for an image, at most
+      128 px. An item shows up here a moment after it joins Items.
+    -->
+    <property name="Thumbnails" type="a{ss}" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
   </interface>
 </node>

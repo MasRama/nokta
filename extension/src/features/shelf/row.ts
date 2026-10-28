@@ -9,6 +9,7 @@ import { CLOSE_SIZE, itemRects, SHELF_ROW_HEIGHT, type Hit, type SlotRect } from
 
 export const SHELF_ICON = 'folder-documents-symbolic';
 const FILE_ICON_SIZE = 32;
+const THUMBNAIL_SIZE = 36;
 const STACK_ICON_SIZE = 22;
 
 /**
@@ -140,7 +141,22 @@ export class ShelfRow {
         return box;
     }
 
-    private file(item: ShelfItem): St.Icon {
+    private file(item: ShelfItem): St.Widget {
+        if (item.thumbnail) {
+            // A file URI is percent-encoded, so quotes in the path cannot
+            // break out of the CSS string.
+            const uri = GLib.filename_to_uri(item.thumbnail, null);
+            return new St.Bin({
+                style_class: 'nokta-shelf-thumbnail',
+                style: `background-image: url("${uri}"); background-size: cover;`,
+                width: THUMBNAIL_SIZE,
+                height: THUMBNAIL_SIZE,
+                x_expand: true,
+                y_expand: true,
+                x_align: Clutter.ActorAlign.CENTER,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+        }
         return new St.Icon({
             gicon: new Gio.ThemedIcon({ name: item.icon }),
             fallback_icon_name: 'application-x-generic',
