@@ -7,7 +7,7 @@ hand before a release and after any change to the extension's UI.
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens the panel and its notifications button opens the calendar, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -98,6 +98,13 @@ must curve inward, the notch must be centered, and no text may be clipped.
       back; `player.sh Stopped 2` hides the arrows.
 - [ ] Leaving (`hover.sh off`) closes after `close_delay_ms`; moving back on
       during that delay keeps it open.
+- [ ] **Idle panel** (`player.sh Stopped`, `hover.sh on`): the date, a
+      notifications button with the count, and `Focus · 25 min`, 420 px
+      wide. The notifications button closes the panel and opens GNOME's
+      calendar under the top bar, also with the clock hidden by another
+      extension. The focus button starts focus and then reads `Stop focus`.
+- [ ] A player stopping or starting under the pointer swaps the panel and
+      the player view without closing.
 - [ ] Passing over the notch quickly (less than `open_delay_ms`) does not
       open it.
 

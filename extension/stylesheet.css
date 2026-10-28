@@ -180,3 +180,34 @@
 .nokta-notification-detail {
     font-size: 12px;
 }
+
+.nokta-panel {
+    padding: 14px 18px 14px 18px;
+    spacing: 10px;
+}
+
+.nokta-panel-date {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.nokta-panel-buttons {
+    spacing: 8px;
+}
+
+.nokta-panel-button {
+    border-radius: 10px;
+    padding: 7px 12px;
+}
+
+.nokta-panel-button-box {
+    spacing: 8px;
+}
+
+.nokta-panel-button-icon {
+    icon-size: 16px;
+}
+
+.nokta-panel-button-label {
+    font-size: 12px;
+}

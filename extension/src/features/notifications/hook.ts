@@ -1,3 +1,4 @@
+import type Clutter from 'gi://Clutter';
 import type Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -51,4 +52,58 @@ export function takeOverBanners(show: (notification: TrayNotification) => boolea
         next.acknowledged = true;
         next.playSound?.();
     });
+}
+
+/** How many notifications wait in GNOME's message list; null when this GNOME does not say. */
+export function notificationCount(): number | null {
+    const tray = Main.messageTray as unknown as { getSources?: () => Array<{ notifications?: unknown }> };
+    if (typeof tray.getSources !== 'function') return null;
+    let count = 0;
+    for (const source of tray.getSources()) {
+        if (Array.isArray(source.notifications)) count += source.notifications.length;
+    }
+    return count;
+}
+
+/** The parts of ui/popupMenu.js PopupMenu used here. */
+interface DateMenu {
+    sourceActor: Clutter.Actor;
+    isOpen: boolean;
+    toggle(): void;
+    close(animate?: number): void;
+    connect(signal: 'open-state-changed', callback: (menu: unknown, open: boolean) => void): number;
+    disconnect(id: number): void;
+}
+
+/**
+ * Opens GNOME's calendar and message list in the middle of the top bar,
+ * under the notch, so it works while the top bar's clock is hidden. The
+ * menu points at its own clock again once it closes. Returns an undo for
+ * disable(), or null when this GNOME has no such menu.
+ */
+export function openMessageList(): Restore | null {
+    const indicator = Main.panel.statusArea.dateMenu as unknown as { menu?: DateMenu } | undefined;
+    const menu = indicator?.menu;
+    if (!menu || typeof menu.toggle !== 'function' || !('sourceActor' in menu)) return null;
+    if (menu.isOpen) {
+        menu.close();
+        return null;
+    }
+    const clock = menu.sourceActor;
+    let id = 0;
+    const restore = () => {
+        if (!id) return;
+        menu.disconnect(id);
+        id = 0;
+        menu.sourceActor = clock;
+    };
+    id = menu.connect('open-state-changed', (_menu, open) => {
+        if (!open) restore();
+    });
+    menu.sourceActor = Main.panel as unknown as Clutter.Actor;
+    menu.toggle();
+    return () => {
+        if (id && menu.isOpen) menu.close();
+        restore();
+    };
 }

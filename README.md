@@ -12,7 +12,9 @@ full. A focus timer from Quick Settings counts down in the notch and
 starts a short break when the session ends. While an app uses the camera,
 the microphone or screen sharing, small green and orange dots sit in the
 notch's left corner. Notifications show in the notch instead of GNOME's
-banner: hover to keep one open, click it to open the app. Every monitor has
+banner: hover to keep one open, click it to open the app. When nothing
+plays, hovering the notch opens the date, a button to the notification list
+and one to start or stop focus. Every monitor has
 its own notch,
 and these messages show on the monitor you are working on.
 

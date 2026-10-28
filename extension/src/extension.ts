@@ -6,7 +6,14 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
-import { notificationLines, takeOverBanners, takesBanner, type TrayNotification } from './features/notifications/index.js';
+import {
+    notificationCount,
+    notificationLines,
+    openMessageList,
+    takeOverBanners,
+    takesBanner,
+    type TrayNotification,
+} from './features/notifications/index.js';
 import {
     CapsLockWatcher,
     capsLockContent,
@@ -16,11 +23,13 @@ import {
     type OsdContent,
     type OsdRequest,
 } from './features/osd/index.js';
+import { notificationsLabel, type PanelContent } from './features/panel/index.js';
 import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import {
     breakAfterFocus,
     finishedAlert,
+    focusButtonLabel,
     FocusShortcut,
     FocusToggle,
     gnomeBanners,
@@ -30,7 +39,7 @@ import {
     TimerClient,
     wantsQuiet,
 } from './features/timer/index.js';
-import { MonitorNotch } from './monitor-notch.js';
+import { MonitorNotch, type PanelSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
@@ -76,6 +85,16 @@ class Session {
     private restoreOsd: Restore | null = null;
     private capsLock: CapsLockWatcher | null = null;
     private restoreBanners: Restore | null = null;
+    /** Puts the calendar back under its own clock, while the notch opened it. */
+    private restoreMessageList: Restore | null = null;
+    private readonly panel: PanelSource = {
+        content: () => this.panelContent(),
+        openNotifications: () => {
+            this.restoreMessageList?.();
+            this.restoreMessageList = openMessageList();
+        },
+        toggleFocus: () => this.onFocusShortcut(),
+    };
     /** The notification in a notch, watched so the notch closes when it goes away. */
     private shownNotification: { notification: TrayNotification; notch: MonitorNotch; destroyId: number } | null =
         null;
@@ -133,6 +152,8 @@ class Session {
         this.restoreBanners?.();
         this.restoreBanners = null;
         this.releaseNotification();
+        this.restoreMessageList?.();
+        this.restoreMessageList = null;
     }
 
     // Daemon
@@ -224,6 +245,7 @@ class Session {
             lyrics: this.lyrics,
             timer: this.timer,
             privacy: this.privacy,
+            panel: this.panel,
         };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;
@@ -318,6 +340,16 @@ class Session {
             this.capsLock.destroy();
             this.capsLock = null;
         }
+    }
+
+    // The idle panel
+
+    private panelContent(): PanelContent {
+        return {
+            date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
+            notifications: notificationsLabel(notificationCount()),
+            focus: focusButtonLabel(this.timer.snapshot(), this.settings.timer.focusMinutes),
+        };
     }
 
     // Notifications (0.4 spec, section 5)

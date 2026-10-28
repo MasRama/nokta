@@ -11,7 +11,9 @@ export interface HoverDelays {
 /**
  * Which state the notch is in (spec 6.2, 6.3): Idle without a player,
  * Collapsed with one, Expanded after the pointer rests on it for the open
- * delay. Leaving closes after the close delay; coming back cancels that.
+ * delay, with or without a player. Leaving closes after the close delay;
+ * coming back cancels that. A player that comes or goes while the pointer
+ * is on the open notch keeps it open.
  */
 export class NotchMachine {
     mode: NotchMode = 'idle';
@@ -27,33 +29,43 @@ export class NotchMachine {
 
     setAvailable(available: boolean): void {
         this.available = available;
-        if (!available) {
+        if (this.mode === 'expanded') {
+            if (this.inside) return;
             this.clearTimer();
-            this.go('idle');
-        } else if (this.mode === 'idle') {
-            this.go('collapsed');
-            if (this.inside) this.startTimer(this.delays().openMs, 'expanded');
         }
+        // A pending open delay keeps running.
+        this.go(this.closed());
     }
 
     pointer(inside: boolean): void {
         this.inside = inside;
         this.clearTimer();
-        if (inside && this.mode === 'collapsed') {
-            this.startTimer(this.delays().openMs, 'expanded');
+        if (inside && this.mode !== 'expanded') {
+            this.startTimer(this.delays().openMs, () => 'expanded');
         } else if (!inside && this.mode === 'expanded') {
-            this.startTimer(this.delays().closeMs, 'collapsed');
+            this.startTimer(this.delays().closeMs, () => this.closed());
         }
+    }
+
+    /** Closes the open notch, after a click on it; it opens again when the pointer comes back. */
+    close(): void {
+        this.clearTimer();
+        this.go(this.closed());
     }
 
     destroy(): void {
         this.clearTimer();
     }
 
-    private startTimer(ms: number, target: NotchMode): void {
+    /** The mode the notch rests in when not open. */
+    private closed(): NotchMode {
+        return this.available ? 'collapsed' : 'idle';
+    }
+
+    private startTimer(ms: number, target: () => NotchMode): void {
         this.cancelTimer = this.schedule(ms, () => {
             this.cancelTimer = null;
-            if (this.available) this.go(target);
+            this.go(target());
         });
     }
 

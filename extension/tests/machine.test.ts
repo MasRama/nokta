@@ -71,15 +71,20 @@ test('leaving_before_open_delay_never_opens', () => {
     assert.equal(pending(), 0);
 });
 
-test('hover_while_idle_does_not_open', () => {
-    const { machine, advance, pending } = setup();
+test('hover_while_idle_opens_the_panel_and_leaving_closes_it', () => {
+    const { machine, advance, changes } = setup();
     machine.pointer(true);
-    advance(1000);
+    advance(119);
     assert.equal(machine.mode, 'idle');
-    assert.equal(pending(), 0);
+    advance(1);
+    assert.equal(machine.mode, 'expanded');
+    machine.pointer(false);
+    advance(300);
+    assert.equal(machine.mode, 'idle');
+    assert.deepEqual(changes, [['idle', 'expanded'], ['expanded', 'idle']]);
 });
 
-test('player_gone_while_expanded_goes_idle_and_cancels_timers', () => {
+test('player_gone_after_leaving_goes_idle_and_cancels_timers', () => {
     const { machine, advance, pending } = setup();
     machine.setAvailable(true);
     machine.pointer(true);
@@ -88,6 +93,21 @@ test('player_gone_while_expanded_goes_idle_and_cancels_timers', () => {
     machine.setAvailable(false);
     assert.equal(machine.mode, 'idle');
     assert.equal(pending(), 0);
+});
+
+test('a_player_coming_or_going_under_the_pointer_keeps_it_open', () => {
+    const { machine, advance } = setup();
+    machine.setAvailable(true);
+    machine.pointer(true);
+    advance(120);
+    machine.setAvailable(false);
+    assert.equal(machine.mode, 'expanded');
+    machine.setAvailable(true);
+    assert.equal(machine.mode, 'expanded');
+    machine.setAvailable(false);
+    machine.pointer(false);
+    advance(300);
+    assert.equal(machine.mode, 'idle');
 });
 
 test('becoming_available_under_the_pointer_starts_the_open_delay', () => {
@@ -104,4 +124,19 @@ test('destroy_cancels_pending_timers', () => {
     machine.pointer(true);
     machine.destroy();
     assert.equal(pending(), 0);
+});
+
+test('close_shuts_the_open_notch_until_the_pointer_comes_back', () => {
+    const { machine, advance, pending } = setup();
+    machine.pointer(true);
+    advance(120);
+    machine.close();
+    assert.equal(machine.mode, 'idle');
+    assert.equal(pending(), 0);
+    advance(1000);
+    assert.equal(machine.mode, 'idle');
+    machine.pointer(false);
+    machine.pointer(true);
+    advance(120);
+    assert.equal(machine.mode, 'expanded');
 });

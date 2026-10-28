@@ -74,6 +74,21 @@ wait_for "the idle notch shows the clock in 180 px" \
     "$FIND shown('nokta-clock') && /^[0-9]{1,2}:[0-9]{2}/.test(one('nokta-clock').text) && width() === 180" 10
 "$HERE/shot.sh" smoke-idle > /dev/null
 
+# Hovering the idle notch opens the panel; its notifications button opens
+# GNOME's calendar from the top bar and gives the menu back to the clock.
+"$HERE/hover.sh" on > /dev/null
+wait_for "hovering the idle notch opens the panel with the date" \
+    "$FIND shown('nokta-panel') && one('nokta-panel-date').text.length > 0 && width() === 420" 5
+"$HERE/shot.sh" smoke-panel > /dev/null
+DATE_MENU="Main.panel.statusArea.dateMenu.menu"
+js "$FIND one('nokta-panel-button').emit('clicked', 1); true" > /dev/null
+wait_for "the notifications button opens GNOME's calendar" "$DATE_MENU.isOpen" 5
+js "$DATE_MENU.close(); true" > /dev/null
+wait_for "the calendar belongs to the clock again" \
+    "!$DATE_MENU.isOpen && $DATE_MENU.sourceActor === Main.panel.statusArea.dateMenu" 5
+"$HERE/hover.sh" off > /dev/null
+wait_for "the panel closes" "$FIND shown('nokta-clock') && width() === 180" 5
+
 # GNOME's own privacy indicators drive the dots; showing one by hand must
 # show a dot. This also checks that this GNOME version has them where Nokta
 # looks.

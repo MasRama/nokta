@@ -8,6 +8,7 @@ import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/in
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { NotificationTimer, NotificationView } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
+import { IdlePanel, type PanelContent } from './features/panel/index.js';
 import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
 import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
@@ -22,9 +23,21 @@ import { glibSchedule } from './shared/schedule.js';
 const TICK_MS = 250;
 /** A notification is two lines tall: this much taller than the closed notch. */
 const NOTIFICATION_EXTRA_HEIGHT = 28;
+/** The idle panel: the date and a row of buttons under the closed notch's height. */
+const PANEL_EXTRA_HEIGHT = 58;
 
-/** What the notch draws: the state machine's mode, or the OSD or a notification over it. */
-type Drawn = NotchMode | 'osd' | 'notification';
+/**
+ * What the notch draws: the state machine's mode (the idle panel when it
+ * opens without a player), or the OSD or a notification over it.
+ */
+type Drawn = NotchMode | 'panel' | 'osd' | 'notification';
+
+/** What the idle panel shows and does; owned by the session. */
+export interface PanelSource {
+    content(): PanelContent;
+    openNotifications(): void;
+    toggleFocus(): void;
+}
 
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
@@ -33,6 +46,7 @@ export interface NotchSources {
     lyrics: LyricsClient;
     timer: TimerClient;
     privacy: PrivacyMonitor;
+    panel: PanelSource;
 }
 
 /**
@@ -55,6 +69,10 @@ export class MonitorNotch {
     private notificationClick: (() => void) | null = null;
     private readonly privacyDots = new PrivacyDots();
     private privacyCount = 0;
+    private readonly idlePanel = new IdlePanel({
+        openNotifications: () => this.onPanelClick(() => this.sources.panel.openNotifications()),
+        toggleFocus: () => this.onPanelClick(() => this.sources.panel.toggleFocus()),
+    });
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
     private readonly notificationTimer: NotificationTimer;
@@ -84,6 +102,7 @@ export class MonitorNotch {
             idle: this.idle,
             collapsed: this.collapsed.actor,
             expanded: this.expanded.actor,
+            panel: this.idlePanel.actor,
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
         };
@@ -145,6 +164,7 @@ export class MonitorNotch {
         this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
         this.notificationView.destroy();
+        this.idlePanel.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
@@ -168,6 +188,8 @@ export class MonitorNotch {
         this.expanded.update(snapshot);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.machine.setAvailable(snapshot.available);
+        // Open, a player coming or going swaps the media view and the idle panel.
+        this.draw(this.overlay());
         this.tick();
         this.updateTimers();
     }
@@ -184,6 +206,7 @@ export class MonitorNotch {
             this.idleTimer.update(text, color, paused);
             this.collapsedTimer.update(text, color, paused);
         }
+        if (this.drawn === 'panel') this.idlePanel.show(this.sources.panel.content());
         if (active === this.timerShown) return;
         this.timerShown = active;
         this.idleTimer.actor.visible = active;
@@ -247,6 +270,12 @@ export class MonitorNotch {
 
     // State
 
+    /** A panel button closes the panel, then acts. */
+    private onPanelClick(action: () => void): void {
+        this.machine.close();
+        action();
+    }
+
     /** The dots belong to the closed notch; open, GNOME's own indicators still show. */
     private showPrivacyDots(): void {
         this.privacyDots.actor.visible = this.privacyCount > 0 && (this.drawn === 'idle' || this.drawn === 'collapsed');
@@ -263,7 +292,8 @@ export class MonitorNotch {
     private overlay(): Drawn {
         if (this.osdTimer.active) return 'osd';
         if (this.notificationTimer.active) return 'notification';
-        return this.machine.mode;
+        const { mode } = this.machine;
+        return mode === 'expanded' && !this.sources.media.snapshot().available ? 'panel' : mode;
     }
 
     private onMode(): void {
@@ -275,9 +305,10 @@ export class MonitorNotch {
         if (mode === previous) return;
         this.drawn = mode;
         const [width, height] = this.sizeFor(mode);
-        const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'notification';
+        const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'panel' || drawn === 'notification';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
+        if (mode === 'panel') this.idlePanel.show(this.sources.panel.content());
         this.showView(mode);
         this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();
@@ -296,6 +327,7 @@ export class MonitorNotch {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
         if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
+        if (mode === 'panel') return [a.expandedWidth, a.height + PANEL_EXTRA_HEIGHT];
         if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight];
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }
@@ -311,6 +343,7 @@ export class MonitorNotch {
     private applyOsdColors(): void {
         const { foreground, accent } = this.sources.settings.appearance;
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
+        this.idlePanel.setForeground(foreground);
     }
 
     private applyClockOptions(): void {
