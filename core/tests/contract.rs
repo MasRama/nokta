@@ -125,6 +125,7 @@ async fn daemon_matches_contracts() {
         ("io.nokta.Devices1.xml", "/io/nokta/Devices"),
         ("io.nokta.Timer1.xml", "/io/nokta/Timer"),
         ("io.nokta.Activities1.xml", "/io/nokta/Activities"),
+        ("io.nokta.Weather1.xml", "/io/nokta/Weather"),
     ] {
         let expected = members(&std::fs::read_to_string(contracts.join(file)).unwrap());
         assert!(!expected.is_empty(), "{file} has no io.nokta members");

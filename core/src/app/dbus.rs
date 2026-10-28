@@ -14,6 +14,7 @@ use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings;
 use crate::features::timer;
+use crate::features::weather;
 use crate::shared::http;
 use crate::shared::paths::Paths;
 
@@ -29,7 +30,12 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     let (media_state, control) =
         media::watcher::spawn(conn.clone(), ArtCache::new(paths.cache_dir.clone(), http));
     // Keeps watching config.toml until the daemon stops.
-    let services = Services::start(&paths, media_state.clone(), &options.lrclib_base_url);
+    let services = Services::start(
+        &paths,
+        media_state.clone(),
+        &options.lrclib_base_url,
+        &options.open_meteo,
+    );
 
     let system = match connect_system(options.system_bus_address.as_deref()).await {
         Ok(system) => Some(system),
@@ -50,6 +56,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     settings::dbus::serve(&conn, services.config.clone(), services.config_file.clone()).await?;
     devices::dbus::serve(&conn, alerts).await?;
     activities::dbus::serve(&conn, services.activities).await?;
+    weather::dbus::serve(&conn, services.weather).await?;
     let super::Timer {
         commands,
         state,

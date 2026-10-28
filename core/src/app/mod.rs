@@ -8,6 +8,8 @@ mod dbus;
 mod nokta_iface;
 mod services;
 
+use crate::features::weather;
+
 pub use services::{Services, Timer};
 
 pub const BUS_NAME: &str = "io.nokta.Nokta";
@@ -24,6 +26,23 @@ pub struct RunOptions {
     /// System bus to watch UPower and BlueZ on instead of the real one.
     pub system_bus_address: Option<String>,
     pub lrclib_base_url: String,
+    pub open_meteo: OpenMeteoUrls,
+}
+
+/// Where noktad asks for the weather.
+#[derive(Clone, Debug)]
+pub struct OpenMeteoUrls {
+    pub forecast: String,
+    pub geocoding: String,
+}
+
+impl Default for OpenMeteoUrls {
+    fn default() -> Self {
+        OpenMeteoUrls {
+            forecast: weather::openmeteo::DEFAULT_FORECAST_URL.to_owned(),
+            geocoding: weather::openmeteo::DEFAULT_GEOCODING_URL.to_owned(),
+        }
+    }
 }
 
 /// Runs the daemon until SIGTERM or SIGINT. Returns `Ok` straight away when

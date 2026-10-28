@@ -52,3 +52,8 @@ show_body = true         # false shows only the app and the title
 
 [activities]
 stale_minutes = 30       # an activity with no update for this long ends, 1 to 1440
+
+[weather]
+enabled = true           # show the weather in the open notch; asks open-meteo.com for location's forecast
+location = ""            # a place like "Jakarta", or coordinates like "-6.2,106.8"; empty shows no weather
+units = "celsius"        # "celsius" or "fahrenheit"

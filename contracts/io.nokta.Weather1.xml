@@ -1,0 +1,49 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Weather. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Weather1">
+    <!--
+      Asks Open-Meteo again if the reading is stale (30 minutes, or 5 minutes
+      after a failed request). Returns at once; the properties change later.
+    -->
+    <method name="Refresh"/>
+    <!--
+      "off" (turned off or no location set), "loading", "ready" or "error".
+      A failed refresh keeps the last reading, so Status stays "ready".
+    -->
+    <property name="Status" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- The place's name; empty when the location is coordinates or there is no reading. -->
+    <property name="Place" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- The current temperature in Units; 0 without a reading. -->
+    <property name="Temperature" type="d" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Today's highest and lowest temperature in Units. -->
+    <property name="High" type="d" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <property name="Low" type="d" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- "celsius" or "fahrenheit". -->
+    <property name="Units" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      "clear", "partly-cloudy", "cloudy", "fog", "drizzle", "rain", "snow",
+      "showers", "thunderstorm" or "unknown"; empty without a reading.
+    -->
+    <property name="Condition" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Whether the sun is up at the place. -->
+    <property name="IsDay" type="b" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+  </interface>
+</node>

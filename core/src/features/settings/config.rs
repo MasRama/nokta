@@ -16,6 +16,7 @@ pub struct Config {
     pub timer: TimerConfig,
     pub notifications: NotificationsConfig,
     pub activities: ActivitiesConfig,
+    pub weather: WeatherConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -175,6 +176,26 @@ impl Default for ActivitiesConfig {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct WeatherConfig {
+    pub enabled: bool,
+    /// A place name, or coordinates like `-6.2,106.8`; empty means no weather.
+    pub location: String,
+    /// `celsius` or `fahrenheit`.
+    pub units: String,
+}
+
+impl Default for WeatherConfig {
+    fn default() -> Self {
+        WeatherConfig {
+            enabled: true,
+            location: String::new(),
+            units: "celsius".into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConfigError {
     pub message: String,
@@ -304,6 +325,12 @@ impl Config {
             1,
             1440,
         )?;
+        if !WEATHER_UNITS.contains(&self.weather.units.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "weather.units must be \"celsius\" or \"fahrenheit\", got {:?}",
+                self.weather.units
+            )));
+        }
         if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
             return Err(ConfigError::invalid(format!(
                 "timer.shortcut must be keys like \"<Super><Alt>f\" or empty, got {:?}",
@@ -313,6 +340,9 @@ impl Config {
         Ok(())
     }
 }
+
+/// The values `weather.units` accepts.
+pub const WEATHER_UNITS: [&str; 2] = ["celsius", "fahrenheit"];
 
 /// The values `behavior.clock_format` accepts.
 pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
@@ -484,6 +514,16 @@ impl NotificationsConfig {
 impl ActivitiesConfig {
     pub fn entries(&self) -> Entries {
         vec![("stale_minutes", self.stale_minutes.into())]
+    }
+}
+
+impl WeatherConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("enabled", self.enabled.into()),
+            ("location", (&self.location).into()),
+            ("units", (&self.units).into()),
+        ]
     }
 }
 
