@@ -13,6 +13,9 @@ const SKIPPED_APPS = ['org.gnome.VolumeControl', 'org.PulseAudio.pavucontrol'];
 /** The color of the call's microphone icon. */
 export const CALL_COLORS = { live: '#ff9500', muted: '#ff453a' } as const;
 
+/** The dot of a screen recording, like GNOME's own. */
+export const RECORDING_COLOR = '#ff453a';
+
 /** The app on the call: the first one recording that is not a sound settings window. */
 export function callingStream(streams: readonly RecordingStream[]): RecordingStream | null {
     return streams.find((s) => !SKIPPED_APPS.includes(s.appId)) ?? null;
@@ -34,7 +37,7 @@ export function callDetail(startedUs: number, nowUs: number, muted: boolean): st
 }
 
 /** Until the shown second changes. */
-export function msUntilCallChange(startedUs: number, nowUs: number): number {
+export function msUntilElapsedSecond(startedUs: number, nowUs: number): number {
     const intoSecond = Math.max(0, nowUs - startedUs) % 1_000_000;
     return Math.ceil((1_000_000 - intoSecond) / 1000);
 }

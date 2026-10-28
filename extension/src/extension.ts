@@ -26,6 +26,7 @@ import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
     bannerShape,
+    isRecordingBanner,
     isScreenshotBanner,
     notificationCount,
     notificationLines,
@@ -55,7 +56,13 @@ import {
     type QuickToggle,
     sessionInhibitor,
 } from './features/panel/index.js';
-import { CallMonitor, callDetail, msUntilCallChange, PrivacyMonitor } from './features/privacy/index.js';
+import {
+    CallMonitor,
+    callDetail,
+    msUntilElapsedSecond,
+    PrivacyMonitor,
+    ScreenRecording,
+} from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
 import { ClipboardClient, ClipboardWatcher, copyToClipboard } from './features/clipboard/index.js';
@@ -81,7 +88,7 @@ import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
-import { formatClock, uses24h } from './shared/logic/format.js';
+import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
@@ -137,6 +144,7 @@ class Session {
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
     private readonly call = new CallMonitor();
+    private readonly recording = new ScreenRecording();
     private readonly privacy = new PrivacyMonitor(() => this.onPrivacy());
     private readonly monitorsId: number;
     private readonly mediaId: number;
@@ -149,8 +157,9 @@ class Session {
     private readonly shelfId: number;
     private readonly clipboardId: number;
     private readonly callId: number;
+    private readonly recordingId: number;
     private timerTickId = 0;
-    private callTickId = 0;
+    private liveTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
     private allMonitors: boolean;
@@ -234,7 +243,8 @@ class Session {
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
-        this.callId = this.call.onChanged(() => this.onCall());
+        this.callId = this.call.onChanged(() => this.onLive());
+        this.recordingId = this.recording.onChanged(() => this.onLive());
         this.call.setMicrophone(this.privacy.state().microphone);
         this.clipboardWatcher = new ClipboardWatcher(this.clipboard, () => this.settings.clipboard.enabled);
         this.unwatchScreenshots = watchScreenshots((uri) => this.onScreenshotSaved(uri));
@@ -251,7 +261,7 @@ class Session {
         this.applyOsdSettings();
         this.applyNotificationSettings();
         this.onTimer();
-        this.onCall();
+        this.onLive();
         this.calendarAlarms.reschedule();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
         this.watchId = watchDaemon(
@@ -292,9 +302,11 @@ class Session {
         for (const [settings, id] of this.togglesIds) settings.disconnect(id);
         this.focusShortcut.destroy();
         this.privacy.destroy();
-        this.stopCallTick();
+        this.stopLiveTick();
         this.call.disconnect(this.callId);
         this.call.destroy();
+        this.recording.disconnect(this.recordingId);
+        this.recording.destroy();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -387,34 +399,44 @@ class Session {
         this.timerTickId = 0;
     }
 
-    // Calls
+    // Calls and screen recordings
 
     private onPrivacy(): void {
         this.call.setMicrophone(this.privacy.state().microphone);
         this.notches.forEach((n) => n.onPrivacy());
     }
 
-    /** Redraws the call, and again when its shown second changes. */
-    private onCall(): void {
-        this.stopCallTick();
-        this.notches.forEach((n) => n.onCall());
-        const call = this.shownCall();
-        if (!call) return;
-        const delay = msUntilCallChange(call.startedUs, GLib.get_monotonic_time());
-        this.callTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
-            this.callTickId = 0;
-            this.onCall();
+    /** Redraws the call and the screen recording, and again when a shown second changes. */
+    private onLive(): void {
+        this.stopLiveTick();
+        this.notches.forEach((n) => {
+            n.onCall();
+            n.onRecording();
+        });
+        const now = GLib.get_monotonic_time();
+        const starts = [this.shownCall()?.startedUs, this.recording.since()];
+        const delays = starts.filter((s): s is number => typeof s === 'number').map((s) => msUntilElapsedSecond(s, now));
+        if (delays.length === 0) return;
+        const delay = Math.min(...delays);
+        this.liveTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.liveTickId = 0;
+            this.onLive();
             return GLib.SOURCE_REMOVE;
         });
     }
 
-    private stopCallTick(): void {
-        if (this.callTickId) GLib.source_remove(this.callTickId);
-        this.callTickId = 0;
+    private stopLiveTick(): void {
+        if (this.liveTickId) GLib.source_remove(this.liveTickId);
+        this.liveTickId = 0;
     }
 
     private shownCall(): ReturnType<CallMonitor['call']> {
         return this.settings.behavior.callIndicator ? this.call.call() : null;
+    }
+
+    private panelRecording(): PanelContent['recording'] {
+        const since = this.recording.since();
+        return since === null ? null : formatDuration(GLib.get_monotonic_time() - since);
     }
 
     private panelCall(): PanelContent['call'] {
@@ -469,6 +491,7 @@ class Session {
             activities: this.activities,
             privacy: this.privacy,
             call: this.call,
+            recording: this.recording,
             panel: this.panel,
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
@@ -500,7 +523,7 @@ class Session {
         this.applyNotificationSettings();
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
-        this.onCall();
+        this.onLive();
         this.onCalendar();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
     }
@@ -652,6 +675,7 @@ class Session {
             date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
             weather: this.weather.line(),
             event: this.panelEvent(),
+            recording: this.panelRecording(),
             call: this.panelCall(),
             activities: this.panelActivities(),
             notificationCount: notificationCount(),
@@ -733,18 +757,23 @@ class Session {
             if (shown.notch !== notch) shown.notch.hideNotification();
             this.releaseNotification();
         }
-        const screenshot = this.settings.behavior.screenshotPreview && isScreenshotBanner(bannerShape(notification));
+        const { screenshotPreview } = this.settings.behavior;
+        const shape = bannerShape(notification);
+        const screenshot = screenshotPreview && isScreenshotBanner(shape);
+        const recording = screenshotPreview && isRecordingBanner(shape, (notification.actions?.length ?? 0) > 0);
         if (!this.shownNotification) {
             const destroyId = notification.connect('destroy', () => {
                 notch.hideNotification();
                 this.releaseNotification();
             });
-            const file = screenshot ? this.screenshotFiles.previewed(Date.now()) : null;
+            let file: string | null = null;
+            if (screenshot) file = this.screenshotFiles.previewed(Date.now());
+            else if (recording) file = this.recording.fileUri();
             this.shownNotification = { notification, notch, destroyId, file };
         }
-        if (screenshot) {
+        if (screenshot || recording) {
             // The image GNOME made for the notification is a Clutter.Content.
-            const image = notification.gicon as unknown as Clutter.Content;
+            const image = screenshot ? (notification.gicon as unknown as Clutter.Content) : null;
             const press = (button: ScreenshotButton) => this.onScreenshotPress(notification, button);
             notch.showScreenshot(image, title, this.screenshotButtons(), durationMs, press);
         } else {

@@ -66,13 +66,14 @@ test('ended alerts say how it went', () => {
     assert.equal(endedAlert('Backup', false, '', 3_000_000).detail, 'Failed after 3 s');
 });
 
-test('the closed notch shows a call, else the timer, else an activity, else the shelf', () => {
-    assert.equal(chooseIndicator({ call: true, timer: true, clock: true, activity: true, shelf: true }), 'call');
-    assert.equal(chooseIndicator({ call: false, timer: true, clock: true, activity: true, shelf: true }), 'timer');
-    assert.equal(chooseIndicator({ call: false, timer: false, clock: true, activity: true, shelf: true }), 'clock');
-    assert.equal(chooseIndicator({ call: false, timer: false, clock: false, activity: true, shelf: true }), 'activity');
-    assert.equal(chooseIndicator({ call: false, timer: false, clock: false, activity: false, shelf: true }), 'shelf');
-    assert.equal(chooseIndicator({ call: false, timer: false, clock: false, activity: false, shelf: false }), null);
+test('the closed notch shows a recording, else a call, else the timer, else an activity, else the shelf', () => {
+    assert.equal(chooseIndicator({ recording: true, call: true, timer: true, clock: true, activity: true, shelf: true }), 'recording');
+    assert.equal(chooseIndicator({ recording: false, call: true, timer: true, clock: true, activity: true, shelf: true }), 'call');
+    assert.equal(chooseIndicator({ recording: false, call: false, timer: true, clock: true, activity: true, shelf: true }), 'timer');
+    assert.equal(chooseIndicator({ recording: false, call: false, timer: false, clock: true, activity: true, shelf: true }), 'clock');
+    assert.equal(chooseIndicator({ recording: false, call: false, timer: false, clock: false, activity: true, shelf: true }), 'activity');
+    assert.equal(chooseIndicator({ recording: false, call: false, timer: false, clock: false, activity: false, shelf: true }), 'shelf');
+    assert.equal(chooseIndicator({ recording: false, call: false, timer: false, clock: false, activity: false, shelf: false }), null);
 });
 
 test('home grows with its rows', () => {
@@ -82,6 +83,7 @@ test('home grows with its rows', () => {
     assert.equal(panelHeight(40, ['date', 'controls']), 168);
     assert.equal(panelHeight(32, ['date', 'clock', 'clock', 'controls']), 160 + 2 * 36);
     assert.equal(panelHeight(32, ['date', 'call', 'controls']), 160 + 36);
+    assert.equal(panelHeight(32, ['date', 'recording', 'call', 'controls']), 160 + 2 * 36);
 });
 
 test('a sub-page is its padding, its header and its body', () => {

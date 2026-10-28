@@ -7,7 +7,7 @@ import {
     callingStream,
     callText,
     callTitle,
-    msUntilCallChange,
+    msUntilElapsedSecond,
     type RecordingStream,
 } from '../src/features/privacy/logic/call.js';
 
@@ -39,8 +39,8 @@ test('the call time counts up from when the microphone came on', () => {
 });
 
 test('the call time is redrawn when its second changes', () => {
-    assert.equal(msUntilCallChange(0, 10 * S + 250_000), 750);
-    assert.equal(msUntilCallChange(S, S), 1000);
+    assert.equal(msUntilElapsedSecond(0, 10 * S + 250_000), 750);
+    assert.equal(msUntilElapsedSecond(S, S), 1000);
 });
 
 test('a muted microphone shows red', () => {

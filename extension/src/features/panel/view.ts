@@ -77,6 +77,8 @@ export interface PanelContent {
     weather: PanelWeather | null;
     /** Null hides the event row. */
     event: PanelEvent | null;
+    /** How long the screen has been recorded, like `1:05`; null hides the row. */
+    recording: string | null;
     /** Null hides the call row. */
     call: PanelCall | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
@@ -108,6 +110,7 @@ export interface PanelHandlers {
     toggle(which: QuickToggle): void;
     pauseClock(id: string, paused: boolean): void;
     removeClock(id: string): void;
+    stopRecording(): void;
     toggleCallMute(): void;
     hideCall(): void;
 }
@@ -243,6 +246,42 @@ class ClockRow {
     }
 }
 
+/** The screen recording: a red dot, how long, and a stop button. */
+class RecordingRow {
+    readonly actor: St.BoxLayout;
+    private readonly time: St.Label;
+
+    constructor(handlers: Pick<PanelHandlers, 'stopRecording'>) {
+        const icon = new St.Icon({
+            icon_name: 'media-record-symbolic',
+            style_class: 'nokta-panel-recording-icon',
+            style: 'color: #ff453a;',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        const title = new St.Label({
+            text: 'Screen recording',
+            style_class: 'nokta-panel-recording-title',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.time = new St.Label({ style_class: 'nokta-panel-recording-time', y_align: Clutter.ActorAlign.CENTER });
+        const stop = new St.Button({
+            style_class: 'nokta-button nokta-panel-recording-stop',
+            child: new St.Icon({ icon_name: 'media-playback-stop-symbolic', style_class: 'nokta-button-icon' }),
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        stop.connect('clicked', () => handlers.stopRecording());
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-recording', visible: false });
+        for (const child of [icon, title, this.time, stop]) this.actor.add_child(child);
+    }
+
+    show(time: string | null): void {
+        this.actor.visible = time !== null;
+        if (time !== null) this.time.text = time;
+    }
+}
+
 /** The call: the app's icon and name, the time, and mute and hide buttons. */
 class CallRow {
     readonly actor: St.BoxLayout;
@@ -365,8 +404,8 @@ class EventRow {
 
 /**
  * Home, the open notch's other page and the only one while nothing plays:
- * the date and weather, the next event, a call, live activities, then the
- * quick toggles and a row of tiles.
+ * the date and weather, the next event, a screen recording, a call, live
+ * activities, then the quick toggles and a row of tiles.
  */
 export class HomePanel {
     readonly actor: St.BoxLayout;
@@ -374,6 +413,7 @@ export class HomePanel {
     private readonly weather = new WeatherBox();
     private readonly playerButton: St.Button;
     private readonly event: EventRow;
+    private readonly recording: RecordingRow;
     private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
@@ -403,6 +443,7 @@ export class HomePanel {
         heading.add_child(this.weather.actor);
         heading.add_child(this.playerButton);
         this.event = new EventRow(() => handlers.openCalendar());
+        this.recording = new RecordingRow(handlers);
         this.call = new CallRow(handlers);
 
         const pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
@@ -428,6 +469,7 @@ export class HomePanel {
 
         this.actor.add_child(heading);
         this.actor.add_child(this.event.actor);
+        this.actor.add_child(this.recording.actor);
         this.actor.add_child(this.call.actor);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
             const row = new ActivityRow();
@@ -452,6 +494,7 @@ export class HomePanel {
         this.weather.show(content.weather);
         this.playerButton.visible = content.player;
         this.event.show(content.event);
+        this.recording.show(content.recording);
         this.call.show(content.call);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.clocks.forEach((row, i) => row.show(content.clocks[i]));
