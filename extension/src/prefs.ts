@@ -6,6 +6,6 @@ import { fillWindow } from './prefs/window.js';
 /** The settings window. GNOME runs it in its own process, never inside the shell. */
 export default class NoktaPreferences extends ExtensionPreferences {
     override fillPreferencesWindow(window: Adw.PreferencesWindow): void {
-        fillWindow(window);
+        fillWindow(window, this.path);
     }
 }

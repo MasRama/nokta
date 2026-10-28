@@ -256,7 +256,9 @@ The Settings tile in home opens a page in the notch with the themes,
 switches for the cover's color, the progress line and the alert glow, and
 how fast the notch moves. Its All settings row opens the settings window,
 as do the menu a right click on the notch opens, `nokta settings` and the
-Extensions app. A change shows in the notch right away.
+Extensions app. A change shows in the notch right away. The window is
+dark whatever your system style, and its Appearance page starts with a
+preview of the notch in the theme you pick.
 
 The window saves to `~/.config/nokta/config.toml`. You can edit that file
 by hand too, and your comments are kept either way. The daemon writes a
