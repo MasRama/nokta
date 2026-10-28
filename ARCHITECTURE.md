@@ -97,8 +97,13 @@ docs/               manual test checklist, screenshots
   refresh when home opens. The toggles change GNOME's settings only on a
   click: Do Not Disturb is `show-banners`, set through the timer's
   `QuietBanners` so a focus session never undoes it; Dark Style is
-  `color-scheme`; Caffeine holds an idle inhibitor of GNOME's session
-  manager (`panel/logic/caffeine.ts`, released in `disable()`). The
+  `color-scheme`; Night Light is gnome-settings-daemon's
+  `night-light-enabled`, offered only when its schema is installed;
+  Caffeine holds an idle inhibitor of GNOME's session
+  manager (`panel/logic/caffeine.ts`, released in `disable()`). Which
+  toggles and tiles show, and in which order, is `[home]` of the config
+  (`panel/logic/layout.ts`); the settings window edits these lists with
+  switches and up and down buttons (`settings/logic/order.ts`). The
   notch's right-click menu (`panel/menu.ts`) is a GNOME popup menu.
 - `osd` (volume, brightness, Caps Lock, Num Lock and the keyboard layout
   in the notch) exists only in the extension: its sources are GNOME Shell's
