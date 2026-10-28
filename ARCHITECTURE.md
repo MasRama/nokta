@@ -86,7 +86,9 @@ docs/               manual test checklist, screenshots
   microphone and screen dots) is the same: it follows the indicators GNOME
   Shell already shows in the top bar. `notifications` too: it wraps
   GNOME's `MessageTray._showNotification`, so the notch only gets the
-  banners GNOME has already decided to show. `calendar` reads the events
+  banners GNOME has already decided to show. A banner from GNOME's
+  screenshot source with an image becomes a screenshot preview; its file
+  comes from `Main.screenshotUI`'s `screenshot-taken` signal. `calendar` reads the events
   the date menu already loads (`dateMenu._eventSource`, found with a
   feature check) and never asks for a time range itself, since the
   calendar server keeps one range for all its clients. One exact timeout
