@@ -43,6 +43,10 @@ export interface MediaProps {
     CanGoNext: boolean;
     CanGoPrevious: boolean;
     CanSeek: boolean;
+    Shuffle: boolean;
+    LoopStatus: string;
+    CanShuffle: boolean;
+    CanLoop: boolean;
 }
 
 /** io.nokta.Media1 methods and the D-Bus signature of their arguments. */
@@ -53,6 +57,8 @@ export const MEDIA_METHODS = {
     SetPosition: 'x',
     RefreshPosition: '',
     SelectPlayer: 's',
+    SetShuffle: 'b',
+    SetLoopStatus: 's',
 } as const;
 
 export interface LyricsProps {

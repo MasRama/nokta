@@ -16,7 +16,7 @@ pub mod watcher;
 
 pub use select::Selector;
 pub use state::MediaState;
-pub use track::{PlaybackStatus, Track};
+pub use track::{LoopStatus, PlaybackStatus, Track};
 
 #[cfg(test)]
 mod tests;

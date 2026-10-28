@@ -140,6 +140,58 @@ impl Player {
     }
 }
 
+/// A player that also has MPRIS Shuffle and LoopStatus, both writable.
+struct LoopingPlayer {
+    meta: Meta,
+    shuffle: bool,
+    loop_status: String,
+    calls: Arc<Mutex<Vec<String>>>,
+}
+
+#[zbus::interface(name = "org.mpris.MediaPlayer2.Player")]
+impl LoopingPlayer {
+    #[zbus(property)]
+    fn playback_status(&self) -> String {
+        "Playing".into()
+    }
+    #[zbus(property)]
+    fn metadata(&self) -> HashMap<String, OwnedValue> {
+        HashMap::from([("xesam:title".into(), owned(self.meta.title.as_str().into()))])
+    }
+    #[zbus(property(emits_changed_signal = "false"))]
+    fn position(&self) -> i64 {
+        0
+    }
+    #[zbus(property)]
+    fn can_control(&self) -> bool {
+        true
+    }
+    #[zbus(property)]
+    fn shuffle(&self) -> bool {
+        self.shuffle
+    }
+    #[zbus(property)]
+    fn set_shuffle(&mut self, shuffle: bool) {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("Shuffle {shuffle}"));
+        self.shuffle = shuffle;
+    }
+    #[zbus(property)]
+    fn loop_status(&self) -> String {
+        self.loop_status.clone()
+    }
+    #[zbus(property)]
+    fn set_loop_status(&mut self, status: String) {
+        self.calls
+            .lock()
+            .unwrap()
+            .push(format!("LoopStatus {status}"));
+        self.loop_status = status;
+    }
+}
+
 /// A fake MPRIS player on its own connection. Closing it makes the player vanish.
 pub struct FakePlayer {
     pub conn: zbus::Connection,
@@ -154,6 +206,34 @@ impl FakePlayer {
             meta,
             position: 0,
             caps: Caps::ALL,
+            calls: calls.clone(),
+        };
+        let conn = zbus::connection::Builder::address(address)
+            .unwrap()
+            .name(format!("org.mpris.MediaPlayer2.{name}"))
+            .unwrap()
+            .serve_at(
+                PATH,
+                Root {
+                    identity: format!("Fake {name}"),
+                },
+            )
+            .unwrap()
+            .serve_at(PATH, player)
+            .unwrap()
+            .build()
+            .await
+            .unwrap();
+        FakePlayer { conn, calls }
+    }
+
+    /// A playing player with Shuffle off and LoopStatus "None"; only calls() works on it.
+    pub async fn start_looping(address: &str, name: &str, meta: Meta) -> FakePlayer {
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let player = LoopingPlayer {
+            meta,
+            shuffle: false,
+            loop_status: "None".into(),
             calls: calls.clone(),
         };
         let conn = zbus::connection::Builder::address(address)

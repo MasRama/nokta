@@ -25,6 +25,35 @@ impl PlaybackStatus {
     }
 }
 
+/// MPRIS `LoopStatus`: what the player repeats.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum LoopStatus {
+    #[default]
+    None,
+    Track,
+    Playlist,
+}
+
+impl LoopStatus {
+    /// The MPRIS value, or None for anything else.
+    pub fn from_mpris(s: &str) -> Option<LoopStatus> {
+        match s {
+            "None" => Some(LoopStatus::None),
+            "Track" => Some(LoopStatus::Track),
+            "Playlist" => Some(LoopStatus::Playlist),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LoopStatus::None => "None",
+            LoopStatus::Track => "Track",
+            LoopStatus::Playlist => "Playlist",
+        }
+    }
+}
+
 /// The track a player is playing: the parts of MPRIS `Metadata` Nokta uses.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Track {
