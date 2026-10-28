@@ -4,6 +4,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
+import { mix } from '../../shared/logic/color.js';
 import { Cover } from './cover.js';
 import { loopIcon, nextLoopStatus, shuffleIcon, type LoopStatus, type ToggleIcon } from './logic/loop.js';
 import { neighbour, playerLabels, scrollStep, type PlayerEntry, type ScrollDirection } from './logic/players.js';
@@ -19,6 +20,10 @@ export interface MediaControls {
     setShuffle(on: boolean): void;
     setLoopStatus(status: LoopStatus): void;
 }
+
+/** The play button's scale under the pointer and while pressed. */
+const PLAY_HOVER = 1.06;
+const PLAY_PRESSED = 0.9;
 
 const SCROLL_DIRECTIONS: Partial<Record<Clutter.ScrollDirection, ScrollDirection>> = {
     [Clutter.ScrollDirection.UP]: 'up',
@@ -58,6 +63,7 @@ export class ExpandedMediaView {
     private players: PlayerEntry[] = [];
     private playerId = '';
     private lastScrollMs = 0;
+    private accent = '#ffffff';
 
     constructor(controls: MediaControls) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));
@@ -90,8 +96,16 @@ export class ExpandedMediaView {
         const buttons = new St.BoxLayout({ style_class: 'nokta-controls', x_align: Clutter.ActorAlign.CENTER });
         this.previous = this.button('media-skip-backward-symbolic', () => controls.previous());
         this.playPauseIcon = new St.Icon({ icon_name: 'media-playback-start-symbolic', style_class: 'nokta-play-icon' });
-        this.playPause = new St.Button({ style_class: 'nokta-button nokta-play', child: this.playPauseIcon, can_focus: true });
+        this.playPause = new St.Button({ style_class: 'nokta-play', child: this.playPauseIcon, can_focus: true });
+        this.playPause.set_pivot_point(0.5, 0.5);
         this.playPause.connect('clicked', () => controls.playPause());
+        // A press sinks the button in, the pointer lifts it a little.
+        const lift = () => {
+            const scale = this.playPause.pressed ? PLAY_PRESSED : this.playPause.hover ? PLAY_HOVER : 1;
+            this.playPause.ease({ scale_x: scale, scale_y: scale, duration: 120, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        };
+        this.playPause.connect('notify::pressed', lift);
+        this.playPause.connect('notify::hover', lift);
         this.next = this.button('media-skip-forward-symbolic', () => controls.next());
         this.shuffle = this.button('media-playlist-shuffle-symbolic', () => controls.setShuffle(!this.shuffleOn));
         this.loop = this.button('media-playlist-repeat-symbolic', () =>
@@ -135,6 +149,17 @@ export class ExpandedMediaView {
         this.showToggle(this.loop, snapshot.canLoop, loopIcon(snapshot.loopStatus));
     }
 
+    /** The play button is filled with the accent; shuffle and repeat take it while on. */
+    setPalette({ accent, onAccent }: { accent: string; onAccent: string }): void {
+        this.accent = accent;
+        this.playPause.style =
+            'background-gradient-direction: vertical;' +
+            ` background-gradient-start: ${mix(accent, '#ffffff', 0.12)};` +
+            ` background-gradient-end: ${mix(accent, '#000000', 0.2)}; color: ${onAccent};`;
+        this.showToggle(this.shuffle, this.shuffle.visible, shuffleIcon(this.shuffleOn));
+        this.showToggle(this.loop, this.loop.visible, loopIcon(this.loopStatus));
+    }
+
     destroy(): void {
         this.progress.destroy();
         this.actor.destroy();
@@ -170,7 +195,9 @@ export class ExpandedMediaView {
     /** Hidden when the player has none; dimmed while off. */
     private showToggle(button: St.Button, supported: boolean, { icon, on }: ToggleIcon): void {
         button.visible = supported;
-        (button.child as St.Icon).icon_name = icon;
+        const child = button.child as St.Icon;
+        child.icon_name = icon;
+        child.style = on ? `color: ${this.accent};` : '';
         button.opacity = on ? 255 : 110;
     }
 

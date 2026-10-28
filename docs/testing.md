@@ -365,6 +365,9 @@ does.
       cover's color that changes with the track (midnight without a
       cover); paper light with dark text, also in the idle panel. Only
       `custom` follows `background`, `foreground` and `accent`.
+- [ ] The play button is a round button filled with the accent, its icon
+      readable on it; it lifts under the pointer and sinks when pressed.
+      Shuffle and repeat take the accent while on.
 
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;
       `"12h"` shows `11:..`; `"system"` follows GNOME.

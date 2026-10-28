@@ -25,8 +25,8 @@
 }
 
 .nokta-expanded {
-    padding: 14px 18px 10px 18px;
-    spacing: 8px;
+    padding: 12px 18px 8px 18px;
+    spacing: 6px;
 }
 
 .nokta-expanded-top {
@@ -87,7 +87,7 @@
 }
 
 .nokta-controls {
-    spacing: 18px;
+    spacing: 16px;
 }
 
 .nokta-button {
@@ -100,11 +100,32 @@
 }
 
 .nokta-button-icon {
-    icon-size: 16px;
+    icon-size: 18px;
+}
+
+/* Filled with the accent from code; the shadow lifts it off the notch. */
+.nokta-play {
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.nokta-play:focus {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
 .nokta-play-icon {
-    icon-size: 20px;
+    icon-size: 16px;
+}
+
+.nokta-theme-paper .nokta-play {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+.nokta-theme-paper .nokta-button:hover,
+.nokta-theme-paper .nokta-shelf-slot-hover {
+    background-color: rgba(0, 0, 0, 0.08);
 }
 
 .nokta-osd {
