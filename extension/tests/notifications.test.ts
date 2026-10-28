@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { MAX_BUTTONS, notificationButtons } from '../src/features/notifications/logic/actions.js';
 import {
     CRITICAL,
+    isSymbolicIcon,
     notificationLines,
     plainText,
     takesBanner,
@@ -176,4 +177,12 @@ test('the stacked count reads 2 to 9, then 9+', () => {
     assert.equal(stackBadge(9), '9');
     assert.equal(stackBadge(10), '9+');
     assert.equal(stackBadge(42), '9+');
+});
+
+test("a symbolic icon sits on a square of the accent; an app's full-color icon stands alone", () => {
+    assert.equal(isSymbolicIcon(['mail-unread-symbolic', 'mail-unread']), true);
+    assert.equal(isSymbolicIcon(['/ext/icons/nokta-screenshot-symbolic.svg']), true);
+    assert.equal(isSymbolicIcon(['org.gnome.Nautilus']), false);
+    assert.equal(isSymbolicIcon(['/usr/share/icons/hicolor/48x48/apps/firefox.png']), false);
+    assert.equal(isSymbolicIcon([]), false);
 });
