@@ -9,6 +9,7 @@ Usage:
   nokta run [--title TITLE] [--icon NAME] -- COMMAND [ARGS...]
   nokta activity set ID --title TITLE [--detail TEXT] [--icon NAME] [--progress 0-100]
   nokta activity end ID [--failed] [--message TEXT]
+  nokta settings
   nokta --version | --help
 
 run shows COMMAND in the notch while it runs, then how it ended, and exits
@@ -17,6 +18,8 @@ with its exit code. It runs the command even when noktad is not there.
 activity set starts or updates an activity; without --progress the progress
 is unknown. activity end removes it, as a success unless --failed is given.
 An activity with no update for [activities] stale_minutes ends by itself.
+
+settings opens Nokta's settings window.
 
 Icon names are theme icons, like drive-harddisk-symbolic.";
 

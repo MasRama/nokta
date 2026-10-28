@@ -11,6 +11,7 @@ use super::client::Client;
 /// Sent again this often while a command runs, so it never goes stale.
 const KEEP_ALIVE: Duration = Duration::from_secs(60);
 const RUN_ICON: &str = "utilities-terminal-symbolic";
+const EXTENSION_UUID: &str = "nokta@nokta.io";
 
 pub async fn execute(cli: Cli) -> ExitCode {
     match cli {
@@ -39,7 +40,26 @@ pub async fn execute(cli: Cli) -> ExitCode {
             icon,
             command,
         } => run(&title, &icon, &command).await,
+        Cli::Settings => settings(),
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
+    }
+}
+
+/// GNOME Shell opens the extension's settings window.
+fn settings() -> ExitCode {
+    match Command::new("gnome-extensions")
+        .args(["prefs", EXTENSION_UUID])
+        .status()
+    {
+        Ok(status) if status.success() => ExitCode::SUCCESS,
+        Ok(_) => {
+            eprintln!("nokta: GNOME Shell cannot open the settings; is the extension installed?");
+            ExitCode::FAILURE
+        }
+        Err(err) => {
+            eprintln!("nokta: cannot run gnome-extensions: {err}");
+            ExitCode::FAILURE
+        }
     }
 }
 

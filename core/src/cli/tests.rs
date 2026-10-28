@@ -105,3 +105,9 @@ fn help_version_and_mistakes() {
         .contains("--colour"));
     assert!(parse(&args("dance")).unwrap_err().contains("dance"));
 }
+
+#[test]
+fn settings_takes_no_options() {
+    assert_eq!(parse(&args("settings")), Ok(Cli::Settings));
+    assert!(parse(&args("settings --now")).is_err());
+}
