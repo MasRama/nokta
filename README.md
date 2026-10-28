@@ -40,7 +40,10 @@ notifications. Hover over it to open it.
 - **Synced lyrics, karaoke style.** The line being sung lights up from left
   to right, with the next line under it. Click it to follow the lyrics
   around it. Lyrics come from [LRCLIB](https://lrclib.net), or from your
-  own `.lrc` files.
+  own `.lrc` files. When they run ahead of the song or behind it, the `−`
+  and `+` under the lyrics view move them a quarter second later or
+  earlier; Nokta remembers that for the song, and a click on the label
+  between them puts it back.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
   Lock and the keyboard layout show in the notch instead of GNOME's popup.
   A muted speaker or microphone says so.
@@ -419,6 +422,12 @@ min`, and at the start `Standup is starting`. All-day events are left out.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.
+- **Lyric timing.** The timing you set for a song is kept in
+  `~/.local/share/nokta/lyrics-offsets.toml`, one line per song: a hash of
+  its artist, title, album and length, and the offset in milliseconds, so
+  the file does not list what you listen to. A song set back to "On time"
+  leaves the file. It stays after `uninstall.sh --purge`, like your own
+  `.lrc` files next to it.
 
 ## Troubleshooting
 

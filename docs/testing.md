@@ -285,10 +285,21 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       (the repeat-one icon), then off.
 - [ ] A player without shuffle or repeat (a browser) *(real session)*: no
       buttons for them.
-- [ ] Click the lyric row: the notch grows to 310 px and shows seven lines,
+- [ ] Click the lyric row: the notch grows to 336 px and shows seven lines,
       the current one larger and lit as it is sung; they slide up as lines
-      change.
-      A click on them, the next track or moving the pointer away closes it.
+      change. Under them `−`, `On time` and `+`, with nothing cut off above
+      the seek bar.
+      A click on the lines, the next track or moving the pointer away
+      closes it.
+- [ ] Click `+` twice: the label says `0.5 s earlier`, the view stays open,
+      the lines change half a second sooner and the lit part of the current
+      line jumps ahead. `−` three times: `0.25 s later`. `OffsetMs` on
+      `/io/nokta/Lyrics` follows, and
+      `build/devshell/data/nokta/lyrics-offsets.toml` has one line.
+- [ ] Next track and back: the new one is `On time`, the first one keeps
+      its timing. A click on the label puts it back to `On time` and takes
+      its line out of the file. (`run.sh` starts with an empty data folder,
+      so keeping it across a restart is left to `cargo test`.)
 
 ### Sound output
 

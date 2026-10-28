@@ -45,7 +45,8 @@ core/               crate nokta-core, binaries noktad and nokta
   src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
   src/features/     media, lyrics, settings, devices, timer, activities, weather,
                     shelf, clipboard
-  src/shared/       paths, monotonic clock, hashing, picture thumbnails, D-Bus helpers
+  src/shared/       paths, monotonic clock, hashing, atomic file writes, picture
+                    thumbnails, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
@@ -161,7 +162,16 @@ docs/               manual test checklist, screenshots
   folder), then the cache, then LRCLIB. `clean.rs` turns browser and YouTube
   titles into up to three candidates, and a search result counts only when
   its title and artist match. LRCLIB results are cached per track; "not
-  found" for 7 days, errors not at all.
+  found" for 7 days, errors not at all. The user's timing per track
+  (`SetOffset`, from the lyrics view) is kept in `lyrics-offsets.toml` next
+  to the lyrics folder (`$XDG_DATA_HOME/nokta/`, `Application Support` on
+  macOS, `%APPDATA%` on Windows), keyed by a hash of the track that does
+  not change with the cache's lookup version, written atomically
+  (`shared/fs.rs`); 0 removes the entry. The service publishes `Lines`
+  already shifted by it (`offsets.rs`: start − offset, not below 0) on top
+  of a file's own `[offset:]`, so the extension never shifts anything.
+  `SetOffset` stores the offset for the current track whatever its status,
+  so it also applies to lyrics still loading, and fails with no track.
 - **devices** follows UPower and BlueZ on the system bus and emits an
   `Alert` signal when a Bluetooth audio device connects or disconnects, the
   charger is plugged or unplugged, the battery gets low (20 %) or critical
@@ -255,7 +265,7 @@ files in `contracts/` are the full definition; this is the overview.
 |---|---|---|
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`, `Shuffle`, `LoopStatus`, `CanShuffle`, `CanLoop`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)`, `SetShuffle(b)`, `SetLoopStatus(s)` |
-| `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
+| `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text, already shifted), `OffsetMs` (`x`, positive is earlier, ±30 000); `SetOffset(offset_ms x)` |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Clocks` `a(sssbxxxx)` (id, kind, label, running, duration, value and monotonic timestamp in µs, alarm time in Unix µs); `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`, `AddCountdown(label s, duration_us x) → id s`, `AddStopwatch(label s) → id s`, `AddAlarm(label s, unix_us x) → id s`, `PauseClock(id s)`, `ResumeClock(id s)`, `RemoveClock(id s)`, `ClearClocks()`; signals `Finished(phase s)`, `ClockDone(id s, kind s, label s)` |
@@ -296,9 +306,12 @@ How both sides stay honest:
   it (`lyrics/logic/karaoke.ts`); the fill is one linear `ease()` to the end
   of the line, restarted only when the line, the play state or the position
   changes. A click on the row opens seven lines of the synced lyrics around
-  the current one (`lyrics/logic/window.ts`) until a click, the next track
-  or the notch closing. A pure state machine (`shared/logic/machine.ts`) decides when to
-  open and close.
+  the current one (`lyrics/logic/window.ts`) until a click on them, the
+  next track or the notch closing. Under them, `−` and `+` call
+  `SetOffset` 250 ms at a time and the label between them (`On time`,
+  `0.5 s earlier`, `lyrics/logic/offset.ts`) resets it; the shifted lines
+  come back from the daemon, and the fill restarts on them. A pure state
+  machine (`shared/logic/machine.ts`) decides when to open and close.
 - The notch changes size on springs (`shared/logic/spring.ts`): width and
   height step on the same frames of one `Clutter.Timeline`, which runs only
   until both settle, so they move together and a new size mid-way bends the
