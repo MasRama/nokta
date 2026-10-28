@@ -19,6 +19,7 @@ export const PATHS = {
     Activities1: '/io/nokta/Activities',
     Weather1: '/io/nokta/Weather',
     Shelf1: '/io/nokta/Shelf',
+    Clipboard1: '/io/nokta/Clipboard',
 } as const;
 
 export interface NoktaProps {
@@ -91,6 +92,7 @@ export interface SettingsProps {
     Activities: Record<string, unknown>;
     Weather: Record<string, unknown>;
     Calendar: Record<string, unknown>;
+    Clipboard: Record<string, unknown>;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */
@@ -166,4 +168,20 @@ export const SHELF_METHODS = {
     Add: 'as',
     Remove: 's',
     Clear: '',
+} as const;
+
+export interface ClipboardProps {
+    /** Id, kind, preview, thumbnail path, pinned and time (µs since the epoch) of each entry, newest first. */
+    Items: Array<[string, string, string, string, boolean, number]>;
+    Paused: boolean;
+}
+
+/** io.nokta.Clipboard1 methods and the D-Bus signature of their arguments. */
+export const CLIPBOARD_METHODS = {
+    Add: 'ssay',
+    Get: 's',
+    Pin: 'sb',
+    Remove: 's',
+    Clear: '',
+    SetPaused: 'b',
 } as const;

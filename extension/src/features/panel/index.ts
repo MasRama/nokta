@@ -1,7 +1,8 @@
 export { Caffeine, type Inhibitor } from './logic/caffeine.js';
-export { panelHeight, type PanelRow } from './logic/height.js';
+export { panelHeight, subPageHeight, type PanelRow } from './logic/height.js';
 export { sessionInhibitor } from './inhibitor.js';
 export { NotchMenu, type NotchMenuHandlers } from './menu.js';
+export { SubPage } from './page.js';
 export {
     HomePanel,
     MAX_PANEL_ACTIVITIES,

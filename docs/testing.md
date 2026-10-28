@@ -117,8 +117,8 @@ must curve inward, the notch must be centered, and no text may be clipped.
       with a music button beside the date, which goes back. Leaving and
       hovering again opens the player.
 - [ ] Right click on the notch: a menu at the pointer with Settings, Do Not
-      Disturb (the same switch as the toggle) and, with files on the shelf,
-      Clear shelf.
+      Disturb (the same switch as the toggle), with files on the shelf
+      Clear shelf, and with the clipboard history on Pause clipboard.
 - [ ] `target/release/nokta settings` opens the settings window.
 - [ ] A player stopping or starting under the pointer swaps the panel and
       the player view without closing.
@@ -323,6 +323,33 @@ the shelf.
       and the helper ends.
 - [ ] Drag a photo from Files and from a browser onto the notch, then drag
       it from the notch into a WhatsApp or Telegram chat *(real session)*.
+
+### Clipboard history
+
+`. tools/devshell/env.sh`, then copy with
+`shell_eval "imports.gi.St.Clipboard.get_default().set_text(imports.gi.St.ClipboardType.CLIPBOARD, 'Some text'); 'ok'"`.
+`Clipboard1.Items` on the devshell bus shows what `noktad` kept.
+
+- [ ] The smoke test copies text: it is in `Clipboard1.Items`, home has a
+      `Clipboard` tile, and the tile opens the list (98 px tall with one
+      row). A new copy goes on top, a click on a row copies it back and
+      moves it up, its pin keeps it through `Clear()`, and the back arrow
+      goes home. `Pause clipboard` in the right-click menu pauses the
+      history, and a copy while paused is not kept.
+- [ ] Copy a PNG with `St.Clipboard.set_content(..., 'image/png', bytes)`:
+      the row shows `Picture · W × H` with its thumbnail, a file in
+      `build/devshell/runtime/nokta/clipboard/`. Removing the entry deletes
+      the file.
+- [ ] More than 5 entries: scrolling over the list shows older ones, and
+      closing the notch goes back to the top.
+- [ ] The pause button in the header turns into a play button in the
+      accent while paused; the empty list says `Paused: copies are not
+      kept`.
+- [ ] `[clipboard] enabled = false` while running: the tile goes, an open
+      list goes back home, and `Items` is empty. `max_items = 5`: the
+      oldest unpinned entries go.
+- [ ] Copy a password from a password manager (KeePassXC) *(real session)*:
+      it is not kept.
 
 ### Privacy dots
 

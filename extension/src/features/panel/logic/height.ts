@@ -19,3 +19,12 @@ export function panelHeight(closedHeight: number, rows: readonly PanelRow[]): nu
     }
     return height;
 }
+
+/** A sub-page's padding, its header row and the gap under it, as `.nokta-subpage` sets them. */
+const PAGE_PADDING = 14;
+const PAGE_HEADER = 28;
+
+/** A sub-page's height for a body `bodyHeight` tall; its header sits beside the camera, like home's date. */
+export function subPageHeight(bodyHeight: number): number {
+    return PAGE_PADDING + PAGE_HEADER + SPACING + bodyHeight + PAGE_PADDING;
+}

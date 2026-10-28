@@ -35,6 +35,9 @@ pub struct Paths {
     pub lyrics_dir: PathBuf,
     /// The freedesktop thumbnail cache that Files fills; Linux only.
     pub system_thumbnails: Option<PathBuf>,
+    /// Thumbnails of copied pictures, emptied at start: in the runtime
+    /// folder (memory, this user only) where there is one.
+    pub clipboard_dir: PathBuf,
 }
 
 impl Paths {
@@ -45,6 +48,7 @@ impl Paths {
             cache_dir: cache_home.join("nokta"),
             lyrics_dir: data_home.join("nokta").join("lyrics"),
             system_thumbnails: Some(cache_home.join("thumbnails")),
+            clipboard_dir: cache_home.join("nokta").join("clipboard"),
         }
     }
 
@@ -68,27 +72,35 @@ impl Paths {
                     (None, Some(home)) => Ok(home.join(fallback)),
                     (None, None) => bail!("neither {name} nor HOME is set"),
                 };
-                Paths::new(
+                let mut paths = Paths::new(
                     &pick("XDG_CONFIG_HOME", ".config")?,
                     &pick("XDG_CACHE_HOME", ".cache")?,
                     &pick("XDG_DATA_HOME", ".local/share")?,
-                )
+                );
+                if let Some(runtime) = dir("XDG_RUNTIME_DIR") {
+                    paths.clipboard_dir = runtime.join("nokta").join("clipboard");
+                }
+                paths
             }
             System::MacOs => {
                 let library = need("HOME")?.join("Library");
                 let support = library.join("Application Support").join("nokta");
+                let cache_dir = library.join("Caches").join("nokta");
                 Paths {
                     config_file: support.join("config.toml"),
-                    cache_dir: library.join("Caches").join("nokta"),
+                    clipboard_dir: cache_dir.join("clipboard"),
+                    cache_dir,
                     lyrics_dir: support.join("lyrics"),
                     system_thumbnails: None,
                 }
             }
             System::Windows => {
                 let roaming = need("APPDATA")?.join("nokta");
+                let cache_dir = need("LOCALAPPDATA")?.join("nokta").join("cache");
                 Paths {
                     config_file: roaming.join("config.toml"),
-                    cache_dir: need("LOCALAPPDATA")?.join("nokta").join("cache"),
+                    clipboard_dir: cache_dir.join("clipboard"),
+                    cache_dir,
                     lyrics_dir: roaming.join("lyrics"),
                     system_thumbnails: None,
                 }
@@ -149,6 +161,21 @@ mod tests {
             )
         );
         assert!(Paths::for_system(System::Linux, env(&[])).is_err());
+    }
+
+    #[test]
+    fn copied_pictures_go_to_the_runtime_folder() {
+        let paths = Paths::new(Path::new("/c"), Path::new("/k"), Path::new("/d"));
+        assert_eq!(paths.clipboard_dir, Path::new("/k/nokta/clipboard"));
+        let vars = [("HOME", "/home/u"), ("XDG_RUNTIME_DIR", "/run/user/1000")];
+        let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
+        assert_eq!(
+            paths.clipboard_dir,
+            Path::new("/run/user/1000/nokta/clipboard")
+        );
+        let vars = [("HOME", "/Users/u")];
+        let paths = Paths::for_system(System::MacOs, env(&vars)).unwrap();
+        assert_eq!(paths.clipboard_dir, paths.cache_dir.join("clipboard"));
     }
 
     #[test]

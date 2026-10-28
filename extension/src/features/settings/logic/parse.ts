@@ -146,6 +146,19 @@ export const DEFAULT_CALENDAR: Readonly<CalendarSettings> = {
     reminderMinutes: 5,
 };
 
+/** io.nokta.Settings1.Clipboard in camelCase. */
+export interface ClipboardSettings {
+    /** Keep a history of what is copied. */
+    enabled: boolean;
+    /** Entries kept besides the pinned ones. */
+    maxItems: number;
+}
+
+export const DEFAULT_CLIPBOARD: Readonly<ClipboardSettings> = {
+    enabled: true,
+    maxItems: 25,
+};
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
@@ -196,3 +209,4 @@ export const notificationsFrom = (raw: unknown): NotificationSettings => fromTab
 export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(raw, DEFAULT_ACTIVITIES);
 export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);
 export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);
+export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);

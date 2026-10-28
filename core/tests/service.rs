@@ -611,3 +611,75 @@ async fn files_added_to_the_shelf_are_listed_until_removed() {
     }
     panic!("the item stayed on the shelf");
 }
+
+#[tokio::test]
+async fn copies_are_kept_given_back_and_cleared() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    const CLIPBOARD: &str = "io.nokta.Clipboard1";
+    let clipboard = zbus::Proxy::new(&conn, NAME, "/io/nokta/Clipboard", CLIPBOARD)
+        .await
+        .unwrap();
+    let p = properties(&conn, "/io/nokta/Clipboard").await;
+    type Row = (String, String, String, String, bool, i64);
+    let items = || async {
+        let v: Vec<Row> = get(&p, CLIPBOARD, "Items").await.try_into().unwrap();
+        v
+    };
+    let paused = || async {
+        let v: bool = get(&p, CLIPBOARD, "Paused").await.try_into().unwrap();
+        v
+    };
+
+    let _: () = clipboard
+        .call("Add", &("text", "first line\nsecond", Vec::<u8>::new()))
+        .await
+        .unwrap();
+    let mut listed = items().await;
+    for _ in 0..100 {
+        if !listed.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        listed = items().await;
+    }
+    assert_eq!(listed.len(), 1);
+    let (id, kind, preview, thumbnail, pinned, time) = listed[0].clone();
+    assert_eq!(
+        (kind.as_str(), preview.as_str(), thumbnail.as_str(), pinned),
+        ("text", "first line", "", false)
+    );
+    assert!(
+        time > 1_700_000_000_000_000,
+        "wall clock microseconds: {time}"
+    );
+
+    let (kind, text, image): (String, String, Vec<u8>) =
+        clipboard.call("Get", &(id.as_str(),)).await.unwrap();
+    assert_eq!(
+        (kind.as_str(), text.as_str(), image.len()),
+        ("text", "first line\nsecond", 0)
+    );
+    let unknown: zbus::Result<(String, String, Vec<u8>)> = clipboard.call("Get", &("nope",)).await;
+    assert!(unknown.is_err());
+
+    assert!(!paused().await);
+    let _: () = clipboard.call("SetPaused", &(true,)).await.unwrap();
+    for _ in 0..100 {
+        if paused().await {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert!(paused().await);
+
+    let _: () = clipboard.call("Clear", &()).await.unwrap();
+    for _ in 0..100 {
+        if items().await.is_empty() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("Clear kept the entry");
+}

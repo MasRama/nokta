@@ -495,3 +495,76 @@
     font-size: 13px;
     font-weight: bold;
 }
+
+/* A page that a tile on home opens: a header with a back arrow over its body. */
+.nokta-subpage {
+    padding: 14px 18px 14px 18px;
+    spacing: 10px;
+}
+
+.nokta-subpage-header {
+    height: 28px;
+    spacing: 6px;
+}
+
+.nokta-subpage-title {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.nokta-subpage-actions {
+    spacing: 2px;
+}
+
+.nokta-clip-list {
+    spacing: 4px;
+}
+
+.nokta-clip-row {
+    spacing: 2px;
+}
+
+.nokta-clip-entry {
+    padding: 0 8px;
+    border-radius: 10px;
+}
+
+.nokta-clip-entry:hover,
+.nokta-clip-entry:focus {
+    background-color: rgba(128, 128, 128, 0.18);
+}
+
+.nokta-theme-paper .nokta-clip-entry:hover,
+.nokta-theme-paper .nokta-clip-entry:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.nokta-clip-content {
+    spacing: 10px;
+}
+
+.nokta-clip-thumbnail {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+}
+
+.nokta-clip-icon {
+    icon-size: 16px;
+}
+
+.nokta-clip-preview {
+    font-size: 13px;
+}
+
+.nokta-clip-age {
+    font-size: 11px;
+}
+
+.nokta-clip-button-icon {
+    icon-size: 14px;
+}
+
+.nokta-clip-empty {
+    font-size: 13px;
+}

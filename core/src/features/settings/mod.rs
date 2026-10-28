@@ -9,8 +9,9 @@ mod store;
 mod watch;
 
 pub use config::{
-    parse, ActivitiesConfig, Appearance, Behavior, CalendarConfig, Config, ConfigError, Entries,
-    LyricsConfig, SettingValue, TimerConfig, WeatherConfig, DEFAULT_CONFIG_TOML, THEMES,
+    parse, ActivitiesConfig, Appearance, Behavior, CalendarConfig, ClipboardConfig, Config,
+    ConfigError, Entries, LyricsConfig, SettingValue, TimerConfig, WeatherConfig,
+    DEFAULT_CONFIG_TOML, THEMES,
 };
 pub use store::Store;
 pub use watch::watch;

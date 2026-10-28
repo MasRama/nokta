@@ -9,6 +9,7 @@ use tokio::sync::{mpsc, watch};
 
 use super::{OpenMeteoUrls, USER_AGENT};
 use crate::features::activities;
+use crate::features::clipboard;
 use crate::features::lyrics::{self, cache::Cache, lrclib, LyricsState};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
@@ -27,6 +28,7 @@ pub struct Services {
     pub activities: activities::service::Handle,
     pub weather: weather::service::Handle,
     pub shelf: shelf::service::Handle,
+    pub clipboard: clipboard::service::Handle,
     /// Watches config.toml as long as the services live.
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
@@ -80,6 +82,12 @@ impl Services {
             own: paths.cache_dir.join("thumbnails"),
         });
 
+        let clipboard = clipboard::service::spawn(
+            follow(config.clone(), |c| c.clipboard.clone()),
+            paths.clipboard_dir.clone(),
+            unix_time_us,
+        );
+
         Services {
             config,
             config_file: paths.config_file.clone(),
@@ -92,9 +100,17 @@ impl Services {
             activities,
             weather,
             shelf,
+            clipboard,
             _config_watcher: config_watcher,
         }
     }
+}
+
+/// Microseconds since the Unix epoch, by the wall clock.
+fn unix_time_us() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_micros()).unwrap_or(i64::MAX))
 }
 
 /// The timer's phase lengths from the current `[timer]` table.

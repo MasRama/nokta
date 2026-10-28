@@ -57,6 +57,7 @@ import {
 import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
+import { ClipboardClient, ClipboardWatcher, copyToClipboard } from './features/clipboard/index.js';
 import {
     breakAfterFocus,
     finishedAlert,
@@ -70,7 +71,7 @@ import {
     wantsQuiet,
 } from './features/timer/index.js';
 import { WeatherClient } from './features/weather/index.js';
-import { MonitorNotch, type PanelSource, type ShelfSource } from './monitor-notch.js';
+import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { formatClock, uses24h } from './shared/logic/format.js';
@@ -104,6 +105,8 @@ class Session {
     private readonly weather = new WeatherClient();
     private readonly shelf = new ShelfClient();
     private readonly shelfCoordinator: ShelfCoordinator;
+    private readonly clipboard = new ClipboardClient();
+    private readonly clipboardWatcher: ClipboardWatcher;
     private readonly calendar = new CalendarSource();
     private readonly calendarAlarms = new CalendarAlarms(
         (nowMs) => this.calendarEvents(nowMs),
@@ -127,6 +130,7 @@ class Session {
     private readonly weatherId: number;
     private readonly calendarId: number;
     private readonly shelfId: number;
+    private readonly clipboardId: number;
     private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
@@ -157,6 +161,21 @@ class Session {
         overRow: (notch, rect) => this.shelfCoordinator.overRow(notch, rect),
         rowGone: (notch) => this.shelfCoordinator.rowGone(notch),
         clear: () => this.shelf.clear(),
+    };
+    private readonly clipboardSource: ClipboardSource = {
+        enabled: () => this.settings.clipboard.enabled && this.clipboard.connected,
+        entries: () => (this.settings.clipboard.enabled ? this.clipboard.entries() : []),
+        paused: () => this.clipboard.paused,
+        copy: (id) => {
+            this.clipboard
+                .get(id)
+                .then((content) => content && copyToClipboard(content))
+                .catch((error: unknown) => console.error('Nokta: cannot copy from the clipboard history', error));
+        },
+        pin: (id, pinned) => this.clipboard.pin(id, pinned),
+        remove: (id) => this.clipboard.remove(id),
+        clear: () => this.clipboard.clear(),
+        setPaused: (paused) => this.clipboard.setPaused(paused),
     };
     /**
      * The notification in a notch, watched so the notch closes when it goes
@@ -193,6 +212,8 @@ class Session {
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
+        this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
+        this.clipboardWatcher = new ClipboardWatcher(this.clipboard, () => this.settings.clipboard.enabled);
         this.unwatchScreenshots = watchScreenshots((uri) => this.onScreenshotSaved(uri));
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
@@ -227,6 +248,8 @@ class Session {
         this.weather.disconnect(this.weatherId);
         this.calendar.disconnect(this.calendarId);
         this.shelf.disconnect(this.shelfId);
+        this.clipboard.disconnect(this.clipboardId);
+        this.clipboardWatcher.destroy();
         this.calendarAlarms.destroy();
         this.calendar.destroy();
         this.stopTimerTick();
@@ -236,6 +259,7 @@ class Session {
         this.activities.destroy();
         this.weather.destroy();
         this.shelf.destroy();
+        this.clipboard.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.caffeine.release();
@@ -287,6 +311,7 @@ class Session {
             this.activities.attach(connection, cancellable),
             this.weather.attach(connection, cancellable),
             this.shelf.attach(connection, cancellable),
+            this.clipboard.attach(connection, cancellable),
         ]);
         if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
@@ -301,6 +326,7 @@ class Session {
         this.activities.detach();
         this.weather.detach();
         this.shelf.detach();
+        this.clipboard.detach();
         this.devices.detach();
     }
 
@@ -357,6 +383,7 @@ class Session {
             privacy: this.privacy,
             panel: this.panel,
             shelf: this.shelfSource,
+            clipboard: this.clipboardSource,
         };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;
@@ -532,6 +559,7 @@ class Session {
                 dark: this.interfaceSettings.get_string('color-scheme') === 'prefer-dark',
             },
             player: this.media.snapshot().available,
+            clipboard: this.clipboardSource.enabled(),
         };
     }
 

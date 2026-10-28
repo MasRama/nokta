@@ -9,6 +9,7 @@ use zbus::Connection;
 
 use super::{nokta_iface, RunOptions, Services, BUS_NAME, USER_AGENT};
 use crate::features::activities;
+use crate::features::clipboard;
 use crate::features::devices;
 use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
@@ -59,6 +60,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     activities::dbus::serve(&conn, services.activities).await?;
     weather::dbus::serve(&conn, services.weather).await?;
     shelf::dbus::serve(&conn, services.shelf).await?;
+    clipboard::dbus::serve(&conn, services.clipboard).await?;
     let super::Timer {
         commands,
         state,

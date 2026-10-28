@@ -201,6 +201,32 @@ fn weather_defaults_and_units() {
 }
 
 #[test]
+fn clipboard_defaults_and_size_range() {
+    let c = Config::default().clipboard;
+    assert!(c.enabled);
+    assert_eq!(c.max_items, 25);
+    let c = parse("[clipboard]\nenabled = false\nmax_items = 5\n").unwrap();
+    assert!(!c.clipboard.enabled);
+    assert_eq!(c.clipboard.max_items, 5);
+    assert_eq!(
+        parse("[clipboard]\nmax_items = 100\n")
+            .unwrap()
+            .clipboard
+            .max_items,
+        100
+    );
+    for bad in [4, 101] {
+        let err = parse(&format!("[clipboard]\nmax_items = {bad}\n")).unwrap_err();
+        assert!(err.message.contains("clipboard.max_items"), "{err}");
+    }
+    let map = entries(Config::default().clipboard.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["enabled", "max_items"]);
+    assert_eq!(map["max_items"], SettingValue::Uint(25));
+}
+
+#[test]
 fn calendar_defaults_and_reminder_range() {
     let c = Config::default().calendar;
     assert!(c.enabled);
@@ -425,6 +451,8 @@ mod edit {
         assert_eq!(parse(&text).unwrap().weather.location, "Bandung");
         let text = set_key("", "calendar", "reminder_minutes", &Value::Uint(10)).unwrap();
         assert_eq!(parse(&text).unwrap().calendar.reminder_minutes, 10);
+        let text = set_key("", "clipboard", "enabled", &Value::Bool(false)).unwrap();
+        assert!(!parse(&text).unwrap().clipboard.enabled);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);
