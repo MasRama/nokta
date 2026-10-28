@@ -242,6 +242,20 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       `sleep 5` while it runs, then `Done in 5 s`. Again in a real session
       *(real session)*.
 
+### Weather
+
+- [ ] The smoke test sets `location` to `Jakarta`; the fake Open-Meteo
+      answers. Hover the idle notch: a partly cloudy icon, `31°`, then
+      `Jakarta · 33° / 25°` dimmed, at the end of the date line.
+- [ ] `location = "-6.2,106.8"`: the same, without the place name.
+- [ ] `units = "fahrenheit"`: the weather goes away, then comes back from a
+      new request. `enabled = false` or `location = ""`: no weather, and
+      `noktad.log` shows no request.
+- [ ] With the fake server stopped, a refresh more than 30 minutes later
+      fails and the last reading stays.
+- [ ] The Weather group in the settings window changes all three.
+- [ ] A real city in a real session *(real session)*.
+
 ### Privacy dots
 
 `. tools/devshell/env.sh`, then with

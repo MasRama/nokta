@@ -42,7 +42,7 @@ contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
   src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
-  src/features/     media, lyrics, settings, devices, timer, activities
+  src/features/     media, lyrics, settings, devices, timer, activities, weather
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
@@ -50,7 +50,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
-                    notifications, panel, activities
+                    notifications, panel, activities, weather
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -65,15 +65,16 @@ docs/               manual test checklist, screenshots
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
   current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`,
-  `notifications`, `panel` and `activities` depend on no other feature;
+  `notifications`, `panel`, `activities` and `weather` depend on no other feature;
   `extension.ts` shows device, timer and activity alerts through the OSD
   row. The closed notch has one spot for extra information, where the clock
   or the equalizer would be: `shared/logic/indicator.ts` picks the timer,
   else the newest live activity, and `monitor-notch.ts` puts it there.
   `panel` (what hovering the idle notch opens) only draws its rows (the
-  date, live activities, two buttons) from plain data, and grows to fit
+  date and weather, live activities, two buttons) from plain data, and grows to fit
   them (`panel/logic/height.ts`); `extension.ts` fills them from
-  `activities`, `notifications` and `timer`.
+  `weather`, `activities`, `notifications` and `timer`, and asks `weather`
+  to refresh when the panel opens.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings. `privacy` (the camera,
@@ -135,6 +136,13 @@ docs/               manual test checklist, screenshots
   `Ended`. The `nokta` command (`src/cli/`) is a thin client of it:
   `nokta activity set|end` and `nokta run -- CMD`, which shows the command
   while it runs and passes its exit code through.
+- **weather** reads the current weather at `[weather] location` from
+  Open-Meteo. The location is coordinates (`-6.2,106.8`) or a place name,
+  which the geocoding API turns into coordinates once. `model.rs` is pure:
+  WMO weather codes to conditions, and when a reading is stale (30 minutes,
+  5 after a failure). The service asks on start, when the location or units
+  change, and on `Refresh()` once stale, one request at a time. A failed
+  request keeps the last reading. With no location it sends nothing.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -158,7 +166,7 @@ the Linux adapters touch D-Bus:
 
 Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
 is a Linux-only dependency. `app::Services` starts the rest (settings,
-lyrics, timer, activities) on any system. CI builds and tests the daemon on macOS and
+lyrics, timer, activities, weather) on any system. CI builds and tests the daemon on macOS and
 Windows, where `noktad` says it has no frontend yet. A new system adds its
 own sources and transport next to the Linux ones; nothing in a feature's
 model changes.
@@ -174,10 +182,11 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`, `Shuffle`, `LoopStatus`, `CanShuffle`, `CanLoop`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)`, `SetShuffle(b)`, `SetLoopStatus(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
+| `io.nokta.Weather1` | `/io/nokta/Weather` | `Status` (`s`), `Place` (`s`), `Temperature`, `High`, `Low` (`d`), `Units` (`s`), `Condition` (`s`), `IsDay` (`b`); `Refresh()` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
