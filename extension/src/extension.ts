@@ -43,6 +43,7 @@ import {
 import { MAX_PANEL_ACTIVITIES, notificationsLabel, type PanelContent } from './features/panel/index.js';
 import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
+import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
 import {
     breakAfterFocus,
     finishedAlert,
@@ -57,7 +58,7 @@ import {
     wantsQuiet,
 } from './features/timer/index.js';
 import { WeatherClient } from './features/weather/index.js';
-import { MonitorNotch, type PanelSource } from './monitor-notch.js';
+import { MonitorNotch, type PanelSource, type ShelfSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { formatClock, uses24h } from './shared/logic/format.js';
@@ -89,6 +90,8 @@ class Session {
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
     private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
     private readonly weather = new WeatherClient();
+    private readonly shelf = new ShelfClient();
+    private readonly shelfCoordinator: ShelfCoordinator;
     private readonly calendar = new CalendarSource();
     private readonly calendarAlarms = new CalendarAlarms(
         (nowMs) => this.calendarEvents(nowMs),
@@ -107,6 +110,7 @@ class Session {
     private readonly activitiesId: number;
     private readonly weatherId: number;
     private readonly calendarId: number;
+    private readonly shelfId: number;
     private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
@@ -128,11 +132,17 @@ class Session {
         },
         toggleFocus: () => this.onFocusShortcut(),
     };
+    private readonly shelfSource: ShelfSource = {
+        items: () => (this.settings.behavior.fileShelf ? this.shelf.items() : []),
+        overRow: (notch, rect) => this.shelfCoordinator.overRow(notch, rect),
+        rowGone: (notch) => this.shelfCoordinator.rowGone(notch),
+    };
     /** The notification in a notch, watched so the notch closes when it goes away. */
     private shownNotification: { notification: TrayNotification; notch: MonitorNotch; destroyId: number } | null =
         null;
 
-    constructor(extensionSettings: Gio.Settings) {
+    constructor(extensionSettings: Gio.Settings, extensionPath: string) {
+        this.shelfCoordinator = new ShelfCoordinator(`${extensionPath}/shelf-helper/main.js`, () => this.notches);
         this.settings = new SettingsClient(() => this.applySettings());
         this.allMonitors = this.settings.behavior.allMonitors;
         this.monitorsId = Main.layoutManager.connect('monitors-changed', () => this.buildNotches());
@@ -142,6 +152,7 @@ class Session {
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
+        this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
             pause: () => this.timer.pause(),
@@ -156,6 +167,7 @@ class Session {
         this.applyNotificationSettings();
         this.onTimer();
         this.calendarAlarms.reschedule();
+        this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
             () => this.onDaemonVanished(),
@@ -165,6 +177,7 @@ class Session {
     destroy(): void {
         unwatchDaemon(this.watchId);
         this.cancellable.cancel();
+        this.shelfCoordinator.destroy();
         this.destroyNotches();
         this.media.disconnect(this.mediaId);
         this.lyrics.disconnect(this.lyricsId);
@@ -172,6 +185,7 @@ class Session {
         this.activities.disconnect(this.activitiesId);
         this.weather.disconnect(this.weatherId);
         this.calendar.disconnect(this.calendarId);
+        this.shelf.disconnect(this.shelfId);
         this.calendarAlarms.destroy();
         this.calendar.destroy();
         this.stopTimerTick();
@@ -180,6 +194,7 @@ class Session {
         this.timer.destroy();
         this.activities.destroy();
         this.weather.destroy();
+        this.shelf.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.focusShortcut.destroy();
@@ -227,6 +242,7 @@ class Session {
             this.timer.attach(connection, cancellable),
             this.activities.attach(connection, cancellable),
             this.weather.attach(connection, cancellable),
+            this.shelf.attach(connection, cancellable),
         ]);
         if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
@@ -240,6 +256,7 @@ class Session {
         this.timer.detach();
         this.activities.detach();
         this.weather.detach();
+        this.shelf.detach();
         this.devices.detach();
     }
 
@@ -295,6 +312,7 @@ class Session {
             activities: this.activities,
             privacy: this.privacy,
             panel: this.panel,
+            shelf: this.shelfSource,
         };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;
@@ -304,7 +322,10 @@ class Session {
     }
 
     private destroyNotches(): void {
-        for (const notch of this.notches) notch.destroy();
+        for (const notch of this.notches) {
+            this.shelfCoordinator.forget(notch);
+            notch.destroy();
+        }
         this.notches = [];
     }
 
@@ -321,6 +342,7 @@ class Session {
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
         this.onCalendar();
+        this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
     }
 
     // OSD
@@ -542,7 +564,7 @@ export default class NoktaExtension extends Extension {
     private session: Session | null = null;
 
     override enable(): void {
-        this.session = new Session(this.getSettings());
+        this.session = new Session(this.getSettings(), this.path);
     }
 
     override disable(): void {

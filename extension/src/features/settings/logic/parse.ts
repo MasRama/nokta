@@ -34,6 +34,8 @@ export interface Behavior {
     privacyDots: boolean;
     /** Live activities from apps and the nokta command. */
     liveActivities: boolean;
+    /** Files dropped on the notch stay there until dragged out. */
+    fileShelf: boolean;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -88,6 +90,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     clockFormat: 'system',
     privacyDots: true,
     liveActivities: true,
+    fileShelf: true,
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */

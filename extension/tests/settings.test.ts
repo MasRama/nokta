@@ -149,6 +149,11 @@ test('activity settings from table', () => {
     assert.equal(behaviorFrom({ live_activities: false }).liveActivities, false);
 });
 
+test('the file shelf is on unless turned off', () => {
+    assert.equal(behaviorFrom({}).fileShelf, true);
+    assert.equal(behaviorFrom({ file_shelf: false }).fileShelf, false);
+});
+
 test('weather settings from table', () => {
     assert.deepEqual(DEFAULT_WEATHER, { enabled: true, location: '', units: 'celsius' });
     assert.deepEqual(weatherFrom({ enabled: false, location: 'Jakarta', units: 'fahrenheit' }), {

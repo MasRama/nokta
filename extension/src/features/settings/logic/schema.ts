@@ -265,6 +265,17 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'File shelf',
+                rows: [
+                    behavior(
+                        'file_shelf',
+                        'Keep files on the notch',
+                        bool(),
+                        'Drop files on the notch, then drag them out again into any app',
+                    ),
+                ],
+            },
+            {
                 title: 'Device alerts',
                 rows: [
                     behavior('device_alerts', 'Show device alerts', bool(), 'Bluetooth audio, charger and battery'),

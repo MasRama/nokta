@@ -100,6 +100,13 @@ export class Notch {
         this.actor.destroy();
     }
 
+    /** Where the body is once it is `width` × `height`, in stage coordinates. */
+    bodyRect(width: number, height: number): { x: number; y: number; width: number; height: number } {
+        const ear = this.style.earRadius;
+        const x = this.monitor.x + Math.round((this.monitor.width - width - 2 * ear) / 2) + ear;
+        return { x, y: this.monitor.y, width, height };
+    }
+
     private totalWidth(): number {
         return this.width + 2 * this.style.earRadius;
     }

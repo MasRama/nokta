@@ -26,6 +26,17 @@ import {
 } from './features/panel/index.js';
 import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
+import {
+    DropView,
+    pointIn,
+    SHELF_ROW_HEIGHT,
+    ShelfBadge,
+    ShelfRow,
+    type Hit,
+    type Rect,
+    type ShelfItem,
+    type ShelfNotch,
+} from './features/shelf/index.js';
 import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { accentFor, withAlpha } from './shared/logic/color.js';
@@ -41,12 +52,18 @@ const TICK_MS = 250;
 const PANEL_TICK_MS = 1000;
 /** A notification is two lines tall: this much taller than the closed notch. */
 const NOTIFICATION_EXTRA_HEIGHT = 28;
+/** The drop area: this much taller than the closed notch. */
+const DROP_EXTRA_HEIGHT = 76;
+/** Files dragged this close to the closed notch open the drop area. */
+const DROP_MARGIN = 24;
+/** The shelf row under the player, with the open player's spacing. */
+const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
 
 /**
  * What the notch draws: the state machine's mode (the idle panel when it
  * opens without a player), or the OSD or a notification over it.
  */
-type Drawn = NotchMode | 'panel' | 'osd' | 'notification';
+type Drawn = NotchMode | 'panel' | 'osd' | 'notification' | 'drop';
 
 /** What the idle panel shows and does; owned by the session. */
 export interface PanelSource {
@@ -58,6 +75,16 @@ export interface PanelSource {
     toggleFocus(): void;
 }
 
+/** The parked files and the helper window; owned by the session. */
+export interface ShelfSource {
+    /** Empty while the shelf is turned off. */
+    items(): readonly ShelfItem[];
+    /** The pointer is over this notch's shelf row, drawn at `rect`. */
+    overRow(notch: MonitorNotch, rect: Rect): void;
+    /** This notch no longer shows its shelf row. */
+    rowGone(notch: MonitorNotch): void;
+}
+
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
     settings: SettingsClient;
@@ -67,13 +94,14 @@ export interface NotchSources {
     activities: ActivitiesClient;
     privacy: PrivacyMonitor;
     panel: PanelSource;
+    shelf: ShelfSource;
 }
 
 /**
  * The notch on one monitor: its views, hover state machine, OSD and timers.
  * destroy() removes everything it created.
  */
-export class MonitorNotch {
+export class MonitorNotch implements ShelfNotch {
     private readonly notch: Notch;
     private readonly clock = new IdleClock();
     /** The clock, or the indicator: the timer while one is set, else the newest activity. */
@@ -82,6 +110,14 @@ export class MonitorNotch {
     private readonly collapsedTimer = new TimerLabel();
     private readonly idleBadge = new ActivityBadge();
     private readonly collapsedBadge = new ActivityBadge();
+    private readonly idleShelf = new ShelfBadge();
+    private readonly collapsedShelf = new ShelfBadge();
+    private readonly panelShelf = new ShelfRow();
+    private readonly expandedShelf = new ShelfRow();
+    private readonly dropView = new DropView();
+    private dropping = false;
+    /** The pointer is over the helper window on a shelf row, so over the notch too. */
+    private helperInside = false;
     private indicator: Indicator | null = null;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
@@ -106,6 +142,7 @@ export class MonitorNotch {
     private readonly notificationTimer: NotificationTimer;
     private readonly views: Record<Drawn, St.Widget>;
     private readonly hoverId: number;
+    private readonly motionId: number;
     private readonly destroyId: number;
     private destroyed = false;
     private drawn: Drawn = 'idle';
@@ -126,13 +163,18 @@ export class MonitorNotch {
         this.expanded.infoBox.add_child(this.lyricLine.actor);
         // Under the cover and the title, above the seek bar.
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 1);
+        this.expanded.actor.add_child(this.expandedShelf.actor);
+        // Above the notifications and focus buttons.
+        this.idlePanel.actor.insert_child_at_index(this.panelShelf.actor, this.idlePanel.actor.get_n_children() - 1);
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
         this.idle.add_child(this.idleTimer.actor);
         this.idle.add_child(this.idleBadge.actor);
+        this.idle.add_child(this.idleShelf.actor);
         this.idleTimer.actor.hide();
         this.idleBadge.actor.hide();
+        this.idleShelf.actor.hide();
         this.views = {
             idle: this.idle,
             collapsed: this.collapsed.actor,
@@ -140,6 +182,7 @@ export class MonitorNotch {
             panel: this.idlePanel.actor,
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
+            drop: this.dropView.actor,
         };
         for (const [mode, actor] of Object.entries(this.views)) {
             actor.x_align = Clutter.ActorAlign.CENTER;
@@ -165,7 +208,11 @@ export class MonitorNotch {
         this.hoverId = this.notch.actor.connect('notify::hover', () => {
             const { hover } = this.notch.actor;
             this.notificationTimer.pointer(hover);
-            this.machine.pointer(hover);
+            this.machine.pointer(hover || this.helperInside);
+        });
+        this.motionId = this.notch.actor.connect('motion-event', (_actor, event: Clutter.Event) => {
+            this.onMotion(event);
+            return Clutter.EVENT_PROPAGATE;
         });
         // GNOME 50 and later destroy the notch themselves when the shell
         // shuts down, while the clients may still report changes.
@@ -180,6 +227,7 @@ export class MonitorNotch {
         this.onMedia();
         this.onTimer();
         this.onActivities();
+        this.onShelf();
         this.onPrivacy();
     }
 
@@ -197,6 +245,7 @@ export class MonitorNotch {
         this.notificationClick = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
+        this.notch.actor.disconnect(this.motionId);
         this.notch.actor.disconnect(this.destroyId);
         this.osdView.destroy();
         this.notificationView.destroy();
@@ -207,6 +256,11 @@ export class MonitorNotch {
         this.collapsedTimer.destroy();
         this.idleBadge.destroy();
         this.collapsedBadge.destroy();
+        this.idleShelf.destroy();
+        this.collapsedShelf.destroy();
+        this.panelShelf.destroy();
+        this.expandedShelf.destroy();
+        this.dropView.destroy();
         this.clock.destroy();
         this.idle.destroy();
         this.lyricLine.destroy();
@@ -268,6 +322,62 @@ export class MonitorNotch {
         if (this.drawn === 'panel') this.refreshPanel();
     }
 
+    /** The parked files changed, or the file_shelf setting. */
+    onShelf(): void {
+        if (this.destroyed) return;
+        const items = this.sources.shelf.items();
+        this.idleShelf.update(items.length);
+        this.collapsedShelf.update(items.length);
+        this.panelShelf.show(items);
+        this.expandedShelf.show(items);
+        if (items.length === 0) this.sources.shelf.rowGone(this);
+        const [width, height] = this.sizeFor('expanded');
+        this.expanded.actor.set_size(width, height);
+        if (this.drawn === 'expanded') this.notch.resizeTo(width, height, 'width');
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
+    }
+
+    // The file shelf: what the helper window needs from this notch.
+
+    get chrome(): Clutter.Actor {
+        return this.notch.actor;
+    }
+
+    dropTrigger(): Rect {
+        const [width, height] = this.sizeFor(this.drawn);
+        const body = this.notch.bodyRect(width, height);
+        return {
+            x: body.x - DROP_MARGIN,
+            y: body.y,
+            width: body.width + 2 * DROP_MARGIN,
+            height: body.height + DROP_MARGIN,
+        };
+    }
+
+    dropRect(): Rect {
+        const [width, height] = this.sizeFor('drop');
+        return this.notch.bodyRect(width, height);
+    }
+
+    setDropping(on: boolean): void {
+        if (this.destroyed || on === this.dropping) return;
+        this.dropping = on;
+        this.draw(this.overlay());
+    }
+
+    setHelperPointer(inside: boolean): void {
+        if (this.destroyed) return;
+        this.helperInside = inside;
+        this.machine.pointer(this.notch.actor.hover || inside);
+    }
+
+    setShelfHover(hit: Hit | null): void {
+        if (this.destroyed) return;
+        this.panelShelf.setHover(hit);
+        this.expandedShelf.setHover(hit);
+    }
+
     onLyrics(): void {
         if (this.destroyed) return;
         if (!this.lyricsAvailable()) this.setLyricsOpen(false);
@@ -285,6 +395,7 @@ export class MonitorNotch {
         this.applyClockOptions();
         this.onMedia();
         this.onActivities();
+        this.onShelf();
         this.onPrivacy();
     }
 
@@ -334,14 +445,19 @@ export class MonitorNotch {
         const indicator = chooseIndicator({
             timer: this.sources.timer.snapshot().state !== 'idle',
             activity: this.liveActivities().length > 0,
-            shelf: false,
+            shelf: this.sources.shelf.items().length > 0,
         });
         if (indicator !== this.indicator) {
             this.indicator = indicator;
             this.clock.actor.visible = indicator === null;
             this.idleTimer.actor.visible = indicator === 'timer';
             this.idleBadge.actor.visible = indicator === 'activity';
-            const aside = { timer: this.collapsedTimer.actor, activity: this.collapsedBadge.actor, shelf: null };
+            this.idleShelf.actor.visible = indicator === 'shelf';
+            const aside = {
+                timer: this.collapsedTimer.actor,
+                activity: this.collapsedBadge.actor,
+                shelf: this.collapsedShelf.actor,
+            };
             this.collapsed.setAside(indicator ? aside[indicator] : null);
             this.collapsed.setActive(this.drawn === 'collapsed', this.sources.media.snapshot());
         }
@@ -353,7 +469,7 @@ export class MonitorNotch {
     private refreshPanel(): void {
         const content = this.sources.panel.content();
         this.idlePanel.show(content);
-        const rows = panelRowsFor(content);
+        const rows = panelRowsFor(content, this.sources.shelf.items().length > 0);
         if (rows.join() !== this.panelRows.join()) {
             this.panelRows = rows;
             const [width, height] = this.sizeFor('panel');
@@ -395,8 +511,26 @@ export class MonitorNotch {
         click?.();
     }
 
-    /** The OSD over a notification over the state machine's mode, which keeps running underneath. */
+    /** The shelf row in the open notch, while one shows. */
+    private shownShelfRow(): ShelfRow | null {
+        const row = this.drawn === 'panel' ? this.panelShelf : this.drawn === 'expanded' ? this.expandedShelf : null;
+        return row?.actor.visible ? row : null;
+    }
+
+    /** The pointer moved over the notch: on the shelf row, the helper window takes over. */
+    private onMotion(event: Clutter.Event): void {
+        const row = this.shownShelfRow();
+        if (!row) return;
+        const [x, y] = event.get_coords();
+        const [rx, ry] = row.actor.get_transformed_position();
+        const [width, height] = row.actor.get_transformed_size();
+        const rect = { x: Math.round(rx), y: Math.round(ry), width: Math.round(width), height: Math.round(height) };
+        if (pointIn(rect, x, y)) this.sources.shelf.overRow(this, rect);
+    }
+
+    /** The drop area over the OSD over a notification over the state machine's mode, which keeps running underneath. */
     private overlay(): Drawn {
+        if (this.dropping) return 'drop';
         if (this.osdTimer.active) return 'osd';
         if (this.notificationTimer.active) return 'notification';
         const { mode } = this.machine;
@@ -418,7 +552,9 @@ export class MonitorNotch {
             this.refreshPanel();
         }
         const [width, height] = this.sizeFor(mode);
-        const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'panel' || drawn === 'notification';
+        if (previous === 'panel' || previous === 'expanded') this.sources.shelf.rowGone(this);
+        const tall = (drawn: Drawn) =>
+            drawn === 'expanded' || drawn === 'panel' || drawn === 'notification' || drawn === 'drop';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
         this.showView(mode);
@@ -441,8 +577,13 @@ export class MonitorNotch {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
         if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
+        if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
-        if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight + (this.lyricsOpen ? SHEET_EXTRA_HEIGHT : 0)];
+        if (mode === 'expanded') {
+            const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : 0;
+            const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
+            return [a.expandedWidth, a.expandedHeight + lyrics + shelf];
+        }
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }
 
@@ -458,6 +599,7 @@ export class MonitorNotch {
         const { foreground, accent } = this.sources.settings.appearance;
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setForeground(foreground);
+        this.dropView.setForeground(foreground);
     }
 
     private applyClockOptions(): void {
@@ -591,8 +733,9 @@ function trackKey(snapshot: { playerId: string; title: string; artists: readonly
     return [snapshot.playerId, snapshot.title, ...snapshot.artists].join('\n');
 }
 
-function panelRowsFor(content: PanelContent): PanelRow[] {
+function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const event: PanelRow[] = content.event ? ['event'] : [];
-    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), 'buttons'];
+    const files: PanelRow[] = shelf ? ['shelf'] : [];
+    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), ...files, 'buttons'];
 }
