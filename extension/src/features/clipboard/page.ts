@@ -7,6 +7,7 @@ import { setVertical } from '../../shared/compat.js';
 import { withAlpha } from '../../shared/logic/color.js';
 import {
     ageLabel,
+    entryIcon,
     entryText,
     filterEntries,
     MAX_VISIBLE_ROWS,
@@ -17,6 +18,7 @@ import {
     type ClipboardEntry,
 } from './logic/entries.js';
 import { iconFor } from '../../shared/icons.js';
+import { SECONDARY, TERTIARY } from '../../shared/dim.js';
 
 export interface ClipboardPageHandlers {
     copy(id: string): void;
@@ -214,10 +216,10 @@ export class ClipboardPage {
         const pin = this.iconButton('view-pin-symbolic', () => this.handlers.pin(entry.id, !entry.pinned));
         pin.add_style_class_name('nokta-clip-pin');
         (pin.child as St.Icon).style = entry.pinned ? `color: ${this.accent};` : '';
-        pin.opacity = entry.pinned ? 255 : 110;
+        pin.opacity = entry.pinned ? 255 : TERTIARY;
         row.add_child(pin);
         const remove = this.iconButton('window-close-symbolic', () => this.handlers.remove(entry.id));
-        remove.opacity = 150;
+        remove.opacity = SECONDARY;
         row.add_child(remove);
         return row;
     }
@@ -237,7 +239,7 @@ export class ClipboardPage {
         }
         return new St.Icon({
             style_class: 'nokta-clip-icon',
-            gicon: iconFor(entry.kind === 'image' ? 'nokta-image' : 'nokta-text'),
+            gicon: iconFor(entryIcon(entry)),
             y_align: Clutter.ActorAlign.CENTER,
         });
     }
