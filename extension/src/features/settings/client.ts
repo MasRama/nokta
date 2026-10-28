@@ -1,4 +1,5 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 import { PATHS } from '../../shared/contracts.js';
 import { cached, makeProxy } from '../../shared/dbus.js';
@@ -50,6 +51,26 @@ export class SettingsClient {
         this.proxy = proxy;
         this.changedId = proxy.connect('g-properties-changed', () => this.read());
         this.read();
+    }
+
+    /**
+     * Sets one key through io.nokta.Settings1.Set; the new value comes back
+     * as a property change. Rejects while the daemon is away or refuses it.
+     */
+    set(table: string, key: string, value: GLib.Variant): Promise<void> {
+        const proxy = this.proxy;
+        if (!proxy) return Promise.reject(new Error('noktad is not running'));
+        const params = new GLib.Variant('(ssv)', [table, key, value]);
+        return new Promise((resolve, reject) => {
+            proxy.call('Set', params, Gio.DBusCallFlags.NONE, -1, null, (source, result) => {
+                try {
+                    source?.call_finish(result);
+                    resolve();
+                } catch (error) {
+                    reject(error as Error);
+                }
+            });
+        });
     }
 
     detach(): void {

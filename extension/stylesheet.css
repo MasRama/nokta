@@ -790,3 +790,83 @@
 .nokta-progress-line-fill {
     height: 2px;
 }
+
+/* The Settings tile's page (settings/page.ts); its height is SETTINGS_PAGE_HEIGHT. */
+.nokta-settings {
+    spacing: 8px;
+}
+
+.nokta-settings-themes {
+    height: 50px;
+    spacing: 4px;
+}
+
+.nokta-settings-theme-box {
+    spacing: 4px;
+}
+
+/* The chosen theme's ring takes the accent. */
+.nokta-settings-swatch-ring {
+    border: 2px solid transparent;
+    border-radius: 11px;
+    padding: 2px;
+}
+
+.nokta-settings-swatch {
+    width: 44px;
+    height: 24px;
+    border-radius: 0 0 8px 8px;
+}
+
+.nokta-settings-swatch-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 2.5px;
+}
+
+.nokta-settings-swatch-label {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.nokta-settings-line {
+    height: 30px;
+    spacing: 10px;
+}
+
+.nokta-settings-row {
+    border-radius: 10px;
+}
+
+.nokta-settings-label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-settings-switch {
+    width: 34px;
+    height: 20px;
+    border-radius: 10px;
+    padding: 2px;
+}
+
+.nokta-settings-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+}
+
+.nokta-settings-motion {
+    spacing: 4px;
+}
+
+.nokta-settings-motion-button {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 8px;
+}
+
+.nokta-settings-chevron {
+    icon-size: 14px;
+}
