@@ -15,10 +15,12 @@ the microphone or screen sharing, small green and orange dots sit in the
 notch's left corner. Notifications show in the notch instead of GNOME's
 banner: hover to keep one open, click it to open the app. A build, a
 download or a backup can show in the notch while it runs and say how it
-ended (see [Live activities](#live-activities)). When nothing
+ended (see [Live activities](#live-activities)). Files dragged onto the
+notch stay on its shelf until you drag them into another app (see
+[File shelf](#file-shelf)). When nothing
 plays, hovering the notch opens the date with the weather (see
 [`[weather]`](#weather)), the next event from GNOME's calendar, the
-running activities, a button
+running activities, the files on the shelf, a button
 to the notification list and one to start or stop focus. Every monitor has
 its own notch,
 and these messages show on the monitor you are working on.
@@ -152,6 +154,7 @@ window then says what to fix before it saves anything.
 | `clock_format` | `"system"` | `"24h"` (17:00), `"12h"` (5:00), or `"system"` to follow GNOME's setting |
 | `privacy_dots` | `true` | A green dot while the camera is on and an orange one while the microphone or screen sharing is in use |
 | `live_activities` | `true` | Show live activities in the notch; `false` shows none, and scripts that report them keep working |
+| `file_shelf` | `true` | Drop files on the notch to park them, then drag them out again (see [File shelf](#file-shelf)) |
 
 ### `[lyrics]`
 
@@ -236,6 +239,22 @@ runs when Nokta is not. `nokta --help` lists every option. Programs can
 call `io.nokta.Activities1` on the session bus directly (see
 [ARCHITECTURE.md](ARCHITECTURE.md)). The newest activity shows in the closed
 notch, with its percentage when it reports one; hover to see up to three.
+
+## File shelf
+
+Drag files from Files, a browser or any other app to the notch: it opens
+with `Drop to keep here`, and the files you drop stay on its shelf. The
+closed notch then shows how many there are, and the open notch lists them,
+newest first, after a stack that holds them all. Drag a file (or the
+stack, for all of them) into another app, for example a chat, to send it;
+it leaves the shelf once the app takes it. Click a file to open it, or its
+`×` to take it off. The shelf keeps up to 30 files, forgets one that is
+moved or deleted, and is empty again after you log out. Nokta never copies
+the files.
+
+GNOME Shell cannot take a drop from an app, so the extension starts a small
+helper window (`gjs`, a GTK 4 window that draws nothing) and puts it under
+the notch while you drag. It is not in Alt+Tab or the overview.
 
 ## Privacy
 

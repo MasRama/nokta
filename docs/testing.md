@@ -270,6 +270,34 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] A real event from an online account in a real session *(real
       session)*.
 
+### File shelf
+
+`tools/devshell/drop.sh FILE...` drags files from a small window onto the
+notch and drops them; with `--hold` it stops over the notch until
+`drop.sh --release`. The window takes drops too and prints them in
+`build/devshell/drag-source.log`, so it can be the target of a drag out of
+the shelf.
+
+- [ ] The smoke test drops a file: the drop area opens (`Drop to keep
+      here`, a dashed outline), the file is in `Shelf1.Items`, the closed
+      notch shows `1` in place of the clock, and the panel is 54 px taller
+      with the stack and the file. The pointer on the file shows its close
+      button; a click on it takes the file off and the clock comes back.
+- [ ] The helper window (`nokta-shelf`) is a dock at -10000, -10000 while
+      nothing needs it, and is not in Alt+Tab or the overview.
+- [ ] Drop 2 files, then drag one from the open notch onto the drop.sh
+      window (start it again with no files): the window prints it and it
+      leaves the shelf. Dragging the stack takes both.
+- [ ] A click on a file opens it in its app.
+- [ ] Delete or move a parked file: it leaves the shelf. More than 30
+      files: the oldest go.
+- [ ] Kill the helper (`pkill -f 'shelf-helper/[m]ain.js'`): it starts
+      again and drops still work.
+- [ ] `file_shelf = false` while running: no badge, no row, no drop area,
+      and the helper ends.
+- [ ] Drag a photo from Files and from a browser onto the notch, then drag
+      it from the notch into a WhatsApp or Telegram chat *(real session)*.
+
 ### Privacy dots
 
 `. tools/devshell/env.sh`, then with
@@ -346,7 +374,8 @@ Send one with `. tools/devshell/env.sh`, then
       (`gnome-extensions disable/enable nokta@nokta.io` in a real session,
       or `Main.extensionManager.disableExtension()` through `Eval` in the
       devshell): no errors, the date menu goes back to the center and returns
-      to the right, nothing is left behind.
+      to the right, nothing is left behind (no `nokta-shelf` window, no
+      helper process).
 - [ ] Stop the daemon (`kill $(cat build/devshell/noktad.pid)`, or
       `systemctl --user stop nokta` in a real session): the notch goes idle.
       Start it again *(real session)*: media comes back without re-enabling
