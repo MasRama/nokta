@@ -514,6 +514,15 @@ banner for a fake file.
       solid.
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
+- [ ] **Progress line**: a song playing, closed: a thin line in the accent
+      along the bottom, inset from the corners, at the song's position and
+      moving smoothly; it stops while paused and jumps on a seek. Open the
+      notch: no line.
+- [ ] `timer.sh countdown 20`: the line fills over 20 s. A focus timer
+      fills over its session; paused, it stands still. An activity with a
+      progress shows it; one without has no line.
+- [ ] A call or a screen recording: no line, not even the song's.
+- [ ] `progress_line = false`: no line anywhere.
 
 ### Settings window
 

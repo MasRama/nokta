@@ -76,6 +76,9 @@ notifications. Hover over it to open it.
   microphone and how long it has been on (red while muted). Home names
   the app, with a button to mute the microphone and one to hide the call
   until the microphone goes off.
+- **Progress line.** A thin line along the bottom of the closed notch fills
+  up with the focus timer, a countdown, an activity's progress or, beside
+  the cover, the song.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color) and paper, or your own colors.
 - **Every monitor** has its own notch, and alerts show on the one you are
@@ -249,6 +252,7 @@ Every key, by table:
 | `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
+| `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
 
 </details>
 
