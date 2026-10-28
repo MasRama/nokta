@@ -73,3 +73,8 @@ reminder_minutes = 5     # show an event this many minutes before it starts, 0 t
 [clipboard]
 enabled = true           # keep what you copy, text and pictures, in the open notch; in memory only
 max_items = 25           # entries kept besides the pinned ones, 5 to 100
+
+[home]
+# The open notch's home, in the order shown.
+toggles = ["do_not_disturb", "caffeine", "dark_style"]                 # at most 3 of these and "night_light"
+tiles = ["notifications", "focus", "timer", "clipboard", "settings"]   # at most 5 of these and "screenshot"

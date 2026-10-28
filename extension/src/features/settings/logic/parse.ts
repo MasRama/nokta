@@ -173,6 +173,27 @@ export const DEFAULT_CLIPBOARD: Readonly<ClipboardSettings> = {
     maxItems: 25,
 };
 
+/** The names home.toggles takes, as the daemon checks them. */
+export const HOME_TOGGLES = ['do_not_disturb', 'caffeine', 'dark_style', 'night_light'] as const;
+/** The names home.tiles takes. */
+export const HOME_TILES = ['notifications', 'focus', 'timer', 'clipboard', 'settings', 'screenshot'] as const;
+export const MAX_HOME_TOGGLES = 3;
+export const MAX_HOME_TILES = 5;
+
+export type HomeToggle = (typeof HOME_TOGGLES)[number];
+export type HomeTile = (typeof HOME_TILES)[number];
+
+/** io.nokta.Settings1.Home: home's toggles and tiles, in the order shown. */
+export interface HomeSettings {
+    toggles: HomeToggle[];
+    tiles: HomeTile[];
+}
+
+export const DEFAULT_HOME: Readonly<HomeSettings> = {
+    toggles: ['do_not_disturb', 'caffeine', 'dark_style'],
+    tiles: ['notifications', 'focus', 'timer', 'clipboard', 'settings'],
+};
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
@@ -224,3 +245,18 @@ export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(ra
 export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);
 export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);
 export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);
+
+/** Known names, each once, at most `max`; anything but a list gives `fallback`. */
+function namesFrom<T extends string>(raw: unknown, known: readonly T[], max: number, fallback: readonly T[]): T[] {
+    if (!Array.isArray(raw)) return [...fallback];
+    const names = raw.filter((name): name is T => known.includes(name as T));
+    return [...new Set(names)].slice(0, max);
+}
+
+export function homeFrom(raw: unknown): HomeSettings {
+    const table = raw !== null && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    return {
+        toggles: namesFrom(table.toggles, HOME_TOGGLES, MAX_HOME_TOGGLES, DEFAULT_HOME.toggles),
+        tiles: namesFrom(table.tiles, HOME_TILES, MAX_HOME_TILES, DEFAULT_HOME.tiles),
+    };
+}

@@ -7,6 +7,7 @@ import { setVertical } from '../../shared/compat.js';
 import { withAlpha } from '../../shared/logic/color.js';
 import { type ControlColors, TogglePill, Tile } from './controls.js';
 import { notificationBadge } from './logic/labels.js';
+import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
 
 /** A live activity, as one panel row shows it. */
 export interface PanelActivity {
@@ -60,14 +61,7 @@ export interface PanelEvent {
     when: string;
 }
 
-/** The quick toggles' states, read from GNOME's settings. */
-export interface QuickToggles {
-    doNotDisturb: boolean;
-    caffeine: boolean;
-    dark: boolean;
-}
-
-export type QuickToggle = keyof QuickToggles;
+export type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from './logic/layout.js';
 
 /** What home shows, worked out by the session when it opens. */
 export interface PanelContent {
@@ -94,6 +88,7 @@ export interface PanelContent {
     player: boolean;
     /** The clipboard history is on, so home has its tile. */
     clipboard: boolean;
+    layout: HomeLayout;
 }
 
 export const MAX_PANEL_ACTIVITIES = 3;
@@ -104,6 +99,7 @@ export interface PanelHandlers {
     openNotifications(): void;
     toggleFocus(): void;
     openSettings(): void;
+    openScreenshot(): void;
     openClipboard(): void;
     openTimer(): void;
     openPlayer(): void;
@@ -117,9 +113,20 @@ export interface PanelHandlers {
 
 /** Each toggle's icon: a theme icon, or one in the extension's icons folder. */
 const TOGGLES: Array<[QuickToggle, string, string]> = [
-    ['doNotDisturb', 'notifications-disabled-symbolic', 'Do Not Disturb'],
+    ['do_not_disturb', 'notifications-disabled-symbolic', 'Do Not Disturb'],
     ['caffeine', 'file:nokta-caffeine-symbolic.svg', 'Caffeine'],
-    ['dark', 'dark-mode-symbolic', 'Dark Style'],
+    ['dark_style', 'dark-mode-symbolic', 'Dark Style'],
+    ['night_light', 'night-light-symbolic', 'Night Light'],
+];
+
+/** Each tile's icon and name. */
+const TILES: Array<[HomeTile, string, string]> = [
+    ['notifications', 'preferences-system-notifications-symbolic', 'Notifications'],
+    ['focus', 'alarm-symbolic', 'Focus'],
+    ['timer', 'file:nokta-timer-symbolic.svg', 'Timer'],
+    ['clipboard', 'edit-paste-symbolic', 'Clipboard'],
+    ['settings', 'emblem-system-symbolic', 'Settings'],
+    ['screenshot', 'camera-photo-symbolic', 'Screenshot'],
 ];
 
 function toggleIcon(name: string, iconsDir: string): Gio.Icon {
@@ -418,11 +425,9 @@ export class HomePanel {
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
-    private readonly notifications: Tile;
-    private readonly focus: Tile;
-    private readonly timer: Tile;
-    private readonly clipboard: Tile;
-    private readonly settings: Tile;
+    private readonly tiles = new Map<HomeTile, Tile>();
+    private readonly pills: St.BoxLayout;
+    private readonly tileRow: St.BoxLayout;
     private readonly controls: St.BoxLayout;
 
     /** `iconsDir` holds the icons the theme does not have. */
@@ -446,26 +451,29 @@ export class HomePanel {
         this.recording = new RecordingRow(handlers);
         this.call = new CallRow(handlers);
 
-        const pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
+        this.pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
         for (const [which, icon, label] of TOGGLES) {
             const pill = new TogglePill(toggleIcon(icon, iconsDir), label, () => handlers.toggle(which));
             this.toggles.set(which, pill);
-            pills.add_child(pill.actor);
+            this.pills.add_child(pill.actor);
         }
-        this.notifications = new Tile('preferences-system-notifications-symbolic', 'Notifications', () =>
-            handlers.openNotifications(),
-        );
-        this.focus = new Tile('alarm-symbolic', 'Focus', () => handlers.toggleFocus());
-        this.timer = new Tile(toggleIcon('file:nokta-timer-symbolic.svg', iconsDir), 'Timer', () =>
-            handlers.openTimer(),
-        );
-        this.clipboard = new Tile('edit-paste-symbolic', 'Clipboard', () => handlers.openClipboard());
-        this.settings = new Tile('emblem-system-symbolic', 'Settings', () => handlers.openSettings());
-        const tiles = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
-        for (const tile of this.tiles()) tiles.add_child(tile.actor);
+        const actions: Record<HomeTile, () => void> = {
+            notifications: () => handlers.openNotifications(),
+            focus: () => handlers.toggleFocus(),
+            timer: () => handlers.openTimer(),
+            clipboard: () => handlers.openClipboard(),
+            settings: () => handlers.openSettings(),
+            screenshot: () => handlers.openScreenshot(),
+        };
+        this.tileRow = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
+        for (const [which, icon, label] of TILES) {
+            const tile = new Tile(toggleIcon(icon, iconsDir), label, actions[which]);
+            this.tiles.set(which, tile);
+            this.tileRow.add_child(tile.actor);
+        }
         this.controls = setVertical(new St.BoxLayout({ style_class: 'nokta-panel-controls' }));
-        this.controls.add_child(pills);
-        this.controls.add_child(tiles);
+        this.controls.add_child(this.pills);
+        this.controls.add_child(this.tileRow);
 
         this.actor.add_child(heading);
         this.actor.add_child(this.event.actor);
@@ -498,16 +506,16 @@ export class HomePanel {
         this.call.show(content.call);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.clocks.forEach((row, i) => row.show(content.clocks[i]));
-        for (const [which, pill] of this.toggles) pill.set(content.toggles[which]);
-        this.notifications.set(false, notificationBadge(content.notificationCount));
-        this.focus.set(content.focusActive);
-        this.timer.set(content.clocks.length > 0);
-        this.clipboard.actor.visible = content.clipboard;
+        for (const [which, pill] of this.toggles) pill.set(content.toggles[which] === true);
+        this.tiles.get('notifications')?.set(false, notificationBadge(content.notificationCount));
+        this.tiles.get('focus')?.set(content.focusActive);
+        this.tiles.get('timer')?.set(content.clocks.length > 0);
+        this.arrange(shownControls(content.layout, content.toggles, content.clipboard));
     }
 
     setColors(colors: ControlColors): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
-        for (const tile of this.tiles()) tile.setColors(colors);
+        for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setForeground(colors.foreground);
     }
 
@@ -516,7 +524,22 @@ export class HomePanel {
         this.actor.destroy();
     }
 
-    private tiles(): Tile[] {
-        return [this.notifications, this.focus, this.timer, this.clipboard, this.settings];
+    /** Shows the layout's toggles and tiles in its order; a row with none goes away. */
+    private arrange(layout: HomeLayout): void {
+        const place = <T extends string>(
+            box: St.BoxLayout,
+            controls: Map<T, { actor: St.Button }>,
+            shown: readonly T[],
+        ) => {
+            shown.forEach((name, i) => {
+                const actor = controls.get(name)?.actor;
+                if (actor) box.set_child_at_index(actor, i);
+            });
+            for (const [name, { actor }] of controls) actor.visible = shown.includes(name);
+            box.visible = shown.length > 0;
+        };
+        place(this.pills, this.toggles, layout.toggles);
+        place(this.tileRow, this.tiles, layout.tiles);
+        this.controls.visible = this.pills.visible || this.tileRow.visible;
     }
 }

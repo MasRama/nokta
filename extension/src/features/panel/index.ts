@@ -16,3 +16,4 @@ export {
     type QuickToggle,
     type QuickToggles,
 } from './view.js';
+export { shownControls, type HomeLayout, type HomeTile } from './logic/layout.js';

@@ -9,7 +9,7 @@ import {
     progressLabel,
 } from '../src/features/activities/logic/activities.js';
 import { chooseIndicator } from '../src/shared/logic/indicator.js';
-import { panelHeight, subPageHeight } from '../src/features/panel/logic/height.js';
+import { panelHeight, subPageHeight, type PanelRow } from '../src/features/panel/logic/height.js';
 
 test('activities are read from the daemon rows, skipping broken ones', () => {
     assert.deepEqual(
@@ -77,13 +77,22 @@ test('the closed notch shows a recording, else a call, else the timer, else an a
 });
 
 test('home grows with its rows', () => {
-    assert.equal(panelHeight(32, ['date', 'controls']), 160);
-    assert.equal(panelHeight(32, ['date', 'activity', 'controls']), 206);
-    assert.equal(panelHeight(32, ['date', 'activity', 'activity', 'controls']), 252);
-    assert.equal(panelHeight(40, ['date', 'controls']), 168);
-    assert.equal(panelHeight(32, ['date', 'clock', 'clock', 'controls']), 160 + 2 * 36);
-    assert.equal(panelHeight(32, ['date', 'call', 'controls']), 160 + 36);
-    assert.equal(panelHeight(32, ['date', 'recording', 'call', 'controls']), 160 + 2 * 36);
+    const controls: PanelRow[] = ['toggles', 'tiles'];
+    assert.equal(panelHeight(32, ['date', ...controls]), 160);
+    assert.equal(panelHeight(32, ['date', 'activity', ...controls]), 206);
+    assert.equal(panelHeight(32, ['date', 'activity', 'activity', ...controls]), 252);
+    assert.equal(panelHeight(40, ['date', ...controls]), 168);
+    assert.equal(panelHeight(32, ['date', 'clock', 'clock', ...controls]), 160 + 2 * 36);
+    assert.equal(panelHeight(32, ['date', 'call', ...controls]), 160 + 36);
+    assert.equal(panelHeight(32, ['date', 'recording', 'call', ...controls]), 160 + 2 * 36);
+});
+
+test('home loses the toggles or the tiles when none are chosen', () => {
+    // The pills are 32 high, the tiles 59, with 12 between them.
+    assert.equal(panelHeight(32, ['date', 'tiles']), 160 - 32 - 12);
+    assert.equal(panelHeight(32, ['date', 'toggles']), 160 - 59 - 12);
+    // Only the date and the padding under it.
+    assert.equal(panelHeight(32, ['date']), 32 + 15);
 });
 
 test('a sub-page is its padding, its header and its body', () => {

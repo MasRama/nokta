@@ -12,6 +12,7 @@ import {
     DEFAULT_BEHAVIOR,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
+    homeFrom,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
     notificationsFrom,
@@ -20,12 +21,13 @@ import {
     type Behavior,
     type CalendarSettings,
     type ClipboardSettings,
+    type HomeSettings,
     type NotificationSettings,
     type TimerSettings,
 } from './logic/parse.js';
 
 /**
- * The notch's appearance, behavior, timer, notification, calendar and clipboard settings from io.nokta.Settings1. Until the
+ * The notch's appearance, behavior, timer, notification, calendar, clipboard and home settings from io.nokta.Settings1. Until the
  * daemon answers it holds the defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
@@ -36,6 +38,7 @@ export class SettingsClient {
     notifications: NotificationSettings = { ...DEFAULT_NOTIFICATIONS };
     calendar: CalendarSettings = { ...DEFAULT_CALENDAR };
     clipboard: ClipboardSettings = { ...DEFAULT_CLIPBOARD };
+    home: HomeSettings = homeFrom(undefined);
     private proxy: Gio.DBusProxy | null = null;
     private changedId = 0;
 
@@ -64,6 +67,7 @@ export class SettingsClient {
         this.notifications = notificationsFrom(cached(this.proxy, 'Notifications'));
         this.calendar = calendarFrom(cached(this.proxy, 'Calendar'));
         this.clipboard = clipboardFrom(cached(this.proxy, 'Clipboard'));
+        this.home = homeFrom(cached(this.proxy, 'Home'));
         this.onChanged();
     }
 }

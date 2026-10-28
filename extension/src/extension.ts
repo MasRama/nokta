@@ -99,6 +99,16 @@ const TIMER_ICON = 'alarm-symbolic';
 const CLOCK_ICON = 'nokta-timer-symbolic.svg';
 /** A finished countdown or alarm stays up this many times the alert duration. */
 const CLOCK_ALERT_FACTOR = 2;
+/** The screenshot tile waits this long, before animation_speed, for the notch to close, so the shot does not catch it. */
+const SCREENSHOT_DELAY_MS = 400;
+const NIGHT_LIGHT_SCHEMA = 'org.gnome.settings-daemon.plugins.color';
+const NIGHT_LIGHT_KEY = 'night-light-enabled';
+
+/** GSettings for `schemaId` if it is installed with `key`; creating a missing one would abort the shell. */
+function settingsIfInstalled(schemaId: string, key: string): Gio.Settings | null {
+    const schema = Gio.SettingsSchemaSource.get_default()?.lookup(schemaId, true);
+    return schema?.has_key(key) ? new Gio.Settings({ settings_schema: schema }) : null;
+}
 
 const isCancelled = (error: unknown): boolean =>
     error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
@@ -140,6 +150,9 @@ class Session {
     private readonly interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
     /** Watched for the Do Not Disturb toggle; QuietBanners writes it. */
     private readonly notificationSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' });
+    /** Null where gnome-settings-daemon is not installed; home then has no Night Light. */
+    private readonly nightLightSettings = settingsIfInstalled(NIGHT_LIGHT_SCHEMA, NIGHT_LIGHT_KEY);
+    private screenshotId = 0;
     private readonly togglesIds: Array<[Gio.Settings, number]>;
     private readonly caffeine = new Caffeine(sessionInhibitor(), () => this.notches.forEach((n) => n.onPanelContent()));
     private readonly focusToggle: FocusToggle;
@@ -183,6 +196,7 @@ class Session {
         },
         toggleFocus: () => this.onFocusShortcut(),
         openSettings: () => this.openPreferences(),
+        openScreenshot: () => this.openScreenshot(),
         toggle: (which) => this.toggle(which),
         setDoNotDisturb: (on) => this.quietBanners.setDoNotDisturb(on),
         iconsDir: '',
@@ -232,6 +246,10 @@ class Session {
             [this.notificationSettings, this.notificationSettings.connect('changed::show-banners', refreshPanel)],
             [this.interfaceSettings, this.interfaceSettings.connect('changed::color-scheme', refreshPanel)],
         ];
+        if (this.nightLightSettings) {
+            const id = this.nightLightSettings.connect(`changed::${NIGHT_LIGHT_KEY}`, refreshPanel);
+            this.togglesIds.push([this.nightLightSettings, id]);
+        }
         this.shelfCoordinator = new ShelfCoordinator(`${extensionPath}/shelf-helper/main.js`, () => this.notches);
         this.settings = new SettingsClient(() => this.applySettings());
         this.allMonitors = this.settings.behavior.allMonitors;
@@ -302,6 +320,7 @@ class Session {
         this.quietBanners.release();
         this.caffeine.release();
         for (const [settings, id] of this.togglesIds) settings.disconnect(id);
+        if (this.screenshotId) GLib.source_remove(this.screenshotId);
         this.focusShortcut.destroy();
         this.privacy.destroy();
         this.stopLiveTick();
@@ -530,6 +549,8 @@ class Session {
         this.onLive();
         this.onCalendar();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
+        // The home layout may have changed.
+        for (const notch of this.notches) notch.onPanelContent();
     }
 
     // OSD
@@ -694,21 +715,46 @@ class Session {
             focusActive: this.timer.snapshot().state !== 'idle',
             clocks: this.panelClocks(),
             toggles: {
-                doNotDisturb: this.quietBanners.doNotDisturb,
+                do_not_disturb: this.quietBanners.doNotDisturb,
                 caffeine: this.caffeine.on,
-                dark: this.interfaceSettings.get_string('color-scheme') === 'prefer-dark',
+                dark_style: this.interfaceSettings.get_string('color-scheme') === 'prefer-dark',
+                night_light: this.nightLightSettings?.get_boolean(NIGHT_LIGHT_KEY) ?? null,
             },
             player: this.media.snapshot().available,
             clipboard: this.clipboardSource.enabled(),
+            layout: this.settings.home,
         };
     }
 
     /** A quick toggle in home was clicked. */
     private toggle(which: QuickToggle): void {
         const { toggles } = this.panelContent();
-        if (which === 'doNotDisturb') this.quietBanners.setDoNotDisturb(!toggles.doNotDisturb);
-        else if (which === 'caffeine') this.caffeine.set(!toggles.caffeine);
-        else this.interfaceSettings.set_string('color-scheme', toggles.dark ? 'default' : 'prefer-dark');
+        switch (which) {
+            case 'do_not_disturb':
+                this.quietBanners.setDoNotDisturb(!toggles.do_not_disturb);
+                break;
+            case 'caffeine':
+                this.caffeine.set(!toggles.caffeine);
+                break;
+            case 'dark_style':
+                this.interfaceSettings.set_string('color-scheme', toggles.dark_style ? 'default' : 'prefer-dark');
+                break;
+            case 'night_light':
+                this.nightLightSettings?.set_boolean(NIGHT_LIGHT_KEY, !toggles.night_light);
+                break;
+        }
+    }
+
+    /** GNOME's screenshot UI, once the notch has closed. */
+    private openScreenshot(): void {
+        if (this.screenshotId) return;
+        const delay = Math.round(SCREENSHOT_DELAY_MS * this.settings.appearance.animationSpeed);
+        this.screenshotId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.screenshotId = 0;
+            const ui = (Main as unknown as { screenshotUI?: { open(): Promise<void> } }).screenshotUI;
+            ui?.open().catch((error: unknown) => console.warn(`nokta: cannot open the screenshot UI: ${error}`));
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     private panelClocks(): PanelContent['clocks'] {

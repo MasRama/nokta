@@ -3,7 +3,7 @@ import Gdk from 'gi://Gdk';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
-import { variantType, type Row } from '../features/settings/index.js';
+import { moveItem, orderItems, switchItem, variantType, type Row } from '../features/settings/index.js';
 import { parseHexColor, toHexColor } from '../shared/logic/color.js';
 
 /** One row of the window, bound to one key of config.toml. */
@@ -101,6 +101,47 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             const widget = new Adw.EntryRow({ title, show_apply_button: true, tooltip_text: subtitle });
             widget.connect('apply', () => send(widget.text.trim()));
             return { row, widget, show: (value) => quietly(() => (widget.text = String(value ?? ''))) };
+        }
+        case 'order': {
+            const widget = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.NONE, css_classes: ['boxed-list'] });
+            let chosen: string[] = [];
+            // Each change shows at once; the daemon's copy arrives after the send delay.
+            const change = (next: string[]) => {
+                chosen = next;
+                render();
+                send(chosen);
+            };
+            const render = () => {
+                widget.remove_all();
+                for (const item of orderItems(chosen, kind.options, kind.max)) {
+                    const entry = new Adw.ActionRow({ title: item.label });
+                    const button = (icon: string, tooltip: string, sensitive: boolean, by: -1 | 1) => {
+                        const b = new Gtk.Button({
+                            icon_name: icon,
+                            tooltip_text: tooltip,
+                            sensitive,
+                            valign: Gtk.Align.CENTER,
+                            css_classes: ['flat'],
+                        });
+                        b.connect('clicked', () => change(moveItem(chosen, item.value, by)));
+                        entry.add_suffix(b);
+                    };
+                    button('go-up-symbolic', 'Move up', item.canUp, -1);
+                    button('go-down-symbolic', 'Move down', item.canDown, 1);
+                    const toggle = new Gtk.Switch({ active: item.on, sensitive: item.canSwitch, valign: Gtk.Align.CENTER });
+                    toggle.connect('notify::active', () =>
+                        change(switchItem(chosen, item.value, toggle.active, kind.max)),
+                    );
+                    entry.add_suffix(toggle);
+                    entry.activatable_widget = toggle;
+                    widget.append(entry);
+                }
+            };
+            const show = (value: unknown) => {
+                chosen = Array.isArray(value) ? value.map(String) : [];
+                quietly(render);
+            };
+            return { row, widget, show };
         }
     }
 }

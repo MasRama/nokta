@@ -38,6 +38,7 @@ import {
     MAX_PANEL_CLOCKS,
     NotchMenu,
     panelHeight,
+    shownControls,
     SubPage,
     subPageHeight,
     type PanelContent,
@@ -128,6 +129,8 @@ export interface PanelSource {
     openNotifications(): void;
     toggleFocus(): void;
     openSettings(): void;
+    /** GNOME's screenshot UI, once the notch has closed. */
+    openScreenshot(): void;
     toggle(which: QuickToggle): void;
     setDoNotDisturb(on: boolean): void;
     /** The icons the theme does not have. */
@@ -255,7 +258,7 @@ export class MonitorNotch implements ShelfNotch {
     private lyricTimerId = 0;
     private panelTickId = 0;
     /** The panel's rows, as last shown. */
-    private panelRows: PanelRow[] = ['date', 'controls'];
+    private panelRows: PanelRow[] = ['date', 'toggles', 'tiles'];
 
     constructor(
         readonly monitorIndex: number,
@@ -278,6 +281,7 @@ export class MonitorNotch implements ShelfNotch {
                 openNotifications: () => this.onPanelClick(() => panel.openNotifications()),
                 toggleFocus: () => this.onPanelClick(() => panel.toggleFocus()),
                 openSettings: () => this.onPanelClick(() => panel.openSettings()),
+                openScreenshot: () => this.onPanelClick(() => panel.openScreenshot()),
                 openClipboard: () => this.setPage('clipboard'),
                 openTimer: () => this.setPage('timer'),
                 openPlayer: () => this.setHomeOpen(false),
@@ -390,7 +394,7 @@ export class MonitorNotch implements ShelfNotch {
             if (event.get_button() !== Clutter.BUTTON_SECONDARY) return Clutter.EVENT_PROPAGATE;
             const [x, y] = event.get_coords();
             this.menu.open(x, y, {
-                doNotDisturb: this.sources.panel.content().toggles.doNotDisturb,
+                doNotDisturb: this.sources.panel.content().toggles.do_not_disturb,
                 shelfItems: this.sources.shelf.items().length,
                 clipboardPaused: this.sources.clipboard.enabled() ? this.sources.clipboard.paused() : null,
             });
@@ -1244,6 +1248,9 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const recording: PanelRow[] = content.recording !== null ? ['recording'] : [];
     const call: PanelRow[] = content.call ? ['call'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
+    const shown = shownControls(content.layout, content.toggles, content.clipboard);
+    const toggles: PanelRow[] = shown.toggles.length > 0 ? ['toggles'] : [];
+    const tiles: PanelRow[] = shown.tiles.length > 0 ? ['tiles'] : [];
     return [
         'date',
         ...event,
@@ -1252,6 +1259,7 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
         ...Array<PanelRow>(activities).fill('activity'),
         ...Array<PanelRow>(clocks).fill('clock'),
         ...files,
-        'controls',
+        ...toggles,
+        ...tiles,
     ];
 }

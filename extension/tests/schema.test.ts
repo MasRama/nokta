@@ -9,6 +9,7 @@ import {
     DEFAULT_NOTIFICATIONS,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
+    DEFAULT_HOME,
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
 } from '../src/features/settings/logic/parse.js';
@@ -25,6 +26,7 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     weather: { ...DEFAULT_WEATHER },
     calendar: { ...DEFAULT_CALENDAR },
     clipboard: { ...DEFAULT_CLIPBOARD },
+    home: { ...DEFAULT_HOME },
 };
 
 test('every_setting_has_exactly_one_row', () => {
@@ -57,6 +59,12 @@ test('row_kinds_match_their_defaults', () => {
             case 'text':
                 assert.equal(typeof value, 'string', name);
                 break;
+            case 'order': {
+                const { options, max } = row.kind;
+                assert.ok(Array.isArray(value) && value.length <= max, name);
+                for (const item of value as string[]) assert.ok(options.some((o) => o.value === item), name);
+                break;
+            }
         }
     }
 });
@@ -64,7 +72,7 @@ test('row_kinds_match_their_defaults', () => {
 test('pages_have_titles_and_groups', () => {
     assert.deepEqual(
         SETTINGS_PAGES.map((p) => p.name),
-        ['appearance', 'behavior'],
+        ['appearance', 'behavior', 'home'],
     );
     for (const page of SETTINGS_PAGES) {
         assert.ok(page.title && page.icon && page.groups.length > 0, page.name);
@@ -85,6 +93,7 @@ test('variant_types_follow_the_daemon', () => {
     assert.equal(type('behavior', 'clock_format'), 's');
     assert.equal(type('lyrics', 'enabled'), 'b');
     assert.equal(type('timer', 'shortcut'), 's');
+    assert.equal(type('home', 'tiles'), 'as');
 });
 
 test('row_value_reads_the_daemon_tables', () => {

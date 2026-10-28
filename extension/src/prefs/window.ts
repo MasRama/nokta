@@ -71,7 +71,7 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
         page.add(banner);
 
         for (const groupSpec of spec.groups) {
-            const group = new Adw.PreferencesGroup({ title: groupSpec.title });
+            const group = new Adw.PreferencesGroup({ title: groupSpec.title, description: groupSpec.description ?? '' });
             for (const row of groupSpec.rows) {
                 const setting: SettingRow = buildRow(row, (value) => queue(setting, value));
                 setting.show(rowValue(row, {}));

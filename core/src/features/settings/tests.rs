@@ -253,6 +253,52 @@ fn calendar_defaults_and_reminder_range() {
 }
 
 #[test]
+fn home_defaults_names_and_limits() {
+    let h = Config::default().home;
+    assert_eq!(h.toggles, ["do_not_disturb", "caffeine", "dark_style"]);
+    assert_eq!(
+        h.tiles,
+        ["notifications", "focus", "timer", "clipboard", "settings"]
+    );
+    let c = parse(
+        "[home]\ntoggles = [\"night_light\", \"dark_style\"]\ntiles = [\"screenshot\", \"settings\"]\n",
+    )
+    .unwrap();
+    assert_eq!(c.home.toggles, ["night_light", "dark_style"]);
+    assert_eq!(c.home.tiles, ["screenshot", "settings"]);
+    let c = parse("[home]\ntoggles = []\ntiles = []\n").unwrap();
+    assert!(c.home.toggles.is_empty() && c.home.tiles.is_empty());
+    for (bad, key) in [
+        ("toggles = [\"wifi\"]", "home.toggles"),
+        ("toggles = [\"caffeine\", \"caffeine\"]", "home.toggles"),
+        (
+            "toggles = [\"do_not_disturb\", \"caffeine\", \"dark_style\", \"night_light\"]",
+            "home.toggles",
+        ),
+        ("tiles = [\"calendar\"]", "home.tiles"),
+        (
+            "tiles = [\"notifications\", \"focus\", \"timer\", \"clipboard\", \"settings\", \"screenshot\"]",
+            "home.tiles",
+        ),
+    ] {
+        let err = parse(&format!("[home]\n{bad}\n")).unwrap_err();
+        assert!(err.message.contains(key), "{bad}: {err}");
+    }
+    let map = entries(Config::default().home.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["tiles", "toggles"]);
+    assert_eq!(
+        map["toggles"],
+        SettingValue::List(vec![
+            "do_not_disturb".into(),
+            "caffeine".into(),
+            "dark_style".into()
+        ])
+    );
+}
+
+#[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
     let keys: Vec<_> = map.keys().copied().collect();
@@ -472,6 +518,14 @@ mod edit {
         let text = set_key("", "clipboard", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().clipboard.enabled);
 
+        let tiles = Value::List(vec!["screenshot".into(), "focus".into()]);
+        let text = set_key("", "home", "tiles", &tiles).unwrap();
+        assert_eq!(parse(&text).unwrap().home.tiles, ["screenshot", "focus"]);
+        assert!(
+            text.contains("tiles = [\"screenshot\", \"focus\"]"),
+            "{text}"
+        );
+
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);
         let text = set_key(&text, "lyrics", "enabled", &Value::Bool(true)).unwrap();
@@ -494,6 +548,10 @@ mod edit {
         assert!(err.message.contains("behavior.move_clock"), "{err}");
         let err = set_key("", "appearance", "height", &Value::Float(40.5)).unwrap_err();
         assert!(err.message.contains("whole number"), "{err}");
+        let err = set_key("", "home", "tiles", &Value::Text("focus".into())).unwrap_err();
+        assert!(err.message.contains("a list of names"), "{err}");
+        let err = set_key("", "appearance", "height", &Value::List(vec![])).unwrap_err();
+        assert!(err.message.contains("appearance.height"), "{err}");
         let err = set_key("", "appearance", "animation_speed", &Value::Float(f64::NAN));
         assert!(err.unwrap_err().message.contains("a number"));
     }
@@ -517,6 +575,9 @@ mod edit {
         let err =
             set_key("", "appearance", "background", &Value::Text("black".into())).unwrap_err();
         assert!(err.message.contains("appearance.background"), "{err}");
+        let toggles = Value::List(vec!["airplane".into()]);
+        let err = set_key("", "home", "toggles", &toggles).unwrap_err();
+        assert!(err.message.contains("home.toggles"), "{err}");
         let err = set_key("", "appearance", "height", &Value::Float(-3.0)).unwrap_err();
         assert!(err.message.contains("height"), "{err}");
     }
