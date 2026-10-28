@@ -62,6 +62,7 @@ FIND='const find = (a, cls, out = []) => {
 };
 const one = (cls) => find(Main.layoutManager.uiGroup, cls)[0];
 const shown = (cls) => one(cls)?.mapped === true;
+const any = (cls) => find(Main.layoutManager.uiGroup, cls).some((a) => a.mapped);
 const width = () => Math.round(one("nokta-body")?.width ?? -1);'
 
 wait_for "the extension is active" \
@@ -203,6 +204,64 @@ wait_for "the event's reminder shows in the notch" \
 "$HERE/shot.sh" smoke-calendar-reminder > /dev/null
 js "delete $EVENTS.getEvents; $EVENTS.emit('changed'); true" > /dev/null
 wait_for "the clock comes back after the reminder" "$FIND shown('nokta-clock')" 10
+
+# A file dragged from an app onto the notch opens the drop area and stays on
+# the shelf. The shell's own Wayland client, a dock off every monitor, takes
+# the drop and the presses on the shelf row.
+shelf_items() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf \
+        --method org.freedesktop.DBus.Properties.Get io.nokta.Shelf1 Items
+}
+point() {
+    js "const seat = $SEAT_JS; global._noktaPointer ??= seat.create_virtual_device(imports.gi.Clutter.InputDeviceType.POINTER_DEVICE);
+global._noktaPointer.notify_absolute_motion(global.get_current_time() * 1000, $1, $2); true" > /dev/null
+}
+HELPER="global.get_window_actors().map((a) => a.meta_window).find((w) => w.get_title() === 'nokta-shelf')"
+wait_for "the shelf's helper window waits off screen as a dock" \
+    "const w = $HELPER; !!w && w.get_window_type() === imports.gi.Meta.WindowType.DOCK && w.get_frame_rect().x === -10000" 15 \
+    "const w = $HELPER; JSON.stringify(w ? [w.get_window_type(), w.get_frame_rect().x, w.is_hidden()] : null)"
+mkdir -p "$STATE/files"
+echo smoke > "$STATE/files/smoke-notes.txt"
+"$HERE/drop.sh" --hold "$STATE/files/smoke-notes.txt"
+wait_for "dragging a file to the notch opens the drop area" \
+    "$FIND shown('nokta-drop') && $HELPER.get_frame_rect().y === 0" 5
+"$HERE/shot.sh" smoke-shelf-drop > /dev/null
+"$HERE/drop.sh" --release
+i=0
+until shelf_items | grep -q "smoke-notes.txt', 'text-x-generic'"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the dropped file is not on the shelf: $(shelf_items)"
+    sleep 0.2
+done
+ok "the dropped file is on the shelf"
+wait_for "the closed notch shows one file on the shelf" \
+    "$FIND any('nokta-shelf-badge') && one('nokta-shelf-badge-label').text === '1' && !shown('nokta-clock')" 5
+"$HERE/hover.sh" on > /dev/null
+# 32 px closed, 58 px for the date and the buttons, 54 px for the shelf row.
+wait_for "the panel shows the shelf row" \
+    "$FIND any('nokta-shelf-row') && find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).length === 2 && Math.round(one('nokta-body').height) === 144" 5 \
+    "$FIND JSON.stringify([any('nokta-shelf-row'), find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').length, Math.round(one('nokta-body').height)])"
+# The file's slot, the last one; its close button is in the top right corner.
+SLOT=$(js "$FIND const s = find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).pop(); const [x, y] = s.get_transformed_position(); Math.round(x + s.width - 6) + ' ' + Math.round(y + 6)")
+SLOT=${SLOT#\"}
+SLOT=${SLOT%\"}
+point "${SLOT% *}" "${SLOT#* }"
+sleep 0.1
+point "$((${SLOT% *} - 1))" "${SLOT#* }"
+wait_for "the pointer on the file reaches the helper and shows its close button" \
+    "$FIND any('nokta-shelf-close') && $HELPER.get_frame_rect().y > 0" 5
+"$HERE/shot.sh" smoke-shelf-row > /dev/null
+"$HERE/click.sh" "$((${SLOT% *} - 1))" "${SLOT#* }"
+i=0
+until shelf_items | grep -q '@a(sss) \[\]'; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the close button did not take the file off the shelf: $(shelf_items)"
+    sleep 0.2
+done
+ok "the close button takes the file off the shelf"
+"$HERE/hover.sh" off > /dev/null
+wait_for "the clock comes back when the shelf is empty" \
+    "$FIND shown('nokta-clock') && !any('nokta-shelf-badge') && $HELPER.get_frame_rect().x === -10000" 10
 
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
