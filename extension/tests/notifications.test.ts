@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { MAX_BUTTONS, notificationButtons } from '../src/features/notifications/logic/actions.js';
 import {
     CRITICAL,
     notificationLines,
     plainText,
     takesBanner,
 } from '../src/features/notifications/logic/content.js';
+import { stackBadge, stackCount } from '../src/features/notifications/logic/stack.js';
 import { LEAVE_MS, NotificationTimer } from '../src/features/notifications/logic/timer.js';
 
 test('the notch takes the banners GNOME would show', () => {
@@ -114,4 +116,64 @@ test('hide ends it at once and clears the timer', () => {
     assert.equal(pending(), 0);
     timer.hide();
     assert.deepEqual(changes, [true, false]);
+});
+
+test("a notification's actions become up to three buttons", () => {
+    const actions = [{ label: 'Reply' }, { label: 'Mark as read' }];
+    assert.deepEqual(notificationButtons(actions), [
+        { label: 'Reply', index: 0 },
+        { label: 'Mark as read', index: 1 },
+    ]);
+    const many = ['One', 'Two', 'Three', 'Four'].map((label) => ({ label }));
+    assert.deepEqual(
+        notificationButtons(many).map((b) => b.label),
+        ['One', 'Two', 'Three'],
+    );
+    assert.equal(MAX_BUTTONS, 3);
+});
+
+test('only actions with a label get a button, and keep their place', () => {
+    const actions = [{ label: '  ' }, {}, { label: 7 }, { label: ' Archive ' }];
+    assert.deepEqual(notificationButtons(actions), [{ label: 'Archive', index: 3 }]);
+});
+
+test('no buttons without an array of actions', () => {
+    assert.deepEqual(notificationButtons(undefined), []);
+    assert.deepEqual(notificationButtons(null), []);
+    assert.deepEqual(notificationButtons({ length: 1, 0: { label: 'Reply' } }), []);
+    assert.deepEqual(notificationButtons([]), []);
+    assert.deepEqual(notificationButtons([null, 'Reply']), []);
+});
+
+test('a new notification from the same source stacks on the one that shows', () => {
+    const chat = {};
+    const first = {};
+    const second = {};
+    const third = {};
+    assert.equal(stackCount(null, { source: chat, notification: first }), 1);
+    const one = { source: chat, notification: first, count: 1 };
+    assert.equal(stackCount(one, { source: chat, notification: second }), 2);
+    const two = { source: chat, notification: second, count: 2 };
+    assert.equal(stackCount(two, { source: chat, notification: third }), 3);
+});
+
+test('the same notification again, updated, keeps its count', () => {
+    const chat = {};
+    const shown = { source: chat, notification: {}, count: 2 };
+    assert.equal(stackCount(shown, { source: chat, notification: shown.notification }), 2);
+});
+
+test('another source, or none, starts the count again', () => {
+    const shown = { source: {}, notification: {}, count: 4 };
+    assert.equal(stackCount(shown, { source: {}, notification: {} }), 1);
+    assert.equal(stackCount({ ...shown, source: null }, { source: null, notification: {} }), 1);
+});
+
+test('the stacked count reads 2 to 9, then 9+', () => {
+    assert.equal(stackBadge(1), null);
+    assert.equal(stackBadge(0), null);
+    assert.equal(stackBadge(2), '2');
+    assert.equal(stackBadge(9), '9');
+    assert.equal(stackBadge(10), '9+');
+    assert.equal(stackBadge(42), '9+');
 });

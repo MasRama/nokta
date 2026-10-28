@@ -28,11 +28,14 @@ import {
     bannerShape,
     isRecordingBanner,
     isScreenshotBanner,
+    notificationButtons,
     notificationCount,
     notificationLines,
     openMessageList,
     screenshotButtons,
     ScreenshotFiles,
+    stackBadge,
+    stackCount,
     takeOverBanners,
     takesBanner,
     watchScreenshots,
@@ -224,13 +227,15 @@ class Session {
     };
     /**
      * The notification in a notch, watched so the notch closes when it goes
-     * away, and the file of a screenshot preview once it is known.
+     * away, the file of a screenshot preview once it is known, and how many
+     * from its app stacked into it.
      */
     private shownNotification: {
         notification: TrayNotification;
         notch: MonitorNotch;
         destroyId: number;
         file: string | null;
+        count: number;
     } | null = null;
     private readonly screenshotFiles = new ScreenshotFiles();
     private readonly unwatchScreenshots: Restore | null;
@@ -811,6 +816,12 @@ class Session {
         const { title, detail } = notificationLines(text, showBody);
         const icon = notification.gicon ?? notification.source?.icon ?? null;
         const shown = this.shownNotification;
+        // A new one from the app whose notification shows stacks on it.
+        const stacked =
+            shown && shown.notch === notch && notch.showsNotification
+                ? { source: shown.notification.source, notification: shown.notification, count: shown.count }
+                : null;
+        const count = stackCount(stacked, { source: notification.source, notification });
         if (shown && (shown.notification !== notification || shown.notch !== notch)) {
             if (shown.notch !== notch) shown.notch.hideNotification();
             this.releaseNotification();
@@ -827,7 +838,9 @@ class Session {
             let file: string | null = null;
             if (screenshot) file = this.screenshotFiles.previewed(Date.now());
             else if (recording) file = this.recording.fileUri();
-            this.shownNotification = { notification, notch, destroyId, file };
+            this.shownNotification = { notification, notch, destroyId, file, count };
+        } else {
+            this.shownNotification.count = count;
         }
         if (screenshot || recording) {
             // The image GNOME made for the notification is a Clutter.Content.
@@ -835,7 +848,21 @@ class Session {
             const press = (button: ScreenshotButton) => this.onScreenshotPress(notification, button);
             notch.showScreenshot(image, title, this.screenshotButtons(), durationMs, press);
         } else {
-            notch.showNotification(title, detail, icon, durationMs, () => notification.activate());
+            const buttons = notificationButtons(notification.actions);
+            const notchNotification = {
+                title,
+                detail,
+                icon,
+                buttons: buttons.map((button) => button.label),
+                badge: stackBadge(count),
+                onClick: () => notification.activate(),
+                // GNOME removes the notification after its action, unless it is resident.
+                onButton: (index: number) => {
+                    const button = buttons[index];
+                    if (button) notification.actions?.[button.index]?.activate();
+                },
+            };
+            notch.showNotification(notchNotification, durationMs);
         }
         return true;
     }

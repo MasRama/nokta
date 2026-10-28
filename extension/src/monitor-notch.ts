@@ -98,6 +98,8 @@ const TICK_MS = 250;
 const PANEL_TICK_MS = 1000;
 /** A notification is two lines tall: this much taller than the closed notch. */
 const NOTIFICATION_EXTRA_HEIGHT = 28;
+/** Its row of buttons, with the spacing above it. */
+const NOTIFICATION_BUTTONS_EXTRA = 32;
 /** A screenshot preview: the thumbnail and two rows of buttons. */
 const SCREENSHOT_EXTRA_HEIGHT = 84;
 /** The drop area: this much taller than the closed notch. */
@@ -119,6 +121,21 @@ type Drawn = NotchMode | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot
 
 /** The pages that home's tiles open. */
 type PageName = 'clipboard' | 'timer';
+
+/** A notification the notch shows. */
+export interface NotchNotification {
+    title: string;
+    detail: string;
+    icon: Gio.Icon | null;
+    /** The labels of the buttons for its actions. */
+    buttons: readonly string[];
+    /** The count on the icon when several stacked, else null. */
+    badge: string | null;
+    /** A click on the notification. */
+    onClick(): void;
+    /** A click on the button at this place in `buttons`. */
+    onButton(index: number): void;
+}
 
 /** What home shows and does; owned by the session. */
 export interface PanelSource {
@@ -218,8 +235,15 @@ export class MonitorNotch implements ShelfNotch {
     /** The track the lyrics view opened for. */
     private lyricsTrack = '';
     private readonly osdView = new OsdView();
-    private readonly notificationView = new NotificationView(() => this.onNotificationClick());
+    private readonly notificationView = new NotificationView({
+        onClick: () => this.onNotificationClick(),
+        onButton: (index) => this.onNotificationButton(index),
+        onClose: () => this.hideNotification(),
+    });
     private notificationClick: (() => void) | null = null;
+    private notificationButton: ((index: number) => void) | null = null;
+    /** Whether the notification that shows has a row of buttons. */
+    private notificationButtons = false;
     private readonly screenshotView = new ScreenshotView((button) => this.onScreenshotPress(button));
     private screenshotPress: ((button: ScreenshotButton) => void) | null = null;
     /** Which of the two the notification timer is showing. */
@@ -428,6 +452,7 @@ export class MonitorNotch implements ShelfNotch {
         this.osdTimer.destroy();
         this.notificationTimer.destroy();
         this.notificationClick = null;
+        this.notificationButton = null;
         this.screenshotPress = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
@@ -751,16 +776,28 @@ export class MonitorNotch implements ShelfNotch {
         this.osdTimer.hide();
     }
 
-    /** A notification until its time runs out; a click calls `onClick` and closes it. */
-    showNotification(title: string, detail: string, icon: Gio.Icon | null, durationMs: number, onClick: () => void): void {
+    /**
+     * A notification until its time runs out, or its close button; a click
+     * on it or one of its buttons calls the handler and closes it. A new one
+     * replaces the one that shows.
+     */
+    showNotification(notification: NotchNotification, durationMs: number): void {
         if (this.destroyed) return;
-        this.notificationView.show(title, detail, icon);
-        this.notificationClick = onClick;
+        const { title, detail, icon, buttons, badge } = notification;
+        this.notificationView.show(title, detail, icon, buttons, badge);
+        this.notificationClick = () => notification.onClick();
+        this.notificationButton = (index) => notification.onButton(index);
         this.screenshotPress = null;
         this.notificationKind = 'notification';
+        this.setNotificationButtons(buttons.length > 0);
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
         this.alert('accent');
+    }
+
+    /** Whether a notification, not a screenshot preview, shows now. */
+    get showsNotification(): boolean {
+        return !this.destroyed && this.notificationTimer.active && this.notificationKind === 'notification';
     }
 
     /** A screenshot preview, timed like a notification; a button calls `onPress` and closes it. */
@@ -775,6 +812,7 @@ export class MonitorNotch implements ShelfNotch {
         this.screenshotView.show(image, title, buttons);
         this.screenshotPress = onPress;
         this.notificationClick = null;
+        this.notificationButton = null;
         this.notificationKind = 'screenshot';
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
@@ -928,8 +966,26 @@ export class MonitorNotch implements ShelfNotch {
     private onNotificationClick(): void {
         const click = this.notificationClick;
         this.notificationClick = null;
+        this.notificationButton = null;
         this.notificationTimer.hide();
         click?.();
+    }
+
+    private onNotificationButton(index: number): void {
+        const press = this.notificationButton;
+        this.notificationClick = null;
+        this.notificationButton = null;
+        this.notificationTimer.hide();
+        press?.(index);
+    }
+
+    /** The notification grows by its row of buttons, also while one shows. */
+    private setNotificationButtons(buttons: boolean): void {
+        if (this.notificationButtons === buttons) return;
+        this.notificationButtons = buttons;
+        const [width, height] = this.sizeFor('notification');
+        this.notificationView.actor.set_size(width, height);
+        if (this.drawn === 'notification') this.notch.resizeTo(width, height, 'width');
     }
 
     /** The shelf row in the open notch, while one shows. */
@@ -1032,7 +1088,10 @@ export class MonitorNotch implements ShelfNotch {
     private sizeFor(mode: Drawn): [number, number] {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
-        if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
+        if (mode === 'notification') {
+            const buttons = this.notificationButtons ? NOTIFICATION_BUTTONS_EXTRA : 0;
+            return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT + buttons];
+        }
         if (mode === 'screenshot') return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
         if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
@@ -1093,6 +1152,7 @@ export class MonitorNotch implements ShelfNotch {
         this.timerPage.setColors({ foreground });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
+        this.notificationView.setColors(foreground, accent, onAccent);
     }
 
     private applyClockOptions(): void {

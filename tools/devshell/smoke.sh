@@ -360,6 +360,69 @@ wait_for "a notification shows in a 420 px notch instead of GNOME's banner" \
 "$HERE/shot.sh" smoke-notification > /dev/null
 wait_for "the notification goes away" "$FIND !shown('nokta-notification') && width() === 180" 15
 
+# Its actions show as up to three buttons in a row under the two lines, which
+# makes the notch 32 px taller; the close button ends it in the notch, and
+# GNOME's message list keeps it.
+gdbus call --session --dest org.gnome.Shell \
+    --object-path /org/freedesktop/Notifications \
+    --method org.freedesktop.Notifications.Notify \
+    "Nokta smoke" "uint32 0" "mail-unread-symbolic" "Two buttons" "Reply or archive it" \
+    "@as ['default', 'Open', 'reply', 'Reply', 'archive', 'Archive']" "@a{sv} {}" "int32 -1" > /dev/null
+NOTE_BUTTONS="find(Main.layoutManager.uiGroup, 'nokta-notification-button-label').filter((l) => l.mapped).map((l) => l.text).join()"
+wait_for "a notification with actions shows them as buttons in a 92 px notch" \
+    "$FIND shown('nokta-notification') && $NOTE_BUTTONS === 'Reply,Archive' && shown('nokta-notification-close') && Math.round(one('nokta-body').height) === 92" 10 \
+    "$FIND JSON.stringify([shown('nokta-notification'), $NOTE_BUTTONS, shown('nokta-notification-close'), Math.round(one('nokta-body').height)])"
+sleep 0.4
+"$HERE/shot.sh" smoke-notification-buttons > /dev/null
+js "$FIND one('nokta-notification-close').emit('clicked', 1); true" > /dev/null
+IN_LIST="Main.messageTray.getSources().some((s) => s.notifications.some((n) => n.title === 'Two buttons'))"
+wait_for "the close button ends it in the notch and GNOME's list keeps it" \
+    "$FIND !shown('nokta-notification') && width() === 180 && $IN_LIST" 5
+
+# A new notification from the same app replaces the one that shows and
+# counts on its icon; one from another app starts again. A real click on a
+# button runs its action, and not the notification's own.
+js "import('resource:///org/gnome/shell/ui/messageTray.js').then((MT) => {
+global._noktaChat = new MT.Source({ title: 'Chat', iconName: 'user-available-symbolic' });
+Main.messageTray.add(global._noktaChat);
+global._noktaChat.addNotification(new MT.Notification({ source: global._noktaChat, title: 'First message', body: 'Hi', isTransient: true }));
+}); true" > /dev/null
+wait_for "a chat notification shows without a count" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === 'First message' && !shown('nokta-notification-badge')" 10
+js "import('resource:///org/gnome/shell/ui/messageTray.js').then((MT) => {
+global._noktaActed = '';
+for (const title of ['Second message', 'Third message']) {
+    const n = new MT.Notification({ source: global._noktaChat, title, body: 'Still there?', isTransient: true });
+    n.addAction('Archive', () => { global._noktaActed = 'archive'; });
+    n.connect('activated', () => { global._noktaActed = 'opened'; });
+    global._noktaChat.addNotification(n);
+}
+}); true" > /dev/null
+wait_for "two more from the same app stack into a count of 3" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === 'Third message' && shown('nokta-notification-badge') && one('nokta-notification-badge').text === '3' && $NOTE_BUTTONS === 'Archive'" 10 \
+    "$FIND JSON.stringify([one('nokta-notification-title').text, shown('nokta-notification-badge'), one('nokta-notification-badge').text, $NOTE_BUTTONS])"
+sleep 0.4
+"$HERE/shot.sh" smoke-notification-stack > /dev/null
+ARCHIVE_AT=$(js "$FIND const b = find(Main.layoutManager.uiGroup, 'nokta-notification-button').find((a) => a.mapped); const [x, y] = b.get_transformed_position(); Math.round(x + b.width / 2) + ' ' + Math.round(y + b.height / 2)")
+ARCHIVE_AT=${ARCHIVE_AT#\"}
+# shellcheck disable=SC2086 # two numbers
+"$HERE/click.sh" ${ARCHIVE_AT%\"}
+wait_for "a click on its button runs the action and ends it" \
+    "$FIND global._noktaActed === 'archive' && !shown('nokta-notification')" 5 \
+    "$FIND JSON.stringify([global._noktaActed, shown('nokta-notification')])"
+"$HERE/hover.sh" off > /dev/null
+js "import('resource:///org/gnome/shell/ui/messageTray.js').then((MT) => {
+const mail = new MT.Source({ title: 'Mail', iconName: 'mail-unread-symbolic' });
+Main.messageTray.add(mail);
+for (const [source, title] of [[global._noktaChat, 'Fourth message'], [mail, 'New mail']])
+    source.addNotification(new MT.Notification({ source, title, isTransient: true }));
+}); true" > /dev/null
+wait_for "one from another app starts the count again" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === 'New mail' && !shown('nokta-notification-badge') && Math.round(one('nokta-body').height) === 60" 10 \
+    "$FIND JSON.stringify([one('nokta-notification-title').text, shown('nokta-notification-badge'), Math.round(one('nokta-body').height)])"
+js "$FIND one('nokta-notification-close').emit('clicked', 1); true" > /dev/null
+wait_for "the clock comes back after the notifications" "$FIND shown('nokta-clock') && width() === 180" 10
+
 "$HERE/timer.sh" start focus
 wait_for "a focus timer replaces the clock" \
     "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^2[45]:[0-9]{2}$/.test(one('nokta-timer').text)" 10

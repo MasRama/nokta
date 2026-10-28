@@ -227,6 +227,38 @@
     font-size: 12px;
 }
 
+.nokta-notification-badge {
+    font-size: 9px;
+    font-weight: bold;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.nokta-notification-buttons {
+    padding-top: 6px;
+    spacing: 6px;
+}
+
+.nokta-notification-button {
+    border-radius: 9px;
+    padding: 5px 10px;
+}
+
+.nokta-notification-button-label {
+    font-size: 12px;
+}
+
+.nokta-notification-close {
+    border-radius: 12px;
+    padding: 4px;
+}
+
+.nokta-notification-close-icon {
+    icon-size: 14px;
+}
+
 .nokta-screenshot {
     padding: 0 16px;
     spacing: 14px;

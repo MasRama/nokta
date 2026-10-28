@@ -16,7 +16,7 @@ export interface TrayNotification {
     source: { title: string | null; icon: Gio.Icon | null } | null;
     acknowledged: boolean;
     /** Its buttons; GNOME 46 and later. */
-    actions?: ReadonlyArray<{ activate(): void }>;
+    actions?: ReadonlyArray<{ readonly label?: string; activate(): void }>;
     activate(): void;
     playSound?(): void;
     connect(signal: 'destroy', callback: () => void): number;
