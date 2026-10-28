@@ -118,6 +118,8 @@ export class MonitorNotch implements ShelfNotch {
     private dropping = false;
     /** The pointer is over the helper window on a shelf row, so over the notch too. */
     private helperInside = false;
+    /** Watches the next pointer motion while the notch may still think the pointer is on it. */
+    private staleHoverId = 0;
     private indicator: Indicator | null = null;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
@@ -247,6 +249,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
         this.notch.actor.disconnect(this.destroyId);
+        this.forgetStaleHover();
         this.osdView.destroy();
         this.notificationView.destroy();
         this.idlePanel.destroy();
@@ -369,7 +372,31 @@ export class MonitorNotch implements ShelfNotch {
     setHelperPointer(inside: boolean): void {
         if (this.destroyed) return;
         this.helperInside = inside;
+        if (!inside) this.checkHoverOnNextMotion();
         this.machine.pointer(this.notch.actor.hover || inside);
+    }
+
+    /**
+     * The helper window lay over the notch, so the notch may never see the
+     * pointer leave: GNOME 49 and later keep it hovered. The next motion
+     * anywhere says whether the pointer is still on it.
+     */
+    private checkHoverOnNextMotion(): void {
+        if (this.staleHoverId || !this.notch.actor.hover) return;
+        this.staleHoverId = global.stage.connect('captured-event', (_stage, event: Clutter.Event) => {
+            if (event.type() !== Clutter.EventType.MOTION) return Clutter.EVENT_PROPAGATE;
+            this.forgetStaleHover();
+            const [x, y] = event.get_coords();
+            const [ax, ay] = this.notch.actor.get_transformed_position();
+            const [width, height] = this.notch.actor.get_transformed_size();
+            if (!pointIn({ x: ax, y: ay, width, height }, x, y)) this.notch.actor.hover = false;
+            return Clutter.EVENT_PROPAGATE;
+        });
+    }
+
+    private forgetStaleHover(): void {
+        if (this.staleHoverId) global.stage.disconnect(this.staleHoverId);
+        this.staleHoverId = 0;
     }
 
     setShelfHover(hit: Hit | null): void {
