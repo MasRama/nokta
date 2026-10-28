@@ -1,6 +1,7 @@
 // A scripted MPRIS player for the devshell: one 200 s track with a generated
 // cover. Its status follows <state>/player-status (see player.sh) and the
-// PlayPause, Next, Previous and SetPosition methods.
+// PlayPause, Next, Previous and SetPosition methods. Shuffle and LoopStatus
+// can be set over D-Bus, as the notch's buttons do.
 // Usage: gjs -m fake-player.js STATE_DIR [N]
 // N (2, 3, ...) starts another player with its own name, track and
 // <state>/player-N-status file.
@@ -54,6 +55,8 @@ const PLAYER_XML = `<node>
     <property name="CanPause" type="b" access="read"/>
     <property name="CanSeek" type="b" access="read"/>
     <property name="CanControl" type="b" access="read"/>
+    <property name="Shuffle" type="b" access="readwrite"/>
+    <property name="LoopStatus" type="s" access="readwrite"/>
   </interface>
 </node>`;
 
@@ -80,6 +83,8 @@ const coverPath = GLib.build_filenamev([state, `cover${suffix}.png`]);
 drawCover(coverPath);
 
 let status = 'Playing';
+let shuffle = false;
+let loopStatus = 'None';
 let anchorUs = 0; // position at anchorAt
 let anchorAt = GLib.get_monotonic_time();
 
@@ -123,6 +128,23 @@ const player = {
     CanPause: true,
     CanSeek: true,
     CanControl: true,
+    get Shuffle() {
+        return shuffle;
+    },
+    set Shuffle(value) {
+        shuffle = value;
+        exported.emit_property_changed('Shuffle', new GLib.Variant('b', shuffle));
+        exported.flush();
+    },
+    get LoopStatus() {
+        return loopStatus;
+    },
+    set LoopStatus(value) {
+        if (!['None', 'Track', 'Playlist'].includes(value)) return;
+        loopStatus = value;
+        exported.emit_property_changed('LoopStatus', new GLib.Variant('s', loopStatus));
+        exported.flush();
+    },
 
     PlayPause() {
         setStatus(status === 'Playing' ? 'Paused' : 'Playing');

@@ -5,6 +5,7 @@ import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
 import { Cover } from './cover.js';
+import { loopIcon, nextLoopStatus, shuffleIcon, type LoopStatus, type ToggleIcon } from './logic/loop.js';
 import { neighbour, playerLabels, scrollStep, type PlayerEntry, type ScrollDirection } from './logic/players.js';
 import type { MediaSnapshot } from './logic/snapshot.js';
 import { ProgressBar } from './progress.js';
@@ -15,6 +16,8 @@ export interface MediaControls {
     previous(): void;
     setPosition(us: number): void;
     selectPlayer(id: string): void;
+    setShuffle(on: boolean): void;
+    setLoopStatus(status: LoopStatus): void;
 }
 
 const SCROLL_DIRECTIONS: Partial<Record<Clutter.ScrollDirection, ScrollDirection>> = {
@@ -45,6 +48,10 @@ export class ExpandedMediaView {
     private readonly previous: St.Button;
     private readonly playPause: St.Button;
     private readonly next: St.Button;
+    private readonly shuffle: St.Button;
+    private readonly loop: St.Button;
+    private shuffleOn = false;
+    private loopStatus: LoopStatus = 'None';
     private readonly playPauseIcon: St.Icon;
     private readonly playerRow: St.BoxLayout;
     private readonly playerLabel = ellipsized('nokta-player-name');
@@ -86,9 +93,16 @@ export class ExpandedMediaView {
         this.playPause = new St.Button({ style_class: 'nokta-button nokta-play', child: this.playPauseIcon, can_focus: true });
         this.playPause.connect('clicked', () => controls.playPause());
         this.next = this.button('media-skip-forward-symbolic', () => controls.next());
+        this.shuffle = this.button('media-playlist-shuffle-symbolic', () => controls.setShuffle(!this.shuffleOn));
+        this.loop = this.button('media-playlist-repeat-symbolic', () =>
+            controls.setLoopStatus(nextLoopStatus(this.loopStatus)),
+        );
+        for (const toggle of [this.shuffle, this.loop]) toggle.add_style_class_name('nokta-toggle');
+        buttons.add_child(this.shuffle);
         buttons.add_child(this.previous);
         buttons.add_child(this.playPause);
         buttons.add_child(this.next);
+        buttons.add_child(this.loop);
 
         this.actor.add_child(top);
         this.actor.add_child(this.progress.actor);
@@ -115,6 +129,10 @@ export class ExpandedMediaView {
         this.enable(this.previous, snapshot.canGoPrevious);
         this.enable(this.playPause, snapshot.canPlayPause);
         this.enable(this.next, snapshot.canGoNext);
+        this.shuffleOn = snapshot.shuffle;
+        this.loopStatus = snapshot.loopStatus;
+        this.showToggle(this.shuffle, snapshot.canShuffle, shuffleIcon(snapshot.shuffle));
+        this.showToggle(this.loop, snapshot.canLoop, loopIcon(snapshot.loopStatus));
     }
 
     destroy(): void {
@@ -147,6 +165,13 @@ export class ExpandedMediaView {
         });
         button.connect('clicked', onClick);
         return button;
+    }
+
+    /** Hidden when the player has none; dimmed while off. */
+    private showToggle(button: St.Button, supported: boolean, { icon, on }: ToggleIcon): void {
+        button.visible = supported;
+        (button.child as St.Icon).icon_name = icon;
+        button.opacity = on ? 255 : 110;
     }
 
     private enable(button: St.Button, enabled: boolean): void {
