@@ -4,7 +4,7 @@ use tokio::sync::watch;
 use zbus::{fdo, Connection};
 
 use super::control::Controller;
-use super::MediaState;
+use super::{LoopStatus, MediaState};
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
 
 pub const PATH: &str = "/io/nokta/Media";
@@ -48,6 +48,10 @@ fn properties(s: &MediaState) -> PropertyList {
         ("CanGoNext", owned(s.can_go_next)),
         ("CanGoPrevious", owned(s.can_go_previous)),
         ("CanSeek", owned(s.can_seek)),
+        ("Shuffle", owned(s.shuffle)),
+        ("LoopStatus", owned(s.loop_status.as_str())),
+        ("CanShuffle", owned(s.can_shuffle)),
+        ("CanLoop", owned(s.can_loop)),
     ]
 }
 
@@ -84,6 +88,19 @@ impl MediaInterface {
 
     async fn select_player(&self, id: String) -> fdo::Result<()> {
         self.control.select_player(&id).await.map_err(failed)
+    }
+
+    async fn set_shuffle(&self, shuffle: bool) -> fdo::Result<()> {
+        self.control.set_shuffle(shuffle).await.map_err(failed)
+    }
+
+    async fn set_loop_status(&self, status: String) -> fdo::Result<()> {
+        let status = LoopStatus::from_mpris(&status).ok_or_else(|| {
+            fdo::Error::InvalidArgs(format!(
+                "loop status must be None, Track or Playlist, got {status:?}"
+            ))
+        })?;
+        self.control.set_loop_status(status).await.map_err(failed)
     }
 
     #[zbus(property)]
@@ -174,5 +191,25 @@ impl MediaInterface {
     #[zbus(property)]
     fn can_seek(&self) -> bool {
         self.state.borrow().can_seek
+    }
+
+    #[zbus(property)]
+    fn shuffle(&self) -> bool {
+        self.state.borrow().shuffle
+    }
+
+    #[zbus(property)]
+    fn loop_status(&self) -> String {
+        self.state.borrow().loop_status.as_str().to_owned()
+    }
+
+    #[zbus(property)]
+    fn can_shuffle(&self) -> bool {
+        self.state.borrow().can_shuffle
+    }
+
+    #[zbus(property)]
+    fn can_loop(&self) -> bool {
+        self.state.borrow().can_loop
     }
 }

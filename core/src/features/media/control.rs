@@ -2,6 +2,7 @@ use tokio::sync::{mpsc, oneshot};
 use zbus::zvariant::ObjectPath;
 
 use super::watcher::{Active, Event};
+use super::LoopStatus;
 
 /// Forwards transport controls to whichever player is active when the call
 /// is made. Every call is a no-op when there is no active player.
@@ -63,6 +64,22 @@ impl Controller {
             .proxy
             .set_position(&track_id, position_us.clamp(0, upper))
             .await
+    }
+
+    /// Ignored when the active player has no shuffle.
+    pub async fn set_shuffle(&self, shuffle: bool) -> zbus::Result<()> {
+        match self.active().await {
+            Some(a) if a.can_shuffle => a.proxy.set_shuffle(shuffle).await,
+            _ => Ok(()),
+        }
+    }
+
+    /// Ignored when the active player has no repeat.
+    pub async fn set_loop_status(&self, status: LoopStatus) -> zbus::Result<()> {
+        match self.active().await {
+            Some(a) if a.can_loop => a.proxy.set_loop_status(status.as_str()).await,
+            _ => Ok(()),
+        }
     }
 
     /// Makes the player with this id active; unknown ids are ignored.

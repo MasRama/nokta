@@ -328,6 +328,80 @@ async fn play_pause_method_reaches_player() {
     );
 }
 
+async fn wait_available(p: &PropertiesProxy<'_>) {
+    for _ in 0..100 {
+        if bool::try_from(get(p, "io.nokta.Media1", "Available").await).unwrap() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("no player became available");
+}
+
+#[tokio::test]
+async fn shuffle_and_repeat_follow_the_player() {
+    let bus = TestBus::start();
+    let player = FakePlayer::start_looping(bus.address(), "a", Meta::new(1)).await;
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Media").await;
+    wait_available(&p).await;
+    let flag = |v: OwnedValue| bool::try_from(v).unwrap();
+    assert!(flag(get(&p, "io.nokta.Media1", "CanShuffle").await));
+    assert!(flag(get(&p, "io.nokta.Media1", "CanLoop").await));
+    assert!(!flag(get(&p, "io.nokta.Media1", "Shuffle").await));
+    assert_eq!(
+        String::try_from(get(&p, "io.nokta.Media1", "LoopStatus").await).unwrap(),
+        "None"
+    );
+
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let media = zbus::Proxy::new(&conn, NAME, "/io/nokta/Media", "io.nokta.Media1")
+        .await
+        .unwrap();
+    let _: () = media.call("SetShuffle", &(true,)).await.unwrap();
+    let changed = next_change_with(&mut changes, "Shuffle").await;
+    assert!(bool::try_from(changed["Shuffle"].try_clone().unwrap()).unwrap());
+    let _: () = media.call("SetLoopStatus", &("Track",)).await.unwrap();
+    let changed = next_change_with(&mut changes, "LoopStatus").await;
+    assert_eq!(
+        String::try_from(changed["LoopStatus"].try_clone().unwrap()).unwrap(),
+        "Track"
+    );
+    let err = media
+        .call::<_, _, ()>("SetLoopStatus", &("Forever",))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("InvalidArgs"), "{err}");
+    assert_eq!(player.calls(), ["Shuffle true", "LoopStatus Track"]);
+}
+
+#[tokio::test]
+async fn a_player_without_shuffle_or_repeat_has_neither() {
+    let bus = TestBus::start();
+    let player = FakePlayer::start(bus.address(), "a", "Playing", Meta::new(1)).await;
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Media").await;
+    wait_available(&p).await;
+    for name in ["CanShuffle", "CanLoop", "Shuffle"] {
+        assert!(
+            !bool::try_from(get(&p, "io.nokta.Media1", name).await).unwrap(),
+            "{name}"
+        );
+    }
+    conn.call_method(
+        Some(NAME),
+        "/io/nokta/Media",
+        Some("io.nokta.Media1"),
+        "SetShuffle",
+        &(true,),
+    )
+    .await
+    .unwrap();
+    assert!(player.calls().is_empty());
+}
+
 #[tokio::test]
 async fn timer_starts_pauses_and_stops_over_dbus() {
     let bus = TestBus::start();

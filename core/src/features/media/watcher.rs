@@ -21,7 +21,7 @@ use super::control::Controller;
 use super::mpris::{
     track_from_metadata, PlayerProxy, RootProxy, NAME_PREFIX, PATH, PLAYER_INTERFACE,
 };
-use super::{MediaState, PlaybackStatus, Selector, Track};
+use super::{LoopStatus, MediaState, PlaybackStatus, Selector, Track};
 use crate::shared::clock::monotonic_us;
 
 type Props = HashMap<String, OwnedValue>;
@@ -68,6 +68,8 @@ pub(super) struct Active {
     pub track_id: Option<String>,
     pub can_seek: bool,
     pub length_us: i64,
+    pub can_shuffle: bool,
+    pub can_loop: bool,
 }
 
 pub fn spawn(conn: Connection, art: ArtCache) -> (watch::Receiver<MediaState>, Controller) {
@@ -105,6 +107,9 @@ struct Player {
     can_go_next: bool,
     can_go_previous: bool,
     can_seek: bool,
+    /// MPRIS Shuffle and LoopStatus; None while the player has not published them.
+    shuffle: Option<bool>,
+    loop_status: Option<LoopStatus>,
     position_us: i64,
     position_timestamp_us: i64,
     /// Bumped on every new position source so a slow read cannot overwrite a newer one.
@@ -134,6 +139,8 @@ impl Player {
             can_go_next: false,
             can_go_previous: false,
             can_seek: false,
+            shuffle: None,
+            loop_status: None,
             position_us: 0,
             position_timestamp_us: monotonic_us(),
             position_generation: 0,
@@ -199,6 +206,11 @@ impl Player {
                 ("CanGoNext", Value::Bool(b)) => self.can_go_next = *b,
                 ("CanGoPrevious", Value::Bool(b)) => self.can_go_previous = *b,
                 ("CanSeek", Value::Bool(b)) => self.can_seek = *b,
+                ("Shuffle", Value::Bool(b)) => self.shuffle = Some(*b),
+                // An unknown value still means the player has a repeat.
+                ("LoopStatus", Value::Str(s)) => {
+                    self.loop_status = Some(LoopStatus::from_mpris(s.as_str()).unwrap_or_default());
+                }
                 _ => {}
             }
         }
@@ -229,6 +241,10 @@ impl Player {
             can_go_next: self.can_control && self.can_go_next,
             can_go_previous: self.can_control && self.can_go_previous,
             can_seek: self.can_control && self.can_seek,
+            shuffle: self.shuffle.unwrap_or(false),
+            loop_status: self.loop_status.unwrap_or_default(),
+            can_shuffle: self.can_control && self.shuffle.is_some(),
+            can_loop: self.can_control && self.loop_status.is_some(),
         }
     }
 }
@@ -383,6 +399,8 @@ impl Actor {
                     track_id: p.track.track_id.clone(),
                     can_seek: p.can_seek,
                     length_us: p.track.length_us,
+                    can_shuffle: p.can_control && p.shuffle.is_some(),
+                    can_loop: p.can_control && p.loop_status.is_some(),
                 });
                 let _ = reply.send(active);
             }

@@ -37,6 +37,12 @@ pub trait Player {
 
     #[zbus(property(emits_changed_signal = "false"))]
     fn position(&self) -> zbus::Result<i64>;
+
+    #[zbus(property)]
+    fn set_shuffle(&self, shuffle: bool) -> zbus::Result<()>;
+
+    #[zbus(property)]
+    fn set_loop_status(&self, status: &str) -> zbus::Result<()>;
 }
 
 /// The track in an MPRIS `Metadata` map. Players are loose with types, so

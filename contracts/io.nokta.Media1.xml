@@ -69,6 +69,22 @@
     <property name="CanSeek" type="b" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- The player's shuffle; false when it has none (CanShuffle). -->
+    <property name="Shuffle" type="b" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- "None", "Track" or "Playlist"; "None" when it has none (CanLoop). -->
+    <property name="LoopStatus" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- True when the player publishes MPRIS Shuffle and can be controlled. -->
+    <property name="CanShuffle" type="b" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- True when the player publishes MPRIS LoopStatus and can be controlled. -->
+    <property name="CanLoop" type="b" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <method name="PlayPause"/>
     <method name="Next"/>
     <method name="Previous"/>
@@ -82,6 +98,15 @@
          another player starts playing or it stops. Unknown ids are ignored. -->
     <method name="SelectPlayer">
       <arg name="id" type="s" direction="in"/>
+    </method>
+    <!-- Turns the active player's shuffle on or off; ignored without CanShuffle. -->
+    <method name="SetShuffle">
+      <arg name="shuffle" type="b" direction="in"/>
+    </method>
+    <!-- Sets the active player's repeat to "None", "Track" or "Playlist";
+         ignored without CanLoop. Any other value fails with InvalidArgs. -->
+    <method name="SetLoopStatus">
+      <arg name="status" type="s" direction="in"/>
     </method>
   </interface>
 </node>

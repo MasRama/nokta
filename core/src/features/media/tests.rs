@@ -1,4 +1,4 @@
-use super::{PlaybackStatus, Selector, Track};
+use super::{LoopStatus, PlaybackStatus, Selector, Track};
 
 #[test]
 fn identity_changes_with_title() {
@@ -12,6 +12,15 @@ fn identity_changes_with_title() {
     };
     assert_ne!(a.identity(), b.identity());
     assert_eq!(a.identity(), a.clone().identity());
+}
+
+#[test]
+fn loop_status_reads_only_mpris_values() {
+    for status in [LoopStatus::None, LoopStatus::Track, LoopStatus::Playlist] {
+        assert_eq!(LoopStatus::from_mpris(status.as_str()), Some(status));
+    }
+    assert_eq!(LoopStatus::from_mpris("track"), None);
+    assert_eq!(LoopStatus::default().as_str(), "None");
 }
 
 const A: &str = "org.mpris.MediaPlayer2.a";

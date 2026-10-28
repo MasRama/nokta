@@ -1,4 +1,4 @@
-use super::{PlaybackStatus, Track};
+use super::{LoopStatus, PlaybackStatus, Track};
 
 /// Everything `io.nokta.Media1` publishes about the active player.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -20,4 +20,10 @@ pub struct MediaState {
     pub can_go_next: bool,
     pub can_go_previous: bool,
     pub can_seek: bool,
+    /// False when the player has no shuffle.
+    pub shuffle: bool,
+    /// `None` when the player has no repeat.
+    pub loop_status: LoopStatus,
+    pub can_shuffle: bool,
+    pub can_loop: bool,
 }
