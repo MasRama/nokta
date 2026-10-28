@@ -91,9 +91,19 @@ test('variant_types_follow_the_daemon', () => {
     assert.equal(type('appearance', 'background_opacity'), 'd');
     assert.equal(type('appearance', 'background'), 's');
     assert.equal(type('behavior', 'clock_format'), 's');
+    assert.equal(type('behavior', 'fullscreen_alerts'), 's');
     assert.equal(type('lyrics', 'enabled'), 'b');
     assert.equal(type('timer', 'shortcut'), 's');
     assert.equal(type('home', 'tiles'), 'as');
+});
+
+test('fullscreen_alerts_offers_the_daemons_three_values', () => {
+    const row = allRows().find((r) => r.key === 'fullscreen_alerts');
+    assert.ok(row?.kind.type === 'choice');
+    assert.deepEqual(
+        row.kind.options.map((o) => o.value),
+        ['important', 'all', 'none'],
+    );
 });
 
 test('row_value_reads_the_daemon_tables', () => {

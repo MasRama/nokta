@@ -417,6 +417,7 @@ fn behavior_entries_have_all_keys() {
             "close_delay_ms",
             "device_alerts",
             "file_shelf",
+            "fullscreen_alerts",
             "live_activities",
             "move_clock",
             "open_delay_ms",
@@ -433,6 +434,22 @@ fn behavior_entries_have_all_keys() {
     );
     assert_eq!(map["move_clock"], SettingValue::Bool(true));
     assert_eq!(map["call_indicator"], SettingValue::Bool(true));
+    assert_eq!(
+        map["fullscreen_alerts"],
+        SettingValue::Text("important".into())
+    );
+}
+
+#[test]
+fn fullscreen_alerts_default_to_important_and_take_three_values() {
+    assert_eq!(Config::default().behavior.fullscreen_alerts, "important");
+    for value in ["none", "important", "all"] {
+        let c = parse(&format!("[behavior]\nfullscreen_alerts = \"{value}\"\n")).unwrap();
+        assert_eq!(c.behavior.fullscreen_alerts, value);
+    }
+    let err = parse("[behavior]\nfullscreen_alerts = \"urgent\"\n").unwrap_err();
+    assert!(err.message.contains("fullscreen_alerts"), "{err}");
+    assert!(parse("[behavior]\nfullscreen_alerts = true\n").is_err());
 }
 
 #[test]
@@ -578,6 +595,9 @@ mod edit {
         let toggles = Value::List(vec!["airplane".into()]);
         let err = set_key("", "home", "toggles", &toggles).unwrap_err();
         assert!(err.message.contains("home.toggles"), "{err}");
+        let alerts = Value::Text("urgent".into());
+        let err = set_key("", "behavior", "fullscreen_alerts", &alerts).unwrap_err();
+        assert!(err.message.contains("behavior.fullscreen_alerts"), "{err}");
         let err = set_key("", "appearance", "height", &Value::Float(-3.0)).unwrap_err();
         assert!(err.message.contains("height"), "{err}");
     }

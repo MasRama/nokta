@@ -80,8 +80,10 @@ import {
     type TimerClient,
 } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
+import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { withAlpha } from './shared/logic/color.js';
 import { formatDuration } from './shared/logic/format.js';
+import { fullscreenView, UnredirectHold } from './shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from './shared/logic/glow.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
@@ -276,6 +278,14 @@ export class MonitorNotch implements ShelfNotch {
     private readonly hoverId: number;
     private readonly motionId: number;
     private readonly destroyId: number;
+    private readonly fullscreenId: number;
+    private readonly windowsShownId: number;
+    /** A fullscreen window covers this monitor, as GNOME's top chrome counts it. */
+    private inFullscreen = false;
+    /** The OSD shows an alert let through over the fullscreen window. */
+    private alertOverFullscreen = false;
+    /** Unredirection is off while the notch shows over a fullscreen window. */
+    private readonly unredirect = new UnredirectHold(disableUnredirect, enableUnredirect);
     private destroyed = false;
     private drawn: Drawn = 'idle';
     private tickId = 0;
@@ -397,11 +407,15 @@ export class MonitorNotch implements ShelfNotch {
         this.osdTimer = new OsdTimer(
             glibSchedule,
             () => settings.behavior.osdDurationMs,
-            () => this.draw(this.overlay()),
+            (active) => this.onOsdTimer(active),
         );
         this.notificationTimer = new NotificationTimer(glibSchedule, () => this.draw(this.overlay()));
 
-        Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: true });
+        // The notch follows fullscreen itself, so an alert can show over it.
+        Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: false });
+        this.fullscreenId = global.display.connect('in-fullscreen-changed', () => this.onFullscreen());
+        // The overview hides the windows, and a fullscreen one then hides nothing.
+        this.windowsShownId = global.window_group.connect('notify::visible', () => this.onFullscreen());
         this.hoverId = this.notch.actor.connect('notify::hover', () => {
             const { hover } = this.notch.actor;
             this.notificationTimer.pointer(hover);
@@ -438,11 +452,15 @@ export class MonitorNotch implements ShelfNotch {
         this.onClipboard();
         this.onPrivacy();
         this.onOutputs();
+        this.onFullscreen();
     }
 
-    /** False while a fullscreen app on this monitor hides the notch. */
-    get visible(): boolean {
-        return !this.destroyed && this.notch.actor.visible;
+    /**
+     * Whether a message can show here: not while a fullscreen app hides the
+     * notch, unless it is let through `overFullscreen`.
+     */
+    canShow(overFullscreen = false): boolean {
+        return !this.destroyed && (!this.inFullscreen || overFullscreen);
     }
 
     destroy(): void {
@@ -459,6 +477,9 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.actor.disconnect(this.motionId);
         this.notch.actor.disconnect(this.pressId);
         this.notch.actor.disconnect(this.destroyId);
+        global.display.disconnect(this.fullscreenId);
+        global.window_group.disconnect(this.windowsShownId);
+        this.unredirect.release();
         this.menu.destroy();
         this.forgetStaleHover();
         this.setSearchField(null);
@@ -629,9 +650,46 @@ export class MonitorNotch implements ShelfNotch {
         this.pages.set_size(...this.sizeFor('page'));
     }
 
-    /** The pointer is on the notch, or it counts as on it: over the helper window, or typing a search. */
+    /**
+     * The pointer is on the notch, or it counts as on it: over the helper
+     * window, or typing a search. Never over a fullscreen app.
+     */
     private pointerInside(): boolean {
+        if (!fullscreenView(this.inFullscreen, this.alertOverFullscreen).hover) return false;
         return this.notch.actor.hover || this.helperInside || this.searchGrab !== null || this.outputMenuOpen;
+    }
+
+    /** A fullscreen window came or went on some monitor, or the overview opened or closed. */
+    private onFullscreen(): void {
+        if (this.destroyed) return;
+        // Like GNOME's top chrome: a fullscreen window counts only while the windows show.
+        const monitor = Main.layoutManager.monitors[this.monitorIndex];
+        const fullscreen = global.window_group.visible && monitor?.inFullscreen === true;
+        if (fullscreen === this.inFullscreen) return;
+        this.inFullscreen = fullscreen;
+        // An alert from before goes with the notch; one over the app is no longer over it.
+        this.alertOverFullscreen = false;
+        this.applyFullscreen();
+    }
+
+    private onOsdTimer(active: boolean): void {
+        if (!active) this.alertOverFullscreen = false;
+        // Over a fullscreen app it hides first, so the views settle at once.
+        this.applyFullscreen();
+        this.draw(this.overlay());
+    }
+
+    /** Shows or hides the notch over a fullscreen app, with unredirection off while it shows there. */
+    private applyFullscreen(): void {
+        const view = fullscreenView(this.inFullscreen, this.alertOverFullscreen);
+        if (view.overFullscreen) this.unredirect.set(true);
+        if (view.visible !== this.notch.actor.visible) {
+            // Hidden at rest, so it comes back at its size and not mid-motion.
+            if (!view.visible) this.notch.jumpTo(...this.sizeFor(this.drawn));
+            this.notch.actor.visible = view.visible;
+        }
+        if (!view.overFullscreen) this.unredirect.set(false);
+        this.machine.pointer(this.pointerInside());
     }
 
     /**
@@ -765,6 +823,11 @@ export class MonitorNotch implements ShelfNotch {
      */
     showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number, tone?: AlertTone): void {
         if (this.destroyed) return;
+        // The session sends one here over a fullscreen app only when it is let through.
+        if (this.inFullscreen) {
+            this.alertOverFullscreen = true;
+            this.applyFullscreen();
+        }
         this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
         this.osdTimer.show(durationMs);
         if (tone) this.alert(tone);

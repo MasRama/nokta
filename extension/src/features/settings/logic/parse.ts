@@ -1,3 +1,5 @@
+import { FULLSCREEN_ALERTS, type FullscreenAlerts } from '../../../shared/logic/fullscreen.js';
+
 /** io.nokta.Settings1.Appearance in camelCase, with the defaults. */
 export interface Appearance {
     height: number;
@@ -49,6 +51,8 @@ export interface Behavior {
     fileShelf: boolean;
     /** A preview with buttons in place of the screenshot banner. */
     screenshotPreview: boolean;
+    /** Which alerts show over a fullscreen app. */
+    fullscreenAlerts: FullscreenAlerts;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -111,6 +115,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     liveActivities: true,
     fileShelf: true,
     screenshotPreview: true,
+    fullscreenAlerts: 'important',
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */
@@ -237,7 +242,11 @@ function fromTable<T extends object>(raw: unknown, defaults: Readonly<T>): T {
 }
 
 export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAULT_APPEARANCE);
-export const behaviorFrom = (raw: unknown): Behavior => fromTable(raw, DEFAULT_BEHAVIOR);
+export function behaviorFrom(raw: unknown): Behavior {
+    const behavior = fromTable(raw, DEFAULT_BEHAVIOR);
+    if (!FULLSCREEN_ALERTS.includes(behavior.fullscreenAlerts)) behavior.fullscreenAlerts = DEFAULT_BEHAVIOR.fullscreenAlerts;
+    return behavior;
+}
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
 export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);

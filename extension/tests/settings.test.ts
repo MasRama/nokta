@@ -98,6 +98,15 @@ test('clock_settings_and_free_strings', () => {
     assert.equal(appearanceFrom({ accent: 'orange' }).accent, '#ffffff');
 });
 
+test('fullscreen_alerts_is_one_of_three_values', () => {
+    assert.equal(DEFAULT_BEHAVIOR.fullscreenAlerts, 'important');
+    assert.equal(behaviorFrom({ fullscreen_alerts: 'all' }).fullscreenAlerts, 'all');
+    assert.equal(behaviorFrom({ fullscreen_alerts: 'none' }).fullscreenAlerts, 'none');
+    // A value a newer daemon might add, or a wrong type, keeps the default.
+    assert.equal(behaviorFrom({ fullscreen_alerts: 'urgent' }).fullscreenAlerts, 'important');
+    assert.equal(behaviorFrom({ fullscreen_alerts: true }).fullscreenAlerts, 'important');
+});
+
 test('lyrics_table', () => {
     assert.deepEqual(DEFAULT_LYRICS, { enabled: true });
     assert.deepEqual(lyricsFrom({ enabled: false }), { enabled: false });

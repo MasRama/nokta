@@ -44,3 +44,6 @@ export function deviceAlert(kind: string, name: string, percentage: number): Dev
             return null;
     }
 }
+
+/** The battery runs low or out: the device alerts that show over a fullscreen app. */
+export const isBatteryWarning = (kind: string): boolean => kind === 'battery-low' || kind === 'battery-critical';
