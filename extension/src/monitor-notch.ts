@@ -15,7 +15,12 @@ import {
     visibleLyric,
 } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
-import { NotificationTimer, NotificationView } from './features/notifications/index.js';
+import {
+    NotificationTimer,
+    NotificationView,
+    ScreenshotView,
+    type ScreenshotButton,
+} from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import {
     IdlePanel,
@@ -52,6 +57,8 @@ const TICK_MS = 250;
 const PANEL_TICK_MS = 1000;
 /** A notification is two lines tall: this much taller than the closed notch. */
 const NOTIFICATION_EXTRA_HEIGHT = 28;
+/** A screenshot preview: the thumbnail and two rows of buttons. */
+const SCREENSHOT_EXTRA_HEIGHT = 84;
 /** The drop area: this much taller than the closed notch. */
 const DROP_EXTRA_HEIGHT = 76;
 /** Files dragged this close to the closed notch open the drop area. */
@@ -63,7 +70,7 @@ const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
  * What the notch draws: the state machine's mode (the idle panel when it
  * opens without a player), or the OSD or a notification over it.
  */
-type Drawn = NotchMode | 'panel' | 'osd' | 'notification' | 'drop';
+type Drawn = NotchMode | 'panel' | 'osd' | 'notification' | 'screenshot' | 'drop';
 
 /** What the idle panel shows and does; owned by the session. */
 export interface PanelSource {
@@ -132,6 +139,10 @@ export class MonitorNotch implements ShelfNotch {
     private readonly osdView = new OsdView();
     private readonly notificationView = new NotificationView(() => this.onNotificationClick());
     private notificationClick: (() => void) | null = null;
+    private readonly screenshotView = new ScreenshotView((button) => this.onScreenshotPress(button));
+    private screenshotPress: ((button: ScreenshotButton) => void) | null = null;
+    /** Which of the two the notification timer is showing. */
+    private notificationKind: 'notification' | 'screenshot' = 'notification';
     private readonly privacyDots = new PrivacyDots();
     private privacyCount = 0;
     private readonly idlePanel = new IdlePanel({
@@ -184,6 +195,7 @@ export class MonitorNotch implements ShelfNotch {
             panel: this.idlePanel.actor,
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
+            screenshot: this.screenshotView.actor,
             drop: this.dropView.actor,
         };
         for (const [mode, actor] of Object.entries(this.views)) {
@@ -245,6 +257,7 @@ export class MonitorNotch implements ShelfNotch {
         this.osdTimer.destroy();
         this.notificationTimer.destroy();
         this.notificationClick = null;
+        this.screenshotPress = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
@@ -252,6 +265,7 @@ export class MonitorNotch implements ShelfNotch {
         this.forgetStaleHover();
         this.osdView.destroy();
         this.notificationView.destroy();
+        this.screenshotView.destroy();
         this.idlePanel.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
@@ -453,7 +467,33 @@ export class MonitorNotch implements ShelfNotch {
         if (this.destroyed) return;
         this.notificationView.show(title, detail, icon);
         this.notificationClick = onClick;
+        this.screenshotPress = null;
+        this.notificationKind = 'notification';
         this.notificationTimer.show(durationMs);
+        this.draw(this.overlay());
+    }
+
+    /** A screenshot preview, timed like a notification; a button calls `onPress` and closes it. */
+    showScreenshot(
+        image: Clutter.Content | null,
+        title: string,
+        buttons: readonly ScreenshotButton[],
+        durationMs: number,
+        onPress: (button: ScreenshotButton) => void,
+    ): void {
+        if (this.destroyed) return;
+        this.screenshotView.show(image, title, buttons);
+        this.screenshotPress = onPress;
+        this.notificationClick = null;
+        this.notificationKind = 'screenshot';
+        this.notificationTimer.show(durationMs);
+        this.draw(this.overlay());
+    }
+
+    /** The buttons of the screenshot preview while it shows. */
+    setScreenshotButtons(buttons: readonly ScreenshotButton[]): void {
+        if (this.destroyed) return;
+        this.screenshotView.setButtons(buttons);
     }
 
     hideNotification(): void {
@@ -531,6 +571,13 @@ export class MonitorNotch implements ShelfNotch {
         this.privacyDots.actor.visible = this.privacyCount > 0 && (this.drawn === 'idle' || this.drawn === 'collapsed');
     }
 
+    private onScreenshotPress(button: ScreenshotButton): void {
+        const press = this.screenshotPress;
+        this.screenshotPress = null;
+        this.notificationTimer.hide();
+        press?.(button);
+    }
+
     private onNotificationClick(): void {
         const click = this.notificationClick;
         this.notificationClick = null;
@@ -559,7 +606,7 @@ export class MonitorNotch implements ShelfNotch {
     private overlay(): Drawn {
         if (this.dropping) return 'drop';
         if (this.osdTimer.active) return 'osd';
-        if (this.notificationTimer.active) return 'notification';
+        if (this.notificationTimer.active) return this.notificationKind;
         const { mode } = this.machine;
         return mode === 'expanded' && !this.sources.media.snapshot().available ? 'panel' : mode;
     }
@@ -581,7 +628,11 @@ export class MonitorNotch implements ShelfNotch {
         const [width, height] = this.sizeFor(mode);
         if (previous === 'panel' || previous === 'expanded') this.sources.shelf.rowGone(this);
         const tall = (drawn: Drawn) =>
-            drawn === 'expanded' || drawn === 'panel' || drawn === 'notification' || drawn === 'drop';
+            drawn === 'expanded' ||
+            drawn === 'panel' ||
+            drawn === 'notification' ||
+            drawn === 'screenshot' ||
+            drawn === 'drop';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
         this.showView(mode);
@@ -604,6 +655,7 @@ export class MonitorNotch implements ShelfNotch {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
         if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
+        if (mode === 'screenshot') return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
         if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
         if (mode === 'expanded') {
@@ -627,6 +679,7 @@ export class MonitorNotch implements ShelfNotch {
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setForeground(foreground);
         this.dropView.setForeground(foreground);
+        this.screenshotView.setForeground(foreground);
     }
 
     private applyClockOptions(): void {

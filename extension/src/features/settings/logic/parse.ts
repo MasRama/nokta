@@ -36,6 +36,8 @@ export interface Behavior {
     liveActivities: boolean;
     /** Files dropped on the notch stay there until dragged out. */
     fileShelf: boolean;
+    /** A preview with buttons in place of the screenshot banner. */
+    screenshotPreview: boolean;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -91,6 +93,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     privacyDots: true,
     liveActivities: true,
     fileShelf: true,
+    screenshotPreview: true,
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */
