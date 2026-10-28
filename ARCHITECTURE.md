@@ -54,7 +54,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
-  src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
+  src/shared/       notch shape, springs and layout, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
@@ -231,8 +231,15 @@ How both sides stay honest:
   (`lyrics/logic/window.ts`), 150 px taller, until a click, the next track
   or the notch closing. A pure state machine (`shared/logic/machine.ts`) decides when to
   open and close.
-- Animations use Clutter's `ease()`, so they run in the compositor and turn
-  instant when GNOME animations are off.
+- The notch changes size on springs (`shared/logic/spring.ts`): width and
+  height step on the same frames of one `Clutter.Timeline`, which runs only
+  until both settle, so they move together and a new size mid-way bends the
+  motion instead of restarting it. The bottom corners round more as the
+  body grows (`shared/logic/shape.ts`). The body lays its views out with
+  `shared/layout.ts`, so a view never makes it bigger than the spring says;
+  a larger view is clipped, never reflowed. Views fade and scale with
+  Clutter's `ease()`. Everything turns instant when GNOME animations are
+  off.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, one timeout per second while a
