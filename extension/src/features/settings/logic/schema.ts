@@ -236,12 +236,30 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         },
                         'Important: low battery, the focus timer, timers, alarms and reminders',
                     ),
+                    behavior(
+                        'open_on',
+                        'Open on',
+                        {
+                            type: 'choice',
+                            options: [
+                                { value: 'hover', label: 'Hover' },
+                                { value: 'click', label: 'Click' },
+                            ],
+                        },
+                        'Click: resting the pointer on the notch does not open it',
+                    ),
                     behavior('open_delay_ms', 'Open delay', int(0, 5000, 10), 'Milliseconds of hover before it opens'),
                     behavior(
                         'close_delay_ms',
                         'Close delay',
                         int(0, 5000, 10),
                         'Milliseconds after the pointer leaves',
+                    ),
+                    behavior(
+                        'open_shortcut',
+                        'Shortcut',
+                        text(),
+                        'Opens the notch for the keyboard, like <Super><Alt>n; empty for none',
                     ),
                 ],
             },

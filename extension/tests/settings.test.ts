@@ -107,6 +107,20 @@ test('fullscreen_alerts_is_one_of_three_values', () => {
     assert.equal(behaviorFrom({ fullscreen_alerts: true }).fullscreenAlerts, 'important');
 });
 
+test('open_on_is_hover_or_click', () => {
+    assert.equal(DEFAULT_BEHAVIOR.openOn, 'hover');
+    assert.equal(behaviorFrom({ open_on: 'click' }).openOn, 'click');
+    assert.equal(behaviorFrom({ open_on: 'press' }).openOn, 'hover');
+    assert.equal(behaviorFrom({ open_on: 1 }).openOn, 'hover');
+});
+
+test('open_shortcut_is_a_free_string', () => {
+    assert.equal(DEFAULT_BEHAVIOR.openShortcut, '<Super><Alt>n');
+    assert.equal(behaviorFrom({ open_shortcut: '' }).openShortcut, '');
+    assert.equal(behaviorFrom({ open_shortcut: '<Control><Alt>space' }).openShortcut, '<Control><Alt>space');
+    assert.equal(behaviorFrom({ open_shortcut: false }).openShortcut, '<Super><Alt>n');
+});
+
 test('lyrics_table', () => {
     assert.deepEqual(DEFAULT_LYRICS, { enabled: true });
     assert.deepEqual(lyricsFrom({ enabled: false }), { enabled: false });

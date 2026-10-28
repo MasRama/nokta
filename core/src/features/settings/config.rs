@@ -102,6 +102,10 @@ pub struct Behavior {
     pub screenshot_preview: bool,
     /// Which alerts show over a fullscreen app: one of FULLSCREEN_ALERTS.
     pub fullscreen_alerts: String,
+    /// What opens the notch: one of OPEN_ON.
+    pub open_on: String,
+    /// Opens the notch and takes the keyboard, in GNOME's key syntax; empty for none.
+    pub open_shortcut: String,
 }
 
 impl Default for Behavior {
@@ -127,6 +131,8 @@ impl Default for Behavior {
             file_shelf: true,
             screenshot_preview: true,
             fullscreen_alerts: "important".into(),
+            open_on: "hover".into(),
+            open_shortcut: "<Super><Alt>n".into(),
         }
     }
 }
@@ -390,6 +396,18 @@ impl Config {
                 b.fullscreen_alerts
             )));
         }
+        if !OPEN_ON.contains(&b.open_on.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "behavior.open_on must be \"hover\" or \"click\", got {:?}",
+                b.open_on
+            )));
+        }
+        if !b.open_shortcut.is_empty() && !is_accelerator(&b.open_shortcut) {
+            return Err(ConfigError::invalid(format!(
+                "behavior.open_shortcut must be keys like \"<Super><Alt>n\" or empty, got {:?}",
+                b.open_shortcut
+            )));
+        }
         check_range("behavior.open_delay_ms", b.open_delay_ms, 0, 5000)?;
         check_range("behavior.close_delay_ms", b.close_delay_ms, 0, 5000)?;
         check_range("behavior.osd_duration_ms", b.osd_duration_ms, 200, 10000)?;
@@ -505,6 +523,9 @@ pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
 
 /// The values `behavior.fullscreen_alerts` accepts.
 pub const FULLSCREEN_ALERTS: [&str; 3] = ["none", "important", "all"];
+
+/// The values `behavior.open_on` accepts.
+pub const OPEN_ON: [&str; 2] = ["hover", "click"];
 
 /// Modifiers in angle brackets, then one key name: `<Super><Alt>f`.
 fn is_accelerator(value: &str) -> bool {
@@ -656,6 +677,8 @@ impl Behavior {
             ("file_shelf", self.file_shelf.into()),
             ("screenshot_preview", self.screenshot_preview.into()),
             ("fullscreen_alerts", (&self.fullscreen_alerts).into()),
+            ("open_on", (&self.open_on).into()),
+            ("open_shortcut", (&self.open_shortcut).into()),
         ]
     }
 }

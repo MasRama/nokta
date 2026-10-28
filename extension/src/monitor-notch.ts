@@ -81,11 +81,13 @@ import {
 } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { disableUnredirect, enableUnredirect } from './shared/compat.js';
+import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
 import { withAlpha } from './shared/logic/color.js';
 import { formatDuration } from './shared/logic/format.js';
 import { fullscreenView, UnredirectHold } from './shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from './shared/logic/glow.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
+import { keyAction } from './shared/logic/keyboard.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
@@ -262,9 +264,16 @@ export class MonitorNotch implements ShelfNotch {
     /** A page a home tile opened, until the notch closes or its back arrow goes home. */
     private page: PageName | null = null;
     private readonly clipboardPage: ClipboardPage;
-    /** The keyboard, held while the clipboard's search field is open. */
-    private searchGrab: Clutter.Grab | null = null;
-    private searchPressId = 0;
+    /**
+     * The keyboard, held while the notch is open from the open shortcut or
+     * the clipboard's search field is open: one grab for both.
+     */
+    private grab: Clutter.Grab | null = null;
+    private grabEventId = 0;
+    private grabKeyId = 0;
+    private keyFocusId = 0;
+    /** The clipboard's search field is open. */
+    private searching = false;
     /** The open player's output menu shows, so the pointer counts as on the notch. */
     private outputMenuOpen = false;
     private readonly clipboardSubPage: SubPage;
@@ -404,7 +413,11 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.body.add_child(this.privacyDots.actor);
         this.machine = new NotchMachine(
             glibSchedule,
-            () => ({ openMs: settings.behavior.openDelayMs, closeMs: settings.behavior.closeDelayMs }),
+            () => ({
+                openMs: settings.behavior.openDelayMs,
+                closeMs: settings.behavior.closeDelayMs,
+                openOn: settings.behavior.openOn,
+            }),
             () => this.onMode(),
         );
         this.osdTimer = new OsdTimer(
@@ -429,6 +442,11 @@ export class MonitorNotch implements ShelfNotch {
             return Clutter.EVENT_PROPAGATE;
         });
         this.pressId = this.notch.actor.connect('button-press-event', (_actor, event: Clutter.Event) => {
+            // With open_on "click", a click on the closed notch opens it; its buttons take their own clicks first.
+            if (event.get_button() === Clutter.BUTTON_PRIMARY) {
+                const closed = this.drawn === 'idle' || this.drawn === 'collapsed';
+                return closed && this.pointerInside() && this.machine.click() ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
+            }
             if (event.get_button() !== Clutter.BUTTON_SECONDARY) return Clutter.EVENT_PROPAGATE;
             const [x, y] = event.get_coords();
             this.menu.open(x, y, {
@@ -659,7 +677,7 @@ export class MonitorNotch implements ShelfNotch {
      */
     private pointerInside(): boolean {
         if (!fullscreenView(this.inFullscreen, this.alertOverFullscreen).hover) return false;
-        return this.notch.actor.hover || this.helperInside || this.searchGrab !== null || this.outputMenuOpen;
+        return this.notch.actor.hover || this.helperInside || this.searching || this.outputMenuOpen;
     }
 
     /** A fullscreen window came or went on some monitor, or the overview opened or closed. */
@@ -685,6 +703,8 @@ export class MonitorNotch implements ShelfNotch {
     /** Shows or hides the notch over a fullscreen app, with unredirection off while it shows there. */
     private applyFullscreen(): void {
         const view = fullscreenView(this.inFullscreen, this.alertOverFullscreen);
+        // Hidden, it cannot keep the keyboard.
+        if (!view.visible && this.machine.held) this.machine.close();
         if (view.overFullscreen) this.unredirect.set(true);
         if (view.visible !== this.notch.actor.visible) {
             // Hidden at rest, so it comes back at its size and not mid-motion.
@@ -695,30 +715,106 @@ export class MonitorNotch implements ShelfNotch {
         this.machine.pointer(this.pointerInside());
     }
 
+    /** The notch holds the keyboard: open from the shortcut, or typing a search. */
+    get holdsKeyboard(): boolean {
+        return this.grab !== null;
+    }
+
+    /**
+     * The open shortcut: opens the notch (home or the player, as hover
+     * would), takes the keyboard and focuses the first button; pressed
+     * again while it holds the keyboard, closes it.
+     */
+    toggleKeyboard(): void {
+        if (this.destroyed) return;
+        if (this.grab) {
+            this.machine.close();
+            return;
+        }
+        if (!this.canShow()) return;
+        this.machine.open(true);
+        this.updateGrab();
+        this.focusView();
+    }
+
     /**
      * The clipboard's search field takes the keyboard while it is open, and
      * keeps the notch open; a click outside the notch closes it.
      */
     private setSearchField(entry: St.Entry | null): void {
-        if (entry && !this.searchGrab && !this.destroyed) {
-            this.searchGrab = Main.pushModal(this.notch.actor, { actionMode: Shell.ActionMode.POPUP });
-            entry.grab_key_focus();
-            this.searchPressId = this.notch.actor.connect('captured-event', (_actor, event: Clutter.Event) => {
-                if (event.type() !== Clutter.EventType.BUTTON_PRESS) return Clutter.EVENT_PROPAGATE;
-                const [x, y] = event.get_coords();
-                const [ax, ay] = this.notch.body.get_transformed_position();
-                const [width, height] = this.notch.body.get_transformed_size();
-                if (pointIn({ x: ax, y: ay, width, height }, x, y)) return Clutter.EVENT_PROPAGATE;
-                this.clipboardPage.reset();
-                return Clutter.EVENT_STOP;
-            });
-        } else if (!entry && this.searchGrab) {
-            this.notch.actor.disconnect(this.searchPressId);
-            this.searchPressId = 0;
-            Main.popModal(this.searchGrab);
-            this.searchGrab = null;
-        }
+        this.searching = entry !== null && !this.destroyed;
+        this.updateGrab();
+        if (entry && this.grab) entry.grab_key_focus();
+        // Back from the field, the keyboard stays with the notch's buttons.
+        else if (!entry && this.machine.held) this.focusView();
         if (!this.destroyed) this.machine.pointer(this.pointerInside());
+    }
+
+    /**
+     * Takes the keyboard (`Main.pushModal`, like a popup menu) while the
+     * notch is held open or the search field is open, and lets it go once
+     * neither is.
+     */
+    private updateGrab(): void {
+        const wanted = !this.destroyed && (this.machine.held || this.searching);
+        if (wanted && !this.grab) {
+            this.grab = Main.pushModal(this.notch.actor, { actionMode: Shell.ActionMode.POPUP });
+            this.grabEventId = this.notch.actor.connect('captured-event', (_actor, event: Clutter.Event) =>
+                this.onGrabbedPress(event),
+            );
+            this.grabKeyId = this.notch.actor.connect('key-press-event', (_actor, event: Clutter.Event) =>
+                this.onKey(event),
+            );
+            this.keyFocusId = global.stage.connect('notify::key-focus', () => this.onKeyFocus());
+        } else if (!wanted && this.grab) {
+            this.notch.actor.disconnect(this.grabEventId);
+            this.notch.actor.disconnect(this.grabKeyId);
+            global.stage.disconnect(this.keyFocusId);
+            this.grabEventId = 0;
+            this.grabKeyId = 0;
+            this.keyFocusId = 0;
+            Main.popModal(this.grab);
+            this.grab = null;
+        }
+    }
+
+    /** A press outside the notch closes it when held open, else the search field. */
+    private onGrabbedPress(event: Clutter.Event): boolean {
+        if (event.type() !== Clutter.EventType.BUTTON_PRESS) return Clutter.EVENT_PROPAGATE;
+        const [x, y] = event.get_coords();
+        const [ax, ay] = this.notch.body.get_transformed_position();
+        const [width, height] = this.notch.body.get_transformed_size();
+        if (pointIn({ x: ax, y: ay, width, height }, x, y)) return Clutter.EVENT_PROPAGATE;
+        if (this.machine.held) this.machine.close();
+        else this.clipboardPage.reset();
+        return Clutter.EVENT_STOP;
+    }
+
+    /** Held open: Escape closes, Tab and the arrows move the focus; Enter and Space are the button's. */
+    private onKey(event: Clutter.Event): boolean {
+        if (!this.machine.held) return Clutter.EVENT_PROPAGATE;
+        const shift = (event.get_state() & Clutter.ModifierType.SHIFT_MASK) !== 0;
+        const action = keyAction(event.get_key_symbol(), shift);
+        if (action === null) return Clutter.EVENT_PROPAGATE;
+        if (action === 'close') this.machine.close();
+        else moveFocus(this.views[this.drawn], action);
+        return Clutter.EVENT_STOP;
+    }
+
+    /** The focused button went away (hidden or destroyed): the first one of the view takes over. */
+    private onKeyFocus(): void {
+        if (!this.machine.held) return;
+        const focus = keyFocus();
+        if (focus === null || focus === global.stage || focus === this.notch.actor) this.focusView();
+    }
+
+    /** Focuses the first button of the view that shows, while held open. */
+    private focusView(): void {
+        if (!this.machine.held || !this.grab) return;
+        const view = this.views[this.drawn];
+        const focus = keyFocus();
+        if (focus && focus !== view && view.contains(focus)) return;
+        if (!focusFirst(view)) this.notch.actor.grab_key_focus();
     }
 
     // The file shelf: what the helper window needs from this notch.
@@ -1083,11 +1179,12 @@ export class MonitorNotch implements ShelfNotch {
     }
 
     private onMode(): void {
-        // Closing the notch goes back to its first page.
+        // Closing the notch goes back to its first page, and lets go of the keyboard.
         if (this.machine.mode !== 'expanded') {
             this.homeOpen = false;
             if (this.page) this.clipboardPage.reset();
             this.page = null;
+            this.updateGrab();
         }
         this.draw(this.overlay());
     }
@@ -1136,6 +1233,9 @@ export class MonitorNotch implements ShelfNotch {
         // The glow goes with the alert.
         if (mode !== 'osd' && mode !== 'notification' && mode !== 'screenshot') this.notch.setGlow(null);
         this.showView(mode);
+        // The open notch's buttons take the focus; held open, the new view's first one has it.
+        if (tall(mode)) focusButtons(this.views[mode]);
+        this.focusView();
         this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();
         else this.clock.stop();

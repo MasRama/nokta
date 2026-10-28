@@ -92,6 +92,8 @@ test('variant_types_follow_the_daemon', () => {
     assert.equal(type('appearance', 'background'), 's');
     assert.equal(type('behavior', 'clock_format'), 's');
     assert.equal(type('behavior', 'fullscreen_alerts'), 's');
+    assert.equal(type('behavior', 'open_on'), 's');
+    assert.equal(type('behavior', 'open_shortcut'), 's');
     assert.equal(type('lyrics', 'enabled'), 'b');
     assert.equal(type('timer', 'shortcut'), 's');
     assert.equal(type('home', 'tiles'), 'as');
@@ -104,6 +106,16 @@ test('fullscreen_alerts_offers_the_daemons_three_values', () => {
         row.kind.options.map((o) => o.value),
         ['important', 'all', 'none'],
     );
+});
+
+test('open_on_offers_hover_and_click_and_the_shortcut_is_text', () => {
+    const row = allRows().find((r) => r.key === 'open_on');
+    assert.ok(row?.kind.type === 'choice');
+    assert.deepEqual(
+        row.kind.options.map((o) => o.value),
+        ['hover', 'click'],
+    );
+    assert.equal(allRows().find((r) => r.key === 'open_shortcut')?.kind.type, 'text');
 });
 
 test('row_value_reads_the_daemon_tables', () => {

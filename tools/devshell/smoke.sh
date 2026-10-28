@@ -167,6 +167,97 @@ fi
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 
+# The open shortcut (a real key press through GNOME's keybinding) opens the
+# focused monitor's notch and takes the keyboard with Main.pushModal: the
+# first button has the focus, Tab and Shift+Tab move it, menus still open
+# over it, the pointer leaving keeps it open, Enter presses the focused
+# button, and Escape, the shortcut again or a click outside close it and let
+# go of the keyboard.
+NOTCH="Main.extensionManager.lookup('nokta@nokta.io').stateObj.session.notches[0]"
+FOCUS="global.stage.key_focus"
+HELD="Main.actionMode === imports.gi.Shell.ActionMode.POPUP && $NOTCH.holdsKeyboard"
+FREE="Main.actionMode !== imports.gi.Shell.ActionMode.POPUP && !$NOTCH.holdsKeyboard"
+FOCUSED_IN="(cls) => $FOCUS instanceof imports.gi.St.Button && $FOCUS.has_style_pseudo_class('focus') && one(cls).contains($FOCUS)"
+KEYBOARD_STATE="$FIND JSON.stringify([shown('nokta-expanded'), shown('nokta-panel'), Main.actionMode, $NOTCH.holdsKeyboard, $FOCUS?.style_class ?? null])"
+"$HERE/keys.sh" Super_L Alt_L n
+wait_for "the open shortcut opens the player and holds the keyboard, its first button focused" \
+    "$FIND $HELD && shown('nokta-expanded') && ($FOCUSED_IN)('nokta-expanded')" 5 "$KEYBOARD_STATE"
+sleep 0.4
+"$HERE/shot.sh" smoke-keyboard > /dev/null
+js "global._noktaFocus = $FOCUS; true" > /dev/null
+"$HERE/keys.sh" Tab
+wait_for "Tab moves the focus to the next button" \
+    "$FIND $FOCUS !== global._noktaFocus && ($FOCUSED_IN)('nokta-expanded')" 5 "$KEYBOARD_STATE"
+"$HERE/keys.sh" Shift_L Tab
+wait_for "Shift+Tab moves it back" "$FOCUS === global._noktaFocus" 5 "$KEYBOARD_STATE"
+if [ -S "$STATE/runtime/pulse/native" ]; then
+    OUTPUT_MENU="$FIND const menu = () => find(Main.layoutManager.uiGroup, 'nokta-output-menu').find((a) => a.mapped);"
+    js "$FIND one('nokta-output-button').emit('clicked', 1); true" > /dev/null
+    wait_for "held, the output button still opens its menu" "$OUTPUT_MENU menu() !== undefined" 5
+    "$HERE/keys.sh" Escape
+    wait_for "Escape closes the output menu first; the notch stays held" \
+        "$OUTPUT_MENU menu() === undefined && shown('nokta-expanded') && $HELD" 5 "$KEYBOARD_STATE"
+fi
+NOTCH_MENU="one('nokta-menu')._delegate"
+"$HERE/hover.sh" on > /dev/null
+js "const Clutter = imports.gi.Clutter;
+const now = () => global.get_current_time() * 1000;
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.PRESSED);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_SECONDARY, Clutter.ButtonState.RELEASED);
+true" > /dev/null
+wait_for "held, a right click still opens the menu" "$FIND $NOTCH_MENU.isOpen" 5 "$KEYBOARD_STATE"
+js "$FIND $NOTCH_MENU.close(); true" > /dev/null
+wait_for "closing the menu gives the keyboard back to the notch" \
+    "$FIND !$NOTCH_MENU.isOpen && $HELD && ($FOCUSED_IN)('nokta-expanded')" 5 "$KEYBOARD_STATE"
+"$HERE/hover.sh" off > /dev/null
+sleep 1
+[ "$(js "$FIND shown('nokta-expanded') && $HELD")" = true ] || fail "the pointer leaving closed the notch held from the keyboard: $(js "$KEYBOARD_STATE")"
+ok "held from the keyboard, the pointer leaving keeps it open"
+js "$FIND one('nokta-grid-button').grab_key_focus(); true" > /dev/null
+"$HERE/keys.sh" Return
+wait_for "Enter presses the focused button: the grid button opens home, its first button focused" \
+    "$FIND shown('nokta-panel') && !shown('nokta-expanded') && ($FOCUSED_IN)('nokta-panel')" 5 "$KEYBOARD_STATE"
+"$HERE/keys.sh" Tab
+sleep 0.4
+"$HERE/shot.sh" smoke-keyboard-home > /dev/null
+"$HERE/keys.sh" Escape
+wait_for "Escape closes the notch and lets go of the keyboard" \
+    "$FIND shown('nokta-collapsed') && $FREE && !($FOCUS && one('nokta-notch').contains($FOCUS))" 5 "$KEYBOARD_STATE"
+"$HERE/keys.sh" Super_L Alt_L n
+wait_for "the shortcut opens it again" "$FIND shown('nokta-expanded') && $HELD" 5 "$KEYBOARD_STATE"
+"$HERE/keys.sh" Super_L Alt_L n
+wait_for "the shortcut again closes it and lets go" "$FIND shown('nokta-collapsed') && $FREE" 5 "$KEYBOARD_STATE"
+"$HERE/keys.sh" Super_L Alt_L n
+wait_for "the shortcut opens it once more" "$FIND shown('nokta-expanded') && $HELD" 5 "$KEYBOARD_STATE"
+"$HERE/click.sh" 200 600
+wait_for "a click outside closes it and lets go" "$FIND shown('nokta-collapsed') && $FREE" 5 "$KEYBOARD_STATE"
+# On GNOME 49 and later the virtual Super key can leave the overview open.
+js "Main.overview.hide(); true" > /dev/null
+wait_for "the overview is closed" "!Main.overview.visible" 10
+
+# With open_on = "click", resting the pointer does not open the notch; a
+# click does, and leaving closes it after the close delay.
+set_open_on() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set behavior open_on "<'$1'>" > /dev/null
+    wait_for "open_on is $1" \
+        "Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.settings?.behavior?.openOn === '$1'" 5
+}
+set_open_on click
+"$HERE/hover.sh" on > /dev/null
+sleep 1
+[ "$(js "$FIND shown('nokta-collapsed') && !shown('nokta-expanded')")" = true ] || fail "hovering opened the notch with open_on = click"
+ok "with open_on = click, hovering does not open the notch"
+js "const Clutter = imports.gi.Clutter;
+const now = () => global.get_current_time() * 1000;
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.PRESSED);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.RELEASED);
+true" > /dev/null
+wait_for "a click on the closed notch opens it" "$FIND shown('nokta-expanded')" 5
+"$HERE/hover.sh" off > /dev/null
+wait_for "leaving closes it" "$FIND shown('nokta-collapsed') && width() === 260" 5
+set_open_on hover
+
 "$HERE/player.sh" Stopped > /dev/null
 wait_for "the idle notch shows the clock in 180 px" \
     "$FIND shown('nokta-clock') && /^[0-9]{1,2}:[0-9]{2}/.test(one('nokta-clock').text) && width() === 180" 10

@@ -421,6 +421,8 @@ fn behavior_entries_have_all_keys() {
             "live_activities",
             "move_clock",
             "open_delay_ms",
+            "open_on",
+            "open_shortcut",
             "osd_duration_ms",
             "privacy_dots",
             "replace_osd",
@@ -438,6 +440,34 @@ fn behavior_entries_have_all_keys() {
         map["fullscreen_alerts"],
         SettingValue::Text("important".into())
     );
+    assert_eq!(map["open_on"], SettingValue::Text("hover".into()));
+    assert_eq!(
+        map["open_shortcut"],
+        SettingValue::Text("<Super><Alt>n".into())
+    );
+}
+
+#[test]
+fn open_on_defaults_to_hover_and_takes_click() {
+    assert_eq!(Config::default().behavior.open_on, "hover");
+    let c = parse("[behavior]\nopen_on = \"click\"\n").unwrap();
+    assert_eq!(c.behavior.open_on, "click");
+    let err = parse("[behavior]\nopen_on = \"press\"\n").unwrap_err();
+    assert!(err.message.contains("behavior.open_on"), "{err}");
+    assert!(parse("[behavior]\nopen_on = true\n").is_err());
+}
+
+#[test]
+fn open_shortcut_is_an_accelerator_or_empty() {
+    assert_eq!(Config::default().behavior.open_shortcut, "<Super><Alt>n");
+    for good in ["", "<Super><Alt>n", "<Control><Alt>space"] {
+        let c = parse(&format!("[behavior]\nopen_shortcut = {good:?}\n")).unwrap();
+        assert_eq!(c.behavior.open_shortcut, good);
+    }
+    for bad in ["<Super>", "Super+N", "n<Alt>"] {
+        let err = parse(&format!("[behavior]\nopen_shortcut = {bad:?}\n")).unwrap_err();
+        assert!(err.message.contains("behavior.open_shortcut"), "{err}");
+    }
 }
 
 #[test]
@@ -598,6 +628,9 @@ mod edit {
         let alerts = Value::Text("urgent".into());
         let err = set_key("", "behavior", "fullscreen_alerts", &alerts).unwrap_err();
         assert!(err.message.contains("behavior.fullscreen_alerts"), "{err}");
+        let open_on = Value::Text("press".into());
+        let err = set_key("", "behavior", "open_on", &open_on).unwrap_err();
+        assert!(err.message.contains("behavior.open_on"), "{err}");
         let err = set_key("", "appearance", "height", &Value::Float(-3.0)).unwrap_err();
         assert!(err.message.contains("height"), "{err}");
     }

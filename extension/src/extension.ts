@@ -163,6 +163,8 @@ class Session {
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: Keybinding;
+    /** Opens the focused monitor's notch for the keyboard. */
+    private readonly openShortcut: Keybinding;
     private readonly call = new CallMonitor();
     private readonly recording = new ScreenRecording();
     private readonly privacy = new PrivacyMonitor(() => this.onPrivacy());
@@ -288,6 +290,14 @@ class Session {
             () => this.onFocusShortcut(),
         );
         this.focusShortcut.set(this.settings.timer.shortcut);
+        // Also while a popup holds the keyboard, which the notch's own grab is.
+        this.openShortcut = new Keybinding(
+            extensionSettings,
+            'open-shortcut',
+            Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW | Shell.ActionMode.POPUP,
+            () => this.onOpenShortcut(),
+        );
+        this.openShortcut.set(this.settings.behavior.openShortcut);
         this.buildNotches();
         this.applyClockPosition();
         this.applyOsdSettings();
@@ -334,6 +344,7 @@ class Session {
         for (const [settings, id] of this.togglesIds) settings.disconnect(id);
         if (this.screenshotId) GLib.source_remove(this.screenshotId);
         this.focusShortcut.destroy();
+        this.openShortcut.destroy();
         this.privacy.destroy();
         this.stopLiveTick();
         this.call.disconnect(this.callId);
@@ -479,6 +490,27 @@ class Session {
         return { icon: call.icon, title: call.title, detail, muted: call.muted };
     }
 
+    /**
+     * The notch that holds the keyboard closes; else the focused monitor's
+     * notch opens for it, unless another popup has the keyboard.
+     */
+    private onOpenShortcut(): void {
+        const holder = this.notches.find((n) => n.holdsKeyboard);
+        if (holder) {
+            holder.toggleKeyboard();
+            return;
+        }
+        const mode = Main.actionMode as Shell.ActionMode;
+        if (mode !== Shell.ActionMode.NORMAL && mode !== Shell.ActionMode.OVERVIEW) return;
+        const route = routeOsd({
+            requested: -1,
+            focused: focusedMonitor(),
+            primary: Main.layoutManager.primaryIndex,
+            notches: this.notches.map((n) => n.monitorIndex),
+        });
+        this.notches.find((n) => n.monitorIndex === route.notch)?.toggleKeyboard();
+    }
+
     private onFocusShortcut(): void {
         if (shortcutAction(this.timer.snapshot()) === 'focus') this.timer.start('focus');
         else this.timer.stop();
@@ -558,6 +590,7 @@ class Session {
         this.applyOsdSettings();
         this.applyNotificationSettings();
         this.focusShortcut.set(this.settings.timer.shortcut);
+        this.openShortcut.set(this.settings.behavior.openShortcut);
         this.onTimer();
         this.onLive();
         this.onCalendar();
