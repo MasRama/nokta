@@ -9,8 +9,9 @@ const BUTTON_HOVER_ALPHA = 0.22;
 
 /**
  * A rounded button with an icon and a label, tinted from the foreground
- * color. `styleClass` names it in the stylesheet; its box, icon and label
- * take the same name with -box, -icon and -label.
+ * color; a null `iconName` leaves the label alone. `styleClass` names it
+ * in the stylesheet; its box, icon and label take the same name with -box,
+ * -icon and -label.
  */
 export class TintedButton {
     readonly actor: St.Button;
@@ -19,15 +20,17 @@ export class TintedButton {
     private readonly hoverId: number;
     private readonly clickId: number;
 
-    constructor(styleClass: string, iconName: string, onClick: () => void) {
+    constructor(styleClass: string, iconName: string | null, onClick: () => void) {
         const box = new St.BoxLayout({ style_class: `${styleClass}-box` });
-        box.add_child(
-            new St.Icon({
-                style_class: `${styleClass}-icon`,
-                gicon: new Gio.ThemedIcon({ name: iconName }),
-                y_align: Clutter.ActorAlign.CENTER,
-            }),
-        );
+        if (iconName !== null) {
+            box.add_child(
+                new St.Icon({
+                    style_class: `${styleClass}-icon`,
+                    gicon: new Gio.ThemedIcon({ name: iconName }),
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+            );
+        }
         this.label = new St.Label({ style_class: `${styleClass}-label`, y_align: Clutter.ActorAlign.CENTER });
         box.add_child(this.label);
         this.actor = new St.Button({ style_class: styleClass, child: box, x_expand: true });
