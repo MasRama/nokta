@@ -6,10 +6,13 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
 import {
+    LYRIC_ROW_EXTRA,
     LyricLine,
+    lineProgress,
     type LyricsClient,
     LyricsSheet,
     lyricWindow,
+    nextLyric,
     SHEET_EXTRA_HEIGHT,
     SHEET_ROWS,
     visibleLyric,
@@ -179,9 +182,9 @@ export class MonitorNotch implements ShelfNotch {
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
         this.expanded = new ExpandedMediaView(media);
-        this.expanded.infoBox.add_child(this.lyricLine.actor);
-        // Under the cover and the title, above the seek bar.
-        this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 1);
+        // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
+        this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
+        this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
         this.expanded.actor.add_child(this.expandedShelf.actor);
         // Above the notifications and focus buttons.
         this.idlePanel.actor.insert_child_at_index(this.panelShelf.actor, this.idlePanel.actor.get_n_children() - 1);
@@ -352,9 +355,7 @@ export class MonitorNotch implements ShelfNotch {
         this.panelShelf.show(items);
         this.expandedShelf.show(items);
         if (items.length === 0) this.sources.shelf.rowGone(this);
-        const [width, height] = this.sizeFor('expanded');
-        this.expanded.actor.set_size(width, height);
-        if (this.drawn === 'expanded') this.notch.resizeTo(width, height, 'width');
+        this.resizeExpanded();
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
     }
@@ -426,6 +427,8 @@ export class MonitorNotch implements ShelfNotch {
     onLyrics(): void {
         if (this.destroyed) return;
         if (!this.lyricsAvailable()) this.setLyricsOpen(false);
+        // The lyric row comes and goes with the lyrics.
+        this.resizeExpanded();
         this.tick();
         this.updateTimers();
     }
@@ -663,7 +666,7 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
         if (mode === 'expanded') {
-            const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : 0;
+            const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
             const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
             return [a.expandedWidth, a.expandedHeight + lyrics + shelf];
         }
@@ -676,6 +679,17 @@ export class MonitorNotch implements ShelfNotch {
             const [width, height] = this.sizeFor(mode as Drawn);
             actor.set_size(width, height);
         }
+        // The open player's padding is 18 px a side.
+        const lyricWidth = this.sources.settings.appearance.expandedWidth - 36;
+        this.lyricLine.setWidth(lyricWidth);
+        this.lyricsSheet.setWidth(lyricWidth);
+    }
+
+    /** The open player's size changed: a row came or went. */
+    private resizeExpanded(): void {
+        const [width, height] = this.sizeFor('expanded');
+        this.expanded.actor.set_size(width, height);
+        if (this.drawn === 'expanded') this.notch.resizeTo(width, height, 'width');
     }
 
     /** The theme's colors with the cover's worked in. */
@@ -768,16 +782,22 @@ export class MonitorNotch implements ShelfNotch {
         const snapshot = media.snapshot();
         const position = this.positionNow();
         this.expanded.progress.update(position, snapshot.lengthUs, snapshot.canSeek);
+        const playing = snapshot.playbackStatus === 'Playing';
+        const progress = lineProgress(lyrics.lines, position, snapshot.rate);
         if (this.lyricsOpen) {
             this.lyricLine.show(null);
-            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS));
-        } else {
-            this.lyricLine.show(visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position));
+            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS), progress, playing);
+            return;
         }
+        const text = visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position);
+        this.lyricLine.show(
+            text === null ? null : { text, next: nextLyric(lyrics.lines, position), ...progress, playing },
+        );
     }
 
     private lyricsAvailable(): boolean {
-        return this.sources.lyrics.status === 'synced' && this.sources.settings.behavior.showLyrics;
+        const { status, lines } = this.sources.lyrics;
+        return status === 'synced' && lines.length > 0 && this.sources.settings.behavior.showLyrics;
     }
 
     /** Opens or closes the lyrics view; the open notch grows or shrinks with it. */
@@ -788,12 +808,8 @@ export class MonitorNotch implements ShelfNotch {
         this.lyricsTrack = wanted ? trackKey(this.sources.media.snapshot()) : '';
         this.lyricsSheet.reset();
         this.lyricsSheet.actor.visible = wanted;
-        const [width, height] = this.sizeFor('expanded');
-        this.expanded.actor.set_size(width, height);
-        if (this.drawn === 'expanded') {
-            this.notch.resizeTo(width, height, 'width');
-            this.tick();
-        }
+        this.resizeExpanded();
+        if (this.drawn === 'expanded') this.tick();
     }
 
     private updateTimers(): void {

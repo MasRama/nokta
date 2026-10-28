@@ -61,10 +61,19 @@
     opacity: 0.7;
 }
 
+/* The open player's lyric row: the line being sung, then the next one. */
+.nokta-lyric-box {
+    spacing: 2px;
+}
+
 .nokta-lyric {
+    font-size: 15px;
+    font-weight: bold;
+}
+
+.nokta-lyric-next {
     font-size: 12px;
-    font-style: italic;
-    padding-top: 4px;
+    font-weight: bold;
 }
 
 .nokta-progress {
@@ -369,16 +378,16 @@
 }
 
 .nokta-lyrics-sheet {
-    padding-top: 10px;
+    padding-top: 4px;
 }
 
 .nokta-lyrics-row {
     font-size: 13px;
+    font-weight: bold;
 }
 
 .nokta-lyrics-current {
-    font-size: 15px;
-    font-weight: bold;
+    font-size: 17px;
 }
 
 .nokta-shelf-slot {

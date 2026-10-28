@@ -2,55 +2,83 @@ import Clutter from 'gi://Clutter';
 import Pango from 'gi://Pango';
 import St from 'gi://St';
 
-/** One lyric line that crossfades when the line changes; a click calls `onClick`. */
+import { setVertical } from '../../shared/compat.js';
+import { FillLabel } from './fill.js';
+
+/** How much taller the open player gets while it shows the lyric row. */
+export const LYRIC_ROW_EXTRA = 44;
+const CURRENT_HEIGHT = 20;
+const SLIDE_PX = 8;
+const SLIDE_MS = 220;
+/** The next line, out of 255. */
+const NEXT_OPACITY = 115;
+
+/** The lyric the row shows. */
+export interface LyricNow {
+    text: string;
+    /** The next line with words, or null after the last. */
+    next: string | null;
+    /** The current line's index, to tell lines apart. */
+    index: number;
+    fraction: number;
+    msLeft: number;
+    playing: boolean;
+}
+
+/**
+ * The open player's lyric row: the current line, large and lighting up as
+ * it is sung, and the next one under it, dimmed. A new line slides up into
+ * place. A click calls `onClick`.
+ */
 export class LyricLine {
     readonly actor: St.Button;
-    private readonly label: St.Label;
-    private text: string | null = null;
+    private readonly box: St.BoxLayout;
+    private readonly current = new FillLabel('nokta-lyric', CURRENT_HEIGHT);
+    private readonly next: St.Label;
+    private index: number | null = null;
 
     constructor(onClick: () => void) {
-        this.label = new St.Label({ style_class: 'nokta-lyric', x_expand: true });
-        this.label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.box = setVertical(new St.BoxLayout({ style_class: 'nokta-lyric-box', x_expand: true }));
+        this.next = new St.Label({ style_class: 'nokta-lyric-next', x_expand: true, opacity: NEXT_OPACITY });
+        this.next.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.box.add_child(this.current.actor);
+        this.box.add_child(this.next);
         this.actor = new St.Button({
             style_class: 'nokta-lyric-button',
-            child: this.label,
+            child: this.box,
             x_expand: true,
-            y_align: Clutter.ActorAlign.CENTER,
             visible: false,
         });
         this.actor.connect('clicked', onClick);
     }
 
-    /** Shows `text`, or hides the row when it is null. */
-    show(text: string | null): void {
-        if (text === this.text) return;
-        const wasVisible = this.text !== null;
-        this.text = text;
-        if (text === null) {
-            this.label.remove_all_transitions();
+    setWidth(width: number): void {
+        this.current.setWidth(width);
+        this.next.width = width;
+    }
+
+    /** Shows the lyric, or hides the row when it is null. */
+    show(now: LyricNow | null): void {
+        if (now === null) {
+            this.index = null;
+            this.box.remove_all_transitions();
             this.actor.hide();
             return;
         }
-        if (!wasVisible) {
-            this.label.remove_all_transitions();
-            this.label.text = text;
-            this.label.opacity = 255;
-            this.actor.show();
-            return;
-        }
-        this.label.ease({
-            opacity: 0,
-            duration: 120,
-            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-            onComplete: () => {
-                if (this.text === null) return;
-                this.label.text = this.text;
-                this.label.ease({ opacity: 255, duration: 160, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
-            },
-        });
+        const moved = this.index !== null && now.index !== this.index;
+        this.index = now.index;
+        this.actor.show();
+        this.current.show(now.text, now.index, now.fraction, now.msLeft, now.playing);
+        this.next.text = now.next ?? '';
+        if (!moved) return;
+        this.box.remove_all_transitions();
+        this.box.translation_y = SLIDE_PX;
+        this.box.opacity = 0;
+        this.box.ease({ translation_y: 0, opacity: 255, duration: SLIDE_MS, mode: Clutter.AnimationMode.EASE_OUT_CUBIC });
     }
 
     destroy(): void {
+        this.current.destroy();
         this.actor.destroy();
     }
 }
