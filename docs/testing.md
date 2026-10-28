@@ -32,7 +32,7 @@ fully isolated from your session:
 - a fake GNOME session manager (`fake-session.js`) that only keeps
   inhibitors, for the Caffeine toggle.
 - its own PipeWire (`pipewire.conf`) with two silent outputs, Speakers and
-  Headphones, when `pipewire-pulse` and `pw-metadata` are installed. It sits
+  Headphones, and a silent microphone, when `pipewire-pulse` and `pw-metadata` are installed. It sits
   in the devshell's runtime directory, so your real sound is never touched.
 
 It also loads `devtools@nokta.io`, a development-only extension that allows
@@ -63,6 +63,7 @@ tools/devshell/device.sh disconnect
 tools/devshell/timer.sh start focus|break  # noktad's focus timer
 tools/devshell/timer.sh pause|resume|stop
 tools/devshell/timer.sh countdown SECONDS [LABEL]  # a countdown; also stopwatch [LABEL], clear
+tools/devshell/mic.sh on|off               # a fake call: Fake Call records from the silent microphone
 tools/devshell/activity.sh set ID TITLE DETAIL PROGRESS  # a live activity; PROGRESS -1 = unknown
 tools/devshell/activity.sh end ID ok|failed [MESSAGE]
 tools/devshell/prefs.sh               # open the settings window there
@@ -421,6 +422,22 @@ the shelf.
 - [ ] `privacy_dots = false` while running: no dots.
 - [ ] A real webcam, a call with the microphone and screen sharing
       *(real session)*.
+
+### Calls
+
+- [ ] `player.sh Stopped`, then `mic.sh on`: an orange microphone and
+      `0:01`, counting, replace the clock; while playing they sit beside
+      the cover.
+- [ ] Hover: home has a row with the phone icon, **Fake Call** and
+      `Microphone · 0:05`, the notch 36 px taller.
+- [ ] Its microphone button: `Muted · …`, the icon crossed out and red in
+      home and the closed notch; Quick Settings shows the microphone muted.
+      Again unmutes.
+- [ ] Its close button: the row and the closed notch's microphone go away;
+      `mic.sh off`, then `mic.sh on` brings them back.
+- [ ] `call_indicator = false` while running: no microphone, no row.
+- [ ] A real call (Meet in a browser, Zoom, Discord) *(real session)*: the
+      app's name and icon, and the mute button mutes it for the others.
 
 ### Notifications
 
