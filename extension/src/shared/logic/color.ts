@@ -12,6 +12,18 @@ export function parseHexColor(hex: string, fallback: Rgb = { r: 0, g: 0, b: 0 })
     return { r, g, b };
 }
 
+/** `#rrggbb`, `rgb()` or `rgba()` as 0..1 red, green, blue and alpha, or null. */
+export function parseCssColor(css: string): [number, number, number, number] | null {
+    if (HEX.test(css)) {
+        const { r, g, b } = parseHexColor(css);
+        return [r, g, b, 1];
+    }
+    const match = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(css.trim());
+    if (!match) return null;
+    const [r, g, b] = match.slice(1, 4).map((c) => Math.min(255, Number(c)) / 255);
+    return [r, g, b, match[4] === undefined ? 1 : clampAlpha(Number(match[4]))];
+}
+
 /** 0..1 channels as `#rrggbb`; out-of-range channels are clamped, NaN is 0. */
 export function toHexColor({ r, g, b }: Rgb): string {
     const hex = (c: number) =>

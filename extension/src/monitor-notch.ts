@@ -377,9 +377,6 @@ export class MonitorNotch implements ShelfNotch {
         );
         this.notificationTimer = new NotificationTimer(glibSchedule, () => this.draw(this.overlay()));
 
-        // The glow first, so it lies under the notch. It covers the body only, so it takes no
-        // input the notch does not; GNOME 50 dropped affectsInputRegion.
-        Main.layoutManager.addTopChrome(this.notch.glow, { affectsStruts: false, trackFullscreen: true });
         Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: true });
         this.hoverId = this.notch.actor.connect('notify::hover', () => {
             const { hover } = this.notch.actor;
@@ -471,7 +468,6 @@ export class MonitorNotch implements ShelfNotch {
         this.lyricsSheet.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
-        if (!this.notch.glowGone) Main.layoutManager.removeChrome(this.notch.glow);
         Main.layoutManager.removeChrome(this.notch.actor);
         this.notch.destroy();
     }

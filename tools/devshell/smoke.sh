@@ -635,7 +635,9 @@ wait_for "clearing keeps the pinned entry" "$FIND $CLIP_ROWS === 'Smoke clipboar
 js "$FIND one('nokta-subpage-back').emit('clicked', 1); true" > /dev/null
 wait_for "the back arrow goes home" "$FIND shown('nokta-panel') && !shown('nokta-subpage')" 5
 # The timer tile opens its presets; one starts a countdown and goes back
-# home, which gets a 26 px row for it.
+# home, which gets a 26 px row for it. The body is larger while the notch
+# moves and clipped to the shape, so read home's height once it rests.
+wait_for "home comes to rest" "$FIND !one('nokta-body').has_clip" 5
 HOME_HEIGHT=$(js "$FIND Math.round(one('nokta-body').height)")
 TIMER_TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Timer')"
 js "$FIND $TIMER_TILE.emit('clicked', 1); true" > /dev/null
