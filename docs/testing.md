@@ -208,6 +208,17 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
 
+### Shuffle, repeat and the lyrics view
+
+- [ ] Hover while the fake player plays: shuffle left of Previous and repeat
+      right of Next, both dimmed. Shuffle lights up; repeat goes all, one
+      (the repeat-one icon), then off.
+- [ ] A player without shuffle or repeat (a browser) *(real session)*: no
+      buttons for them.
+- [ ] Click the lyric line: the notch grows by 150 px and shows seven lines,
+      the current one bright and larger; they slide up as lines change.
+      A click on them, the next track or moving the pointer away closes it.
+
 ### Live activities
 
 - [ ] `activity.sh set b Backup Photos 0.4`: an icon and `40%` replace the
