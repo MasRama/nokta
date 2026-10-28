@@ -7,7 +7,7 @@ hand before a release and after any change to the extension's UI.
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, a fullscreen window hides the notch, a countdown alert shows over it (unredirection off, hover does not open it) and hides again while a volume OSD and, with `fullscreen_alerts = "none"`, an alert leave it hidden, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -64,6 +64,7 @@ tools/devshell/timer.sh start focus|break  # noktad's focus timer
 tools/devshell/timer.sh pause|resume|stop
 tools/devshell/timer.sh countdown SECONDS [LABEL]  # a countdown; also stopwatch [LABEL], clear
 tools/devshell/mic.sh on|off               # a fake call: Fake Call records from the silent microphone
+tools/devshell/fullscreen.sh on|off        # a window fullscreen on the primary monitor, or closed again
 tools/devshell/activity.sh set ID TITLE DETAIL PROGRESS  # a live activity; PROGRESS -1 = unknown
 tools/devshell/activity.sh end ID ok|failed [MESSAGE]
 tools/devshell/prefs.sh               # open the settings window there
@@ -187,7 +188,8 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] `replace_osd = false` while running: GNOME's popup again; back to
       `true`: the notch again. `show_caps_lock = false`: no Caps Lock message.
 - [ ] Disabled extension: GNOME's popup again.
-- [ ] Volume keys during a fullscreen video *(real session)*: GNOME's popup.
+- [ ] Volume keys during a fullscreen video *(real session)*: GNOME's popup;
+      with `fullscreen_alerts = "all"`, the notch.
 - [ ] Brightness and volume keys, mic mute key *(real session)*: in the
       notch.
 
@@ -592,6 +594,31 @@ banner for a fake file.
       logs the error with its location.
 - [ ] Fullscreen app *(real session)*: the notch hides and comes back when
       leaving fullscreen.
+
+### Over a fullscreen app
+
+`fullscreen.sh on` opens a window that goes fullscreen on the primary
+monitor; `fullscreen.sh off` closes it.
+
+- [ ] `fullscreen.sh on`: the notch and the top bar hide.
+- [ ] `timer.sh countdown 2 Tea`: `Tea` and `Timer done` show over the
+      window with a glow; `hover.sh on` does not open the notch; it hides
+      again when the alert ends.
+- [ ] Unplugged, `device.sh percent 20`: `Battery low` over the window;
+      `device.sh plug`: nothing.
+- [ ] `timer.sh start focus` with `focus_minutes = 1`: `Focus done` over
+      the window; the break's end too.
+- [ ] `osd.sh level audio-volume-medium-symbolic 0.5`: GNOME's popup, not
+      the notch; with `fullscreen_alerts = "all"`, the notch, which hides
+      again after.
+- [ ] `fullscreen_alerts = "none"`: the countdown shows nothing.
+- [ ] A notification while fullscreen: GNOME holds it, and the notch shows
+      nothing.
+- [ ] `fullscreen.sh off`: the notch comes back, closed.
+- [ ] Open the overview with the window fullscreen: the notch shows there.
+- [ ] A game or video player in a real session *(real session)*: an alert
+      shows over it (unredirection is off while it shows), and the game runs
+      unredirected again after.
 - [ ] Monitor change *(real session)*: plugging or unplugging a monitor, or
       changing the primary one, gives every monitor a notch centered at its
       top edge (only the primary with `all_monitors = false`).

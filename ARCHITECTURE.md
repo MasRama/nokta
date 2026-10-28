@@ -278,8 +278,10 @@ How both sides stay honest:
 
 ## The extension
 
-- The notch is one actor in the shell's top chrome, centered on the primary
-  monitor and touching the top edge. It hides when an app goes fullscreen.
+- The notch is one actor in the shell's top chrome, centered on its
+  monitor and touching the top edge. It hides while its monitor shows a
+  fullscreen window, and comes up over it only for an alert that
+  `[behavior] fullscreen_alerts` lets through (see below).
   Its shape is a body with rounded bottom corners plus two "ears" that curve
   into the top edge, all drawn by one fragment shader (`shared/shape.ts`:
   `Shell.GLSLEffect` up to GNOME 50, `Clutter.ShaderEffect` from 51).
@@ -317,6 +319,25 @@ How both sides stay honest:
   the spring says; a larger view is clipped, never reflowed. Views fade and
   scale with Clutter's `ease()`. Everything turns instant when GNOME
   animations are off.
+- **Over a fullscreen app.** The notch is top chrome without GNOME's
+  `trackFullscreen`, so it follows fullscreen itself, the way GNOME's
+  layout does: its monitor's `inFullscreen` while the windows show
+  (`global.window_group`, hidden in the overview), read again on
+  `global.display`'s `in-fullscreen-changed`. Every alert has a kind, and
+  `shared/logic/fullscreen.ts` decides (`showsOverFullscreen`) whether it
+  shows there: `important` lets through a low or critical battery, a focus
+  session or break ending, a countdown or alarm done and a calendar
+  reminder; `all` also the other device alerts, activity ends and the OSD.
+  Notifications never do, since GNOME holds its banners while an app is
+  fullscreen. An alert that passes shows the notch until it ends, then
+  hides it again at rest; the pointer does not open it meanwhile. While it
+  shows over a fullscreen window, unredirection is off
+  (`global.compositor.disable_unredirect()` from GNOME 48,
+  `Meta.disable_unredirect_for_display()` before, in `shared/compat.ts`),
+  or the window would bypass the compositor and cover it. Each notch holds
+  it once at most (`UnredirectHold`) and gives it back when it hides and in
+  `destroy()`; mutter counts the calls, so two notches holding it at once
+  stay paired too.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, one timeout per second while a
