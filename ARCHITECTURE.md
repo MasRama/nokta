@@ -40,9 +40,10 @@ small public boundary, private internals, and a thin composition layer.
 
 ```
 contracts/          D-Bus interface XML, the single source of truth
-core/               crate nokta-core, binary noktad
+core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
-  src/features/     media, lyrics, settings, devices, timer
+  src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
+  src/features/     media, lyrics, settings, devices, timer, activities
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
@@ -50,7 +51,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
-                    notifications, panel
+                    notifications, panel, activities
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -65,11 +66,15 @@ docs/               design spec, plans, manual test checklist
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
   current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`,
-  `notifications` and `panel` depend on no other feature; `extension.ts` shows device and timer alerts through
-  the OSD row, and `monitor-notch.ts` puts the timer where the clock or the
-  equalizer would be. `panel` (what hovering the idle notch opens) only
-  draws the date and two buttons; `extension.ts` fills them from
-  `notifications` and `timer`.
+  `notifications`, `panel` and `activities` depend on no other feature;
+  `extension.ts` shows device, timer and activity alerts through the OSD
+  row. The closed notch has one spot for extra information, where the clock
+  or the equalizer would be: `shared/logic/indicator.ts` picks the timer,
+  else the newest live activity, and `monitor-notch.ts` puts it there.
+  `panel` (what hovering the idle notch opens) only draws its rows (the
+  date, live activities, two buttons) from plain data, and grows to fit
+  them (`panel/logic/height.ts`); `extension.ts` fills them from
+  `activities`, `notifications` and `timer`.
 - `osd` (volume, brightness and Caps Lock in the notch) exists only in the
   extension: its sources are GNOME Shell's own OSD calls and the keymap, so
   the daemon only publishes its settings. `privacy` (the camera,
@@ -124,6 +129,13 @@ docs/               design spec, plans, manual test checklist
   extension does the GNOME-only parts of focus mode: it turns notification
   banners off during focus (and back on), and binds the shortcut through
   its one GSettings key, which it copies from `config.toml`.
+- **activities** keeps the live activities that apps and scripts report
+  (`Set`, `End`): at most 8, newest first. A pure `Activities` takes `now`;
+  the task around it sleeps until the oldest one goes stale
+  (`[activities] stale_minutes`) and ends it as failed. Every end emits
+  `Ended`. The `nokta` command (`src/cli/`) is a thin client of it:
+  `nokta activity set|end` and `nokta run -- CMD`, which shows the command
+  while it runs and passes its exit code through.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -147,7 +159,7 @@ the Linux adapters touch D-Bus:
 
 Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
 is a Linux-only dependency. `app::Services` starts the rest (settings,
-lyrics, timer) on any system. CI builds and tests the daemon on macOS and
+lyrics, timer, activities) on any system. CI builds and tests the daemon on macOS and
 Windows, where `noktad` says it has no frontend yet. A new system adds its
 own sources and transport next to the Linux ones; nothing in a feature's
 model changes.
@@ -163,9 +175,10 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
+| `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -193,8 +206,9 @@ How both sides stay honest:
   instant when GNOME animations are off.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
-  timeout while expanded and playing, and one timeout per second while a
-  focus timer runs. Nothing runs while paused.
+  timeout while expanded and playing, one timeout per second while a
+  focus timer runs, and one per second while the open panel shows a live
+  activity. Nothing runs while paused.
 - Privacy dots follow the `visible` property of GNOME's own camera,
   microphone and screen sharing indicators; no polling, no extra D-Bus.
 - `disable()` destroys every actor, disconnects every signal, removes every

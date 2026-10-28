@@ -66,8 +66,8 @@ docs: explain the Just Perfection clock setting
 ```
 
 Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`,
-`chore`. Scopes: `media`, `lyrics`, `settings`, `app`, `contracts`,
-`extension`, `packaging`, `core`. A breaking change gets a `!` after the
+`chore`. Scopes: `media`, `lyrics`, `settings`, `osd`, `devices`, `timer`,
+`activities`, `app`, `contracts`, `extension`, `packaging`, `core`. A breaking change gets a `!` after the
 scope and a `BREAKING CHANGE:` footer.
 
 ## Releases
