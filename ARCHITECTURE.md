@@ -321,7 +321,9 @@ How both sides stay honest:
   dimmed text is dimmed from code with the two levels in `shared/dim.ts`.
 - States: **idle** (a clock), **collapsed** (small cover and equalizer bars)
   and **expanded** on hover (cover, title, artists, a lyric row, seek bar,
-  shuffle, previous, play, next and repeat). The lyric row shows the line
+  shuffle, previous, play, next and repeat). The open cover glows in its own
+  color (`media/logic/cover.ts`, softer on a light notch) and the equalizer
+  bars sit beside the title while the song plays. The lyric row shows the line
   being sung, lit from left to right as it goes, with the next line under
   it (`lyrics/logic/karaoke.ts`); the fill is one linear `ease()` to the end
   of the line, restarted only when the line, the play state or the position
@@ -395,7 +397,7 @@ How both sides stay honest:
   `destroy()`; mutter counts the calls, so two notches holding it at once
   stay paired too.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
-  equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
+  equalizer while playing and on screen, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, one timeout per second while a
   focus timer or the closed notch's countdown or stopwatch runs (one
   timeout for an alarm's last hour), and one per second while the open

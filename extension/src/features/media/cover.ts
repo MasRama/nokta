@@ -7,6 +7,8 @@ import { iconFor } from '../../shared/icons.js';
 export class Cover {
     readonly actor: St.Bin;
     private readonly icon: St.Icon;
+    private shadow = '';
+    private artPath = '';
 
     constructor(
         private readonly size: number,
@@ -24,7 +26,8 @@ export class Cover {
 
     /** `artPath` is a local file from the daemon's cache, or empty. */
     set(artPath: string): void {
-        const base = `border-radius: ${this.radius}px;`;
+        this.artPath = artPath;
+        const base = `border-radius: ${this.radius}px; ${this.shadow}`;
         if (artPath) {
             // A file URI is percent-encoded, so quotes in the path cannot
             // break out of the CSS string.
@@ -35,6 +38,13 @@ export class Cover {
             this.actor.style = `${base} background-color: rgba(128, 128, 128, 0.3);`;
             this.icon.show();
         }
+    }
+
+    /** A `box-shadow` declaration under the cover, or '' for none. */
+    setShadow(shadow: string): void {
+        if (shadow === this.shadow) return;
+        this.shadow = shadow;
+        this.set(this.artPath);
     }
 
     get dimension(): number {

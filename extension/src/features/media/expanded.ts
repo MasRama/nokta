@@ -6,6 +6,8 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { mix } from '../../shared/logic/color.js';
 import { Cover } from './cover.js';
+import { Equalizer } from './equalizer.js';
+import { coverShadow } from './logic/cover.js';
 import { loopIcon, nextLoopStatus, shuffleIcon, type LoopStatus, type ToggleIcon } from './logic/loop.js';
 import { outputIcon, type AudioOutput } from './logic/outputs.js';
 import { neighbour, playerLabels, scrollStep, type PlayerEntry, type ScrollDirection } from './logic/players.js';
@@ -13,7 +15,7 @@ import type { MediaSnapshot } from './logic/snapshot.js';
 import { OutputMenu, type OutputMenuHandlers } from './output-menu.js';
 import { ProgressBar } from './progress.js';
 import { iconFor } from '../../shared/icons.js';
-import { SECONDARY } from '../../shared/dim.js';
+import { SECONDARY, TERTIARY } from '../../shared/dim.js';
 
 export interface MediaControls {
     playPause(): void;
@@ -50,7 +52,8 @@ function ellipsized(styleClass: string): St.Label {
 export class ExpandedMediaView {
     readonly actor: St.BoxLayout;
     readonly progress: ProgressBar;
-    private readonly cover = new Cover(64, 10);
+    private readonly cover = new Cover(64, 14);
+    private readonly equalizer = new Equalizer();
     private readonly title = ellipsized('nokta-title');
     private readonly artists = ellipsized('nokta-artists');
     private readonly info: St.BoxLayout;
@@ -68,6 +71,10 @@ export class ExpandedMediaView {
     private playerId = '';
     private lastScrollMs = 0;
     private accent = '#ffffff';
+    private light = false;
+    private coverColor: string | null = null;
+    private playing = false;
+    private active = false;
     private readonly outputButton: St.Button;
     private readonly outputIcon: St.Icon;
     private readonly outputMenu: OutputMenu;
@@ -102,6 +109,9 @@ export class ExpandedMediaView {
         });
         top.add_child(this.cover.actor);
         top.add_child(this.info);
+        // Beside the title, the bars say the song is playing, as in the closed notch.
+        this.equalizer.actor.y_align = Clutter.ActorAlign.CENTER;
+        top.add_child(this.equalizer.actor);
         const home = new St.Button({
             style_class: 'nokta-button nokta-home-button nokta-grid-button',
             child: new St.Icon({ gicon: iconFor('view-app-grid-symbolic'), style_class: 'nokta-home-icon' }),
@@ -138,6 +148,7 @@ export class ExpandedMediaView {
         this.playPause.connect('notify::pressed', lift);
         this.playPause.connect('notify::hover', lift);
         this.next = this.button('media-skip-forward-symbolic', () => controls.next());
+        for (const skip of [this.previous, this.next]) skip.add_style_class_name('nokta-skip');
         this.shuffle = this.button('media-playlist-shuffle-symbolic', () => controls.setShuffle(!this.shuffleOn));
         this.loop = this.button('media-playlist-repeat-symbolic', () =>
             controls.setLoopStatus(nextLoopStatus(this.loopStatus)),
@@ -156,6 +167,10 @@ export class ExpandedMediaView {
 
     update(snapshot: MediaSnapshot): void {
         this.cover.set(snapshot.artPath);
+        this.coverColor = snapshot.artPath ? snapshot.accentColor : null;
+        this.cover.setShadow(coverShadow(this.coverColor, this.light));
+        this.playing = snapshot.playbackStatus === 'Playing';
+        this.equalizer.setPlaying(this.active && this.playing);
         this.title.text = snapshot.title || snapshot.playerName;
         this.artists.text = snapshot.artists.join(', ');
         this.artists.visible = snapshot.artists.length > 0;
@@ -177,8 +192,11 @@ export class ExpandedMediaView {
     }
 
     /** The play button is filled with the accent; shuffle and repeat take it while on. */
-    setPalette({ accent, onAccent }: { accent: string; onAccent: string }): void {
+    setPalette({ accent, onAccent, light }: { accent: string; onAccent: string; light: boolean }): void {
         this.accent = accent;
+        this.light = light;
+        this.equalizer.setColor(accent);
+        this.cover.setShadow(coverShadow(this.coverColor, light));
         this.playPause.style =
             'background-gradient-direction: vertical;' +
             ` background-gradient-start: ${mix(accent, '#ffffff', 0.12)};` +
@@ -196,12 +214,19 @@ export class ExpandedMediaView {
         if (!this.outputButton.visible) this.outputMenu.close();
     }
 
+    /** Steps the equalizer only while the open player is on screen. */
+    setActive(active: boolean): void {
+        this.active = active;
+        this.equalizer.setPlaying(active && this.playing);
+    }
+
     /** The notch is closing: the menu goes with it. */
     closeMenus(): void {
         this.outputMenu.close();
     }
 
     destroy(): void {
+        this.equalizer.destroy();
         this.outputMenu.destroy();
         this.progress.destroy();
         this.actor.destroy();
@@ -240,7 +265,7 @@ export class ExpandedMediaView {
         const child = button.child as St.Icon;
         child.gicon = iconFor(icon);
         child.style = on ? `color: ${this.accent};` : '';
-        button.opacity = on ? 255 : 110;
+        button.opacity = on ? 255 : TERTIARY;
     }
 
     private enable(button: St.Button, enabled: boolean): void {

@@ -88,16 +88,21 @@
 }
 
 .nokta-progress-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 5px;
+    border-radius: 2.5px;
 }
 
 .nokta-progress-fill {
-    border-radius: 2px;
+    border-radius: 2.5px;
 }
 
 .nokta-controls {
-    spacing: 16px;
+    spacing: 22px;
+}
+
+/* Previous and next are the controls' heaviest glyphs after play. */
+.nokta-skip .nokta-button-icon {
+    icon-size: 22px;
 }
 
 .nokta-button {
@@ -113,12 +118,11 @@
     icon-size: 18px;
 }
 
-/* Filled with the accent from code; the shadow lifts it off the notch. */
+/* Filled with the accent from code. A shadow would not show on a dark notch; paper gets one. */
 .nokta-play {
-    width: 34px;
-    height: 34px;
-    border-radius: 17px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    width: 38px;
+    height: 38px;
+    border-radius: 19px;
 }
 
 /*
@@ -155,7 +159,7 @@
 }
 
 .nokta-play-icon {
-    icon-size: 16px;
+    icon-size: 18px;
 }
 
 .nokta-theme-paper .nokta-play {
@@ -544,7 +548,7 @@
 }
 
 .nokta-toggle .nokta-button-icon {
-    icon-size: 14px;
+    icon-size: 16px;
 }
 
 .nokta-lyrics-sheet {
