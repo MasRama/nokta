@@ -25,10 +25,19 @@ $1;
 }
 button() { pointer "p.notify_button(t, Clutter.BUTTON_PRIMARY, Clutter.ButtonState.$1)"; }
 
+# Not every container has pkill, so the source window's process is kept in a file.
+PIDFILE="$STATE/drag-source.pid"
+stop_source() {
+    if [ -f "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2> /dev/null || true
+        rm -f "$PIDFILE"
+    fi
+}
+
 release() {
     button RELEASED
     sleep 1
-    pkill -f 'gjs -m .*devshell/[d]rag-source.js' || true
+    stop_source
 }
 
 HOLD=0
@@ -39,10 +48,20 @@ esac
 [ "$#" -gt 0 ] || { echo "usage: $0 [--hold] FILE... | $0 --release" >&2; exit 2; }
 
 # A window left from an earlier drag would lie under this one.
-pkill -f 'gjs -m .*devshell/[d]rag-source.js' || true
+stop_source
 env XDG_RUNTIME_DIR="$STATE/runtime" WAYLAND_DISPLAY=nokta-devshell GDK_BACKEND=wayland \
     GSK_RENDERER=cairo GTK_A11Y=none ${GDK_DEBUG:+GDK_DEBUG=$GDK_DEBUG} \
     gjs -m "$ROOT/tools/devshell/drag-source.js" "$@" > "$STATE/drag-source.log" 2>&1 &
+echo "$!" > "$PIDFILE"
+
+# GNOME 49 and later start in the overview, which would take the drag.
+shell_eval "Main.overview.hide(); 'ok'" > /dev/null
+i=0
+until shell_eval "Main.overview.visible" | grep -q false; do
+    i=$((i + 1))
+    [ "$i" -le 50 ] || { echo "drop.sh: the overview did not close" >&2; exit 1; }
+    sleep 0.1
+done
 
 # Where the source window's center is, once it is shown.
 WINDOW='global.get_window_actors().map((a) => a.get_meta_window()).find((w) => w.title === "nokta-drag-source" && !w.is_hidden())'
