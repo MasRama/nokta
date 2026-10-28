@@ -261,7 +261,8 @@ done
 ok "the close button takes the file off the shelf"
 "$HERE/hover.sh" off > /dev/null
 wait_for "the clock comes back when the shelf is empty" \
-    "$FIND shown('nokta-clock') && !any('nokta-shelf-badge') && $HELPER.get_frame_rect().x === -10000" 10
+    "$FIND shown('nokta-clock') && !any('nokta-shelf-badge') && $HELPER.get_frame_rect().x === -10000" 10 \
+    "$FIND const r = $HELPER.get_frame_rect(); JSON.stringify([shown('nokta-clock'), any('nokta-shelf-badge'), any('nokta-shelf-row'), [r.x, r.y, r.width, r.height], Math.round(one('nokta-body').height), global.get_pointer().slice(0, 2)])"
 
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
