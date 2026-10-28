@@ -66,7 +66,8 @@ notifications. Hover over it to open it.
 - **[File shelf](#file-shelf).** Drop files on the notch to keep them
   there, then drag them into another app.
 - **[Screenshots](#screenshots).** After a screenshot, the notch shows it
-  with buttons to open it, show it in Files or keep it on the shelf.
+  with buttons to open it, show it in Files or keep it on the shelf. A
+  screen recording shows how long it runs, with a stop button in home.
 - **[Clipboard history](#clipboard-history).** What you copy, text and
   pictures, ready to search and copy again from home.
 - **Privacy dots.** A green dot while an app uses the camera, an orange
@@ -192,6 +193,11 @@ Screen): GNOME does not say which file the direct shortcuts
 (Shift+Print Screen, Alt+Print Screen) saved. With saving to disk turned
 off in GNOME, the preview has no buttons.
 
+While the screenshot UI records the screen, the notch shows a red dot and
+how long it has been recording, and home has a row with a stop button.
+When the recording is saved, the notch shows the same preview with a
+video icon instead of GNOME's `Screencast recorded` banner.
+
 ### Clipboard history
 
 The `Clipboard` tile in home opens what you copied, newest first: text with
@@ -269,7 +275,7 @@ Every key, by table:
 | `call_indicator` | `true` | While the microphone is on: the app and how long in the notch, with a mute button in home |
 | `live_activities` | `true` | Show live activities in the notch; `false` shows none, and scripts that report them keep working |
 | `file_shelf` | `true` | Drop files on the notch to park them, then drag them out again (see [File shelf](#file-shelf)) |
-| `screenshot_preview` | `true` | After a screenshot, a preview with `Open`, `Show in Files` and `Keep on shelf` instead of its banner (see [Screenshots](#screenshots)); needs `[notifications] in_notch` |
+| `screenshot_preview` | `true` | After a screenshot or a screen recording, a preview with `Open`, `Show in Files` and `Keep on shelf` instead of its banner (see [Screenshots](#screenshots)); needs `[notifications] in_notch` |
 
 </details>
 

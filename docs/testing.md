@@ -478,6 +478,23 @@ does.
       `Show in Files`. `Open` opens the image viewer, `Show in Files`
       selects the file in Files, and a kept screenshot drags into a chat.
 
+### Screen recordings
+
+`smoke.sh` tells GNOME's screenshot UI that it records (there is no
+recorder in the devshell) and then shows its own `Screencast recorded`
+banner for a fake file.
+
+- [ ] `shell_eval "Main.screenshotUI._setScreencastInProgress(true)"`: a
+      red dot and `0:01`, counting, replace the clock; while playing they
+      sit beside the cover.
+- [ ] Hover: home has a **Screen recording** row with the time and a stop
+      button, the notch 36 px taller. Stop takes the row and the dot away.
+- [ ] The `Screencast recorded` banner shows as a preview with a video
+      icon, `Open`, `Show in Files` and `Keep on shelf`.
+- [ ] A real recording *(real session)*: Ctrl+Shift+Alt+R or the screenshot
+      UI's video mode starts it, the notch's stop button stops it and saves
+      the video, `Open` plays it and a kept video drags into a chat.
+
 ### Appearance and clock
 
 - [ ] **Themes**: set `theme` to each value with a song playing, open and
