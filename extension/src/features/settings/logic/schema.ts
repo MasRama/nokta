@@ -1,6 +1,7 @@
 import {
     activitiesFrom,
     appearanceFrom,
+    calendarFrom,
     behaviorFrom,
     lyricsFrom,
     notificationsFrom,
@@ -22,7 +23,7 @@ export type RowKind =
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities' | 'weather';
+export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities' | 'weather' | 'calendar';
 
 export interface Row {
     table: Table;
@@ -75,6 +76,14 @@ const timer = (key: string, title: string, kind: RowKind, subtitle?: string): Ro
 
 const weather = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'weather',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const calendar = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'calendar',
     key,
     title,
     kind,
@@ -202,6 +211,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Calendar',
+                rows: [
+                    calendar('enabled', 'Show the next event', bool(), "From GNOME's calendar, when the notch opens"),
+                    calendar('reminder_minutes', 'Remind before', int(0, 60), 'Minutes before it starts; 0 for no reminder'),
+                ],
+            },
+            {
                 title: 'Music',
                 rows: [
                     behavior('show_lyrics', 'Show lyrics', bool()),
@@ -295,6 +311,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     notifications: notificationsFrom,
     activities: activitiesFrom,
     weather: weatherFrom,
+    calendar: calendarFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

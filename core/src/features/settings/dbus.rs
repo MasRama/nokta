@@ -46,6 +46,7 @@ fn properties(c: &Config) -> PropertyList {
         ("Notifications", owned(dbus_map(c.notifications.entries()))),
         ("Activities", owned(dbus_map(c.activities.entries()))),
         ("Weather", owned(dbus_map(c.weather.entries()))),
+        ("Calendar", owned(dbus_map(c.calendar.entries()))),
     ]
 }
 
@@ -137,6 +138,11 @@ impl SettingsInterface {
     #[zbus(property)]
     fn weather(&self) -> HashMap<String, OwnedValue> {
         dbus_map(self.config.borrow().weather.entries())
+    }
+
+    #[zbus(property)]
+    fn calendar(&self) -> HashMap<String, OwnedValue> {
+        dbus_map(self.config.borrow().calendar.entries())
     }
 
     async fn set(&self, table: String, key: String, value: OwnedValue) -> fdo::Result<()> {
