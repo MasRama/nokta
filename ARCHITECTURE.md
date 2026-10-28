@@ -275,8 +275,9 @@ How both sides stay honest:
 
 - The notch is one actor in the shell's top chrome, centered on the primary
   monitor and touching the top edge. It hides when an app goes fullscreen.
-  Its shape is a body with rounded bottom corners plus two Cairo-drawn "ears"
-  that curve into the top edge.
+  Its shape is a body with rounded bottom corners plus two "ears" that curve
+  into the top edge, all drawn by one fragment shader (`shared/shape.ts`:
+  `Shell.GLSLEffect` up to GNOME 50, `Clutter.ShaderEffect` from 51).
 - Colors come from the theme (`[appearance] theme`): `shared/logic/theme.ts`
   turns it, the color settings (used only by `custom`) and the cover's
   color into one palette for the body, the ears and every view, and the
@@ -296,14 +297,21 @@ How both sides stay honest:
   until both settle, so they move together and a new size mid-way bends the
   motion instead of restarting it. An alert kicks the width spring, so the
   body overshoots by 6 % and springs back; the kick waits until a resize
-  reaches its width, or the motion would swallow it. Its glow is a separate
-  actor under the body (the body clips), with a `box-shadow` in the colour
-  from `shared/logic/glow.ts`. The bottom corners round more as the
-  body grows (`shared/logic/shape.ts`). The body lays its views out with
-  `shared/layout.ts`, so a view never makes it bigger than the spring says;
-  a larger view is clipped, never reflowed. Views fade and scale with
-  Clutter's `ease()`. Everything turns instant when GNOME animations are
-  off.
+  reaches its width, or the motion would swallow it. A frame of a resize
+  costs no relayout and no restyle: when a resize starts, the actors take
+  one size with room for the whole motion (`shared/logic/motion.ts`), and
+  each frame only hands the shader the springs' size and clips the body to
+  it, between pixels. Once the springs settle the actors take the final
+  size, which keeps every view on the same pixel. The springs step by whole
+  refresh periods, so uneven frame callbacks do not make the motion uneven.
+  Its glow is a second actor with the same shader, under the shape and
+  outside the body's clip, a soft shadow in the colour from
+  `shared/logic/glow.ts`; it is hidden while faded out. The bottom corners
+  round more as the body grows (`shared/logic/shape.ts`). The body lays its
+  views out with `shared/layout.ts`, so a view never makes it bigger than
+  the spring says; a larger view is clipped, never reflowed. Views fade and
+  scale with Clutter's `ease()`. Everything turns instant when GNOME
+  animations are off.
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, one timeout per second while a
