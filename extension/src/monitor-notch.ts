@@ -19,7 +19,12 @@ import {
     SHEET_ROWS,
     visibleLyric,
 } from './features/lyrics/index.js';
-import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
+import {
+    type AudioOutputs,
+    CollapsedMediaView,
+    ExpandedMediaView,
+    type MediaClient,
+} from './features/media/index.js';
 import {
     NotificationTimer,
     NotificationView,
@@ -142,6 +147,8 @@ export interface ClipboardSource {
 export interface NotchSources {
     settings: SettingsClient;
     media: MediaClient;
+    /** The sound outputs, for the open player's output button. */
+    outputs: AudioOutputs;
     lyrics: LyricsClient;
     timer: TimerClient;
     activities: ActivitiesClient;
@@ -203,6 +210,8 @@ export class MonitorNotch implements ShelfNotch {
     /** The keyboard, held while the clipboard's search field is open. */
     private searchGrab: Clutter.Grab | null = null;
     private searchPressId = 0;
+    /** The open player's output menu shows, so the pointer counts as on the notch. */
+    private outputMenuOpen = false;
     private readonly clipboardSubPage: SubPage;
     private readonly timerPage: TimerPage;
     private readonly timerSubPage: SubPage;
@@ -233,7 +242,13 @@ export class MonitorNotch implements ShelfNotch {
         const { settings, media, panel } = sources;
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
-        this.expanded = new ExpandedMediaView(media, () => this.setHomeOpen(true));
+        this.expanded = new ExpandedMediaView(media, () => this.setHomeOpen(true), {
+            select: (id) => sources.outputs.select(id),
+            opened: (open) => {
+                this.outputMenuOpen = open;
+                if (!this.destroyed) this.machine.pointer(this.pointerInside());
+            },
+        });
         this.idlePanel = new HomePanel(
             {
                 openCalendar: () => this.onPanelClick(() => panel.openCalendar()),
@@ -363,6 +378,7 @@ export class MonitorNotch implements ShelfNotch {
         this.onShelf();
         this.onClipboard();
         this.onPrivacy();
+        this.onOutputs();
     }
 
     /** False while a fullscreen app on this monitor hides the notch. */
@@ -429,6 +445,13 @@ export class MonitorNotch implements ShelfNotch {
         this.draw(this.overlay());
         this.tick();
         this.updateTimers();
+    }
+
+    /** The sound outputs or the one in use changed. */
+    onOutputs(): void {
+        if (this.destroyed) return;
+        const { outputs } = this.sources;
+        this.expanded.setOutputs(outputs.list(), outputs.activeId());
     }
 
     /**
@@ -516,7 +539,7 @@ export class MonitorNotch implements ShelfNotch {
 
     /** The pointer is on the notch, or it counts as on it: over the helper window, or typing a search. */
     private pointerInside(): boolean {
-        return this.notch.actor.hover || this.helperInside || this.searchGrab !== null;
+        return this.notch.actor.hover || this.helperInside || this.searchGrab !== null || this.outputMenuOpen;
     }
 
     /**
@@ -838,7 +861,10 @@ export class MonitorNotch implements ShelfNotch {
         const previous = this.drawn;
         if (mode === previous) return;
         this.drawn = mode;
-        if (mode !== 'expanded') this.setLyricsOpen(false);
+        if (mode !== 'expanded') {
+            this.setLyricsOpen(false);
+            this.expanded.closeMenus();
+        }
         // The panel's rows give its height, so draw it before sizing.
         if (mode === 'panel') {
             this.sources.panel.opened();

@@ -23,7 +23,7 @@ import {
 } from './features/calendar/index.js';
 import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
-import { MediaClient } from './features/media/index.js';
+import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
     bannerShape,
     isScreenshotBanner,
@@ -109,6 +109,7 @@ function focusedMonitor(): number {
 class Session {
     private readonly settings: SettingsClient;
     private readonly media = new MediaClient();
+    private readonly outputs = new AudioOutputs();
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly timer = new TimerClient(
@@ -138,6 +139,7 @@ class Session {
     private readonly privacy = new PrivacyMonitor(() => this.notches.forEach((n) => n.onPrivacy()));
     private readonly monitorsId: number;
     private readonly mediaId: number;
+    private readonly outputsId: number;
     private readonly lyricsId: number;
     private readonly timerId: number;
     private readonly activitiesId: number;
@@ -221,6 +223,7 @@ class Session {
         this.allMonitors = this.settings.behavior.allMonitors;
         this.monitorsId = Main.layoutManager.connect('monitors-changed', () => this.buildNotches());
         this.mediaId = this.media.onChanged(() => this.notches.forEach((n) => n.onMedia()));
+        this.outputsId = this.outputs.onChanged(() => this.notches.forEach((n) => n.onOutputs()));
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
         this.timerId = this.timer.onChanged(() => this.onTimer());
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
@@ -257,6 +260,8 @@ class Session {
         this.shelfCoordinator.destroy();
         this.destroyNotches();
         this.media.disconnect(this.mediaId);
+        this.outputs.disconnect(this.outputsId);
+        this.outputs.destroy();
         this.lyrics.disconnect(this.lyricsId);
         this.timer.disconnect(this.timerId);
         this.activities.disconnect(this.activitiesId);
@@ -412,6 +417,7 @@ class Session {
         const sources = {
             settings: this.settings,
             media: this.media,
+            outputs: this.outputs,
             lyrics: this.lyrics,
             timer: this.timer,
             activities: this.activities,

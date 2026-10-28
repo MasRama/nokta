@@ -5,10 +5,12 @@
 # keeps inhibitors for the Caffeine toggle. Stays in the foreground; Ctrl-C
 # stops it.
 #
-# Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--players=N] [--monitors=N]
+# Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--no-audio] [--players=N] [--monitors=N]
 #   --no-daemon   do not start noktad (the notch must stay idle)
 #                 nor the fake UPower and BlueZ (fake-devices.js)
 #   --no-player   do not start the fake MPRIS player
+#   --no-audio    do not start the private PipeWire with two silent outputs
+#                 (it is skipped anyway when PipeWire is not installed)
 #   --players=N   N fake players (default 1); the others start paused
 #   --monitors=N  N virtual 1920x1080 monitors side by side (default 1)
 #
@@ -25,12 +27,14 @@ ZIP="$ROOT/build/nokta@nokta.io.shell-extension.zip"
 if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
     START_DAEMON=1
     START_PLAYER=1
+    START_AUDIO=1
     PLAYERS=1
     MONITORS=1
     for arg in "$@"; do
         case "$arg" in
             --no-daemon) START_DAEMON=0 ;;
             --no-player) START_PLAYER=0 ;;
+            --no-audio) START_AUDIO=0 ;;
             --players=[1-9]) PLAYERS=${arg#--players=} ;;
             --monitors=[1-9]) MONITORS=${arg#--monitors=} ;;
             *) echo "unknown option: $arg" >&2; exit 2 ;;
@@ -51,6 +55,8 @@ if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
     # What gnome-extensions install would do.
     glib-compile-schemas "$EXT/nokta@nokta.io/schemas"
     cp -r "$HERE/devtools@nokta.io" "$EXT/"
+    mkdir -p "$STATE/config/pipewire/pipewire.conf.d"
+    cp "$HERE/pipewire.conf" "$STATE/config/pipewire/pipewire.conf.d/nokta-devshell.conf"
 
     cat > "$STATE/config/glib-2.0/settings/keyfile" <<'KEYFILE'
 [org/gnome/shell]
@@ -87,7 +93,7 @@ BUSCONF
     cp "$HERE/forecast.json" "$STATE/lrclib/v1/forecast"
 
     exec env -u DISPLAY -u WAYLAND_DISPLAY -u GNOME_SETUP_DISPLAY \
-        NOKTA_DEVSHELL_INNER=1 START_DAEMON="$START_DAEMON" START_PLAYER="$START_PLAYER" \
+        NOKTA_DEVSHELL_INNER=1 START_DAEMON="$START_DAEMON" START_PLAYER="$START_PLAYER" START_AUDIO="$START_AUDIO" \
         PLAYERS="$PLAYERS" MONITORS="$MONITORS" \
         NOKTAD="$NOKTAD" \
         XDG_CONFIG_HOME="$STATE/config" XDG_DATA_HOME="$STATE/data" \
@@ -123,6 +129,38 @@ wait_name() {
     done
 }
 
+wait_file() {
+    i=0
+    until [ -e "$1" ]; do
+        i=$((i + 1))
+        [ "$i" -le 50 ] || { echo "timed out waiting for $1" >&2; exit 1; }
+        sleep 0.1
+    done
+}
+
+# A private PipeWire (the runtime directory is ours, so the real one is never
+# reached) with the two outputs from pipewire.conf, started before the shell
+# connects to it. There is no session manager; the loop does its one job
+# here and makes the output the shell picks the default.
+if [ "$START_AUDIO" = 1 ] && command -v pipewire-pulse > /dev/null 2>&1 && command -v pw-metadata > /dev/null 2>&1; then
+    pipewire > "$STATE/pipewire.log" 2>&1 &
+    PIDS="$PIDS $!"
+    wait_file "$XDG_RUNTIME_DIR/pipewire-0"
+    pipewire-pulse > "$STATE/pipewire-pulse.log" 2>&1 &
+    PIDS="$PIDS $!"
+    wait_file "$XDG_RUNTIME_DIR/pulse/native"
+    pw-metadata -n default 0 default.audio.sink '{"name":"nokta-speakers"}' > /dev/null
+    stdbuf -oL pw-metadata -n default -m 2> /dev/null | while read -r line; do
+        case "$line" in
+            *"key:'default.configured.audio.sink'"*)
+                value=${line#*value:\'}
+                pw-metadata -n default 0 default.audio.sink "${value%%\'*}" > /dev/null
+                ;;
+        esac
+    done &
+    PIDS="$PIDS $!"
+fi
+
 set --
 i=0
 while [ "$i" -lt "$MONITORS" ]; do
@@ -134,7 +172,7 @@ done
 DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gnome-shell --headless --wayland --no-x11 "$@" \
     --wayland-display nokta-devshell > "$STATE/shell.log" 2>&1 &
 SHELL_PID=$!
-PIDS="$SHELL_PID"
+PIDS="$PIDS $SHELL_PID"
 wait_name org.gnome.Shell.Screenshot
 # Started after the shell, which needs no session manager of its own here.
 gjs -m "$HERE/fake-session.js" > "$STATE/session.log" 2>&1 &
