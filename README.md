@@ -89,6 +89,10 @@ notifications. Hover over it to open it.
   activity, an event or a notification), the notch bounces a little wider
   and glows underneath: red when urgent, green when something finished or
   the charger is in, in a timer's own color, else in the accent.
+- **Over fullscreen apps.** The notch hides while a video or a game is
+  fullscreen, and still comes up for what matters: a low battery, the
+  focus timer, a timer or alarm that is done and a calendar reminder.
+  Choose all alerts or none with `fullscreen_alerts`.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color) and paper, or your own colors.
 - **Every monitor** has its own notch, and alerts show on the one you are
@@ -290,6 +294,7 @@ Every key, by table:
 | `call_indicator` | `true` | While the microphone is on: the app and how long in the notch, with a mute button in home |
 | `live_activities` | `true` | Show live activities in the notch; `false` shows none, and scripts that report them keep working |
 | `file_shelf` | `true` | Drop files on the notch to park them, then drag them out again (see [File shelf](#file-shelf)) |
+| `fullscreen_alerts` | `"important"` | Which alerts show over a fullscreen app, where the notch is otherwise hidden: `"important"` (battery low or critical, the focus timer, a timer or alarm done, a calendar reminder), `"all"` (also the other device alerts, activities ending, and volume, brightness and the lock keys) or `"none"`. Notifications wait for GNOME either way |
 | `screenshot_preview` | `true` | After a screenshot or a screen recording, a preview with `Open`, `Show in Files` and `Keep on shelf` instead of its banner (see [Screenshots](#screenshots)); needs `[notifications] in_notch` |
 
 </details>
