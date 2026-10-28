@@ -5,15 +5,14 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use image::{ImageFormat, ImageReader, Limits};
+use image::{ImageFormat, ImageReader};
 use md5::Md5;
 use sha2::{Digest, Sha256};
 
-/// Nokta's own thumbnails fit in this square, like the freedesktop `normal` size.
-pub const SIZE: u32 = 128;
+use crate::shared::picture::write_thumbnail;
+
 /// Larger images are not decoded.
 const MAX_FILE_BYTES: u64 = 64 * 1024 * 1024;
-const MAX_DECODE_BYTES: u64 = 512 * 1024 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ThumbnailDirs {
@@ -94,16 +93,6 @@ fn write(source: &Path, dest: &Path) -> Result<(), Skip> {
     if std::fs::metadata(source)?.len() > MAX_FILE_BYTES {
         return Err(Skip::NotAnImage);
     }
-    let mut reader = ImageReader::open(source)?.with_guessed_format()?;
-    let mut limits = Limits::default();
-    limits.max_alloc = Some(MAX_DECODE_BYTES);
-    reader.limits(limits);
-    let thumbnail = reader.decode()?.thumbnail(SIZE, SIZE);
-    let dir = dest.parent().ok_or_else(|| anyhow::anyhow!("no folder"))?;
-    std::fs::create_dir_all(dir)?;
-    // Written whole, then moved in place, so nobody reads half a file.
-    let partial = dest.with_extension("png.partial");
-    thumbnail.save_with_format(&partial, ImageFormat::Png)?;
-    std::fs::rename(&partial, dest)?;
+    write_thumbnail(ImageReader::open(source)?, dest)?;
     Ok(())
 }
