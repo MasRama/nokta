@@ -57,7 +57,8 @@ extension/          GNOME Shell extension nokta@nokta.io
                     clipboard
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
-                    keyboard focus, D-Bus helpers
+                    keyboard focus, D-Bus helpers, icons, dim levels
+  icons/            Nokta's own symbolic icons
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
@@ -302,6 +303,15 @@ How both sides stay honest:
   turns it, the color settings (used only by `custom`) and the cover's
   color into one palette for the body, the ears and every view, and the
   notch carries a `nokta-theme-<name>` style class for the stylesheet.
+- Icons: the notch draws its own symbolic icons (`icons/nokta-<name>-symbolic.svg`,
+  fills only, since St recolors fills and not strokes). `shared/icons.ts`
+  `iconFor(name)` takes one of Nokta's names (`nokta-focus`) or a GNOME name
+  it redraws (`shared/logic/icon-names.ts`) and falls back to the theme's
+  icon for anything else (weather, files, apps); icons from GNOME, as an
+  OSD's or a notification's, go through `chromeIcon()`.
+- Text follows one type scale (caption 11, body 13, title 15, the sung
+  lyric 17; semibold labels, bold digits). St CSS ignores `opacity`, so
+  dimmed text is dimmed from code with the two levels in `shared/dim.ts`.
 - States: **idle** (a clock), **collapsed** (small cover and equalizer bars)
   and **expanded** on hover (cover, title, artists, a lyric row, seek bar,
   shuffle, previous, play, next and repeat). The lyric row shows the line
