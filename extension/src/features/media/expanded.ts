@@ -65,7 +65,8 @@ export class ExpandedMediaView {
     private lastScrollMs = 0;
     private accent = '#ffffff';
 
-    constructor(controls: MediaControls) {
+    /** `openHome` goes to the open notch's other page. */
+    constructor(controls: MediaControls, openHome: () => void) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));
 
         const top = new St.BoxLayout({ style_class: 'nokta-expanded-top' });
@@ -90,6 +91,14 @@ export class ExpandedMediaView {
         });
         top.add_child(this.cover.actor);
         top.add_child(this.info);
+        const home = new St.Button({
+            style_class: 'nokta-button nokta-home-button',
+            child: new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'nokta-home-icon' }),
+            y_align: Clutter.ActorAlign.START,
+            can_focus: true,
+        });
+        home.connect('clicked', openHome);
+        top.add_child(home);
 
         this.progress = new ProgressBar((us) => controls.setPosition(us));
 
@@ -121,11 +130,6 @@ export class ExpandedMediaView {
         this.actor.add_child(top);
         this.actor.add_child(this.progress.actor);
         this.actor.add_child(buttons);
-    }
-
-    /** Where the lyric line goes: under the artists. */
-    get infoBox(): St.BoxLayout {
-        return this.info;
     }
 
     update(snapshot: MediaSnapshot): void {

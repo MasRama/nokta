@@ -4,8 +4,9 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
-import { TintedButton } from '../../shared/button.js';
 import { withAlpha } from '../../shared/logic/color.js';
+import { type ControlColors, TogglePill, Tile } from './controls.js';
+import { notificationBadge } from './logic/labels.js';
 
 /** A live activity, as one panel row shows it. */
 export interface PanelActivity {
@@ -34,7 +35,16 @@ export interface PanelEvent {
     when: string;
 }
 
-/** What the idle panel shows, worked out by the session when it opens. */
+/** The quick toggles' states, read from GNOME's settings. */
+export interface QuickToggles {
+    doNotDisturb: boolean;
+    caffeine: boolean;
+    dark: boolean;
+}
+
+export type QuickToggle = keyof QuickToggles;
+
+/** What home shows, worked out by the session when it opens. */
 export interface PanelContent {
     /** Today, like `Wednesday, 28 October`, in the user's language. */
     date: string;
@@ -44,8 +54,13 @@ export interface PanelContent {
     event: PanelEvent | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
     activities: readonly PanelActivity[];
-    notifications: string;
-    focus: string;
+    /** How many wait in GNOME's message list; null when GNOME does not say. */
+    notificationCount: number | null;
+    /** A focus session or a break is set. */
+    focusActive: boolean;
+    toggles: QuickToggles;
+    /** A player is open, so home has a way back to it. */
+    player: boolean;
 }
 
 export const MAX_PANEL_ACTIVITIES = 3;
@@ -54,6 +69,21 @@ export interface PanelHandlers {
     openCalendar(): void;
     openNotifications(): void;
     toggleFocus(): void;
+    openSettings(): void;
+    openPlayer(): void;
+    toggle(which: QuickToggle): void;
+}
+
+/** Each toggle's icon: a theme icon, or one in the extension's icons folder. */
+const TOGGLES: Array<[QuickToggle, string, string]> = [
+    ['doNotDisturb', 'notifications-disabled-symbolic', 'Do Not Disturb'],
+    ['caffeine', 'file:nokta-caffeine-symbolic.svg', 'Caffeine'],
+    ['dark', 'dark-mode-symbolic', 'Dark Style'],
+];
+
+function toggleIcon(name: string, iconsDir: string): Gio.Icon {
+    if (!name.startsWith('file:')) return new Gio.ThemedIcon({ name });
+    return new Gio.FileIcon({ file: Gio.File.new_for_path(`${iconsDir}/${name.slice('file:'.length)}`) });
 }
 
 /** One live activity: icon, title, detail and elapsed time, and a thin bar. */
@@ -181,31 +211,60 @@ class EventRow {
     }
 }
 
-/** The open notch while nothing plays: the date and weather, the next event, live activities, then notifications and focus. */
-export class IdlePanel {
+/**
+ * Home, the open notch's other page and the only one while nothing plays:
+ * the date and weather, the next event, live activities, then the quick
+ * toggles and a row of tiles.
+ */
+export class HomePanel {
     readonly actor: St.BoxLayout;
     private readonly date: St.Label;
     private readonly weather = new WeatherBox();
+    private readonly playerButton: St.Button;
     private readonly event: EventRow;
     private readonly activities: ActivityRow[] = [];
-    private readonly notifications: TintedButton;
-    private readonly focus: TintedButton;
+    private readonly toggles = new Map<QuickToggle, TogglePill>();
+    private readonly notifications: Tile;
+    private readonly focus: Tile;
+    private readonly settings: Tile;
+    private readonly controls: St.BoxLayout;
 
-    constructor(handlers: PanelHandlers) {
+    /** `iconsDir` holds the icons the theme does not have. */
+    constructor(handlers: PanelHandlers, iconsDir: string) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-panel' }));
         this.date = new St.Label({ style_class: 'nokta-panel-date', x_expand: true, y_align: Clutter.ActorAlign.CENTER });
         this.date.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.playerButton = new St.Button({
+            style_class: 'nokta-button nokta-panel-player',
+            child: new St.Icon({ icon_name: 'audio-x-generic-symbolic', style_class: 'nokta-button-icon' }),
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            visible: false,
+        });
+        this.playerButton.connect('clicked', () => handlers.openPlayer());
         const heading = new St.BoxLayout({ style_class: 'nokta-panel-heading' });
         heading.add_child(this.date);
         heading.add_child(this.weather.actor);
+        heading.add_child(this.playerButton);
         this.event = new EventRow(() => handlers.openCalendar());
-        this.notifications = new TintedButton('nokta-panel-button', 'preferences-system-notifications-symbolic', () =>
+
+        const pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
+        for (const [which, icon, label] of TOGGLES) {
+            const pill = new TogglePill(toggleIcon(icon, iconsDir), label, () => handlers.toggle(which));
+            this.toggles.set(which, pill);
+            pills.add_child(pill.actor);
+        }
+        this.notifications = new Tile('preferences-system-notifications-symbolic', 'Notifications', () =>
             handlers.openNotifications(),
         );
-        this.focus = new TintedButton('nokta-panel-button', 'alarm-symbolic', () => handlers.toggleFocus());
-        const buttons = new St.BoxLayout({ style_class: 'nokta-panel-buttons' });
-        buttons.add_child(this.notifications.actor);
-        buttons.add_child(this.focus.actor);
+        this.focus = new Tile('alarm-symbolic', 'Focus', () => handlers.toggleFocus());
+        this.settings = new Tile('emblem-system-symbolic', 'Settings', () => handlers.openSettings());
+        const tiles = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
+        for (const tile of [this.notifications, this.focus, this.settings]) tiles.add_child(tile.actor);
+        this.controls = setVertical(new St.BoxLayout({ style_class: 'nokta-panel-controls' }));
+        this.controls.add_child(pills);
+        this.controls.add_child(tiles);
+
         this.actor.add_child(heading);
         this.actor.add_child(this.event.actor);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
@@ -213,28 +272,33 @@ export class IdlePanel {
             this.activities.push(row);
             this.actor.add_child(row.actor);
         }
-        this.actor.add_child(buttons);
+        this.actor.add_child(this.controls);
+    }
+
+    /** Puts a row above the toggles. */
+    addRow(actor: Clutter.Actor): void {
+        this.actor.insert_child_below(actor, this.controls);
     }
 
     show(content: PanelContent): void {
         this.date.text = content.date;
         this.weather.show(content.weather);
+        this.playerButton.visible = content.player;
         this.event.show(content.event);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
-        this.notifications.text = content.notifications;
-        this.focus.text = content.focus;
+        for (const [which, pill] of this.toggles) pill.set(content.toggles[which]);
+        this.notifications.set(false, notificationBadge(content.notificationCount));
+        this.focus.set(content.focusActive);
     }
 
-    setForeground(color: string): void {
-        this.notifications.setForeground(color);
-        this.focus.setForeground(color);
-        for (const row of this.activities) row.setForeground(color);
+    setColors(colors: ControlColors): void {
+        for (const pill of this.toggles.values()) pill.setColors(colors);
+        for (const tile of [this.notifications, this.focus, this.settings]) tile.setColors(colors);
+        for (const row of this.activities) row.setForeground(colors.foreground);
     }
 
     destroy(): void {
         this.event.destroy();
-        this.notifications.destroy();
-        this.focus.destroy();
         this.actor.destroy();
     }
 }

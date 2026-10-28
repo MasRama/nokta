@@ -1,7 +1,9 @@
 #!/bin/sh
 # Runs Nokta in an isolated, headless GNOME Shell: a private session bus,
 # temporary XDG directories and GSettings in a keyfile, so nothing touches
-# the real session or its settings. Stays in the foreground; Ctrl-C stops it.
+# the real session or its settings. A fake session manager (fake-session.js)
+# keeps inhibitors for the Caffeine toggle. Stays in the foreground; Ctrl-C
+# stops it.
 #
 # Usage: tools/devshell/run.sh [--no-daemon] [--no-player] [--players=N] [--monitors=N]
 #   --no-daemon   do not start noktad (the notch must stay idle)
@@ -134,6 +136,10 @@ DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gnome-shell --headless --way
 SHELL_PID=$!
 PIDS="$SHELL_PID"
 wait_name org.gnome.Shell.Screenshot
+# Started after the shell, which needs no session manager of its own here.
+gjs -m "$HERE/fake-session.js" > "$STATE/session.log" 2>&1 &
+PIDS="$PIDS $!"
+wait_name org.gnome.SessionManager
 
 if [ "$START_PLAYER" = 1 ]; then
     gjs -m "$HERE/fake-player.js" "$STATE" > "$STATE/player.log" 2>&1 &

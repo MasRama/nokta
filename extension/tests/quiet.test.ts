@@ -71,3 +71,44 @@ test('release_restores_once', () => {
     quiet.release();
     assert.deepEqual(port.writes, [false, true]);
 });
+
+test('do_not_disturb_turned_on_during_focus_stays_on_after', () => {
+    const port = fakeBanners(true);
+    const quiet = new QuietBanners(port);
+    quiet.update(true);
+    quiet.setDoNotDisturb(true);
+    quiet.update(true);
+    quiet.update(false);
+    quiet.release();
+    assert.equal(port.value, false);
+});
+
+test('do_not_disturb_turned_off_during_focus_is_not_undone', () => {
+    const port = fakeBanners(true);
+    const quiet = new QuietBanners(port);
+    quiet.update(true);
+    quiet.setDoNotDisturb(false);
+    quiet.update(true);
+    quiet.update(false);
+    assert.equal(port.value, true);
+    assert.deepEqual(port.writes, [false, true]);
+});
+
+test('the_next_focus_session_quiets_banners_again', () => {
+    const port = fakeBanners(true);
+    const quiet = new QuietBanners(port);
+    quiet.update(true);
+    quiet.setDoNotDisturb(false);
+    quiet.update(false);
+    quiet.update(true);
+    assert.equal(port.value, false);
+});
+
+test('do_not_disturb_is_whether_banners_are_off', () => {
+    const port = fakeBanners(true);
+    const quiet = new QuietBanners(port);
+    assert.equal(quiet.doNotDisturb, false);
+    quiet.setDoNotDisturb(true);
+    assert.equal(quiet.doNotDisturb, true);
+    assert.equal(port.value, false);
+});

@@ -26,11 +26,13 @@ import {
 } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import {
-    IdlePanel,
+    HomePanel,
     MAX_PANEL_ACTIVITIES,
+    NotchMenu,
     panelHeight,
     type PanelContent,
     type PanelRow,
+    type QuickToggle,
 } from './features/panel/index.js';
 import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
@@ -78,14 +80,19 @@ const VIEW_SCALE_FROM = 0.96;
  */
 type Drawn = NotchMode | 'panel' | 'osd' | 'notification' | 'screenshot' | 'drop';
 
-/** What the idle panel shows and does; owned by the session. */
+/** What home shows and does; owned by the session. */
 export interface PanelSource {
     content(): PanelContent;
-    /** The panel just opened. */
+    /** Home just opened. */
     opened(): void;
     openCalendar(): void;
     openNotifications(): void;
     toggleFocus(): void;
+    openSettings(): void;
+    toggle(which: QuickToggle): void;
+    setDoNotDisturb(on: boolean): void;
+    /** The icons the theme does not have. */
+    iconsDir: string;
 }
 
 /** The parked files and the helper window; owned by the session. */
@@ -96,6 +103,7 @@ export interface ShelfSource {
     overRow(notch: MonitorNotch, rect: Rect): void;
     /** This notch no longer shows its shelf row. */
     rowGone(notch: MonitorNotch): void;
+    clear(): void;
 }
 
 /** The clients every notch reads; owned by the session. */
@@ -153,11 +161,11 @@ export class MonitorNotch implements ShelfNotch {
     private notificationKind: 'notification' | 'screenshot' = 'notification';
     private readonly privacyDots = new PrivacyDots();
     private privacyCount = 0;
-    private readonly idlePanel = new IdlePanel({
-        openCalendar: () => this.onPanelClick(() => this.sources.panel.openCalendar()),
-        openNotifications: () => this.onPanelClick(() => this.sources.panel.openNotifications()),
-        toggleFocus: () => this.onPanelClick(() => this.sources.panel.toggleFocus()),
-    });
+    private readonly idlePanel: HomePanel;
+    /** Home is open over the player, until the notch closes or its music button goes back. */
+    private homeOpen = false;
+    private readonly menu: NotchMenu;
+    private readonly pressId: number;
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
     private readonly notificationTimer: NotificationTimer;
@@ -171,23 +179,39 @@ export class MonitorNotch implements ShelfNotch {
     private lyricTimerId = 0;
     private panelTickId = 0;
     /** The panel's rows, as last shown. */
-    private panelRows: PanelRow[] = ['date', 'buttons'];
+    private panelRows: PanelRow[] = ['date', 'controls'];
 
     constructor(
         readonly monitorIndex: number,
         area: MonitorArea,
         private readonly sources: NotchSources,
     ) {
-        const { settings, media } = sources;
+        const { settings, media, panel } = sources;
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
-        this.expanded = new ExpandedMediaView(media);
+        this.expanded = new ExpandedMediaView(media, () => this.setHomeOpen(true));
+        this.idlePanel = new HomePanel(
+            {
+                openCalendar: () => this.onPanelClick(() => panel.openCalendar()),
+                openNotifications: () => this.onPanelClick(() => panel.openNotifications()),
+                toggleFocus: () => this.onPanelClick(() => panel.toggleFocus()),
+                openSettings: () => this.onPanelClick(() => panel.openSettings()),
+                openPlayer: () => this.setHomeOpen(false),
+                // A toggle acts in place; home stays open to show it.
+                toggle: (which) => panel.toggle(which),
+            },
+            panel.iconsDir,
+        );
+        this.menu = new NotchMenu({
+            openSettings: () => panel.openSettings(),
+            setDoNotDisturb: (on) => panel.setDoNotDisturb(on),
+            clearShelf: () => sources.shelf.clear(),
+        });
         // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
         this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
         this.expanded.actor.add_child(this.expandedShelf.actor);
-        // Above the notifications and focus buttons.
-        this.idlePanel.actor.insert_child_at_index(this.panelShelf.actor, this.idlePanel.actor.get_n_children() - 1);
+        this.idlePanel.addRow(this.panelShelf.actor);
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
@@ -237,6 +261,15 @@ export class MonitorNotch implements ShelfNotch {
             this.onMotion(event);
             return Clutter.EVENT_PROPAGATE;
         });
+        this.pressId = this.notch.actor.connect('button-press-event', (_actor, event: Clutter.Event) => {
+            if (event.get_button() !== Clutter.BUTTON_SECONDARY) return Clutter.EVENT_PROPAGATE;
+            const [x, y] = event.get_coords();
+            this.menu.open(x, y, {
+                doNotDisturb: this.sources.panel.content().toggles.doNotDisturb,
+                shelfItems: this.sources.shelf.items().length,
+            });
+            return Clutter.EVENT_STOP;
+        });
         // GNOME 50 and later destroy the notch themselves when the shell
         // shuts down, while the clients may still report changes.
         this.destroyId = this.notch.actor.connect('destroy', () => this.destroy());
@@ -270,7 +303,9 @@ export class MonitorNotch implements ShelfNotch {
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
+        this.notch.actor.disconnect(this.pressId);
         this.notch.actor.disconnect(this.destroyId);
+        this.menu.destroy();
         this.forgetStaleHover();
         this.osdView.destroy();
         this.notificationView.destroy();
@@ -615,10 +650,19 @@ export class MonitorNotch implements ShelfNotch {
         if (this.osdTimer.active) return 'osd';
         if (this.notificationTimer.active) return this.notificationKind;
         const { mode } = this.machine;
-        return mode === 'expanded' && !this.sources.media.snapshot().available ? 'panel' : mode;
+        if (mode !== 'expanded') return mode;
+        return this.homeOpen || !this.sources.media.snapshot().available ? 'panel' : mode;
     }
 
     private onMode(): void {
+        // Closing the notch goes back to its first page.
+        if (this.machine.mode !== 'expanded') this.homeOpen = false;
+        this.draw(this.overlay());
+    }
+
+    private setHomeOpen(open: boolean): void {
+        if (this.homeOpen === open) return;
+        this.homeOpen = open;
         this.draw(this.overlay());
     }
 
@@ -708,11 +752,11 @@ export class MonitorNotch implements ShelfNotch {
     }
 
     private applyOsdColors(): void {
-        const { foreground, accent } = this.shownPalette;
+        const { foreground, accent, onAccent } = this.shownPalette;
         this.expanded.setPalette(this.shownPalette);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
-        this.idlePanel.setForeground(foreground);
+        this.idlePanel.setColors({ foreground, accent, onAccent });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
     }
@@ -863,5 +907,5 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const event: PanelRow[] = content.event ? ['event'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
-    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), ...files, 'buttons'];
+    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), ...files, 'controls'];
 }

@@ -13,15 +13,30 @@ export const wantsQuiet = (timer: TimerSnapshot, quietNotifications: boolean): b
 /**
  * Turns banners off for focus and back on after. Only banners Nokta turned
  * off are turned on again: banners the user had off stay off, and banners
- * the user turned on in between are left as they are.
+ * the user turned on in between are left as they are. Do Not Disturb set
+ * from the notch is the user's: focus leaves banners alone for the rest of
+ * that session, so it never undoes the choice.
  */
 export class QuietBanners {
     private silenced = false;
+    /** The user chose during this focus session. */
+    private chosen = false;
 
     constructor(private readonly setting: BannerSetting) {}
 
+    get doNotDisturb(): boolean {
+        return !this.setting.get();
+    }
+
+    setDoNotDisturb(on: boolean): void {
+        this.silenced = false;
+        this.chosen = true;
+        if (this.setting.get() === on) this.setting.set(!on);
+    }
+
     update(quiet: boolean): void {
-        if (quiet && !this.silenced && this.setting.get()) {
+        if (!quiet) this.chosen = false;
+        if (quiet && !this.chosen && !this.silenced && this.setting.get()) {
             this.setting.set(false);
             this.silenced = true;
         } else if (!quiet && this.silenced) {

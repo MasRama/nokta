@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { notificationsLabel } from '../src/features/panel/logic/labels.js';
+import { notificationBadge } from '../src/features/panel/logic/labels.js';
 
-test('the notifications button counts what is in the message list', () => {
-    assert.equal(notificationsLabel(0), 'No notifications');
-    assert.equal(notificationsLabel(1), '1 notification');
-    assert.equal(notificationsLabel(12), '12 notifications');
+test('the notifications tile counts what is in the message list', () => {
+    assert.equal(notificationBadge(0), null);
+    assert.equal(notificationBadge(1), '1');
+    assert.equal(notificationBadge(9), '9');
+    assert.equal(notificationBadge(12), '9+');
     // A GNOME that does not say how many.
-    assert.equal(notificationsLabel(null), 'Notifications');
+    assert.equal(notificationBadge(null), null);
 });
