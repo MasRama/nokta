@@ -65,6 +65,8 @@ const DROP_EXTRA_HEIGHT = 76;
 const DROP_MARGIN = 24;
 /** The shelf row under the player, with the open player's spacing. */
 const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
+/** A view comes in from, and goes out to, this scale. */
+const VIEW_SCALE_FROM = 0.96;
 
 /**
  * What the notch draws: the state machine's mode (the idle panel when it
@@ -687,27 +689,36 @@ export class MonitorNotch implements ShelfNotch {
         this.clock.setOptions(clockFormat, showClock);
     }
 
-    /** Fades the old content out and the new one in, sliding slightly. */
+    /**
+     * The old content fades out as it shrinks a little, the new one fades
+     * in growing from the top centre, while the body springs to its size.
+     */
     private showView(mode: Drawn): void {
         const speed = this.sources.settings.appearance.animationSpeed;
         for (const [name, actor] of Object.entries(this.views)) {
             actor.remove_all_transitions();
+            actor.set_pivot_point(0.5, 0);
             if (name === mode) {
                 actor.show();
                 actor.opacity = 0;
-                actor.translation_y = -4;
+                actor.scale_x = VIEW_SCALE_FROM;
+                actor.scale_y = VIEW_SCALE_FROM;
+                actor.translation_y = 0;
                 actor.ease({
                     opacity: 255,
-                    translation_y: 0,
-                    delay: Math.round(80 * speed),
-                    duration: Math.round(180 * speed),
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    scale_x: 1,
+                    scale_y: 1,
+                    delay: Math.round(50 * speed),
+                    duration: Math.round(200 * speed),
+                    mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
                 });
             } else if (actor.visible) {
                 actor.ease({
                     opacity: 0,
-                    duration: Math.round(100 * speed),
-                    mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                    scale_x: VIEW_SCALE_FROM,
+                    scale_y: VIEW_SCALE_FROM,
+                    duration: Math.round(90 * speed),
+                    mode: Clutter.AnimationMode.EASE_IN_QUAD,
                     onComplete: () => {
                         if (this.drawn !== name) actor.hide();
                     },
