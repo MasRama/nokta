@@ -655,3 +655,8 @@
 .nokta-timer-stopwatch .nokta-button-icon {
     icon-size: 14px;
 }
+
+/* The closed notch's progress line; its colour comes from code. */
+.nokta-progress-line-fill {
+    height: 2px;
+}

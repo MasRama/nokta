@@ -40,6 +40,9 @@ pub struct Appearance {
     pub accent: String,
     /// One of THEMES; only "custom" uses the colors above.
     pub theme: String,
+    /// A line along the closed notch's bottom edge for the timer, countdown,
+    /// activity or song.
+    pub progress_line: bool,
 }
 
 impl Default for Appearance {
@@ -60,6 +63,7 @@ impl Default for Appearance {
             background_opacity: 1.0,
             accent: "#ffffff".into(),
             theme: "midnight".into(),
+            progress_line: true,
         }
     }
 }
@@ -531,6 +535,7 @@ impl Appearance {
             ("background_opacity", self.background_opacity.into()),
             ("accent", (&self.accent).into()),
             ("theme", (&self.theme).into()),
+            ("progress_line", self.progress_line.into()),
         ]
     }
 }

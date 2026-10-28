@@ -16,6 +16,8 @@ export interface Appearance {
     accent: string;
     /** One of THEMES in shared/logic/theme.ts; only "custom" uses the colors. */
     theme: string;
+    /** A line along the closed notch for the timer, a countdown, an activity or the song. */
+    progressLine: boolean;
 }
 
 export interface Behavior {
@@ -83,6 +85,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     backgroundOpacity: 1.0,
     accent: '#ffffff',
     theme: 'midnight',
+    progressLine: true,
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
