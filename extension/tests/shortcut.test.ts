@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { shortcutAction, shortcutKeys } from '../src/features/timer/logic/shortcut.js';
+import { shortcutAction } from '../src/features/timer/logic/shortcut.js';
+import { shortcutKeys } from '../src/shared/logic/shortcut.js';
 import { EMPTY_TIMER } from '../src/features/timer/logic/timer.js';
 
 test('the_shortcut_setting_becomes_a_key_list', () => {

@@ -1,6 +1,7 @@
 import type Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -77,7 +78,6 @@ import {
     clockText,
     clockTitle,
     finishedAlert,
-    FocusShortcut,
     FocusToggle,
     gnomeBanners,
     msUntilClockChange,
@@ -92,6 +92,7 @@ import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
+import { Keybinding } from './shared/keybinding.js';
 import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
@@ -161,7 +162,7 @@ class Session {
     private readonly caffeine = new Caffeine(sessionInhibitor(), () => this.notches.forEach((n) => n.onPanelContent()));
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
-    private readonly focusShortcut: FocusShortcut;
+    private readonly focusShortcut: Keybinding;
     private readonly call = new CallMonitor();
     private readonly recording = new ScreenRecording();
     private readonly privacy = new PrivacyMonitor(() => this.onPrivacy());
@@ -280,7 +281,12 @@ class Session {
             resume: () => this.timer.resume(),
             stop: () => this.timer.stop(),
         });
-        this.focusShortcut = new FocusShortcut(extensionSettings, () => this.onFocusShortcut());
+        this.focusShortcut = new Keybinding(
+            extensionSettings,
+            'focus-shortcut',
+            Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
+            () => this.onFocusShortcut(),
+        );
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.buildNotches();
         this.applyClockPosition();
