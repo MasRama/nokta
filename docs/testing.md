@@ -345,6 +345,15 @@ the shelf.
       moves it up, its pin keeps it through `Clear()`, and the back arrow
       goes home. `Pause clipboard` in the right-click menu pauses the
       history, and a copy while paused is not kept.
+- [ ] The smoke test searches: the search button opens a field with the
+      keyboard (168 px with two rows), typing `SECOND` leaves one row
+      (132 px), and Enter copies it and closes the field.
+- [ ] While searching, the notch stays open with the pointer away; a click
+      outside it closes the field, and the notch closes after
+      `close_delay_ms`. Escape closes the field; with the pointer still on
+      the notch, the page stays.
+- [ ] A search with no match says `No match`. `Café` is found with `cafe`;
+      `picture` finds every picture.
 - [ ] Copy a PNG with `St.Clipboard.set_content(..., 'image/png', bytes)`:
       the row shows `Picture · W × H` with its thumbnail, a file in
       `build/devshell/runtime/nokta/clipboard/`. Removing the entry deletes

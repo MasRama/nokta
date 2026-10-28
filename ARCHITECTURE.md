@@ -77,7 +77,11 @@ docs/               manual test checklist, screenshots
   `monitor-notch.ts` also puts the shelf's row in the panel and in the open
   player, since `panel` cannot import `shelf`. In the same way it opens the
   clipboard's list as a page over home (`panel/page.ts` draws the header
-  with the back arrow) when home's `Clipboard` tile is clicked.
+  with the back arrow) when home's `Clipboard` tile is clicked. While the
+  clipboard's search field is open, `monitor-notch.ts` holds the keyboard
+  with `Main.pushModal` on the notch, keeps it open as if the pointer were
+  on it, and lets go on Enter, Escape, a click outside or the notch
+  closing.
   `panel` is home, the open notch's other page (the only one while nothing
   plays; the player's grid button opens it, its music button goes back,
   and closing the notch returns to the player). It only draws its rows (the
