@@ -103,7 +103,9 @@ docs/               manual test checklist, screenshots
   the daemon only publishes its settings. `privacy` (the camera,
   microphone and screen dots, and calls) is the same: it follows the
   indicators GNOME Shell already shows in the top bar, and for a call reads
-  the recording app and the microphone's mute from GNOME's own mixer. `notifications` too: it wraps
+  the recording app and the microphone's mute from GNOME's own mixer. A
+  screen recording is followed and stopped through GNOME's own screenshot
+  UI (`Main.screenshotUI`). `notifications` too: it wraps
   GNOME's `MessageTray._showNotification`, so the notch only gets the
   banners GNOME has already decided to show. A banner from GNOME's
   screenshot source with an image becomes a screenshot preview; its file
