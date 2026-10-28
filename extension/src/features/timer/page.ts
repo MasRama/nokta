@@ -3,6 +3,7 @@ import St from 'gi://St';
 
 import { withAlpha } from '../../shared/logic/color.js';
 import { TIMER_PRESETS } from './logic/clocks.js';
+import { iconFor } from '../../shared/icons.js';
 
 export interface TimerPageHandlers {
     countdown(minutes: number): void;
@@ -42,7 +43,7 @@ export class TimerPage {
             layout.attach(button, i % COLUMNS, Math.floor(i / COLUMNS), 1, 1);
         });
         const box = new St.BoxLayout({ style_class: 'nokta-timer-stopwatch', x_align: Clutter.ActorAlign.CENTER });
-        box.add_child(new St.Icon({ icon_name: 'media-playback-start-symbolic', style_class: 'nokta-button-icon' }));
+        box.add_child(new St.Icon({ gicon: iconFor('media-playback-start-symbolic'), style_class: 'nokta-button-icon' }));
         box.add_child(new St.Label({ text: 'Stopwatch', y_align: Clutter.ActorAlign.CENTER }));
         const used = TIMER_PRESETS.length;
         layout.attach(

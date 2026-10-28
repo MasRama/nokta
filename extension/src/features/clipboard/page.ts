@@ -16,6 +16,7 @@ import {
     SEARCH_HEIGHT,
     type ClipboardEntry,
 } from './logic/entries.js';
+import { iconFor } from '../../shared/icons.js';
 
 export interface ClipboardPageHandlers {
     copy(id: string): void;
@@ -61,7 +62,7 @@ export class ClipboardPage {
             can_focus: true,
             height: SEARCH_HEIGHT,
             visible: false,
-            primary_icon: new St.Icon({ icon_name: 'edit-find-symbolic', style_class: 'nokta-clip-search-icon' }),
+            primary_icon: new St.Icon({ gicon: iconFor('edit-find-symbolic'), style_class: 'nokta-clip-search-icon' }),
         });
         this.search.clutter_text.connect('text-changed', () => this.onQuery());
         this.search.clutter_text.connect('activate', () => this.copyFirstMatch());
@@ -158,7 +159,7 @@ export class ClipboardPage {
         this.list.destroy_all_children();
         // Paused shows the way back: a play button in the accent.
         const pauseIcon = this.pauseButton.child as St.Icon;
-        pauseIcon.icon_name = this.paused ? 'media-playback-start-symbolic' : 'media-playback-pause-symbolic';
+        pauseIcon.gicon = iconFor(this.paused ? 'media-playback-start-symbolic' : 'media-playback-pause-symbolic');
         pauseIcon.style = this.paused ? `color: ${this.accent};` : '';
         this.pauseButton.opacity = this.paused ? 255 : 150;
         const shown = this.shown();
@@ -236,7 +237,7 @@ export class ClipboardPage {
         }
         return new St.Icon({
             style_class: 'nokta-clip-icon',
-            icon_name: entry.kind === 'image' ? 'image-x-generic-symbolic' : 'edit-paste-symbolic',
+            gicon: iconFor(entry.kind === 'image' ? 'nokta-image' : 'nokta-text'),
             y_align: Clutter.ActorAlign.CENTER,
         });
     }
@@ -244,7 +245,7 @@ export class ClipboardPage {
     private iconButton(icon: string, onClick: () => void): St.Button {
         const button = new St.Button({
             style_class: 'nokta-button nokta-clip-button',
-            child: new St.Icon({ icon_name: icon, style_class: 'nokta-clip-button-icon' }),
+            child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-clip-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });

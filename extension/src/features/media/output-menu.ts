@@ -1,10 +1,10 @@
-import Gio from 'gi://Gio';
 import St from 'gi://St';
 import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import { outputIcon, outputLabel, type AudioOutput } from './logic/outputs.js';
+import { iconFor } from '../../shared/icons.js';
 
 export interface OutputMenuHandlers {
     select(id: number): void;
@@ -44,7 +44,7 @@ export class OutputMenu {
         if (this.gone) return;
         this.menu.removeAll();
         for (const output of outputs) {
-            const icon = new Gio.ThemedIcon({ name: outputIcon(output) });
+            const icon = iconFor(outputIcon(output));
             const item = new PopupMenu.PopupImageMenuItem(outputLabel(output), icon);
             item.setOrnament(output.id === activeId ? PopupMenu.Ornament.CHECK : PopupMenu.Ornament.NONE);
             item.connect('activate', () => this.handlers.select(output.id));

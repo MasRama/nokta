@@ -3,6 +3,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
+import { iconFor } from '../../shared/icons.js';
 
 /**
  * A page that a home tile opens: a back arrow, its title and its own
@@ -16,7 +17,7 @@ export class SubPage {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-subpage' }));
         const back = new St.Button({
             style_class: 'nokta-button nokta-subpage-back',
-            child: new St.Icon({ icon_name: 'go-previous-symbolic', style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor('go-previous-symbolic'), style_class: 'nokta-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });

@@ -1,6 +1,7 @@
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
+import { iconFor } from '../../shared/icons.js';
 
 /** The track's cover as a rounded square, or a note icon when there is none. */
 export class Cover {
@@ -11,7 +12,7 @@ export class Cover {
         private readonly size: number,
         private readonly radius: number,
     ) {
-        this.icon = new St.Icon({ icon_name: 'audio-x-generic-symbolic', icon_size: Math.round(size / 2) });
+        this.icon = new St.Icon({ gicon: iconFor('audio-x-generic-symbolic'), icon_size: Math.round(size / 2) });
         this.actor = new St.Bin({
             style_class: 'nokta-cover',
             width: size,

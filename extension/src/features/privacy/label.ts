@@ -2,6 +2,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import { CALL_COLORS, RECORDING_COLOR } from './logic/call.js';
+import { iconFor } from '../../shared/icons.js';
 
 /** The closed notch's call: a microphone, red while muted, and how long it has been on. */
 export class CallLabel {
@@ -23,7 +24,7 @@ export class CallLabel {
 
     update(text: string, muted: boolean): void {
         this.label.text = text;
-        this.icon.icon_name = muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic';
+        this.icon.gicon = iconFor(muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic');
         this.icon.style = `color: ${muted ? CALL_COLORS.muted : CALL_COLORS.live};`;
     }
 

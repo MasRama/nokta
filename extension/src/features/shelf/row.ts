@@ -1,11 +1,11 @@
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import St from 'gi://St';
 
 import type { ShelfItem } from './logic/items.js';
 import { CLOSE_SIZE, itemRects, SHELF_ROW_HEIGHT, type Hit, type SlotRect } from './logic/layout.js';
+import { iconFor } from '../../shared/icons.js';
 
 export const SHELF_ICON = 'folder-documents-symbolic';
 const FILE_ICON_SIZE = 32;
@@ -39,7 +39,7 @@ export class ShelfRow {
         });
         this.close = new St.Icon({
             style_class: 'nokta-shelf-close',
-            gicon: new Gio.ThemedIcon({ name: 'window-close-symbolic' }),
+            gicon: iconFor('window-close-symbolic'),
             width: CLOSE_SIZE,
             height: CLOSE_SIZE,
             visible: false,
@@ -126,7 +126,7 @@ export class ShelfRow {
         });
         box.add_child(
             new St.Icon({
-                gicon: new Gio.ThemedIcon({ name: SHELF_ICON }),
+                gicon: iconFor(SHELF_ICON),
                 icon_size: STACK_ICON_SIZE,
                 y_align: Clutter.ActorAlign.CENTER,
             }),
@@ -158,7 +158,7 @@ export class ShelfRow {
             });
         }
         return new St.Icon({
-            gicon: new Gio.ThemedIcon({ name: item.icon }),
+            gicon: iconFor(item.icon),
             fallback_icon_name: 'application-x-generic',
             icon_size: FILE_ICON_SIZE,
             x_expand: true,
@@ -184,7 +184,7 @@ export class ShelfBadge {
         this.actor.add_child(
             new St.Icon({
                 style_class: 'nokta-shelf-badge-icon',
-                gicon: new Gio.ThemedIcon({ name: SHELF_ICON }),
+                gicon: iconFor(SHELF_ICON),
                 y_align: Clutter.ActorAlign.CENTER,
             }),
         );

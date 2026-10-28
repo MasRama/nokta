@@ -1,0 +1,128 @@
+/** Nokta's own symbolic icons, as `icons/nokta-<name>-symbolic.svg`. */
+export const NOKTA_ICONS = [
+    'play',
+    'pause',
+    'previous',
+    'next',
+    'shuffle',
+    'repeat',
+    'repeat-one',
+    'stop',
+    'record',
+    'close',
+    'back',
+    'chevron-left',
+    'chevron-right',
+    'chevron-up',
+    'chevron-down',
+    'plus',
+    'minus',
+    'home',
+    'pin',
+    'search',
+    'clear',
+    'check',
+    'error',
+    'sync',
+    'mic',
+    'mic-off',
+    'bell',
+    'bell-off',
+    'dark-style',
+    'night-light',
+    'alarm',
+    'focus',
+    'caffeine',
+    'timer',
+    'settings',
+    'screenshot',
+    'calendar',
+    'clipboard',
+    'text',
+    'link',
+    'image',
+    'music',
+    'headphones',
+    'speaker',
+    'volume-0',
+    'volume-1',
+    'volume-2',
+    'volume-3',
+    'brightness',
+    'keyboard',
+] as const;
+export type NoktaIcon = (typeof NOKTA_ICONS)[number];
+
+/** GNOME's icon names, without `-symbolic`, that Nokta draws in its own hand. */
+const FROM_GNOME: Record<string, NoktaIcon> = {
+    'media-playback-start': 'play',
+    'media-playback-pause': 'pause',
+    'media-skip-backward': 'previous',
+    'media-skip-forward': 'next',
+    'media-playlist-shuffle': 'shuffle',
+    'media-playlist-repeat': 'repeat',
+    'media-playlist-repeat-song': 'repeat-one',
+    'media-playback-stop': 'stop',
+    'media-record': 'record',
+    'screencast-recorded': 'record',
+    'window-close': 'close',
+    'go-previous': 'back',
+    'pan-start': 'chevron-left',
+    'pan-end': 'chevron-right',
+    'go-up': 'chevron-up',
+    'go-down': 'chevron-down',
+    'list-add': 'plus',
+    'list-remove': 'minus',
+    'view-app-grid': 'home',
+    'view-pin': 'pin',
+    'edit-find': 'search',
+    'edit-clear-all': 'clear',
+    'object-select': 'check',
+    'dialog-error': 'error',
+    'emblem-synchronizing': 'sync',
+    'audio-input-microphone': 'mic',
+    'microphone-disabled': 'mic-off',
+    'microphone-sensitivity-muted': 'mic-off',
+    'microphone-sensitivity-low': 'mic',
+    'microphone-sensitivity-medium': 'mic',
+    'microphone-sensitivity-high': 'mic',
+    'preferences-system-notifications': 'bell',
+    'notifications-disabled': 'bell-off',
+    'dark-mode': 'dark-style',
+    'night-light': 'night-light',
+    alarm: 'alarm',
+    'emblem-system': 'settings',
+    'preferences-system': 'settings',
+    'camera-photo': 'screenshot',
+    screenshooter: 'screenshot',
+    'screenshot-recorded': 'screenshot',
+    'x-office-calendar': 'calendar',
+    'edit-paste': 'clipboard',
+    'image-x-generic': 'image',
+    'audio-x-generic': 'music',
+    'audio-headphones': 'headphones',
+    'audio-speakers': 'speaker',
+    'audio-volume-muted': 'volume-0',
+    'audio-volume-low': 'volume-1',
+    'audio-volume-medium': 'volume-2',
+    'audio-volume-high': 'volume-3',
+    'audio-volume-overamplified': 'volume-3',
+    'display-brightness': 'brightness',
+    'input-keyboard': 'keyboard',
+};
+
+const OWN = new Set<string>(NOKTA_ICONS);
+
+/**
+ * The Nokta icon to draw for `name`: one of Nokta's own (`nokta-focus`) or a
+ * GNOME name it redraws (`media-playback-start-symbolic`), else null for an
+ * icon that stays the system's (weather, files, apps).
+ */
+export function noktaIconName(name: string): NoktaIcon | null {
+    const bare = name.endsWith('-symbolic') ? name.slice(0, -'-symbolic'.length) : name;
+    if (bare.startsWith('nokta-')) {
+        const own = bare.slice('nokta-'.length);
+        return OWN.has(own) ? (own as NoktaIcon) : null;
+    }
+    return FROM_GNOME[bare] ?? null;
+}

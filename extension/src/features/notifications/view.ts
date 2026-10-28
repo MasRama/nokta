@@ -6,6 +6,8 @@ import St from 'gi://St';
 import { TintedButton } from '../../shared/button.js';
 import { setVertical } from '../../shared/compat.js';
 import { MAX_BUTTONS } from './logic/actions.js';
+import { iconFor } from '../../shared/icons.js';
+import { chromeIcon } from '../../shared/icons.js';
 
 /** The second line is dimmed next to the title. */
 const DETAIL_OPACITY = 180;
@@ -79,7 +81,7 @@ export class NotificationView {
             style_class: 'nokta-notification-close',
             child: new St.Icon({
                 style_class: 'nokta-notification-close-icon',
-                gicon: new Gio.ThemedIcon({ name: 'window-close-symbolic' }),
+                gicon: iconFor('window-close-symbolic'),
             }),
             y_align: Clutter.ActorAlign.CENTER,
             opacity: CLOSE_OPACITY,
@@ -103,7 +105,7 @@ export class NotificationView {
     /** `buttons` are the labels of its actions' buttons, at most MAX_BUTTONS; `badge` the stacked count. */
     show(title: string, detail: string, icon: Gio.Icon | null, buttons: readonly string[], badge: string | null): void {
         // The typings omit that gicon is nullable; null leaves the slot empty.
-        this.icon.gicon = icon as Gio.Icon;
+        this.icon.gicon = chromeIcon(icon) as Gio.Icon;
         this.icon.visible = icon !== null;
         this.badge.visible = badge !== null;
         this.badge.text = badge ?? '';

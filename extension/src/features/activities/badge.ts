@@ -1,8 +1,8 @@
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import { activityIcon, progressLabel, type Activity } from './logic/activities.js';
+import { iconFor } from '../../shared/icons.js';
 
 const PULSE_MS = 900;
 
@@ -31,7 +31,7 @@ export class ActivityBadge {
     }
 
     update(activity: Activity): void {
-        this.icon.gicon = new Gio.ThemedIcon({ name: activityIcon(activity.icon) });
+        this.icon.gicon = iconFor(activityIcon(activity.icon));
         const label = progressLabel(activity.progress);
         this.label.text = label ?? '';
         this.label.visible = label !== null;

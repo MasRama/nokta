@@ -6,6 +6,7 @@ import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 import { Listeners } from '../../shared/listeners.js';
 import { callingStream, callTitle, type RecordingStream } from './logic/call.js';
+import { iconFor } from '../../shared/icons.js';
 
 const MICROPHONE_ICON = 'audio-input-microphone-symbolic';
 
@@ -60,7 +61,7 @@ export class CallMonitor {
         const iconName = stream?.iconName || MICROPHONE_ICON;
         return {
             title: callTitle(app?.get_name() ?? null, stream),
-            icon: app?.get_icon() ?? new Gio.ThemedIcon({ name: iconName }),
+            icon: app?.get_icon() ?? iconFor(iconName),
             startedUs: this.startedUs,
             muted: this.source?.is_muted ?? false,
         };
