@@ -1,9 +1,11 @@
 import type Clutter from 'gi://Clutter';
-import type Gio from 'gi://Gio';
+import Gio from 'gi://Gio';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { replaceMethod } from '../../shared/patch.js';
 import type { Restore } from '../../shared/topbar.js';
+import type { BannerShape } from './logic/screenshot.js';
 
 /** The parts of ui/messageTray.js Notification used here. */
 export interface TrayNotification {
@@ -13,6 +15,8 @@ export interface TrayNotification {
     gicon: Gio.Icon | null;
     source: { title: string | null; icon: Gio.Icon | null } | null;
     acknowledged: boolean;
+    /** Its buttons; GNOME 46 and later. */
+    actions?: ReadonlyArray<{ activate(): void }>;
     activate(): void;
     playSound?(): void;
     connect(signal: 'destroy', callback: () => void): number;
@@ -106,4 +110,30 @@ export function openMessageList(): Restore | null {
         if (id && menu.isOpen) menu.close();
         restore();
     };
+}
+
+/** What isScreenshotBanner needs to know about a banner. */
+export function bannerShape(notification: TrayNotification): BannerShape {
+    const icon = notification.source?.icon;
+    const sourceIcon = icon instanceof Gio.ThemedIcon ? (icon.get_names()[0] ?? null) : null;
+    // GNOME draws the screenshot itself into the notification's image.
+    return { sourceIcon, hasImage: notification.gicon instanceof St.ImageContent };
+}
+
+/** The parts of ui/screenshot.js ScreenshotUI used here. */
+interface ScreenshotUI {
+    connect(signal: 'screenshot-taken', callback: (ui: unknown, file: Gio.File) => void): number;
+    disconnect(id: number): void;
+}
+
+/**
+ * Calls `onFile` with the URI of each screenshot GNOME's screenshot UI
+ * saves. Its direct shortcuts save without saying so. Returns null when
+ * this GNOME has no screenshot UI.
+ */
+export function watchScreenshots(onFile: (uri: string) => void): Restore | null {
+    const ui = (Main as unknown as { screenshotUI?: ScreenshotUI | null }).screenshotUI;
+    if (!ui || typeof ui.connect !== 'function') return null;
+    const id = ui.connect('screenshot-taken', (_ui, file) => onFile(file.get_uri()));
+    return () => ui.disconnect(id);
 }

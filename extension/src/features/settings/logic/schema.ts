@@ -244,6 +244,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                     notifications('in_notch', 'Notifications in the notch', bool(), "Instead of GNOME's banner"),
                     notifications('duration_ms', 'How long', int(1000, 30000, 500), 'Milliseconds; hovering keeps it open'),
                     notifications('show_body', 'Show the message', bool(), 'Off shows only who sent it and the app'),
+                    behavior(
+                        'screenshot_preview',
+                        'Screenshot previews',
+                        bool(),
+                        'Open a new screenshot, show it in Files or keep it on the shelf',
+                    ),
                 ],
             },
             {

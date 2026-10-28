@@ -81,6 +81,8 @@ pub struct Behavior {
     pub live_activities: bool,
     /// Park files on the notch by dropping them there.
     pub file_shelf: bool,
+    /// A large preview with buttons in place of the screenshot banner.
+    pub screenshot_preview: bool,
 }
 
 impl Default for Behavior {
@@ -101,6 +103,7 @@ impl Default for Behavior {
             privacy_dots: true,
             live_activities: true,
             file_shelf: true,
+            screenshot_preview: true,
         }
     }
 }
@@ -508,6 +511,7 @@ impl Behavior {
             ("privacy_dots", self.privacy_dots.into()),
             ("live_activities", self.live_activities.into()),
             ("file_shelf", self.file_shelf.into()),
+            ("screenshot_preview", self.screenshot_preview.into()),
         ]
     }
 }

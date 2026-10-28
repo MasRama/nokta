@@ -1,3 +1,4 @@
+import type Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -24,11 +25,17 @@ import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
 import {
+    bannerShape,
+    isScreenshotBanner,
     notificationCount,
     notificationLines,
     openMessageList,
+    screenshotButtons,
+    ScreenshotFiles,
     takeOverBanners,
     takesBanner,
+    watchScreenshots,
+    type ScreenshotButton,
     type TrayNotification,
 } from './features/notifications/index.js';
 import {
@@ -137,9 +144,18 @@ class Session {
         overRow: (notch, rect) => this.shelfCoordinator.overRow(notch, rect),
         rowGone: (notch) => this.shelfCoordinator.rowGone(notch),
     };
-    /** The notification in a notch, watched so the notch closes when it goes away. */
-    private shownNotification: { notification: TrayNotification; notch: MonitorNotch; destroyId: number } | null =
-        null;
+    /**
+     * The notification in a notch, watched so the notch closes when it goes
+     * away, and the file of a screenshot preview once it is known.
+     */
+    private shownNotification: {
+        notification: TrayNotification;
+        notch: MonitorNotch;
+        destroyId: number;
+        file: string | null;
+    } | null = null;
+    private readonly screenshotFiles = new ScreenshotFiles();
+    private readonly unwatchScreenshots: Restore | null;
 
     constructor(extensionSettings: Gio.Settings, extensionPath: string) {
         this.shelfCoordinator = new ShelfCoordinator(`${extensionPath}/shelf-helper/main.js`, () => this.notches);
@@ -153,6 +169,7 @@ class Session {
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
+        this.unwatchScreenshots = watchScreenshots((uri) => this.onScreenshotSaved(uri));
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
             pause: () => this.timer.pause(),
@@ -210,6 +227,7 @@ class Session {
         this.capsLock = null;
         this.restoreBanners?.();
         this.restoreBanners = null;
+        this.unwatchScreenshots?.();
         this.releaseNotification();
         this.restoreMessageList?.();
         this.restoreMessageList = null;
@@ -529,21 +547,57 @@ class Session {
             if (shown.notch !== notch) shown.notch.hideNotification();
             this.releaseNotification();
         }
+        const screenshot = this.settings.behavior.screenshotPreview && isScreenshotBanner(bannerShape(notification));
         if (!this.shownNotification) {
             const destroyId = notification.connect('destroy', () => {
                 notch.hideNotification();
                 this.releaseNotification();
             });
-            this.shownNotification = { notification, notch, destroyId };
+            const file = screenshot ? this.screenshotFiles.previewed(Date.now()) : null;
+            this.shownNotification = { notification, notch, destroyId, file };
         }
-        notch.showNotification(title, detail, icon, durationMs, () => notification.activate());
+        if (screenshot) {
+            // The image GNOME made for the notification is a Clutter.Content.
+            const image = notification.gicon as unknown as Clutter.Content;
+            const press = (button: ScreenshotButton) => this.onScreenshotPress(notification, button);
+            notch.showScreenshot(image, title, this.screenshotButtons(), durationMs, press);
+        } else {
+            notch.showNotification(title, detail, icon, durationMs, () => notification.activate());
+        }
         return true;
+    }
+
+    /** The buttons of the screenshot preview that shows. */
+    private screenshotButtons(): ScreenshotButton[] {
+        const shown = this.shownNotification;
+        return screenshotButtons({
+            saved: (shown?.notification.actions?.length ?? 0) > 0,
+            file: !!shown?.file,
+            shelf: this.settings.behavior.fileShelf,
+        });
+    }
+
+    /** GNOME's screenshot UI saved a file: the preview of it can now keep it on the shelf. */
+    private onScreenshotSaved(uri: string): void {
+        const shown = this.shownNotification;
+        if (!this.screenshotFiles.saved(uri, Date.now()) || !shown) return;
+        shown.file = uri;
+        shown.notch.setScreenshotButtons(this.screenshotButtons());
+    }
+
+    private onScreenshotPress(notification: TrayNotification, button: ScreenshotButton): void {
+        const file = this.shownNotification?.notification === notification ? this.shownNotification.file : null;
+        // GNOME opens the file and shows it in Files, and then removes its notification.
+        if (button === 'open') notification.activate();
+        else if (button === 'files') notification.actions?.[0]?.activate();
+        else if (file) this.shelf.add([file]);
     }
 
     private releaseNotification(): void {
         const shown = this.shownNotification;
         if (!shown) return;
         this.shownNotification = null;
+        this.screenshotFiles.ended();
         shown.notification.disconnect(shown.destroyId);
     }
 

@@ -181,6 +181,45 @@
     font-size: 12px;
 }
 
+.nokta-screenshot {
+    padding: 0 16px;
+    spacing: 14px;
+}
+
+.nokta-screenshot-thumb {
+    border-radius: 8px;
+}
+
+.nokta-screenshot-side {
+    spacing: 8px;
+}
+
+.nokta-screenshot-title {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.nokta-screenshot-buttons {
+    spacing: 6px;
+}
+
+.nokta-screenshot-button {
+    border-radius: 9px;
+    padding: 5px 10px;
+}
+
+.nokta-screenshot-button-box {
+    spacing: 6px;
+}
+
+.nokta-screenshot-button-icon {
+    icon-size: 14px;
+}
+
+.nokta-screenshot-button-label {
+    font-size: 12px;
+}
+
 .nokta-panel {
     padding: 14px 18px 14px 18px;
     spacing: 10px;

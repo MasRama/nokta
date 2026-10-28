@@ -170,6 +170,7 @@ fn activities_defaults_and_limits() {
     assert_eq!(Config::default().activities.stale_minutes, 30);
     assert!(Config::default().behavior.live_activities);
     assert!(Config::default().behavior.file_shelf);
+    assert!(Config::default().behavior.screenshot_preview);
     for bad in ["stale_minutes = 0", "stale_minutes = 1441"] {
         let err = parse(&format!("[activities]\n{bad}\n")).unwrap_err();
         assert!(err.message.contains("activities.stale_minutes"), "{err}");
@@ -343,6 +344,7 @@ fn behavior_entries_have_all_keys() {
             "osd_duration_ms",
             "privacy_dots",
             "replace_osd",
+            "screenshot_preview",
             "show_caps_lock",
             "show_clock",
             "show_lyrics"
