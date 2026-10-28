@@ -1,4 +1,4 @@
-import { appearanceFrom, behaviorFrom, lyricsFrom, notificationsFrom, timerFrom } from './parse.js';
+import { activitiesFrom, appearanceFrom, behaviorFrom, lyricsFrom, notificationsFrom, timerFrom } from './parse.js';
 
 /**
  * Every row of the settings window, in order. Adding a setting is one line
@@ -14,7 +14,7 @@ export type RowKind =
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications';
+export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities';
 
 export interface Row {
     table: Table;
@@ -196,6 +196,24 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Live activities',
+                rows: [
+                    behavior(
+                        'live_activities',
+                        'Show live activities',
+                        bool(),
+                        'Builds, downloads and anything run with the nokta command',
+                    ),
+                    {
+                        table: 'activities',
+                        key: 'stale_minutes',
+                        title: 'End after no update for',
+                        subtitle: 'Minutes',
+                        kind: int(1, 1440),
+                    },
+                ],
+            },
+            {
                 title: 'Device alerts',
                 rows: [
                     behavior('device_alerts', 'Show device alerts', bool(), 'Bluetooth audio, charger and battery'),
@@ -240,6 +258,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     lyrics: lyricsFrom,
     timer: timerFrom,
     notifications: notificationsFrom,
+    activities: activitiesFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

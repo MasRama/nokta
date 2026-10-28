@@ -129,6 +129,25 @@ wait_for "a focus timer replaces the clock" \
 "$HERE/timer.sh" stop
 wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock') && !shown('nokta-timer')" 10
 
+# A live activity takes the clock's place and gets a row in the panel; its
+# end shows like a device alert.
+"$HERE/activity.sh" set smoke "Smoke build" "Compiling" 0.4
+wait_for "a live activity replaces the clock with its percentage" \
+    "$FIND shown('nokta-activity-badge') && !shown('nokta-clock') && one('nokta-activity-badge-label').text === '40%'" 10
+"$HERE/shot.sh" smoke-activity > /dev/null
+"$HERE/hover.sh" on > /dev/null
+# 32 px closed, 58 px for the date and the buttons, 46 px for one activity.
+wait_for "the panel grows a row for the activity" \
+    "$FIND shown('nokta-panel-activity') && one('nokta-panel-activity-title').text === 'Smoke build' && Math.round(one('nokta-body').height) === 136" 5
+"$HERE/shot.sh" smoke-activity-panel > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the panel closes over the activity" "$FIND shown('nokta-activity-badge') && width() === 180" 5
+"$HERE/activity.sh" end smoke failed "Disk full"
+wait_for "the end of the activity shows as an urgent alert" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke build' && one('nokta-osd-detail').text === 'Disk full' && one('nokta-osd').has_style_class_name('nokta-osd-urgent')" 5
+"$HERE/shot.sh" smoke-activity-ended > /dev/null
+wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
+
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10

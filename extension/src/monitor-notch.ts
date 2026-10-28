@@ -4,16 +4,24 @@ import GLib from 'gi://GLib';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
 import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { NotificationTimer, NotificationView } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
-import { IdlePanel, type PanelContent } from './features/panel/index.js';
+import {
+    IdlePanel,
+    MAX_PANEL_ACTIVITIES,
+    panelHeight,
+    type PanelContent,
+    type PanelRow,
+} from './features/panel/index.js';
 import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
 import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { accentFor, withAlpha } from './shared/logic/color.js';
+import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
@@ -21,10 +29,10 @@ import { type MonitorArea, Notch } from './shared/notch.js';
 import { glibSchedule } from './shared/schedule.js';
 
 const TICK_MS = 250;
+/** The elapsed times in the open panel change once a second. */
+const PANEL_TICK_MS = 1000;
 /** A notification is two lines tall: this much taller than the closed notch. */
 const NOTIFICATION_EXTRA_HEIGHT = 28;
-/** The idle panel: the date and a row of buttons under the closed notch's height. */
-const PANEL_EXTRA_HEIGHT = 58;
 
 /**
  * What the notch draws: the state machine's mode (the idle panel when it
@@ -45,6 +53,7 @@ export interface NotchSources {
     media: MediaClient;
     lyrics: LyricsClient;
     timer: TimerClient;
+    activities: ActivitiesClient;
     privacy: PrivacyMonitor;
     panel: PanelSource;
 }
@@ -56,11 +65,13 @@ export interface NotchSources {
 export class MonitorNotch {
     private readonly notch: Notch;
     private readonly clock = new IdleClock();
-    /** The clock, or the timer while one is set. */
+    /** The clock, or the indicator: the timer while one is set, else the newest activity. */
     private readonly idle = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly idleTimer = new TimerLabel();
     private readonly collapsedTimer = new TimerLabel();
-    private timerShown = false;
+    private readonly idleBadge = new ActivityBadge();
+    private readonly collapsedBadge = new ActivityBadge();
+    private indicator: Indicator | null = null;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
     private readonly lyricLine = new LyricLine();
@@ -83,6 +94,9 @@ export class MonitorNotch {
     private drawn: Drawn = 'idle';
     private tickId = 0;
     private lyricTimerId = 0;
+    private panelTickId = 0;
+    /** The panel's rows, as last shown. */
+    private panelRows: PanelRow[] = ['date', 'buttons'];
 
     constructor(
         readonly monitorIndex: number,
@@ -97,7 +111,9 @@ export class MonitorNotch {
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
         this.idle.add_child(this.idleTimer.actor);
+        this.idle.add_child(this.idleBadge.actor);
         this.idleTimer.actor.hide();
+        this.idleBadge.actor.hide();
         this.views = {
             idle: this.idle,
             collapsed: this.collapsed.actor,
@@ -144,6 +160,7 @@ export class MonitorNotch {
         this.applyOsdColors();
         this.onMedia();
         this.onTimer();
+        this.onActivities();
         this.onPrivacy();
     }
 
@@ -169,6 +186,8 @@ export class MonitorNotch {
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
         this.collapsedTimer.destroy();
+        this.idleBadge.destroy();
+        this.collapsedBadge.destroy();
         this.clock.destroy();
         this.idle.destroy();
         this.lyricLine.destroy();
@@ -206,13 +225,20 @@ export class MonitorNotch {
             this.idleTimer.update(text, color, paused);
             this.collapsedTimer.update(text, color, paused);
         }
-        if (this.drawn === 'panel') this.idlePanel.show(this.sources.panel.content());
-        if (active === this.timerShown) return;
-        this.timerShown = active;
-        this.idleTimer.actor.visible = active;
-        this.clock.actor.visible = !active;
-        this.collapsed.setAside(active ? this.collapsedTimer.actor : null);
-        this.collapsed.setActive(this.drawn === 'collapsed', this.sources.media.snapshot());
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
+    }
+
+    /** The running activities changed, or the live_activities setting. */
+    onActivities(): void {
+        if (this.destroyed) return;
+        const newest = this.liveActivities()[0];
+        if (newest) {
+            this.idleBadge.update(newest);
+            this.collapsedBadge.update(newest);
+        }
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
     }
 
     onLyrics(): void {
@@ -230,6 +256,7 @@ export class MonitorNotch {
         this.applyOsdColors();
         this.applyClockOptions();
         this.onMedia();
+        this.onActivities();
         this.onPrivacy();
     }
 
@@ -270,6 +297,58 @@ export class MonitorNotch {
 
     // State
 
+    private liveActivities(): readonly Activity[] {
+        return this.sources.settings.behavior.liveActivities ? this.sources.activities.list() : [];
+    }
+
+    /** The one spot in the closed notch: the clock or the indicator in idle, next to the cover while playing. */
+    private applyIndicator(): void {
+        const indicator = chooseIndicator({
+            timer: this.sources.timer.snapshot().state !== 'idle',
+            activity: this.liveActivities().length > 0,
+            shelf: false,
+        });
+        if (indicator !== this.indicator) {
+            this.indicator = indicator;
+            this.clock.actor.visible = indicator === null;
+            this.idleTimer.actor.visible = indicator === 'timer';
+            this.idleBadge.actor.visible = indicator === 'activity';
+            const aside = { timer: this.collapsedTimer.actor, activity: this.collapsedBadge.actor, shelf: null };
+            this.collapsed.setAside(indicator ? aside[indicator] : null);
+            this.collapsed.setActive(this.drawn === 'collapsed', this.sources.media.snapshot());
+        }
+        this.idleBadge.setActive(this.drawn === 'idle' && indicator === 'activity');
+        this.collapsedBadge.setActive(this.drawn === 'collapsed' && indicator === 'activity');
+    }
+
+    /** Draws the panel's content; resizes the notch when its rows change while open. */
+    private refreshPanel(): void {
+        const content = this.sources.panel.content();
+        this.idlePanel.show(content);
+        const rows = panelRowsFor(content);
+        if (rows.join() !== this.panelRows.join()) {
+            this.panelRows = rows;
+            const [width, height] = this.sizeFor('panel');
+            this.idlePanel.actor.set_size(width, height);
+            if (this.drawn === 'panel') this.notch.resizeTo(width, height, 'width');
+        }
+        this.updatePanelTick();
+    }
+
+    /** Once a second while the open panel shows an activity's elapsed time. */
+    private updatePanelTick(): void {
+        const run = this.drawn === 'panel' && this.panelRows.includes('activity');
+        if (run && !this.panelTickId) {
+            this.panelTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PANEL_TICK_MS, () => {
+                this.idlePanel.show(this.sources.panel.content());
+                return GLib.SOURCE_CONTINUE;
+            });
+        } else if (!run && this.panelTickId) {
+            GLib.source_remove(this.panelTickId);
+            this.panelTickId = 0;
+        }
+    }
+
     /** A panel button closes the panel, then acts. */
     private onPanelClick(action: () => void): void {
         this.machine.close();
@@ -304,16 +383,19 @@ export class MonitorNotch {
         const previous = this.drawn;
         if (mode === previous) return;
         this.drawn = mode;
+        // The panel's rows give its height, so draw it before sizing.
+        if (mode === 'panel') this.refreshPanel();
         const [width, height] = this.sizeFor(mode);
         const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'panel' || drawn === 'notification';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
-        if (mode === 'panel') this.idlePanel.show(this.sources.panel.content());
         this.showView(mode);
         this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();
         else this.clock.stop();
         this.collapsed.setActive(mode === 'collapsed', this.sources.media.snapshot());
+        this.applyIndicator();
+        this.updatePanelTick();
         if (mode === 'expanded') {
             this.sources.media.refreshPosition();
             this.tick();
@@ -327,7 +409,7 @@ export class MonitorNotch {
         const a = this.sources.settings.appearance;
         if (mode === 'osd') return [a.osdWidth, a.height];
         if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
-        if (mode === 'panel') return [a.expandedWidth, a.height + PANEL_EXTRA_HEIGHT];
+        if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
         if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight];
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }
@@ -440,7 +522,14 @@ export class MonitorNotch {
     private stopTimers(): void {
         if (this.tickId) GLib.source_remove(this.tickId);
         if (this.lyricTimerId) GLib.source_remove(this.lyricTimerId);
+        if (this.panelTickId) GLib.source_remove(this.panelTickId);
         this.tickId = 0;
         this.lyricTimerId = 0;
+        this.panelTickId = 0;
     }
+}
+
+function panelRowsFor(content: PanelContent): PanelRow[] {
+    const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
+    return ['date', ...Array<PanelRow>(activities).fill('activity'), 'buttons'];
 }

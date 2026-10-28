@@ -1,2 +1,3 @@
 export { notificationsLabel } from './logic/labels.js';
-export { IdlePanel, type PanelContent, type PanelHandlers } from './view.js';
+export { panelHeight, type PanelRow } from './logic/height.js';
+export { IdlePanel, MAX_PANEL_ACTIVITIES, type PanelActivity, type PanelContent, type PanelHandlers } from './view.js';

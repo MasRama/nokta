@@ -55,6 +55,8 @@ tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none 
 tools/devshell/device.sh disconnect
 tools/devshell/timer.sh start focus|break  # noktad's focus timer
 tools/devshell/timer.sh pause|resume|stop
+tools/devshell/activity.sh set ID TITLE DETAIL PROGRESS  # a live activity; PROGRESS -1 = unknown
+tools/devshell/activity.sh end ID ok|failed [MESSAGE]
 tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
 tools/devshell/keys.sh KEY...         # press keys together, e.g. Super_L Alt_L f
@@ -205,6 +207,26 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       `shortcut = ""` frees the keys; `"<Control><Alt>t"` moves them.
 - [ ] The sound *(real session)*; lock the screen while running and unlock:
       the timer went on *(real session)*.
+
+### Live activities (0.5 spec, part 1)
+
+- [ ] `activity.sh set b Backup Photos 0.4`: an icon and `40%` replace the
+      clock; while playing they replace the equalizer. A focus timer wins
+      over it.
+- [ ] `activity.sh set c "cargo build" "" -1`: the newest one shows, its
+      icon pulsing slowly.
+- [ ] Hover: the panel lists up to three, newest first, each with a bar
+      (none while unknown) and an elapsed time that ticks each second. The
+      panel grows and shrinks as they come and go.
+- [ ] `activity.sh end b ok`: a check mark, `Backup`, `Done in …`;
+      `activity.sh end c failed "Disk full"` in red.
+- [ ] With `stale_minutes = 1`, one not set again ends as failed with `No
+      update for 1 minute`.
+- [ ] `live_activities = false` while running: nothing shows; `Set` still
+      works.
+- [ ] After `. tools/devshell/env.sh`, `target/release/nokta run -- sleep 5`:
+      `sleep 5` while it runs, then `Done in 5 s`. Again in a real session
+      *(real session)*.
 
 ### Privacy dots
 
