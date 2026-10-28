@@ -29,6 +29,11 @@ export class CollapsedMediaView {
         this.equalizer.setPlaying(!this.aside && snapshot.playbackStatus === 'Playing');
     }
 
+    /** Moves the cover right to `px` from the left edge, to clear the privacy dots; 0 for the usual place. */
+    setInset(px: number): void {
+        this.actor.style = px > 0 ? `padding-left: ${px}px;` : '';
+    }
+
     /** Stops the equalizer while the view is not on screen. */
     setActive(active: boolean, snapshot: MediaSnapshot): void {
         this.equalizer.setPlaying(!this.aside && active && snapshot.playbackStatus === 'Playing');

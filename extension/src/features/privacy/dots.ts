@@ -1,32 +1,33 @@
 import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
-import { setVertical } from '../../shared/compat.js';
-import { DOT_COLORS, DOT_GAP, DOT_SIZE, dotsTop, type Dot } from './logic/dots.js';
+import { DOT_COLORS, DOT_GAP, DOT_SIZE, dotsPlace, type Dot } from './logic/dots.js';
 
-/** The dots at the notch's left edge, over every view. */
+/** A row of dots at the closed notch's left edge, over the idle and collapsed views. */
 export class PrivacyDots {
     readonly actor: St.BoxLayout;
     private shown = '';
 
     constructor() {
-        this.actor = setVertical(
-            new St.BoxLayout({
-                style_class: 'nokta-privacy-dots',
-                // A BinLayout honors the alignment only of expanding children.
-                x_expand: true,
-                y_expand: true,
-                x_align: Clutter.ActorAlign.START,
-                y_align: Clutter.ActorAlign.START,
-            }),
-        );
+        this.actor = new St.BoxLayout({
+            style_class: 'nokta-privacy-dots',
+            // A BinLayout honors the alignment only of expanding children.
+            x_expand: true,
+            y_expand: true,
+            x_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.START,
+        });
         this.actor.hide();
     }
 
-    /** `height` is the closed notch's height; the dots stay centered on it. */
-    update(dots: readonly Dot[], height: number): void {
-        const key = `${dots.join()}@${height}`;
-        if (key === this.shown) return;
+    /**
+     * `height` and `cornerRadius` are the closed notch's. Returns where
+     * content beside the dots may start, 0 without dots.
+     */
+    update(dots: readonly Dot[], height: number, cornerRadius: number): number {
+        const place = dotsPlace(height, cornerRadius, dots.length);
+        const key = `${dots.join()}@${height}/${cornerRadius}`;
+        if (key === this.shown) return place.contentLeft;
         this.shown = key;
         this.actor.destroy_all_children();
         for (const dot of dots) {
@@ -40,8 +41,8 @@ export class PrivacyDots {
             );
         }
         // St has no CSS margins; padding places the dots.
-        this.actor.style = `spacing: ${DOT_GAP}px; padding-left: 3px; padding-top: ${dotsTop(height, dots.length)}px;`;
-        this.actor.visible = dots.length > 0;
+        this.actor.style = `spacing: ${DOT_GAP}px; padding-left: ${place.left}px; padding-top: ${place.top}px;`;
+        return place.contentLeft;
     }
 
     destroy(): void {

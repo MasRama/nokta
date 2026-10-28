@@ -54,6 +54,7 @@ export class MonitorNotch {
     private readonly notificationView = new NotificationView(() => this.onNotificationClick());
     private notificationClick: (() => void) | null = null;
     private readonly privacyDots = new PrivacyDots();
+    private privacyCount = 0;
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
     private readonly notificationTimer: NotificationTimer;
@@ -212,7 +213,11 @@ export class MonitorNotch {
     onPrivacy(): void {
         if (this.destroyed) return;
         const { settings, privacy } = this.sources;
-        this.privacyDots.update(dotsFor(privacy.state(), settings.behavior.privacyDots), settings.appearance.height);
+        const { height, cornerRadius } = settings.appearance;
+        const dots = dotsFor(privacy.state(), settings.behavior.privacyDots);
+        this.privacyCount = dots.length;
+        this.collapsed.setInset(this.privacyDots.update(dots, height, cornerRadius));
+        this.showPrivacyDots();
     }
 
     /** `durationMs` replaces osd_duration_ms, for device alerts. */
@@ -242,6 +247,11 @@ export class MonitorNotch {
 
     // State
 
+    /** The dots belong to the closed notch; open, GNOME's own indicators still show. */
+    private showPrivacyDots(): void {
+        this.privacyDots.actor.visible = this.privacyCount > 0 && (this.drawn === 'idle' || this.drawn === 'collapsed');
+    }
+
     private onNotificationClick(): void {
         const click = this.notificationClick;
         this.notificationClick = null;
@@ -269,6 +279,7 @@ export class MonitorNotch {
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
         this.notch.resizeTo(width, height, kind);
         this.showView(mode);
+        this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();
         else this.clock.stop();
         this.collapsed.setActive(mode === 'collapsed', this.sources.media.snapshot());

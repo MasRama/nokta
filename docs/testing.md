@@ -204,10 +204,12 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 `. tools/devshell/env.sh`, then with
 `QS=Main.panel.statusArea.quickSettings`:
 
-- [ ] `shell_eval "$QS._camera._indicator.visible = true"`: a green dot at
-      the left edge of the notch, idle, collapsed and expanded.
+- [ ] `shell_eval "$QS._camera._indicator.visible = true"`: a green dot
+      centered in the notch's rounded left corner, idle and collapsed; the
+      cover moves right to make room. None while expanded.
 - [ ] `shell_eval "$QS._volumeInput._indicator.visible = true"`: an orange
-      dot under the green one; turning both off removes them.
+      dot next to the green one; turning both off removes them and the
+      cover moves back.
 - [ ] `privacy_dots = false` while running: no dots.
 - [ ] A real webcam, a call with the microphone and screen sharing
       *(real session)*.
