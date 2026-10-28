@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0](https://github.com/MasRama/nokta/compare/v0.5.0...v0.6.0) (2026-10-28)
+
+
+### Features
+
+* **clipboard:** keep a history of what you copy, opened from home ([dd00d67](https://github.com/MasRama/nokta/commit/dd00d67e1daa45674af2282cfce3a454859cdf25))
+* **extension:** fade and scale views in from the top of the notch ([af253db](https://github.com/MasRama/nokta/commit/af253db52a0ff2c9deaeeedbbbf3c9e450224aa4))
+* **extension:** resize the notch on springs, width and height together ([8ac0099](https://github.com/MasRama/nokta/commit/8ac009961987ed6d0ac62fecd1dd4332f4f2f93e))
+* **lyrics:** light up the lyric line as it is sung, with the next line under it ([15d5a84](https://github.com/MasRama/nokta/commit/15d5a84cc13a2c48002937cf6bbff362117e0881))
+* **media:** a raised play button filled with the cover's color ([8dc6b5b](https://github.com/MasRama/nokta/commit/8dc6b5bad97c54f5cfea4b0e53d7249b59fd716a))
+* **panel:** a home page with quick toggles, tiles and a right-click menu ([68d2a20](https://github.com/MasRama/nokta/commit/68d2a20ed3d11c54103dc4bbeb722aed4b6760ae))
+* **settings:** `nokta settings` opens the settings window ([9ea0783](https://github.com/MasRama/nokta/commit/9ea0783d2d0a502f7d7fbb713fb52a154cf564d0))
+* **shelf:** show pictures as thumbnails on the shelf and while dragging them ([84fa45e](https://github.com/MasRama/nokta/commit/84fa45ed52eed1439cc10f4b2f0e9e10e68370cb))
+* **themes:** pick the notch's look from five themes ([5b2ac8d](https://github.com/MasRama/nokta/commit/5b2ac8d5f98b83929c7b3900d9418c22611b5400))
+
 ## [0.5.0](https://github.com/MasRama/nokta/compare/v0.4.0...v0.5.0) (2026-10-28)
 
 
