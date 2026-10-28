@@ -150,7 +150,16 @@ docs/               manual test checklist, screenshots
   follows its imports to check. So `features/settings/index.ts` exports no
   actors, and the notch imports the settings page from `settings/page.ts`
   itself. Its rows come from
-  `features/settings/logic/schema.ts`, one line per setting.
+  `features/settings/logic/schema.ts`, one line per setting. The window
+  replaces the content GNOME's dialog gives it with its own: a sidebar of
+  pages with Nokta's icons (`prefs/logic/look.ts`), and Appearance opening
+  on a drawn preview of the notch with a sample song (`prefs/preview.ts`)
+  and the theme gallery (`prefs/themes.ts`), both following each change at
+  once. Its stylesheet (`prefs/logic/style.ts`) is added for the whole
+  display above the user's own `gtk.css`, with every rule scoped to the
+  window's `nokta-prefs` class and literal colors only, so other
+  extensions' windows in the same process keep their look and GNOME 46
+  (no CSS variables) draws it too.
 - In the extension, decisions live in `logic/` folders: plain TypeScript with
   no `gi://` imports, tested with Node. The files around them turn those
   decisions into actors.

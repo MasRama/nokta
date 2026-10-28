@@ -1,11 +1,16 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 
-import { rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
+import { appearanceFrom, rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
+import { pageIcon, previewModel } from './logic/look.js';
+import { PREFS_CLASS, PREFS_CSS } from './logic/style.js';
+import { NotchPreview } from './preview.js';
 import { buildRow, type SettingRow } from './rows.js';
 import { errorMessage, SettingsService } from './service.js';
+import { ThemeGallery } from './themes.js';
 
 /** A change is sent after this long without another one, so a dragged slider sends one value. */
 const SEND_DELAY_MS = 250;
@@ -18,34 +23,74 @@ interface Pending {
     send: () => void;
 }
 
-/** Fills the extension's preferences window with every setting of config.toml. */
-export function fillWindow(window: Adw.PreferencesWindow): void {
+/** Shown until the window is narrower than this; then the sidebar and a page take turns. */
+const COLLAPSE_BELOW = 'max-width: 640sp';
+
+/**
+ * Fills the extension's preferences window with every setting of config.toml,
+ * in a window of Nokta's own: a sidebar with Nokta's pages and icons, and
+ * Appearance opening on a live preview and the theme gallery. `path` is the
+ * extension's folder, for its icons.
+ */
+export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
     const rows: SettingRow[] = [];
     const banners: Adw.PreferencesGroup[] = [];
     const pending = new Map<string, Pending>();
-    const nameOf = (row: Row) => `${row.table}.${row.key}`;
+    /** Appearance values sent but not yet back from the daemon, so the preview shows them at once. */
+    const local = new Map<string, unknown>();
+    /** Sent and answered: the daemon's next values replace these in `local`. */
+    const settled = new Set<string>();
+    const nameOf = (row: Pick<Row, 'table' | 'key'>) => `${row.table}.${row.key}`;
 
-    const toast = (title: string) => window.add_toast(new Adw.Toast({ title, use_markup: false, timeout: 5 }));
+    const overlay = new Adw.ToastOverlay();
+    const toast = (title: string) => overlay.add_toast(new Adw.Toast({ title, use_markup: false, timeout: 5 }));
     const resetRow = resetAllRow(window, () => service.reset(), toast);
+    const unstyle = style(window);
+
+    const preview = new NotchPreview();
+    const gallery = new ThemeGallery((theme) =>
+        queue({ table: 'appearance', key: 'theme' }, new GLib.Variant('s', theme), showLook),
+    );
+    const showLook = () => {
+        const raw = { ...((service.tables.appearance as Record<string, unknown> | undefined) ?? {}) };
+        for (const [name, value] of local) if (name.startsWith('appearance.')) raw[name.slice(11)] = value;
+        const appearance = appearanceFrom(raw);
+        preview.update(previewModel(appearance));
+        gallery.update(appearance);
+    };
 
     const service = new SettingsService(() => {
+        for (const name of settled) local.delete(name);
+        settled.clear();
         for (const banner of banners) banner.visible = !service.available;
         for (const setting of rows) {
             setting.widget.sensitive = service.available;
             // A row the user is still changing keeps their value.
             if (!pending.has(nameOf(setting.row))) setting.show(rowValue(setting.row, service.tables));
         }
+        gallery.widget.sensitive = service.available;
         resetRow.sensitive = service.available;
+        showLook();
     });
 
-    const queue = (setting: SettingRow, value: GLib.Variant) => {
-        const name = nameOf(setting.row);
+    /** Sends `value` once the user stops changing it; `refused` shows the daemon's value again. */
+    const queue = (row: Pick<Row, 'table' | 'key'>, value: GLib.Variant, refused: () => void) => {
+        const name = nameOf(row);
+        local.set(name, value.recursiveUnpack());
+        if (row.table === 'appearance') showLook();
         const send = () => {
             pending.delete(name);
-            service.set(setting.row.table, setting.row.key, value).catch((error) => {
-                toast(errorMessage(error));
-                setting.show(rowValue(setting.row, service.tables));
-            });
+            service
+                .set(row.table, row.key, value)
+                .catch((error) => {
+                    toast(errorMessage(error));
+                    local.delete(name);
+                    refused();
+                    showLook();
+                })
+                .finally(() => {
+                    if (!pending.has(name)) settled.add(name);
+                });
         };
         const old = pending.get(name);
         if (old) GLib.source_remove(old.source);
@@ -56,8 +101,9 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
         pending.set(name, { source, send });
     };
 
+    const stack = new Gtk.Stack({ transition_type: Gtk.StackTransitionType.CROSSFADE });
     for (const spec of SETTINGS_PAGES) {
-        const page = new Adw.PreferencesPage({ name: spec.name, title: spec.title, icon_name: spec.icon });
+        const page = new Adw.PreferencesPage({ name: spec.name, title: spec.title });
         // Shown only while the daemon is away; an empty group would still take space.
         const banner = new Adw.PreferencesGroup();
         const notice = new Adw.Banner({
@@ -70,10 +116,15 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
         banners.push(banner);
         page.add(banner);
 
+        if (spec.name === 'appearance') page.add(lookGroup(preview, gallery));
         for (const groupSpec of spec.groups) {
             const group = new Adw.PreferencesGroup({ title: groupSpec.title, description: groupSpec.description ?? '' });
             for (const row of groupSpec.rows) {
-                const setting: SettingRow = buildRow(row, (value) => queue(setting, value));
+                // The gallery above picks the theme.
+                if (row.table === 'appearance' && row.key === 'theme') continue;
+                const setting: SettingRow = buildRow(row, (value) =>
+                    queue(row, value, () => setting.show(rowValue(row, service.tables))),
+                );
                 setting.show(rowValue(row, {}));
                 setting.widget.sensitive = false;
                 rows.push(setting);
@@ -87,9 +138,32 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
             group.add(resetRow);
             page.add(group);
         }
-        window.add(page);
+        stack.add_named(page, spec.name);
     }
     resetRow.sensitive = false;
+    gallery.widget.sensitive = false;
+    showLook();
+
+    const content = new Adw.NavigationPage({ title: SETTINGS_PAGES[0].title, child: toolbar(stack) });
+    const split = new Adw.NavigationSplitView({
+        sidebar: new Adw.NavigationPage({ title: 'Nokta', child: toolbar(sidebar(stack, content, path), brand()) }),
+        content,
+        min_sidebar_width: 200,
+        max_sidebar_width: 240,
+    });
+    overlay.child = split;
+    const narrow = new Adw.Breakpoint({ condition: Adw.BreakpointCondition.parse(COLLAPSE_BELOW) });
+    const collapsed = new GObject.Value();
+    collapsed.init(GObject.TYPE_BOOLEAN);
+    collapsed.set_boolean(true);
+    narrow.add_setter(split, 'collapsed', collapsed);
+    window.add_breakpoint(narrow);
+    window.set_default_size(920, 700);
+    // Breakpoints need a smallest size to measure against.
+    window.set_size_request(360, 420);
+    // GNOME's dialog checks that the extension gave it a page; the window shows ours instead.
+    window.add(new Adw.PreferencesPage());
+    window.set_content(overlay);
 
     window.connect('close-request', () => {
         // Changes still waiting are sent now rather than lost.
@@ -98,8 +172,74 @@ export function fillWindow(window: Adw.PreferencesWindow): void {
             send();
         }
         service.destroy();
+        unstyle();
         return false;
     });
+}
+
+/** Adds the window's stylesheet; returns what takes it away again. */
+function style(window: Gtk.Window): () => void {
+    const display = window.get_display();
+    const provider = new Gtk.CssProvider();
+    provider.load_from_string(PREFS_CSS);
+    // Above the user's own gtk.css too: the window is dark whatever theme the system has.
+    Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1);
+    window.add_css_class(PREFS_CLASS);
+    return () => Gtk.StyleContext.remove_provider_for_display(display, provider);
+}
+
+/** A page with a header bar over `child`; `title` replaces the header's title. */
+function toolbar(child: Gtk.Widget, title?: Gtk.Widget): Adw.ToolbarView {
+    const view = new Adw.ToolbarView({ content: child });
+    const header = new Adw.HeaderBar();
+    if (title) header.title_widget = title;
+    view.add_top_bar(header);
+    return view;
+}
+
+/** Nokta's name with an ember dot, at the top of the sidebar. */
+function brand(): Gtk.Box {
+    const box = new Gtk.Box({ spacing: 8, halign: Gtk.Align.START, hexpand: true, margin_start: 10 });
+    box.append(new Gtk.Box({ css_classes: ['nokta-brand-dot'], valign: Gtk.Align.CENTER }));
+    box.append(new Gtk.Label({ label: 'Nokta', css_classes: ['nokta-brand'] }));
+    return box;
+}
+
+/** The pages with Nokta's icons from the extension's `path`; picking one shows it in `content`. */
+function sidebar(stack: Gtk.Stack, content: Adw.NavigationPage, path: string): Gtk.Widget {
+    const list = new Gtk.ListBox({ css_classes: ['navigation-sidebar'] });
+    for (const spec of SETTINGS_PAGES) {
+        const box = new Gtk.Box({ spacing: 12 });
+        const icon = pageIcon(spec.name);
+        // Found by name in a search path GTK would not recolor them; as files it does.
+        const file = Gio.File.new_for_path(GLib.build_filenamev([path, 'icons', `nokta-${icon}-symbolic.svg`]));
+        box.append(icon ? new Gtk.Image({ gicon: Gio.FileIcon.new(file) }) : new Gtk.Image({ icon_name: spec.icon }));
+        box.append(new Gtk.Label({ label: spec.title, xalign: 0, hexpand: true }));
+        list.append(new Gtk.ListBoxRow({ child: box }));
+    }
+    list.connect('row-selected', (_list, row) => {
+        if (!row) return;
+        const spec = SETTINGS_PAGES[row.get_index()];
+        stack.visible_child_name = spec.name;
+        content.title = spec.title;
+    });
+    // When collapsed, a click on the page already picked opens it again.
+    list.connect('row-activated', () => {
+        const split = content.get_ancestor(Adw.NavigationSplitView.$gtype) as Adw.NavigationSplitView | null;
+        if (split) split.show_content = true;
+    });
+    list.select_row(list.get_row_at_index(0));
+    return new Gtk.ScrolledWindow({ child: list, hscrollbar_policy: Gtk.PolicyType.NEVER, vexpand: true });
+}
+
+/** The live preview over the theme gallery, first on Appearance; the Theme group follows it. */
+function lookGroup(preview: NotchPreview, gallery: ThemeGallery): Adw.PreferencesGroup {
+    const group = new Adw.PreferencesGroup();
+    const box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 14 });
+    box.append(preview.widget);
+    box.append(gallery.widget);
+    group.add(box);
+    return group;
 }
 
 function openConfigRow(window: Gtk.Window, toast: (title: string) => void): Adw.ActionRow {
