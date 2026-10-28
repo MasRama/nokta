@@ -65,3 +65,13 @@ export function luminance(hex: string): number {
     const { r, g, b } = parseHexColor(hex);
     return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 }
+
+/** Darkens `color` step by step until its luminance is at most `max`. */
+export function darkenTo(color: string, max: number): string {
+    let out = color;
+    for (let i = 0; i < 20 && luminance(out) > max; i++) out = mix(out, '#000000', 0.15);
+    return out;
+}
+
+/** Black or white, whichever reads on a fill of `color`. */
+export const textOn = (color: string): string => (luminance(color) > 0.4 ? '#000000' : '#ffffff');

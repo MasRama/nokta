@@ -97,6 +97,7 @@ import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
 import { iconFor, setIconsDir } from './shared/icons.js';
+import { TONES } from './shared/logic/tones.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
@@ -640,7 +641,7 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const charged = kind === 'charger-plugged' || kind === 'battery-full';
-        const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : 'accent';
+        const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device };
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
         this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone);
     }
@@ -717,7 +718,7 @@ class Session {
         const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
-        const tone = alert.urgent ? 'urgent' : 'accent';
+        const tone: AlertTone = alert.urgent ? 'urgent' : { color: TONES.calendar };
         const icon = iconFor(alert.icon);
         this.showOsd(-1, 'calendar', content, icon, this.settings.behavior.alertDurationMs, tone);
     }

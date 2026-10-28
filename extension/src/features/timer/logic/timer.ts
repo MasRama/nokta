@@ -1,5 +1,6 @@
 import type { TimerProps } from '../../../shared/contracts.js';
 import type { TimerSettings } from '../../settings/logic/parse.js';
+import { TONES } from '../../../shared/logic/tones.js';
 
 export type TimerState = 'idle' | 'running' | 'paused';
 export type TimerPhase = 'focus' | 'break' | '';
@@ -130,4 +131,4 @@ export function finishedAlert(phase: string, next: BreakInfo): FinishedAlert | n
 }
 
 /** The dot before the time left: tomato for focus, green for a break. */
-export const phaseColor = (phase: TimerPhase): string => (phase === 'break' ? '#57e389' : '#ff7b63');
+export const phaseColor = (phase: TimerPhase): string => (phase === 'break' ? TONES.break : TONES.focus);

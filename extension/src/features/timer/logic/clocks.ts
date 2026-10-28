@@ -1,4 +1,5 @@
 import { formatRemaining } from './timer.js';
+import { TONES } from '../../../shared/logic/tones.js';
 
 export type ClockKind = 'countdown' | 'stopwatch' | 'alarm';
 
@@ -130,9 +131,9 @@ export function msUntilClockChange(clocks: readonly Clock[], nowUs: number): num
 
 /** The dot and icon color of each kind; the focus timer keeps tomato and green. */
 export function clockColor(kind: ClockKind): string {
-    if (kind === 'stopwatch') return '#5ac8fa';
-    if (kind === 'alarm') return '#bf9cff';
-    return '#ffb340';
+    if (kind === 'stopwatch') return TONES.stopwatch;
+    if (kind === 'alarm') return TONES.alarm;
+    return TONES.countdown;
 }
 
 export interface ClockAlert {
