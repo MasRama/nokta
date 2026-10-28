@@ -108,7 +108,29 @@ export const SETTINGS_PAGES: readonly Page[] = [
         icon: 'applications-graphics-symbolic',
         groups: [
             {
-                title: 'Colors',
+                title: 'Theme',
+                rows: [
+                    appearance('theme', 'Theme', {
+                        type: 'choice',
+                        options: [
+                            { value: 'midnight', label: 'Midnight' },
+                            { value: 'graphite', label: 'Graphite' },
+                            { value: 'glass', label: 'Glass' },
+                            { value: 'aurora', label: 'Aurora' },
+                            { value: 'paper', label: 'Paper' },
+                            { value: 'custom', label: 'Custom' },
+                        ],
+                    }),
+                    appearance(
+                        'use_album_accent',
+                        "Use the cover's color",
+                        bool(),
+                        'Tint the progress bar, equalizer and play button with the album cover',
+                    ),
+                ],
+            },
+            {
+                title: 'Custom theme colors',
                 rows: [
                     appearance('background', 'Background', color()),
                     appearance(
@@ -119,12 +141,6 @@ export const SETTINGS_PAGES: readonly Page[] = [
                     ),
                     appearance('foreground', 'Text and icons', color()),
                     appearance('accent', 'Accent', color(), 'Progress bar, equalizer and the volume bar'),
-                    appearance(
-                        'use_album_accent',
-                        "Use the cover's color",
-                        bool(),
-                        'Tint the progress bar and equalizer with the album cover',
-                    ),
                 ],
             },
             {

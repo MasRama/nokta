@@ -37,6 +37,8 @@ pub struct Appearance {
     pub osd_width: u32,
     pub background_opacity: f64,
     pub accent: String,
+    /// One of THEMES; only "custom" uses the colors above.
+    pub theme: String,
 }
 
 impl Default for Appearance {
@@ -56,6 +58,7 @@ impl Default for Appearance {
             osd_width: 300,
             background_opacity: 1.0,
             accent: "#ffffff".into(),
+            theme: "midnight".into(),
         }
     }
 }
@@ -308,6 +311,13 @@ impl Config {
             0.0,
             1.0,
         )?;
+        if !THEMES.contains(&a.theme.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "appearance.theme must be one of {}, got {:?}",
+                THEMES.map(|t| format!("{t:?}")).join(", "),
+                a.theme
+            )));
+        }
         if !CLOCK_FORMATS.contains(&b.clock_format.as_str()) {
             return Err(ConfigError::invalid(format!(
                 "behavior.clock_format must be \"system\", \"24h\" or \"12h\", got {:?}",
@@ -373,6 +383,9 @@ impl Config {
 
 /// The values `weather.units` accepts.
 pub const WEATHER_UNITS: [&str; 2] = ["celsius", "fahrenheit"];
+
+/// The values `appearance.theme` accepts.
+pub const THEMES: [&str; 6] = ["midnight", "graphite", "glass", "aurora", "paper", "custom"];
 
 /// The values `behavior.clock_format` accepts.
 pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
@@ -489,6 +502,7 @@ impl Appearance {
             ("osd_width", self.osd_width.into()),
             ("background_opacity", self.background_opacity.into()),
             ("accent", (&self.accent).into()),
+            ("theme", (&self.theme).into()),
         ]
     }
 }

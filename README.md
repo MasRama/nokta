@@ -123,6 +123,7 @@ window then says what to fix before it saves anything.
 
 | Key | Default | What it does |
 |---|---|---|
+| `theme` | `"midnight"` | `"midnight"` (black), `"graphite"` (dark grey with a fine edge), `"glass"` (see-through), `"aurora"` (tinted with the cover's color), `"paper"` (light), or `"custom"` for the four colors below |
 | `height` | `32` | Height of the closed notch in pixels |
 | `idle_width` | `180` | Width of the closed notch when nothing plays |
 | `playing_width` | `260` | Width of the closed notch while music plays |
@@ -130,11 +131,11 @@ window then says what to fix before it saves anything.
 | `expanded_height` | `150` | Height of the open notch |
 | `corner_radius` | `14` | Radius of the bottom corners |
 | `ear_radius` | `8` | Radius of the inward curves where the notch meets the top edge |
-| `background` | `"#000000"` | Notch color |
-| `background_opacity` | `1.0` | `0.0` makes the notch background see-through, `1.0` solid; text and icons stay solid |
-| `foreground` | `"#ffffff"` | Text and icon color |
-| `accent` | `"#ffffff"` | Color of the seek bar, the equalizer and the volume bar when the cover's color is not used |
-| `use_album_accent` | `true` | Color the seek bar and the equalizer with the cover's color |
+| `background` | `"#000000"` | Notch color, with `theme = "custom"` |
+| `background_opacity` | `1.0` | `0.0` makes the notch background see-through, `1.0` solid; text and icons stay solid; with `theme = "custom"` |
+| `foreground` | `"#ffffff"` | Text and icon color, with `theme = "custom"` |
+| `accent` | `"#ffffff"` | Color of the seek bar, the play button, the equalizer and the volume bar when the cover's color is not used, with `theme = "custom"` |
+| `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 

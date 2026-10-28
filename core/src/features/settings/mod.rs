@@ -10,7 +10,7 @@ mod watch;
 
 pub use config::{
     parse, ActivitiesConfig, Appearance, Behavior, CalendarConfig, Config, ConfigError, Entries,
-    LyricsConfig, SettingValue, TimerConfig, WeatherConfig, DEFAULT_CONFIG_TOML,
+    LyricsConfig, SettingValue, TimerConfig, WeatherConfig, DEFAULT_CONFIG_TOML, THEMES,
 };
 pub use store::Store;
 pub use watch::watch;

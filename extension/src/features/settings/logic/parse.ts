@@ -14,6 +14,8 @@ export interface Appearance {
     osdWidth: number;
     backgroundOpacity: number;
     accent: string;
+    /** One of THEMES in shared/logic/theme.ts; only "custom" uses the colors. */
+    theme: string;
 }
 
 export interface Behavior {
@@ -75,6 +77,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     osdWidth: 300,
     backgroundOpacity: 1.0,
     accent: '#ffffff',
+    theme: 'midnight',
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {

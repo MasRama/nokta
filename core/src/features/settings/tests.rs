@@ -31,6 +31,7 @@ fn defaults_match_spec() {
     assert_eq!(a.osd_width, 300);
     assert_eq!(a.background_opacity, 1.0);
     assert_eq!(a.accent, "#ffffff");
+    assert_eq!(a.theme, "midnight");
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
     assert!(b.move_clock);
@@ -316,6 +317,7 @@ fn appearance_entries_have_all_keys() {
             "idle_width",
             "osd_width",
             "playing_width",
+            "theme",
             "use_album_accent",
         ]
     );
@@ -507,5 +509,15 @@ fn shortcut_is_an_accelerator_or_empty() {
     for bad in ["<Super>", "<Super> f", "Super+F", "<Super><Alt", "f<Alt>"] {
         let err = parse(&format!("[timer]\nshortcut = {bad:?}\n")).unwrap_err();
         assert!(err.message.contains("timer.shortcut"), "{err}");
+    }
+}
+
+#[test]
+fn theme_must_be_a_known_one() {
+    let err = parse("[appearance]\ntheme = \"neon\"\n").unwrap_err();
+    assert!(err.message.contains("appearance.theme"), "{err}");
+    for theme in THEMES {
+        let c = parse(&format!("[appearance]\ntheme = \"{theme}\"\n")).unwrap();
+        assert_eq!(c.appearance.theme, theme);
     }
 }
