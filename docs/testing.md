@@ -59,6 +59,7 @@ tools/devshell/device.sh connect [NAME] [BATTERY]  # earbuds; no BATTERY = none 
 tools/devshell/device.sh disconnect
 tools/devshell/timer.sh start focus|break  # noktad's focus timer
 tools/devshell/timer.sh pause|resume|stop
+tools/devshell/timer.sh countdown SECONDS [LABEL]  # a countdown; also stopwatch [LABEL], clear
 tools/devshell/activity.sh set ID TITLE DETAIL PROGRESS  # a live activity; PROGRESS -1 = unknown
 tools/devshell/activity.sh end ID ok|failed [MESSAGE]
 tools/devshell/prefs.sh               # open the settings window there
@@ -241,6 +242,28 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] On GNOME 49 or later, the shortcut does not open the overview
       *(real session)*. The devshell's virtual Super key can, so the smoke
       test closes it before the settings window.
+
+### Timers, stopwatches and alarms
+
+With the devshell's bus (`export DBUS_SESSION_BUS_ADDRESS=$(cat
+build/devshell/bus)`), `target/release/nokta` drives them like a user would.
+
+- [ ] `nokta timer 10m Tea`: an orange dot and `9:59` replace the clock.
+      `nokta stopwatch Run` adds a blue one, but the countdown keeps the
+      spot. A focus timer wins over both.
+- [ ] `nokta alarm HH:MM Sleep` more than an hour ahead: not in the closed
+      notch; less than an hour ahead: a violet dot and the time left.
+- [ ] Hover: home lists the newest three, with the label, `10 min` or the
+      alarm's time dimmed, the time ticking each second, pause (not for an
+      alarm) and remove. Paused, the time dims and says `Paused`.
+- [ ] The **Timer** tile is lit while any run. It opens 1, 3, 5, 10, 15 and
+      30 min and Stopwatch; one starts it and goes back home.
+- [ ] `timer.sh countdown 3 Eggs`: `Eggs Timer done` shows for twice the
+      alert duration; without a label, `Timer done`.
+- [ ] `nokta timer soon` and `nokta alarm 25:00` say what is wrong; a
+      seventh clock says there are already 6.
+- [ ] The sound (`alarm-clock-elapsed`), and an alarm due while suspended
+      rings right after resume *(real session)*.
 
 ### Shuffle, repeat and the lyrics view
 
