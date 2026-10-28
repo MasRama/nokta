@@ -56,7 +56,11 @@ notifications. Hover over it to open it.
   tiles and their order on the settings window's Home page: Night Light and a
   Screenshot tile are there too.
 - **Notifications** show in the notch instead of GNOME's banner. Hover to
-  keep one open, click it to open the app.
+  keep one open, click it to open the app. Its buttons (`Reply`,
+  `Archive`, up to three) show in a row under it, and × closes it while
+  it stays in GNOME's message list. A new one from the same app replaces
+  it and counts on its icon (`2`, `3`, … `9+`). GNOME has no inline
+  reply, so neither does the notch.
 - **Focus timer.** Start it from Quick Settings or with
   <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>. It counts down in the notch
   and starts a break when the session ends.

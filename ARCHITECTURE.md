@@ -115,7 +115,12 @@ docs/               manual test checklist, screenshots
   screen recording is followed and stopped through GNOME's own screenshot
   UI (`Main.screenshotUI`). `notifications` too: it wraps
   GNOME's `MessageTray._showNotification`, so the notch only gets the
-  banners GNOME has already decided to show. A banner from GNOME's
+  banners GNOME has already decided to show. Its buttons come from the
+  notification's `actions` (each a `label` and `activate()`, GNOME 46 and
+  later), checked to be an array of labels; a new one from the same
+  `source` object stacks on the one that shows (`logic/stack.ts`). There is
+  no inline reply: neither the freedesktop spec nor GNOME Shell has one. A
+  banner from GNOME's
   screenshot source with an image becomes a screenshot preview; its file
   comes from `Main.screenshotUI`'s `screenshot-taken` signal. `calendar` reads the events
   the date menu already loads (`dateMenu._eventSource`, found with a
