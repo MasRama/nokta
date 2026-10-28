@@ -8,6 +8,7 @@ import type { LineProgress } from './logic/karaoke.js';
 import { offsetLabel, stepOffset } from './logic/offset.js';
 import { BREAK } from './logic/visible.js';
 import type { LyricWindow } from './logic/window.js';
+import { iconFor } from '../../shared/icons.js';
 
 /** The lyrics view's rows; the middle one is the current line. */
 export const SHEET_ROWS = 7;
@@ -139,7 +140,7 @@ export class LyricsSheet {
 function footerButton(icon: string, name: string, onClick: () => void): St.Button {
     const button = new St.Button({
         style_class: 'nokta-button nokta-lyrics-step',
-        child: new St.Icon({ icon_name: icon, style_class: 'nokta-button-icon' }),
+        child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-button-icon' }),
         y_align: Clutter.ActorAlign.CENTER,
         can_focus: true,
         accessible_name: name,

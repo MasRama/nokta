@@ -96,12 +96,13 @@ import { Keybinding } from './shared/keybinding.js';
 import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
+import { iconFor, setIconsDir } from './shared/icons.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
 const TIMER_ICON = 'alarm-symbolic';
 /** The icon beside a countdown or stopwatch in home and its alert; an alarm has TIMER_ICON. */
-const CLOCK_ICON = 'nokta-timer-symbolic.svg';
+const CLOCK_ICON = 'nokta-timer';
 /** A finished countdown or alarm stays up this many times the alert duration. */
 const CLOCK_ALERT_FACTOR = 2;
 /** The screenshot tile waits this long, before animation_speed, for the notch to close, so the shot does not catch it. */
@@ -206,7 +207,6 @@ class Session {
         openScreenshot: () => this.openScreenshot(),
         toggle: (which) => this.toggle(which),
         setDoNotDisturb: (on) => this.quietBanners.setDoNotDisturb(on),
-        iconsDir: '',
     };
     private readonly shelfSource: ShelfSource = {
         items: () => (this.settings.behavior.fileShelf ? this.shelf.items() : []),
@@ -249,7 +249,7 @@ class Session {
         extensionPath: string,
         private readonly openPreferences: () => void,
     ) {
-        this.panel.iconsDir = `${extensionPath}/icons`;
+        setIconsDir(`${extensionPath}/icons`);
         const refreshPanel = () => this.notches.forEach((n) => n.onPanelContent());
         this.togglesIds = [
             [this.notificationSettings, this.notificationSettings.connect('changed::show-banners', refreshPanel)],
@@ -522,7 +522,7 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const tone = { color: phaseColor(phase === 'break' ? 'break' : 'focus') };
-        const icon = new Gio.ThemedIcon({ name: TIMER_ICON });
+        const icon = iconFor(TIMER_ICON);
         this.showOsd(-1, 'focus', content, icon, this.settings.behavior.alertDurationMs, tone);
         if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
@@ -532,16 +532,11 @@ class Session {
         const alert = clockDoneAlert(kind, label, this.formatTime(Date.now()));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
-        const icon = kind === 'alarm' ? new Gio.ThemedIcon({ name: TIMER_ICON }) : this.extensionIcon(CLOCK_ICON);
+        const icon = kind === 'alarm' ? iconFor(TIMER_ICON) : iconFor(CLOCK_ICON);
         const tone = { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') };
         this.showOsd(-1, 'clock', content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs, tone);
         if (this.settings.timer.sound)
             global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', alert.title, null);
-    }
-
-    /** An icon from the extension's icons folder. */
-    private extensionIcon(name: string): Gio.Icon {
-        return new Gio.FileIcon({ file: Gio.File.new_for_path(`${this.panel.iconsDir}/${name}`) });
     }
 
     // Notches
@@ -647,7 +642,7 @@ class Session {
         const charged = kind === 'charger-plugged' || kind === 'battery-full';
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : 'accent';
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
-        this.showOsd(-1, fullscreenKind, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
+        this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone);
     }
 
     /** An activity ended: a check mark or a red cross in the focused notch. */
@@ -657,7 +652,7 @@ class Session {
         const alert = endedAlert(title, success, message, elapsedUs);
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone = success ? 'success' : 'urgent';
-        this.showOsd(-1, 'activity', content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
+        this.showOsd(-1, 'activity', content, iconFor(alert.icon), alertDurationMs, tone);
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
@@ -688,7 +683,7 @@ class Session {
             this.lockKeys = new LockKeysWatcher((key, on) => {
                 const { showCapsLock: caps, showNumLock: num } = this.settings.behavior;
                 if (key === 'Caps Lock' ? !caps : !num) return;
-                this.showOsd(-1, 'osd', lockKeyContent(key, on), new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
+                this.showOsd(-1, 'osd', lockKeyContent(key, on), iconFor(KEYBOARD_ICON));
             });
         } else if (!lockKeys && this.lockKeys) {
             this.lockKeys.destroy();
@@ -697,7 +692,7 @@ class Session {
         if (showInputSource && !this.inputSources) {
             // GNOME's own switcher shows only while Super is held, so the notch shows every switch.
             this.inputSources = new InputSourceWatcher((name) => {
-                this.showOsd(-1, 'osd', { fraction: null, text: name }, new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
+                this.showOsd(-1, 'osd', { fraction: null, text: name }, iconFor(KEYBOARD_ICON));
             });
         } else if (!showInputSource && this.inputSources) {
             this.inputSources.destroy();
@@ -723,7 +718,7 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone = alert.urgent ? 'urgent' : 'accent';
-        const icon = new Gio.ThemedIcon({ name: alert.icon });
+        const icon = iconFor(alert.icon);
         this.showOsd(-1, 'calendar', content, icon, this.settings.behavior.alertDurationMs, tone);
     }
 
@@ -816,7 +811,7 @@ class Session {
         const now = GLib.get_monotonic_time();
         return this.timer.clocks().map((clock) => ({
             id: clock.id,
-            icon: clock.kind === 'alarm' ? TIMER_ICON : `file:${CLOCK_ICON}`,
+            icon: clock.kind === 'alarm' ? TIMER_ICON : CLOCK_ICON,
             color: clockColor(clock.kind),
             title: clockTitle(clock),
             detail: clockDetail(clock, clock.alarmUnixUs ? this.formatTime(clock.alarmUnixUs / 1000) : ''),

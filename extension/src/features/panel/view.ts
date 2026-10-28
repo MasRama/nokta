@@ -8,6 +8,7 @@ import { withAlpha } from '../../shared/logic/color.js';
 import { type ControlColors, TogglePill, Tile } from './controls.js';
 import { notificationBadge } from './logic/labels.js';
 import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
+import { iconFor } from '../../shared/icons.js';
 
 /** A live activity, as one panel row shows it. */
 export interface PanelActivity {
@@ -23,7 +24,7 @@ export interface PanelActivity {
 /** A countdown, stopwatch or alarm, as one panel row shows it. */
 export interface PanelClock {
     id: string;
-    /** A theme icon, or `file:` and one in the extension's icons folder. */
+    /** An icon name for iconFor. */
     icon: string;
     color: string;
     title: string;
@@ -111,10 +112,10 @@ export interface PanelHandlers {
     hideCall(): void;
 }
 
-/** Each toggle's icon: a theme icon, or one in the extension's icons folder. */
+/** Each toggle's icon and name. */
 const TOGGLES: Array<[QuickToggle, string, string]> = [
     ['do_not_disturb', 'notifications-disabled-symbolic', 'Do Not Disturb'],
-    ['caffeine', 'file:nokta-caffeine-symbolic.svg', 'Caffeine'],
+    ['caffeine', 'nokta-caffeine', 'Caffeine'],
     ['dark_style', 'dark-mode-symbolic', 'Dark Style'],
     ['night_light', 'night-light-symbolic', 'Night Light'],
 ];
@@ -122,17 +123,12 @@ const TOGGLES: Array<[QuickToggle, string, string]> = [
 /** Each tile's icon and name. */
 const TILES: Array<[HomeTile, string, string]> = [
     ['notifications', 'preferences-system-notifications-symbolic', 'Notifications'],
-    ['focus', 'alarm-symbolic', 'Focus'],
-    ['timer', 'file:nokta-timer-symbolic.svg', 'Timer'],
+    ['focus', 'nokta-focus', 'Focus'],
+    ['timer', 'nokta-timer', 'Timer'],
     ['clipboard', 'edit-paste-symbolic', 'Clipboard'],
     ['settings', 'emblem-system-symbolic', 'Settings'],
     ['screenshot', 'camera-photo-symbolic', 'Screenshot'],
 ];
-
-function toggleIcon(name: string, iconsDir: string): Gio.Icon {
-    if (!name.startsWith('file:')) return new Gio.ThemedIcon({ name });
-    return new Gio.FileIcon({ file: Gio.File.new_for_path(`${iconsDir}/${name.slice('file:'.length)}`) });
-}
 
 /** One live activity: icon, title, detail and elapsed time, and a thin bar. */
 class ActivityRow {
@@ -174,7 +170,7 @@ class ActivityRow {
     show(activity: PanelActivity | undefined): void {
         this.actor.visible = activity !== undefined;
         if (!activity) return;
-        this.icon.gicon = new Gio.ThemedIcon({ name: activity.icon });
+        this.icon.gicon = iconFor(activity.icon);
         this.title.text = activity.title;
         this.detail.text = activity.detail;
         this.elapsed.text = activity.elapsed;
@@ -199,10 +195,7 @@ class ClockRow {
     private readonly pauseIcon: St.Icon;
     private clock: PanelClock | null = null;
 
-    constructor(
-        private readonly iconsDir: string,
-        handlers: Pick<PanelHandlers, 'pauseClock' | 'removeClock'>,
-    ) {
+    constructor(handlers: Pick<PanelHandlers, 'pauseClock' | 'removeClock'>) {
         this.icon = new St.Icon({ style_class: 'nokta-panel-clock-icon', y_align: Clutter.ActorAlign.CENTER });
         this.title = new St.Label({ style_class: 'nokta-panel-clock-title', y_align: Clutter.ActorAlign.CENTER });
         this.detail = new St.Label({
@@ -226,7 +219,7 @@ class ClockRow {
         });
         const remove = new St.Button({
             style_class: 'nokta-button nokta-panel-clock-remove',
-            child: new St.Icon({ icon_name: 'window-close-symbolic', style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor('window-close-symbolic'), style_class: 'nokta-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });
@@ -242,14 +235,14 @@ class ClockRow {
         this.clock = clock ?? null;
         this.actor.visible = clock !== undefined;
         if (!clock) return;
-        this.icon.gicon = toggleIcon(clock.icon, this.iconsDir);
+        this.icon.gicon = iconFor(clock.icon);
         this.icon.style = `color: ${clock.color};`;
         this.title.text = clock.title;
         this.detail.text = clock.detail;
         this.time.text = clock.time;
         this.time.opacity = clock.running ? 255 : 128;
         this.pause.visible = clock.canPause;
-        this.pauseIcon.icon_name = clock.running ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
+        this.pauseIcon.gicon = iconFor(clock.running ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic');
     }
 }
 
@@ -260,7 +253,7 @@ class RecordingRow {
 
     constructor(handlers: Pick<PanelHandlers, 'stopRecording'>) {
         const icon = new St.Icon({
-            icon_name: 'media-record-symbolic',
+            gicon: iconFor('media-record-symbolic'),
             style_class: 'nokta-panel-recording-icon',
             style: 'color: #ff453a;',
             y_align: Clutter.ActorAlign.CENTER,
@@ -274,7 +267,7 @@ class RecordingRow {
         this.time = new St.Label({ style_class: 'nokta-panel-recording-time', y_align: Clutter.ActorAlign.CENTER });
         const stop = new St.Button({
             style_class: 'nokta-button nokta-panel-recording-stop',
-            child: new St.Icon({ icon_name: 'media-playback-stop-symbolic', style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor('media-playback-stop-symbolic'), style_class: 'nokta-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });
@@ -318,7 +311,7 @@ class CallRow {
         mute.connect('clicked', () => handlers.toggleCallMute());
         const hide = new St.Button({
             style_class: 'nokta-button nokta-panel-call-hide',
-            child: new St.Icon({ icon_name: 'window-close-symbolic', style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor('window-close-symbolic'), style_class: 'nokta-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });
@@ -333,7 +326,7 @@ class CallRow {
         this.icon.gicon = call.icon;
         this.title.text = call.title;
         this.detail.text = call.detail;
-        this.muteIcon.icon_name = call.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic';
+        this.muteIcon.gicon = iconFor(call.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic');
         this.muteIcon.style = call.muted ? 'color: #ff453a;' : '';
     }
 }
@@ -364,7 +357,7 @@ class WeatherBox {
     show(weather: PanelWeather | null): void {
         this.actor.visible = weather !== null;
         if (!weather) return;
-        this.icon.gicon = new Gio.ThemedIcon({ name: weather.icon });
+        this.icon.gicon = iconFor(weather.icon);
         this.temperature.text = weather.temperature;
         this.detail.text = weather.detail;
     }
@@ -382,7 +375,7 @@ class EventRow {
         box.add_child(
             new St.Icon({
                 style_class: 'nokta-panel-event-icon',
-                gicon: new Gio.ThemedIcon({ name: 'x-office-calendar-symbolic' }),
+                gicon: iconFor('x-office-calendar-symbolic'),
                 y_align: Clutter.ActorAlign.CENTER,
             }),
         );
@@ -430,14 +423,13 @@ export class HomePanel {
     private readonly tileRow: St.BoxLayout;
     private readonly controls: St.BoxLayout;
 
-    /** `iconsDir` holds the icons the theme does not have. */
-    constructor(handlers: PanelHandlers, iconsDir: string) {
+    constructor(handlers: PanelHandlers) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-panel' }));
         this.date = new St.Label({ style_class: 'nokta-panel-date', x_expand: true, y_align: Clutter.ActorAlign.CENTER });
         this.date.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.playerButton = new St.Button({
             style_class: 'nokta-button nokta-panel-player',
-            child: new St.Icon({ icon_name: 'audio-x-generic-symbolic', style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor('audio-x-generic-symbolic'), style_class: 'nokta-button-icon' }),
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
             visible: false,
@@ -453,7 +445,7 @@ export class HomePanel {
 
         this.pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
         for (const [which, icon, label] of TOGGLES) {
-            const pill = new TogglePill(toggleIcon(icon, iconsDir), label, () => handlers.toggle(which));
+            const pill = new TogglePill(iconFor(icon), label, () => handlers.toggle(which));
             this.toggles.set(which, pill);
             this.pills.add_child(pill.actor);
         }
@@ -467,7 +459,7 @@ export class HomePanel {
         };
         this.tileRow = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
         for (const [which, icon, label] of TILES) {
-            const tile = new Tile(toggleIcon(icon, iconsDir), label, actions[which]);
+            const tile = new Tile(iconFor(icon), label, actions[which]);
             this.tiles.set(which, tile);
             this.tileRow.add_child(tile.actor);
         }
@@ -485,7 +477,7 @@ export class HomePanel {
             this.actor.add_child(row.actor);
         }
         for (let i = 0; i < MAX_PANEL_CLOCKS; i++) {
-            const row = new ClockRow(iconsDir, handlers);
+            const row = new ClockRow(handlers);
             this.clocks.push(row);
             this.actor.add_child(row.actor);
         }

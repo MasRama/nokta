@@ -1,10 +1,10 @@
 import type Cairo from 'cairo';
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
 import { parseHexColor } from '../../shared/logic/color.js';
+import { iconFor } from '../../shared/icons.js';
 
 const INSET = 10;
 const RADIUS = 14;
@@ -35,7 +35,7 @@ export class DropView {
         content.add_child(
             new St.Icon({
                 style_class: 'nokta-drop-icon',
-                gicon: new Gio.ThemedIcon({ name: 'folder-download-symbolic' }),
+                gicon: iconFor('folder-download-symbolic'),
                 x_align: Clutter.ActorAlign.CENTER,
             }),
         );

@@ -3,6 +3,7 @@ import type Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import type { OsdContent } from './logic/content.js';
+import { chromeIcon } from '../../shared/icons.js';
 
 const BAR_EASE_MS = 100;
 /** The detail is dimmed next to the text, unless the row is urgent. */
@@ -47,7 +48,7 @@ export class OsdView {
     /** `animate` eases the bar from its last value, for a change while shown. */
     show(content: OsdContent, icon: Gio.Icon | null, animate: boolean, speed: number): void {
         // The typings omit that gicon is nullable; null leaves the slot empty.
-        this.icon.gicon = icon as Gio.Icon;
+        this.icon.gicon = chromeIcon(icon) as Gio.Icon;
         this.label.text = content.text;
         this.detail.text = content.detail ?? '';
         this.detail.visible = Boolean(content.detail);

@@ -1,8 +1,8 @@
 import Clutter from 'gi://Clutter';
-import Gio from 'gi://Gio';
 import St from 'gi://St';
 
 import { withAlpha } from './logic/color.js';
+import { iconFor } from './icons.js';
 
 const BUTTON_ALPHA = 0.12;
 const BUTTON_HOVER_ALPHA = 0.22;
@@ -26,7 +26,7 @@ export class TintedButton {
             box.add_child(
                 new St.Icon({
                     style_class: `${styleClass}-icon`,
-                    gicon: new Gio.ThemedIcon({ name: iconName }),
+                    gicon: iconFor(iconName),
                     y_align: Clutter.ActorAlign.CENTER,
                 }),
             );

@@ -5,6 +5,7 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { OverlayLayout } from '../../shared/layout.js';
 import { mix, withAlpha } from '../../shared/logic/color.js';
+import { iconFor } from '../../shared/icons.js';
 
 const IDLE_ALPHA = 0.12;
 const HOVER_ALPHA = 0.22;
@@ -86,7 +87,7 @@ export class Tile {
         this.circle.add_child(
             new St.Icon({
                 style_class: 'nokta-tile-icon',
-                gicon: typeof icon === 'string' ? new Gio.ThemedIcon({ name: icon }) : icon,
+                gicon: typeof icon === 'string' ? iconFor(icon) : icon,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
             }),

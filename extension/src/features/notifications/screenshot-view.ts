@@ -5,6 +5,7 @@ import St from 'gi://St';
 import { TintedButton } from '../../shared/button.js';
 import { setVertical } from '../../shared/compat.js';
 import type { ScreenshotButton } from './logic/screenshot.js';
+import { iconFor } from '../../shared/icons.js';
 
 /** The thumbnail's box; the image keeps its shape inside it. */
 const THUMB_WIDTH = 160;
@@ -41,7 +42,7 @@ export class ScreenshotView {
         });
         this.thumb.set_content_gravity(Clutter.ContentGravity.RESIZE_ASPECT);
         this.video = new St.Icon({
-            icon_name: 'video-x-generic-symbolic',
+            gicon: iconFor('video-x-generic-symbolic'),
             style_class: 'nokta-screenshot-video',
             x_expand: true,
             y_expand: true,

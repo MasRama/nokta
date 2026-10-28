@@ -154,8 +154,6 @@ export interface PanelSource {
     openScreenshot(): void;
     toggle(which: QuickToggle): void;
     setDoNotDisturb(on: boolean): void;
-    /** The icons the theme does not have. */
-    iconsDir: string;
 }
 
 /** The parked files and the helper window; owned by the session. */
@@ -339,7 +337,6 @@ export class MonitorNotch implements ShelfNotch {
                 toggleCallMute: () => sources.call.toggleMute(),
                 hideCall: () => sources.call.hide(),
             },
-            panel.iconsDir,
         );
         this.menu = new NotchMenu({
             openSettings: () => panel.openSettings(),

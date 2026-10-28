@@ -12,6 +12,7 @@ import { neighbour, playerLabels, scrollStep, type PlayerEntry, type ScrollDirec
 import type { MediaSnapshot } from './logic/snapshot.js';
 import { OutputMenu, type OutputMenuHandlers } from './output-menu.js';
 import { ProgressBar } from './progress.js';
+import { iconFor } from '../../shared/icons.js';
 
 export interface MediaControls {
     playPause(): void;
@@ -100,12 +101,12 @@ export class ExpandedMediaView {
         top.add_child(this.info);
         const home = new St.Button({
             style_class: 'nokta-button nokta-home-button nokta-grid-button',
-            child: new St.Icon({ icon_name: 'view-app-grid-symbolic', style_class: 'nokta-home-icon' }),
+            child: new St.Icon({ gicon: iconFor('view-app-grid-symbolic'), style_class: 'nokta-home-icon' }),
             y_align: Clutter.ActorAlign.START,
             can_focus: true,
         });
         home.connect('clicked', openHome);
-        this.outputIcon = new St.Icon({ icon_name: outputIcon(null), style_class: 'nokta-home-icon' });
+        this.outputIcon = new St.Icon({ gicon: iconFor(outputIcon(null)), style_class: 'nokta-home-icon' });
         this.outputButton = new St.Button({
             style_class: 'nokta-button nokta-home-button nokta-output-button',
             child: this.outputIcon,
@@ -122,7 +123,7 @@ export class ExpandedMediaView {
 
         const buttons = new St.BoxLayout({ style_class: 'nokta-controls', x_align: Clutter.ActorAlign.CENTER });
         this.previous = this.button('media-skip-backward-symbolic', () => controls.previous());
-        this.playPauseIcon = new St.Icon({ icon_name: 'media-playback-start-symbolic', style_class: 'nokta-play-icon' });
+        this.playPauseIcon = new St.Icon({ gicon: iconFor('media-playback-start-symbolic'), style_class: 'nokta-play-icon' });
         this.playPause = new St.Button({ style_class: 'nokta-play', child: this.playPauseIcon, can_focus: true });
         this.playPause.set_pivot_point(0.5, 0.5);
         this.playPause.connect('clicked', () => controls.playPause());
@@ -160,8 +161,9 @@ export class ExpandedMediaView {
         const index = this.players.findIndex(([id]) => id === this.playerId);
         this.playerRow.visible = this.players.length > 1 && index >= 0;
         if (this.playerRow.visible) this.playerLabel.text = playerLabels(this.players)[index];
-        this.playPauseIcon.icon_name =
-            snapshot.playbackStatus === 'Playing' ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
+        this.playPauseIcon.gicon = iconFor(
+            snapshot.playbackStatus === 'Playing' ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic',
+        );
         this.enable(this.previous, snapshot.canGoPrevious);
         this.enable(this.playPause, snapshot.canPlayPause);
         this.enable(this.next, snapshot.canGoNext);
@@ -186,7 +188,7 @@ export class ExpandedMediaView {
     setOutputs(outputs: readonly AudioOutput[], activeId: number | null): void {
         this.outputs = outputs;
         this.activeOutput = activeId;
-        this.outputIcon.icon_name = outputIcon(outputs.find((o) => o.id === activeId) ?? null);
+        this.outputIcon.gicon = iconFor(outputIcon(outputs.find((o) => o.id === activeId) ?? null));
         this.outputButton.visible = outputs.length > 1;
         if (!this.outputButton.visible) this.outputMenu.close();
     }
@@ -212,7 +214,7 @@ export class ExpandedMediaView {
     private switchButton(icon: string, step: 1 | -1, controls: MediaControls): St.Button {
         const button = new St.Button({
             style_class: 'nokta-button nokta-player-switch',
-            child: new St.Icon({ icon_name: icon, style_class: 'nokta-player-switch-icon' }),
+            child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-player-switch-icon' }),
             can_focus: true,
         });
         button.connect('clicked', () => this.switchPlayer(step, controls));
@@ -222,7 +224,7 @@ export class ExpandedMediaView {
     private button(icon: string, onClick: () => void): St.Button {
         const button = new St.Button({
             style_class: 'nokta-button',
-            child: new St.Icon({ icon_name: icon, style_class: 'nokta-button-icon' }),
+            child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-button-icon' }),
             can_focus: true,
         });
         button.connect('clicked', onClick);
@@ -233,7 +235,7 @@ export class ExpandedMediaView {
     private showToggle(button: St.Button, supported: boolean, { icon, on }: ToggleIcon): void {
         button.visible = supported;
         const child = button.child as St.Icon;
-        child.icon_name = icon;
+        child.gicon = iconFor(icon);
         child.style = on ? `color: ${this.accent};` : '';
         button.opacity = on ? 255 : 110;
     }
