@@ -289,7 +289,11 @@ How both sides stay honest:
 - The notch changes size on springs (`shared/logic/spring.ts`): width and
   height step on the same frames of one `Clutter.Timeline`, which runs only
   until both settle, so they move together and a new size mid-way bends the
-  motion instead of restarting it. The bottom corners round more as the
+  motion instead of restarting it. An alert kicks the width spring, so the
+  body overshoots by 6 % and springs back; the kick waits until a resize
+  reaches its width, or the motion would swallow it. Its glow is a separate
+  actor under the body (the body clips), with a `box-shadow` in the colour
+  from `shared/logic/glow.ts`. The bottom corners round more as the
   body grows (`shared/logic/shape.ts`). The body lays its views out with
   `shared/layout.ts`, so a view never makes it bigger than the spring says;
   a larger view is clipped, never reflowed. Views fade and scale with
