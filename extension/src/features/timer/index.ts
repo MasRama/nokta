@@ -8,6 +8,7 @@ export {
     clockDoneAlert,
     clockTitle,
     clockText,
+    clockValueAt,
     indicatorClock,
     msUntilClockChange,
     type Clock,

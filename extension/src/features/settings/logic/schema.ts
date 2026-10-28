@@ -145,6 +145,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Tint the progress bar, equalizer and play button with the album cover',
                     ),
+                    appearance(
+                        'progress_line',
+                        'Progress line',
+                        bool(),
+                        'Along the closed notch: the focus timer, a countdown, an activity or the song',
+                    ),
                 ],
             },
             {

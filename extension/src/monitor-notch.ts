@@ -69,6 +69,7 @@ import {
 import {
     clockColor,
     clockText,
+    clockValueAt,
     formatRemaining,
     indicatorClock,
     phaseColor,
@@ -84,8 +85,10 @@ import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
+import { progressLine, type Span } from './shared/logic/progress-line.js';
 import { paletteFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
+import { ProgressLine } from './shared/progress-line.js';
 import { glibSchedule } from './shared/schedule.js';
 
 const TICK_MS = 250;
@@ -216,6 +219,7 @@ export class MonitorNotch implements ShelfNotch {
     /** Which of the two the notification timer is showing. */
     private notificationKind: 'notification' | 'screenshot' = 'notification';
     private readonly privacyDots = new PrivacyDots();
+    private readonly progress = new ProgressLine();
     private privacyCount = 0;
     private readonly idlePanel: HomePanel;
     /** Home is open over the player, until the notch closes or its music button goes back. */
@@ -351,7 +355,8 @@ export class MonitorNotch implements ShelfNotch {
             actor.visible = mode === 'idle';
             this.notch.body.add_child(actor);
         }
-        // Last, so the dots stay above every view.
+        // Last, so the line and the dots stay above every view.
+        this.notch.body.add_child(this.progress.actor);
         this.notch.body.add_child(this.privacyDots.actor);
         this.machine = new NotchMachine(
             glibSchedule,
@@ -435,6 +440,7 @@ export class MonitorNotch implements ShelfNotch {
         this.timerSubPage.destroy();
         this.pages.destroy();
         this.privacyDots.destroy();
+        this.progress.destroy();
         this.collapsed.setAside(null);
         this.idleRecording.destroy();
         this.collapsedRecording.destroy();
@@ -470,6 +476,7 @@ export class MonitorNotch implements ShelfNotch {
         if (trackKey(snapshot) !== this.lyricsTrack) this.setLyricsOpen(false);
         // Open, a player coming or going swaps the media view and the idle panel.
         this.draw(this.overlay());
+        this.applyProgress();
         this.tick();
         this.updateTimers();
     }
@@ -812,6 +819,42 @@ export class MonitorNotch implements ShelfNotch {
         }
         this.idleBadge.setActive(this.drawn === 'idle' && indicator === 'activity');
         this.collapsedBadge.setActive(this.drawn === 'collapsed' && indicator === 'activity');
+        this.applyProgress();
+    }
+
+    /** The line along the closed notch: the indicator's progress, else the song beside its cover. */
+    private applyProgress(): void {
+        const { settings, timer, media } = this.sources;
+        const closed = this.drawn === 'idle' || this.drawn === 'collapsed';
+        if (!settings.appearance.progressLine || !closed) {
+            this.progress.show(null, '', 0);
+            return;
+        }
+        const now = GLib.get_monotonic_time();
+        const focus = timer.snapshot();
+        const clock = indicatorClock(timer.clocks(), now);
+        const song = media.snapshot();
+        const span = (totalUs: number, leftUs: number, running: boolean, rate = 1): Span => ({
+            totalUs,
+            leftUs,
+            running,
+            rate,
+        });
+        const line = progressLine({
+            indicator: this.indicator,
+            collapsed: this.drawn === 'collapsed',
+            timer:
+                focus.state === 'idle'
+                    ? null
+                    : span(focus.durationUs, remainingAt(focus, now), focus.state === 'running'),
+            clock: clock?.kind === 'countdown' ? span(clock.durationUs, clockValueAt(clock, now), clock.running) : null,
+            activity: this.liveActivities()[0]?.progress ?? -1,
+            song:
+                song.lengthUs > 0
+                    ? span(song.lengthUs, song.lengthUs - this.positionNow(), song.playbackStatus === 'Playing', song.rate)
+                    : null,
+        });
+        this.progress.show(line, this.shownPalette.accent, settings.appearance.cornerRadius);
     }
 
     /** Draws the panel's content; resizes the notch when its rows change while open. */

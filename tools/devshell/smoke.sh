@@ -69,6 +69,9 @@ wait_for "the extension is active" \
     "Main.extensionManager.lookup('nokta@nokta.io')?.state === 1" 60
 wait_for "a playing track shows in a 260 px notch" \
     "$FIND shown('nokta-collapsed') && width() === 260" 20
+# The line along the closed notch runs with the song.
+wait_for "the progress line shows the song's position" \
+    "$FIND shown('nokta-progress-line') && one('nokta-progress-line-fill').scale_x > 0" 5
 "$HERE/shot.sh" smoke-playing > /dev/null
 
 # Hovering opens the player; the fake player has shuffle and repeat, so both
@@ -80,6 +83,8 @@ media_prop() {
 "$HERE/hover.sh" on > /dev/null
 wait_for "hovering opens the player with shuffle and repeat" \
     "$FIND shown('nokta-expanded') && find(Main.layoutManager.uiGroup, 'nokta-toggle').filter((b) => b.mapped).length === 2" 10
+[ "$(js "$FIND shown('nokta-progress-line')")" = false ] || fail "the progress line shows in the open notch"
+ok "the progress line belongs to the closed notch"
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-toggle')[1].emit('clicked', 1); true" > /dev/null
 i=0
 until media_prop LoopStatus | grep -q Playlist; do
@@ -322,8 +327,8 @@ wait_for "a focus timer replaces the clock" \
 wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock') && !shown('nokta-timer')" 10
 # A countdown takes the clock's place too, and alerts when it runs out.
 "$HERE/timer.sh" countdown 3 "Smoke eggs"
-wait_for "a countdown replaces the clock" \
-    "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^0:0[0-3]$/.test(one('nokta-timer').text)" 5
+wait_for "a countdown replaces the clock, with its progress line" \
+    "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^0:0[0-3]$/.test(one('nokta-timer').text) && shown('nokta-progress-line')" 5
 "$HERE/shot.sh" smoke-countdown > /dev/null
 wait_for "a finished countdown alerts with its label" \
     "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke eggs' && one('nokta-osd-detail').text === 'Timer done'" 10
@@ -489,8 +494,8 @@ wait_for "the clock comes back when the shelf is cleared" "$FIND shown('nokta-cl
 # is no recorder here, so only GNOME's own state changes.
 UI="Main.screenshotUI"
 js "$UI._setScreencastInProgress(true); true" > /dev/null
-wait_for "a screen recording replaces the clock with a red dot and its time" \
-    "$FIND any('nokta-recording') && !shown('nokta-clock') && /^0:[0-9]{2}$/.test(find(Main.layoutManager.uiGroup, 'nokta-recording').find((a) => a.mapped).get_last_child().text)" 5
+wait_for "a screen recording replaces the clock with a red dot and its time, and no line" \
+    "$FIND any('nokta-recording') && !shown('nokta-clock') && !shown('nokta-progress-line') && /^0:[0-9]{2}$/.test(find(Main.layoutManager.uiGroup, 'nokta-recording').find((a) => a.mapped).get_last_child().text)" 5
 "$HERE/shot.sh" smoke-recording > /dev/null
 "$HERE/hover.sh" on > /dev/null
 # 32 px closed, 128 px for the date, toggles and tiles, 36 px for the recording.
