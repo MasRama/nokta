@@ -39,8 +39,9 @@ notifications. Hover over it to open it.
   to right, with the next line under it. Click it to follow the lyrics
   around it. Lyrics come from [LRCLIB](https://lrclib.net), or from your
   own `.lrc` files.
-- **System popups.** Volume, brightness and Caps Lock show in the notch
-  instead of GNOME's popup.
+- **System popups.** Volume, brightness, the microphone, Caps Lock, Num
+  Lock and the keyboard layout show in the notch instead of GNOME's popup.
+  A muted speaker or microphone says so.
 - **Devices.** The notch tells you when Bluetooth headphones connect (with
   their battery), when the charger is plugged in or out, and when the
   battery is low or full.
@@ -227,6 +228,8 @@ Every key, by table:
 | `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
 | `osd_duration_ms` | `1500` | How long the notch shows the volume or brightness after the last change |
 | `show_caps_lock` | `true` | Show a message in the notch when Caps Lock turns on or off |
+| `show_num_lock` | `false` | Show a message in the notch when Num Lock turns on or off |
+| `show_input_source` | `true` | Show the new keyboard layout when you switch layouts |
 | `all_monitors` | `true` | Show a notch on every monitor; `false` shows it only on the primary monitor |
 | `device_alerts` | `true` | Show Bluetooth audio, charger and battery alerts in the notch |
 | `alert_duration_ms` | `3000` | How long a device alert stays |

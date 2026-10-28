@@ -50,6 +50,8 @@ tools/devshell/player.sh Playing|Paused|Stopped [N]  # N: player N from --player
 tools/devshell/osd.sh level ICON LEVEL [MAX]  # an OSD as gnome-settings-daemon sends it
 tools/devshell/osd.sh label ICON TEXT
 tools/devshell/osd.sh capslock        # toggle Caps Lock with a virtual keyboard
+tools/devshell/osd.sh numlock         # the same for Num Lock
+tools/devshell/osd.sh layout          # switch to the next keyboard layout
 tools/devshell/device.sh plug|unplug  # the fake charger
 tools/devshell/device.sh percent N    # the fake battery level
 tools/devshell/device.sh full         # charged to 100 % on AC
@@ -163,6 +165,13 @@ must curve inward, the notch must be centered, and no text may be clipped.
       text on the left.
 - [ ] `osd.sh capslock` twice: `Caps Lock on`, then `Caps Lock off`. No
       message when the extension is enabled.
+- [ ] `osd.sh numlock`: nothing by default; with `show_num_lock = true`,
+      `Num Lock on`, then `Num Lock off`.
+- [ ] `osd.sh layout`: the new layout's name, like `German`; again: the
+      first one. `show_input_source = false`: nothing.
+- [ ] `osd.sh level audio-volume-muted-symbolic 0`: `Muted`, no bar.
+      `osd.sh level microphone-sensitivity-muted-symbolic 0`:
+      `Microphone off`, no bar.
 - [ ] `replace_osd = false` while running: GNOME's popup again; back to
       `true`: the notch again. `show_caps_lock = false`: no Caps Lock message.
 - [ ] Disabled extension: GNOME's popup again.
