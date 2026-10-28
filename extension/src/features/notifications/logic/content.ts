@@ -48,3 +48,11 @@ export function notificationLines(n: NotificationText, showBody: boolean): { tit
     const body = showBody ? plainText(n.body) : '';
     return { title, detail: body || (app === title ? '' : app) };
 }
+
+/**
+ * An icon drawn in one color (its theme names or file path end in
+ * `-symbolic`): it sits on a square of the accent. An app's full-color icon
+ * stands alone.
+ */
+export const isSymbolicIcon = (names: readonly string[]): boolean =>
+    names.some((name) => name.endsWith('-symbolic') || name.endsWith('-symbolic.svg'));

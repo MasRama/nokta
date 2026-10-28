@@ -6,13 +6,21 @@ import St from 'gi://St';
 import { TintedButton } from '../../shared/button.js';
 import { setVertical } from '../../shared/compat.js';
 import { MAX_BUTTONS } from './logic/actions.js';
-import { iconFor } from '../../shared/icons.js';
-import { chromeIcon } from '../../shared/icons.js';
+import { isSymbolicIcon } from './logic/content.js';
+import { chromeIcon, iconFor } from '../../shared/icons.js';
+import { withAlpha } from '../../shared/logic/color.js';
 
 /** The second line is dimmed next to the title. */
 const DETAIL_OPACITY = 180;
 /** The close button is dimmed until the pointer is on it. */
 const CLOSE_OPACITY = 150;
+
+/** The names an icon is looked up by, or its file's path. */
+function iconNames(icon: Gio.Icon | null): string[] {
+    if (icon instanceof Gio.ThemedIcon) return icon.get_names();
+    if (icon instanceof Gio.FileIcon) return [icon.get_file().get_path() ?? ''];
+    return [];
+}
 
 export interface NotificationHandlers {
     /** A click on the notification itself. */
@@ -30,7 +38,10 @@ export interface NotificationHandlers {
 export class NotificationView {
     readonly actor: St.BoxLayout;
     private readonly iconBox: St.Widget;
+    private readonly iconSquare: St.Bin;
     private readonly icon: St.Icon;
+    private accent = '#ffffff';
+    private symbolic = false;
     private readonly badge: St.Label;
     private readonly title: St.Label;
     private readonly detail: St.Label;
@@ -48,6 +59,7 @@ export class NotificationView {
         });
         this.iconBox = new St.Widget({ layout_manager: new Clutter.BinLayout(), y_align: Clutter.ActorAlign.CENTER });
         this.icon = new St.Icon({ style_class: 'nokta-notification-icon' });
+        this.iconSquare = new St.Bin({ style_class: 'nokta-notification-icon-square', child: this.icon });
         this.badge = new St.Label({
             style_class: 'nokta-notification-badge',
             x_expand: true,
@@ -59,7 +71,7 @@ export class NotificationView {
         // Over the icon's top right corner, a little outside it.
         this.badge.translation_x = 6;
         this.badge.translation_y = -5;
-        this.iconBox.add_child(this.icon);
+        this.iconBox.add_child(this.iconSquare);
         this.iconBox.add_child(this.badge);
         const text = setVertical(
             new St.BoxLayout({ style_class: 'nokta-notification-text', x_expand: true, y_align: Clutter.ActorAlign.CENTER }),
@@ -105,8 +117,11 @@ export class NotificationView {
     /** `buttons` are the labels of its actions' buttons, at most MAX_BUTTONS; `badge` the stacked count. */
     show(title: string, detail: string, icon: Gio.Icon | null, buttons: readonly string[], badge: string | null): void {
         // The typings omit that gicon is nullable; null leaves the slot empty.
-        this.icon.gicon = chromeIcon(icon) as Gio.Icon;
-        this.icon.visible = icon !== null;
+        const gicon = chromeIcon(icon);
+        this.icon.gicon = gicon as Gio.Icon;
+        this.iconSquare.visible = icon !== null;
+        this.symbolic = isSymbolicIcon(iconNames(gicon));
+        this.paintIcon();
         this.badge.visible = badge !== null;
         this.badge.text = badge ?? '';
         this.iconBox.visible = icon !== null || badge !== null;
@@ -123,6 +138,15 @@ export class NotificationView {
     setColors(foreground: string, accent: string, onAccent: string): void {
         for (const button of this.buttons) button.setForeground(foreground);
         this.badge.style = `background-color: ${accent}; color: ${onAccent};`;
+        this.accent = accent;
+        this.paintIcon();
+    }
+
+    /** A symbolic icon sits on the accent at 20 %; an app's own icon fills the square alone. */
+    private paintIcon(): void {
+        this.iconSquare.style = this.symbolic ? `background-color: ${withAlpha(this.accent, 0.2)};` : '';
+        if (this.symbolic) this.icon.add_style_class_name('nokta-notification-icon-symbolic');
+        else this.icon.remove_style_class_name('nokta-notification-icon-symbolic');
     }
 
     destroy(): void {

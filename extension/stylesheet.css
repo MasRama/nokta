@@ -273,8 +273,19 @@
     spacing: 12px;
 }
 
+/* The icon's square: filled with the accent at 20 % under a symbolic icon (notifications/view.ts). */
+.nokta-notification-icon-square {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+}
+
 .nokta-notification-icon {
-    icon-size: 28px;
+    icon-size: 32px;
+}
+
+.nokta-notification-icon-symbolic {
+    icon-size: 18px;
 }
 
 .nokta-notification-title {
