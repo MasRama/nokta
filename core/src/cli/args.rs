@@ -4,6 +4,8 @@
 pub enum Cli {
     Help,
     Version,
+    /// Opens the extension's settings window.
+    Settings,
     Set {
         id: String,
         title: String,
@@ -29,6 +31,7 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
     match words.as_slice() {
         [] | ["--help" | "-h" | "help"] => Ok(Cli::Help),
         ["--version" | "-V"] => Ok(Cli::Version),
+        ["settings"] => Ok(Cli::Settings),
         ["activity", "set", rest @ ..] => {
             let (id, options) = id_and_options(rest)?;
             let mut o = Options::read(
