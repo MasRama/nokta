@@ -48,7 +48,7 @@ if [[ -z "$prefix" && "$skip_systemd" != 1 ]] && command -v gnome-extensions >/d
   fi
 fi
 
-for file in "$bin_dir/noktad" "$config_dir/systemd/user/nokta.service" \
+for file in "$bin_dir/noktad" "$bin_dir/nokta" "$config_dir/systemd/user/nokta.service" \
             "$data_dir/dbus-1/services/io.nokta.Nokta.service"; do
   if [[ -e "$file" ]]; then
     rm -f "$file"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Installs noktad and the Nokta GNOME extension for the current user.
+# Installs noktad, the nokta command and the Nokta GNOME extension for the
+# current user.
 # Nothing is written outside your home directory and sudo is never used.
 #
 # Usage: install.sh [--prefix-dir DIR]
@@ -49,6 +50,8 @@ find_first() {
 }
 noktad="$(find_first "$here/noktad" "$here/../target/release/noktad")" \
   || die "noktad not found next to this script or in target/release (run: cargo build --release)"
+nokta="$(find_first "$here/nokta" "$here/../target/release/nokta")" \
+  || die "nokta not found next to this script or in target/release (run: cargo build --release)"
 unit_src="$(find_first "$here/nokta.service" "$here/packaging/nokta.service")" \
   || die "nokta.service not found"
 dbus_src="$(find_first "$here/io.nokta.Nokta.service" "$here/packaging/io.nokta.Nokta.service")" \
@@ -71,9 +74,10 @@ render() {
 }
 
 put "$noktad" "$bin_dir/noktad" 755
+put "$nokta" "$bin_dir/nokta" 755
 render "$unit_src" "$unit_dir/nokta.service"
 render "$dbus_src" "$dbus_dir/io.nokta.Nokta.service"
-echo "Installed noktad to $bin_dir"
+echo "Installed noktad and nokta to $bin_dir"
 echo "Installed nokta.service to $unit_dir"
 echo "Installed D-Bus activation to $dbus_dir"
 
