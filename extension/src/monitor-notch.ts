@@ -543,6 +543,7 @@ export class MonitorNotch implements ShelfNotch {
         this.collapsed.update(snapshot, this.shownPalette.accent);
         this.collapsed.setActive(this.drawn === 'collapsed', snapshot);
         this.expanded.update(snapshot);
+        this.expanded.setActive(this.drawn === 'expanded');
         this.machine.setAvailable(snapshot.available);
         if (trackKey(snapshot) !== this.lyricsTrack) this.setLyricsOpen(false);
         // Open, a player coming or going swaps the media view and the idle panel.
@@ -1237,6 +1238,7 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === 'idle') this.clock.start();
         else this.clock.stop();
         this.collapsed.setActive(mode === 'collapsed', this.sources.media.snapshot());
+        this.expanded.setActive(mode === 'expanded');
         this.applyIndicator();
         this.updatePanelTick();
         if (mode === 'expanded') {
