@@ -223,6 +223,19 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 title: 'Notch',
                 rows: [
                     behavior('all_monitors', 'On every monitor', bool(), 'Off shows it on the primary monitor only'),
+                    behavior(
+                        'fullscreen_alerts',
+                        'Over fullscreen apps',
+                        {
+                            type: 'choice',
+                            options: [
+                                { value: 'important', label: 'Important alerts' },
+                                { value: 'all', label: 'All alerts' },
+                                { value: 'none', label: 'Nothing' },
+                            ],
+                        },
+                        'Important: low battery, the focus timer, timers, alarms and reminders',
+                    ),
                     behavior('open_delay_ms', 'Open delay', int(0, 5000, 10), 'Milliseconds of hover before it opens'),
                     behavior(
                         'close_delay_ms',

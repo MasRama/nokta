@@ -141,7 +141,8 @@ export class Notch {
     /** Animates the body to `width` × `height`, keeping the notch centered. */
     resizeTo(width: number, height: number, kind: ResizeKind): void {
         if (width === this.width && height === this.height) return;
-        if (!St.Settings.get().enable_animations) {
+        // Hidden, as over a fullscreen app, it has nothing to animate.
+        if (!St.Settings.get().enable_animations || !this.actor.mapped) {
             this.jumpTo(width, height);
             return;
         }

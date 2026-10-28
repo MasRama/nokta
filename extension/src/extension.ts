@@ -21,7 +21,7 @@ import {
     type Alarm,
     type CalendarEvent,
 } from './features/calendar/index.js';
-import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
+import { deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
@@ -94,6 +94,7 @@ import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
+import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
@@ -483,7 +484,8 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const tone = { color: phaseColor(phase === 'break' ? 'break' : 'focus') };
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs, tone);
+        const icon = new Gio.ThemedIcon({ name: TIMER_ICON });
+        this.showOsd(-1, 'focus', content, icon, this.settings.behavior.alertDurationMs, tone);
         if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
 
@@ -494,7 +496,7 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const icon = kind === 'alarm' ? new Gio.ThemedIcon({ name: TIMER_ICON }) : this.extensionIcon(CLOCK_ICON);
         const tone = { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') };
-        this.showOsd(-1, content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs, tone);
+        this.showOsd(-1, 'clock', content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs, tone);
         if (this.settings.timer.sound)
             global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', alert.title, null);
     }
@@ -560,8 +562,12 @@ class Session {
 
     // OSD
 
-    /** The notch for a message, or null and the monitor for GNOME's popup when none can show it. */
-    private routeMessage(requested: number): { notch: MonitorNotch | null; monitor: number } {
+    /**
+     * The notch for a message, or null and the monitor for GNOME's popup when
+     * none can show it. Over a fullscreen app only an alert `kind` that
+     * `fullscreen_alerts` lets through shows.
+     */
+    private routeMessage(requested: number, kind?: AlertKind): { notch: MonitorNotch | null; monitor: number } {
         const route = routeOsd({
             requested,
             focused: focusedMonitor(),
@@ -570,7 +576,8 @@ class Session {
         });
         const notch = this.notches.find((n) => n.monitorIndex === route.notch);
         // A fullscreen app hides the notch; the lock screen covers it.
-        const shown = notch?.visible && !Main.sessionMode.isLocked;
+        const overFullscreen = kind !== undefined && showsOverFullscreen(kind, this.settings.behavior.fullscreenAlerts);
+        const shown = notch !== undefined && notch.canShow(overFullscreen) && !Main.sessionMode.isLocked;
         return { notch: shown ? notch : null, monitor: route.monitor };
     }
 
@@ -580,12 +587,13 @@ class Session {
      */
     private showOsd(
         requested: number,
+        kind: AlertKind,
         content: OsdContent,
         icon: Gio.Icon | null,
         durationMs?: number,
         tone?: AlertTone,
     ): number | null {
-        const { notch, monitor } = this.routeMessage(requested);
+        const { notch, monitor } = this.routeMessage(requested, kind);
         if (!notch) return monitor;
         notch.showOsd(content, icon, durationMs, tone);
         return null;
@@ -599,7 +607,8 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const charged = kind === 'charger-plugged' || kind === 'battery-full';
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : 'accent';
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
+        const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
+        this.showOsd(-1, fullscreenKind, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
     }
 
     /** An activity ended: a check mark or a red cross in the focused notch. */
@@ -609,13 +618,14 @@ class Session {
         const alert = endedAlert(title, success, message, elapsedUs);
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone = success ? 'success' : 'urgent';
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
+        this.showOsd(-1, 'activity', content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs, tone);
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
         const iconNames = request.icon instanceof Gio.ThemedIcon ? request.icon.get_names() : [];
         return this.showOsd(
             request.monitorIndex,
+            'osd',
             osdContent(request.level, request.maxLevel, request.label, iconNames),
             request.icon,
         );
@@ -639,7 +649,7 @@ class Session {
             this.lockKeys = new LockKeysWatcher((key, on) => {
                 const { showCapsLock: caps, showNumLock: num } = this.settings.behavior;
                 if (key === 'Caps Lock' ? !caps : !num) return;
-                this.showOsd(-1, lockKeyContent(key, on), new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
+                this.showOsd(-1, 'osd', lockKeyContent(key, on), new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
             });
         } else if (!lockKeys && this.lockKeys) {
             this.lockKeys.destroy();
@@ -648,7 +658,7 @@ class Session {
         if (showInputSource && !this.inputSources) {
             // GNOME's own switcher shows only while Super is held, so the notch shows every switch.
             this.inputSources = new InputSourceWatcher((name) => {
-                this.showOsd(-1, { fraction: null, text: name }, new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
+                this.showOsd(-1, 'osd', { fraction: null, text: name }, new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
             });
         } else if (!showInputSource && this.inputSources) {
             this.inputSources.destroy();
@@ -674,7 +684,8 @@ class Session {
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone = alert.urgent ? 'urgent' : 'accent';
-        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), this.settings.behavior.alertDurationMs, tone);
+        const icon = new Gio.ThemedIcon({ name: alert.icon });
+        this.showOsd(-1, 'calendar', content, icon, this.settings.behavior.alertDurationMs, tone);
     }
 
     /** A time like the notch's clock shows it. */

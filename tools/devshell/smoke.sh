@@ -758,6 +758,72 @@ wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokt
 # leave the overview open, which hides every window.
 js "Main.overview.hide(); true" > /dev/null
 wait_for "the overview is closed" "!Main.overview.visible" 10
+
+# The notch follows fullscreen itself: a fullscreen window hides it, an
+# important alert shows over the window with unredirection off (counted by
+# wrapping GNOME's functions) and without opening on hover, and it hides
+# again after. A volume OSD, or with fullscreen_alerts = "none" any alert,
+# leaves it hidden.
+set_fullscreen_alerts() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set behavior fullscreen_alerts "<'$1'>" > /dev/null
+    wait_for "fullscreen_alerts is $1" \
+        "Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.settings?.behavior?.fullscreenAlerts === '$1'" 5
+}
+NOTCH_SHOWN="one('nokta-notch').visible"
+"$HERE/fullscreen.sh" on
+wait_for "a fullscreen window hides the notch" "$FIND !one('nokta-notch').visible" 5
+"$HERE/shot.sh" smoke-fullscreen > /dev/null
+js "const c = global.compositor; const M = imports.gi.Meta;
+// GNOME's ease() turns it off and on too, also for Nokta's actors: count only the notch's own calls.
+const count = (step) => { if (new Error().stack.includes('nokta@nokta.io/shared/compat.js')) global._noktaUnredirect += step; };
+global._noktaUnredirect = 0;
+if (c.disable_unredirect) {
+    const [off, on] = [c.disable_unredirect, c.enable_unredirect];
+    global._noktaRestoreUnredirect = () => { delete c.disable_unredirect; delete c.enable_unredirect; };
+    c.disable_unredirect = function () { count(1); return off.call(this); };
+    c.enable_unredirect = function () { count(-1); return on.call(this); };
+} else {
+    const [off, on] = [M.disable_unredirect_for_display, M.enable_unredirect_for_display];
+    global._noktaRestoreUnredirect = () => { M.disable_unredirect_for_display = off; M.enable_unredirect_for_display = on; };
+    M.disable_unredirect_for_display = (d) => { count(1); return off(d); };
+    M.enable_unredirect_for_display = (d) => { count(-1); return on(d); };
+}
+true" > /dev/null
+"$HERE/timer.sh" countdown 1 "Smoke fullscreen"
+wait_for "a finished countdown shows over the fullscreen window, unredirection off" \
+    "$FIND $NOTCH_SHOWN && shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke fullscreen' && global._noktaUnredirect === 1" 10 \
+    "$FIND JSON.stringify([one('nokta-notch').visible, shown('nokta-osd'), one('nokta-osd-text')?.text, global._noktaUnredirect])"
+"$HERE/hover.sh" on > /dev/null
+sleep 1
+[ "$(js "$FIND $NOTCH_SHOWN && shown('nokta-osd') && !shown('nokta-panel') && !shown('nokta-expanded')")" = true ] ||
+    fail "hovering opened the notch over the fullscreen window"
+ok "hovering does not open the notch over the fullscreen window"
+"$HERE/shot.sh" smoke-fullscreen-alert > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the notch hides again after the alert, unredirection back on" \
+    "$FIND !one('nokta-notch').visible && global._noktaUnredirect === 0" 15 \
+    "$FIND JSON.stringify([one('nokta-notch').visible, shown('nokta-osd'), global._noktaUnredirect])"
+# Counts every time the notch shows from here on.
+js "$FIND global._noktaShows = 0; global._noktaShowsId = one('nokta-notch').connect('notify::visible', (a) => { if (a.visible) global._noktaShows++; }); true" > /dev/null
+"$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
+sleep 1
+[ "$(js "global._noktaShows")" = 0 ] || fail "a volume OSD showed the notch over the fullscreen window"
+ok "a volume OSD leaves the notch hidden over the fullscreen window"
+set_fullscreen_alerts none
+"$HERE/timer.sh" countdown 1 "Smoke hidden"
+sleep 3
+[ "$(js "global._noktaShows")" = 0 ] || fail "an alert showed the notch over the fullscreen window with fullscreen_alerts = none"
+ok "with fullscreen_alerts = none the notch stays hidden for an alert"
+"$HERE/shot.sh" smoke-fullscreen-none > /dev/null
+js "$FIND one('nokta-notch').disconnect(global._noktaShowsId); global._noktaRestoreUnredirect(); true" > /dev/null
+set_fullscreen_alerts important
+"$HERE/fullscreen.sh" off
+wait_for "the notch comes back closed when the window leaves fullscreen" \
+    "$FIND $NOTCH_SHOWN && !shown('nokta-osd') && (shown('nokta-clock') || shown('nokta-collapsed'))" 5
+sleep 0.4
+"$HERE/shot.sh" smoke-fullscreen-after > /dev/null
+
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.
 # The windows the shell has, printed when the settings window does not open.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { deviceAlert } from '../src/features/devices/logic/alert.js';
+import { deviceAlert, isBatteryWarning } from '../src/features/devices/logic/alert.js';
 
 test('bluetooth_connected_shows_name_and_battery', () => {
     assert.deepEqual(deviceAlert('bluetooth-connected', 'Galaxy Buds2', 82), {
@@ -79,4 +79,11 @@ test('unknown_percentage_shows_no_detail', () => {
 
 test('unknown_kind_is_ignored', () => {
     assert.equal(deviceAlert('wifi-connected', 'Home', -1), null);
+});
+
+test('battery_low_and_critical_are_battery_warnings', () => {
+    assert.equal(isBatteryWarning('battery-low'), true);
+    assert.equal(isBatteryWarning('battery-critical'), true);
+    for (const kind of ['battery-full', 'charger-plugged', 'charger-unplugged', 'bluetooth-connected', 'other'])
+        assert.equal(isBatteryWarning(kind), false, kind);
 });
