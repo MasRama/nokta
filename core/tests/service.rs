@@ -559,3 +559,55 @@ async fn weather_reaches_ready_and_refresh_keeps_a_fresh_reading() {
     tokio::time::sleep(Duration::from_millis(100)).await;
     // The mock's expect(1) fails the test on drop if a fresh reading was asked again.
 }
+
+#[tokio::test]
+async fn files_added_to_the_shelf_are_listed_until_removed() {
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let file = daemon.cache_home.path().join("two words.txt");
+    std::fs::write(&file, "x").unwrap();
+    let uri = url::Url::from_file_path(&file).unwrap().to_string();
+    let conn = bus.connect().await;
+    const SHELF: &str = "io.nokta.Shelf1";
+    let shelf = zbus::Proxy::new(&conn, NAME, "/io/nokta/Shelf", SHELF)
+        .await
+        .unwrap();
+    let p = properties(&conn, "/io/nokta/Shelf").await;
+    let items = || async {
+        let v: Vec<(String, String, String)> = get(&p, SHELF, "Items").await.try_into().unwrap();
+        v
+    };
+
+    let _: () = shelf
+        .call(
+            "Add",
+            &(vec![uri.clone(), "https://example.com/a.txt".to_owned()],),
+        )
+        .await
+        .unwrap();
+    let mut listed = items().await;
+    for _ in 0..100 {
+        if !listed.is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        listed = items().await;
+    }
+    assert_eq!(
+        listed,
+        [(
+            uri.clone(),
+            "two words.txt".to_owned(),
+            "text-x-generic".to_owned()
+        )]
+    );
+
+    let _: () = shelf.call("Remove", &(uri,)).await.unwrap();
+    for _ in 0..100 {
+        if items().await.is_empty() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    panic!("the item stayed on the shelf");
+}

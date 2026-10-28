@@ -1,5 +1,5 @@
 //! The services that run on every system: settings, lyrics, the timer, live
-//! activities and the weather.
+//! activities, the weather and the file shelf.
 //! Media players and device alerts are system sources; the platform part of
 //! `app` starts them and hands the media state in.
 
@@ -12,6 +12,7 @@ use crate::features::activities;
 use crate::features::lyrics::{self, cache::Cache, lrclib, LyricsState};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
+use crate::features::shelf;
 use crate::features::timer::logic::{Lengths, Phase, Snapshot};
 use crate::features::timer::{self, service::Command};
 use crate::features::weather::{self, openmeteo};
@@ -25,6 +26,7 @@ pub struct Services {
     pub timer: Timer,
     pub activities: activities::service::Handle,
     pub weather: weather::service::Handle,
+    pub shelf: shelf::service::Handle,
     /// Watches config.toml as long as the services live.
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
@@ -73,6 +75,7 @@ impl Services {
             )),
             monotonic_us,
         );
+        let shelf = shelf::service::spawn();
 
         Services {
             config,
@@ -85,6 +88,7 @@ impl Services {
             },
             activities,
             weather,
+            shelf,
             _config_watcher: config_watcher,
         }
     }

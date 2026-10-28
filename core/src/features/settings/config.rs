@@ -79,6 +79,8 @@ pub struct Behavior {
     pub privacy_dots: bool,
     /// Live activities from apps and scripts in the notch.
     pub live_activities: bool,
+    /// Park files on the notch by dropping them there.
+    pub file_shelf: bool,
 }
 
 impl Default for Behavior {
@@ -98,6 +100,7 @@ impl Default for Behavior {
             clock_format: "system".into(),
             privacy_dots: true,
             live_activities: true,
+            file_shelf: true,
         }
     }
 }
@@ -504,6 +507,7 @@ impl Behavior {
             ("clock_format", (&self.clock_format).into()),
             ("privacy_dots", self.privacy_dots.into()),
             ("live_activities", self.live_activities.into()),
+            ("file_shelf", self.file_shelf.into()),
         ]
     }
 }
