@@ -1306,11 +1306,12 @@ export class MonitorNotch implements ShelfNotch {
     }
 
     private applyOsdColors(): void {
-        const { foreground, accent, onAccent } = this.shownPalette;
+        const { foreground, accent, onAccent, light } = this.shownPalette;
         this.expanded.setPalette(this.shownPalette);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
-        this.osdView.setColors(accent, withAlpha(foreground, 0.25));
-        this.idlePanel.setColors({ foreground, accent, onAccent });
+        // The levels are the system's, not the song's: the bar takes the text color.
+        this.osdView.setColors(foreground, withAlpha(foreground, 0.2));
+        this.idlePanel.setColors({ foreground, accent, onAccent, light });
         this.clipboardPage.setColors({ foreground, accent });
         this.timerPage.setColors({ foreground });
         this.dropView.setForeground(foreground);

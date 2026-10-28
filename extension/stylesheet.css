@@ -404,7 +404,7 @@
 }
 
 .nokta-pill {
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 8px 10px;
 }
 
@@ -425,8 +425,9 @@
     spacing: 5px;
 }
 
+/* A rounded square, like the pills' corners. */
 .nokta-tile-circle {
-    border-radius: 20px;
+    border-radius: 13px;
 }
 
 .nokta-tile-icon {
