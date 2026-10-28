@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.7.0](https://github.com/MasRama/nokta/compare/v0.6.0...v0.7.0) (2026-10-28)
+
+
+### Features
+
+* **clipboard:** search the history as you type ([adb6e80](https://github.com/MasRama/nokta/commit/adb6e804c39aff3f244594a25a37abebd4f4c8ac))
+* **extension:** bounce and glow the notch on alerts ([ee6c688](https://github.com/MasRama/nokta/commit/ee6c68890304075186dfcb6b0a07a016f9f54b22))
+* **extension:** open the notch from the keyboard, or with a click ([e84fa3f](https://github.com/MasRama/nokta/commit/e84fa3f764c5979fa4847fc24f132de4d22a1bd0))
+* **extension:** show important alerts over a fullscreen app ([5a5389d](https://github.com/MasRama/nokta/commit/5a5389da487c7f72046f95e39c39b0a07c7e4ff5))
+* **extension:** show progress along the closed notch ([3a5ad61](https://github.com/MasRama/nokta/commit/3a5ad61da4b7ae09b8948f5c6d9f7749941454f8))
+* **lyrics:** nudge the lyrics earlier or later, kept per song ([aa84ec8](https://github.com/MasRama/nokta/commit/aa84ec8e6e195f6f7cfde06e6699f4f390745cc9))
+* **media:** switch the sound output from the open player ([e3012c7](https://github.com/MasRama/nokta/commit/e3012c724fd2ab6b6fa6ba345e9f8a4ab6a0badb))
+* **notifications:** add the notification's buttons, a close button and a count for stacked ones ([82276d5](https://github.com/MasRama/nokta/commit/82276d569c12e265bbbdfe9ed34975141753f52a))
+* **osd:** show Num Lock, the keyboard layout and a muted speaker or microphone ([362c135](https://github.com/MasRama/nokta/commit/362c1350c7e2d0e52de411c5d83aa48572bd5116))
+* **panel:** choose home's toggles and tiles and their order ([cb46363](https://github.com/MasRama/nokta/commit/cb463635bc7251b4f72bfa978d75a1f84c1c87e9))
+* **privacy:** show the call while an app uses the microphone ([30500b7](https://github.com/MasRama/nokta/commit/30500b703ee9321d22c38e6f05b0d512d42f83f9))
+* **screenshots:** show a screen recording in the notch ([f23f2d3](https://github.com/MasRama/nokta/commit/f23f2d30c39c233159d74dc6309b8557708740ed))
+* **timer:** add countdowns, stopwatches and alarms ([0b3d36d](https://github.com/MasRama/nokta/commit/0b3d36d6e5fc4bbe68b580e284b75f2634105b8a))
+
+
+### Bug Fixes
+
+* **extension:** open and close the notch smoothly ([657ce97](https://github.com/MasRama/nokta/commit/657ce97301eb4b1e9aa99b2625425a970e8113d5))
+* **media:** show a new sound output before Quick Settings lists it ([d25c86f](https://github.com/MasRama/nokta/commit/d25c86f7235ce664ea407a7c05937773565874e8))
+
 ## [0.6.0](https://github.com/MasRama/nokta/compare/v0.5.0...v0.6.0) (2026-10-28)
 
 
