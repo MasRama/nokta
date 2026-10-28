@@ -91,8 +91,9 @@ docs/               manual test checklist, screenshots
   `color-scheme`; Caffeine holds an idle inhibitor of GNOME's session
   manager (`panel/logic/caffeine.ts`, released in `disable()`). The
   notch's right-click menu (`panel/menu.ts`) is a GNOME popup menu.
-- `osd` (volume, brightness and Caps Lock in the notch) exists only in the
-  extension: its sources are GNOME Shell's own OSD calls and the keymap, so
+- `osd` (volume, brightness, Caps Lock, Num Lock and the keyboard layout
+  in the notch) exists only in the extension: its sources are GNOME Shell's
+  own OSD calls, the keymap and its input source manager, so
   the daemon only publishes its settings. `privacy` (the camera,
   microphone and screen dots) is the same: it follows the indicators GNOME
   Shell already shows in the top bar. `notifications` too: it wraps
