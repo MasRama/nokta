@@ -340,6 +340,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Green while the camera is on, orange while the microphone or screen is used',
                     ),
+                    behavior(
+                        'call_indicator',
+                        'Calls',
+                        bool(),
+                        'While the microphone is on: the app and how long, with a mute button in home',
+                    ),
                 ],
             },
             {

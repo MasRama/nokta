@@ -1,0 +1,7 @@
+# The app mic.sh says is on a call, so the notch can name it and show its icon.
+[Desktop Entry]
+Type=Application
+Name=Fake Call
+Icon=call-start-symbolic
+Exec=true
+NoDisplay=true

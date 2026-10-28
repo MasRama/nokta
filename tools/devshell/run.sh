@@ -57,6 +57,8 @@ if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
     cp -r "$HERE/devtools@nokta.io" "$EXT/"
     mkdir -p "$STATE/config/pipewire/pipewire.conf.d"
     cp "$HERE/pipewire.conf" "$STATE/config/pipewire/pipewire.conf.d/nokta-devshell.conf"
+    mkdir -p "$STATE/data/applications"
+    cp "$HERE/fake-call.desktop" "$STATE/data/applications/io.nokta.FakeCall.desktop"
 
     cat > "$STATE/config/glib-2.0/settings/keyfile" <<'KEYFILE'
 [org/gnome/shell]
@@ -150,6 +152,7 @@ if [ "$START_AUDIO" = 1 ] && command -v pipewire-pulse > /dev/null 2>&1 && comma
     PIDS="$PIDS $!"
     wait_file "$XDG_RUNTIME_DIR/pulse/native"
     pw-metadata -n default 0 default.audio.sink '{"name":"nokta-speakers"}' > /dev/null
+    pw-metadata -n default 0 default.audio.source '{"name":"nokta-microphone"}' > /dev/null
     stdbuf -oL pw-metadata -n default -m 2> /dev/null | while read -r line; do
         case "$line" in
             *"key:'default.configured.audio.sink'"*)

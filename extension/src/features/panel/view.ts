@@ -35,6 +35,15 @@ export interface PanelClock {
     canPause: boolean;
 }
 
+/** The microphone on for a call, as its panel row shows it. */
+export interface PanelCall {
+    icon: Gio.Icon;
+    title: string;
+    /** Like `Microphone · 12:03`. */
+    detail: string;
+    muted: boolean;
+}
+
 /** The weather beside the date. */
 export interface PanelWeather {
     icon: string;
@@ -68,6 +77,8 @@ export interface PanelContent {
     weather: PanelWeather | null;
     /** Null hides the event row. */
     event: PanelEvent | null;
+    /** Null hides the call row. */
+    call: PanelCall | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
     activities: readonly PanelActivity[];
     /** How many wait in GNOME's message list; null when GNOME does not say. */
@@ -97,6 +108,8 @@ export interface PanelHandlers {
     toggle(which: QuickToggle): void;
     pauseClock(id: string, paused: boolean): void;
     removeClock(id: string): void;
+    toggleCallMute(): void;
+    hideCall(): void;
 }
 
 /** Each toggle's icon: a theme icon, or one in the extension's icons folder. */
@@ -230,6 +243,55 @@ class ClockRow {
     }
 }
 
+/** The call: the app's icon and name, the time, and mute and hide buttons. */
+class CallRow {
+    readonly actor: St.BoxLayout;
+    private readonly icon: St.Icon;
+    private readonly title: St.Label;
+    private readonly detail: St.Label;
+    private readonly muteIcon: St.Icon;
+
+    constructor(handlers: Pick<PanelHandlers, 'toggleCallMute' | 'hideCall'>) {
+        this.icon = new St.Icon({ style_class: 'nokta-panel-call-icon', y_align: Clutter.ActorAlign.CENTER });
+        this.title = new St.Label({ style_class: 'nokta-panel-call-title', y_align: Clutter.ActorAlign.CENTER });
+        this.detail = new St.Label({
+            style_class: 'nokta-panel-call-detail',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.detail.opacity = 150;
+        this.muteIcon = new St.Icon({ style_class: 'nokta-button-icon' });
+        const mute = new St.Button({
+            style_class: 'nokta-button nokta-panel-call-mute',
+            child: this.muteIcon,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        mute.connect('clicked', () => handlers.toggleCallMute());
+        const hide = new St.Button({
+            style_class: 'nokta-button nokta-panel-call-hide',
+            child: new St.Icon({ icon_name: 'window-close-symbolic', style_class: 'nokta-button-icon' }),
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        hide.connect('clicked', () => handlers.hideCall());
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-call', visible: false });
+        for (const child of [this.icon, this.title, this.detail, mute, hide]) this.actor.add_child(child);
+    }
+
+    show(call: PanelCall | null): void {
+        this.actor.visible = call !== null;
+        if (!call) return;
+        this.icon.gicon = call.icon;
+        this.title.text = call.title;
+        this.detail.text = call.detail;
+        this.muteIcon.icon_name = call.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic';
+        this.muteIcon.style = call.muted ? 'color: #ff453a;' : '';
+    }
+}
+
 /** Today's weather at the end of the date line: icon, temperature, then the place and range dimmed. */
 class WeatherBox {
     readonly actor: St.BoxLayout;
@@ -303,8 +365,8 @@ class EventRow {
 
 /**
  * Home, the open notch's other page and the only one while nothing plays:
- * the date and weather, the next event, live activities, then the quick
- * toggles and a row of tiles.
+ * the date and weather, the next event, a call, live activities, then the
+ * quick toggles and a row of tiles.
  */
 export class HomePanel {
     readonly actor: St.BoxLayout;
@@ -312,6 +374,7 @@ export class HomePanel {
     private readonly weather = new WeatherBox();
     private readonly playerButton: St.Button;
     private readonly event: EventRow;
+    private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
@@ -340,6 +403,7 @@ export class HomePanel {
         heading.add_child(this.weather.actor);
         heading.add_child(this.playerButton);
         this.event = new EventRow(() => handlers.openCalendar());
+        this.call = new CallRow(handlers);
 
         const pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
         for (const [which, icon, label] of TOGGLES) {
@@ -364,6 +428,7 @@ export class HomePanel {
 
         this.actor.add_child(heading);
         this.actor.add_child(this.event.actor);
+        this.actor.add_child(this.call.actor);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
             const row = new ActivityRow();
             this.activities.push(row);
@@ -387,6 +452,7 @@ export class HomePanel {
         this.weather.show(content.weather);
         this.playerButton.visible = content.player;
         this.event.show(content.event);
+        this.call.show(content.call);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.clocks.forEach((row, i) => row.show(content.clocks[i]));
         for (const [which, pill] of this.toggles) pill.set(content.toggles[which]);

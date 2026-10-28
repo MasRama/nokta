@@ -115,7 +115,10 @@ if [ -S "$STATE/runtime/pulse/native" ]; then
     MENU="$FIND const menu = () => find(Main.layoutManager.uiGroup, 'nokta-output-menu').find((a) => a.mapped);
 const items = () => find(menu(), 'popup-menu-item');"
     wait_for "the open player shows the speakers as the sound output" \
-        "$FIND shown('nokta-output-button') && one('nokta-output-button').child.icon_name === 'audio-speakers-symbolic'" 10
+        "$FIND shown('nokta-output-button') && one('nokta-output-button').child.icon_name === 'audio-speakers-symbolic'" 10 \
+        "$FIND const c = Main.panel.statusArea.quickSettings._volumeOutput?._output?._control; JSON.stringify([shown('nokta-output-button'),
+one('nokta-output-button')?.child.icon_name, c?.get_state(), c?.get_default_sink()?.get_name(),
+c?.get_sinks().map((s) => s.get_name())])"
     js "$FIND one('nokta-output-button').emit('clicked', 1); true" > /dev/null
     wait_for "the output button lists both outputs" \
         "$MENU menu() !== undefined && items().map((i) => i.label_actor?.text).join() === 'Headphones,Speakers'" 5 \
@@ -229,6 +232,56 @@ wait_for "the camera and microphone show two dots" \
 js "$QS._camera._indicator.visible = false; $QS._volumeInput._indicator.visible = false; true" > /dev/null
 wait_for "the dots go away" \
     "$FIND find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').every((d) => !d.mapped)" 5
+
+# A fake call (mic.sh) records from the devshell's silent microphone, which
+# turns GNOME's microphone indicator on: the closed notch shows the
+# microphone and how long, home a 26 px row with the app. Its mute button
+# mutes the microphone; its close button hides the call until the
+# microphone goes off.
+if [ -S "$STATE/runtime/pulse/native" ]; then
+    CALL="$FIND const call = () => find(Main.layoutManager.uiGroup, 'nokta-call').find((a) => a.mapped);"
+    SOURCE="$QS._volumeInput._control.get_default_source()"
+    "$HERE/mic.sh" on
+    wait_for "a call replaces the clock with the microphone and its time" \
+        "$CALL call() !== undefined && !shown('nokta-clock') && /^0:[0-9]{2}$/.test(call().get_last_child().text)" 10 \
+        "$CALL JSON.stringify([$QS._volumeInput._indicator.visible, call()?.get_last_child().text])"
+    "$HERE/shot.sh" smoke-call > /dev/null
+    "$HERE/hover.sh" on > /dev/null
+    # 32 px closed, 128 px for the date, toggles and tiles, 36 px for the call.
+    wait_for "home shows the call with its app" \
+        "$FIND shown('nokta-panel-call') && find(one('nokta-panel-call'), 'nokta-panel-call-title')[0].text === 'Fake Call' && Math.round(one('nokta-body').height) === 196" 5 \
+        "$FIND JSON.stringify([shown('nokta-panel-call'), find(one('nokta-panel-call'), 'nokta-panel-call-title')[0]?.text, one('nokta-body').height])"
+    sleep 0.4
+    "$HERE/shot.sh" smoke-call-panel > /dev/null
+    # Without a session manager, some PipeWire versions cannot mute the
+    # devshell's microphone at all, not even from Quick Settings.
+    js "$SOURCE.change_is_muted(true); true" > /dev/null
+    i=0
+    until [ "$(js "$SOURCE.is_muted")" = true ] || [ "$i" -ge 10 ]; do
+        i=$((i + 1))
+        sleep 0.2
+    done
+    if [ "$i" -lt 10 ]; then
+        js "$SOURCE.change_is_muted(false); true" > /dev/null
+        wait_for "the microphone can be muted here" "!$SOURCE.is_muted" 5
+        js "$FIND one('nokta-panel-call-mute').emit('clicked', 1); true" > /dev/null
+        wait_for "the mute button mutes the microphone" \
+            "$FIND $SOURCE.is_muted && one('nokta-panel-call-detail').text.startsWith('Muted · ')" 5 \
+            "$FIND JSON.stringify([$SOURCE?.get_name(), $SOURCE?.is_muted, one('nokta-panel-call-detail').text])"
+    else
+        echo "smoke: skip: this PipeWire cannot mute the devshell's microphone"
+    fi
+    js "$FIND one('nokta-panel-call-hide').emit('clicked', 1); true" > /dev/null
+    wait_for "the close button hides the call" \
+        "$FIND !shown('nokta-panel-call') && Math.round(one('nokta-body').height) === 160" 5
+    "$HERE/hover.sh" off > /dev/null
+    wait_for "the clock comes back while the call is hidden" "$CALL shown('nokta-clock') && call() === undefined && width() === 180" 5
+    "$HERE/mic.sh" off
+    js "$SOURCE.change_is_muted(false); true" > /dev/null
+    wait_for "GNOME's microphone indicator goes away with the call" "!$QS._volumeInput._indicator.visible" 5
+else
+    echo "smoke: skip: the devshell has no PipeWire, so no call"
+fi
 
 "$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
 wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && width() === 300" 5

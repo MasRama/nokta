@@ -34,6 +34,7 @@ alert_duration_ms = 3000 # how long a device alert stays
 show_clock = true        # the time in the notch while nothing plays
 clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
 privacy_dots = true      # a green dot while the camera is on, orange while the microphone or screen is used
+call_indicator = true    # while the microphone is on: the app and how long in the notch, with a mute button in home
 live_activities = true   # show builds, downloads and other activities that apps and the nokta command report
 file_shelf = true        # drop files on the notch to park them, then drag them out again
 screenshot_preview = true # after a screenshot, a preview with Open, Show in Files and Keep on shelf (needs [notifications] in_notch)
