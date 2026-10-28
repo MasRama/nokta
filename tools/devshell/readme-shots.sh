@@ -186,4 +186,31 @@ for theme in glass paper; do
     wait_for "the player closes" "$FIND shown('nokta-collapsed')" 10
 done
 set_key appearance theme "<'midnight'>"
+
+# The settings page home's Settings tile opens, and the settings window.
+# While nothing plays, the open notch is home.
+"$HERE/player.sh" Stopped
+wait_for "the clock" "$FIND shown('nokta-clock')" 10
+"$HERE/hover.sh" on > /dev/null
+TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Settings')"
+wait_for "the settings tile" "$FIND shown('nokta-panel') && $TILE?.mapped === true" 10
+js "$FIND $TILE.emit('clicked', 1); true"
+wait_for "the settings page" "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 6" 5
+shot settings-page 330
+"$HERE/hover.sh" off > /dev/null
+wait_for "the notch closes" "$FIND !any('nokta-subpage')" 10
+"$HERE/prefs.sh"
+PREFS="global.get_window_actors().find((w) => w.meta_window.get_title() === 'Nokta')"
+wait_for "the settings window" "$PREFS?.mapped === true && $PREFS.opacity === 255" 30
+sleep 1.5
+# The window's frame, without its shadow.
+RECT=$(shell_eval "const r = $PREFS.meta_window.get_frame_rect(); [r.x, r.y, r.width, r.height].join(' ')" | grep -oE '[0-9]+' | tr '\n' ' ')
+"$HERE/shot.sh" readme > /dev/null
+python3 - "$ROOT/build/shots/readme.png" "$OUT/settings-window.png" "$RECT" <<'PY'
+import sys
+from PIL import Image
+x, y, w, h = map(int, sys.argv[3].split())
+Image.open(sys.argv[1]).crop((x, y, x + w, y + h)).save(sys.argv[2], optimize=True)
+PY
+echo "readme-shots: docs/images/settings-window.png"
 echo "readme-shots: done"
