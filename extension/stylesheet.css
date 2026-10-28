@@ -120,8 +120,37 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.nokta-play:focus {
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+/*
+ * The focus ring: every button in the open notch can take the focus (from
+ * the open shortcut). Inset, like GNOME's own; St draws an inset shadow
+ * only over a background, so the focused button gets a faint one (a tint
+ * set from code stays).
+ */
+.nokta-notch StButton:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.nokta-notch.nokta-theme-glass StButton:focus {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+}
+
+.nokta-notch.nokta-light StButton:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+    box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+/* The wide buttons have square corners; their ring gets round ones. */
+.nokta-notch StButton.nokta-lyric-button:focus,
+.nokta-notch StButton.nokta-lyrics-sheet-button:focus,
+.nokta-notch StButton.nokta-panel-event:focus,
+.nokta-notch StButton.nokta-tile:focus {
+    border-radius: 10px;
+}
+
+/* Filled with the accent, light or dark: a grey ring shows on both. */
+.nokta-notch StButton.nokta-play:focus {
+    box-shadow: inset 0 0 0 3px rgba(128, 128, 128, 0.85);
 }
 
 .nokta-play-icon {

@@ -300,9 +300,12 @@ export class Notch {
     }
 
     private applyPalette(): void {
-        const { background, backgroundOpacity, gradient, foreground, border, theme } = this.palette;
+        const { background, backgroundOpacity, gradient, foreground, border, theme, light } = this.palette;
         for (const name of THEMES) this.actor.remove_style_class_name(`nokta-theme-${name}`);
         this.actor.add_style_class_name(`nokta-theme-${theme}`);
+        // Paper, or a light custom theme: the focus ring is dark.
+        if (light) this.actor.add_style_class_name('nokta-light');
+        else this.actor.remove_style_class_name('nokta-light');
         // The views take their text colour from the body.
         this.body.style = `color: ${foreground};`;
         const [r, g, b] = parseCssColor(background) ?? [0, 0, 0];

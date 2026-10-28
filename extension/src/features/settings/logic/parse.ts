@@ -1,4 +1,5 @@
 import { FULLSCREEN_ALERTS, type FullscreenAlerts } from '../../../shared/logic/fullscreen.js';
+import { OPEN_ON, type OpenOn } from '../../../shared/logic/machine.js';
 
 /** io.nokta.Settings1.Appearance in camelCase, with the defaults. */
 export interface Appearance {
@@ -53,6 +54,10 @@ export interface Behavior {
     screenshotPreview: boolean;
     /** Which alerts show over a fullscreen app. */
     fullscreenAlerts: FullscreenAlerts;
+    /** Whether resting the pointer or a click opens the notch. */
+    openOn: OpenOn;
+    /** Opens the notch and takes the keyboard, in GNOME's key syntax; empty for none. */
+    openShortcut: string;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -116,6 +121,8 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     fileShelf: true,
     screenshotPreview: true,
     fullscreenAlerts: 'important',
+    openOn: 'hover',
+    openShortcut: '<Super><Alt>n',
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */
@@ -245,6 +252,7 @@ export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAU
 export function behaviorFrom(raw: unknown): Behavior {
     const behavior = fromTable(raw, DEFAULT_BEHAVIOR);
     if (!FULLSCREEN_ALERTS.includes(behavior.fullscreenAlerts)) behavior.fullscreenAlerts = DEFAULT_BEHAVIOR.fullscreenAlerts;
+    if (!OPEN_ON.includes(behavior.openOn)) behavior.openOn = DEFAULT_BEHAVIOR.openOn;
     return behavior;
 }
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
