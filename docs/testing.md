@@ -7,7 +7,7 @@ hand before a release and after any change to the extension's UI.
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, the right-click menu opens, its notifications tile opens the calendar, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -120,6 +120,13 @@ must curve inward, the notch must be centered, and no text may be clipped.
       devshell's own setting (`show-banners`, `color-scheme`); Caffeine
       shows `inhibit` in `build/devshell/session.log`. Do Not Disturb turned
       on during a focus session stays on after it.
+- [ ] Settings window, **Home** page: each toggle and tile has a switch and
+      up and down buttons; with three toggles on, Night Light's switch is
+      off and greyed. Moving and switching changes home at once and writes
+      `[home]` in `config.toml`. Without toggles home is 116 px tall,
+      without tiles 89. Night Light changes `night-light-enabled`; the
+      Screenshot tile closes the notch, then opens GNOME's screenshot UI
+      without the notch in it.
 - [ ] With a player: the grid button at the player's top right opens home
       with a music button beside the date, which goes back. Leaving and
       hovering again opens the player.
@@ -535,7 +542,7 @@ banner for a fake file.
 
 ### Settings window
 
-- [ ] `prefs.sh`: two pages, Appearance and Behavior, with the values of
+- [ ] `prefs.sh`: three pages, Appearance, Behavior and Home, with the values of
       `config.toml`; no banner.
 - [ ] Change a switch and a number (`click.sh`; the first click may only
       focus the window): `config.toml` changes with its comments kept, the

@@ -52,7 +52,9 @@ notifications. Hover over it to open it.
   activities, timers, the files on the shelf, quick toggles for Do Not Disturb,
   Caffeine (the screen stays on) and the dark style, and tiles for the
   notification list, focus, timers, the clipboard and Settings. While a song plays,
-  the grid button at the player's top right opens it.
+  the grid button at the player's top right opens it. Choose its toggles and
+  tiles and their order on the settings window's Home page: Night Light and a
+  Screenshot tile are there too.
 - **Notifications** show in the notch instead of GNOME's banner. Hover to
   keep one open, click it to open the app.
 - **Focus timer.** Start it from Quick Settings or with
@@ -378,6 +380,16 @@ min`, and at the start `Standup is starting`. All-day events are left out.
 |---|---|---|
 | `enabled` | `true` | Keep a history of what you copy. Turning it off forgets the whole history, pinned entries too |
 | `max_items` | `25` | How many entries to keep, 5 to 100, besides the pinned ones |
+
+</details>
+
+<details>
+<summary><code>[home]</code>: home's toggles and tiles</summary>
+
+| Key | Default | What it does |
+|---|---|---|
+| `toggles` | `["do_not_disturb", "caffeine", "dark_style"]` | The quick toggles, in the order shown: at most 3 of these and `night_light`. Night Light shows only where GNOME has it. `[]` hides the row |
+| `tiles` | `["notifications", "focus", "timer", "clipboard", "settings"]` | The tiles, in the order shown: at most 5 of these and `screenshot`, which opens GNOME's screenshot UI. `[]` hides the row |
 
 </details>
 
