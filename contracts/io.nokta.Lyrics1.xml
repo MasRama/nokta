@@ -7,9 +7,22 @@
     <property name="Status" type="s" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
-    <!-- (start_us, text) pairs sorted by start; empty unless Status is "synced". -->
+    <!-- (start_us, text) pairs sorted by start; empty unless Status is "synced".
+         Already shifted by OffsetMs (start - offset, not below 0). -->
     <property name="Lines" type="a(xs)" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- The user's timing nudge for the current track in milliseconds, between
+         -30000 and 30000; positive shows the lyrics earlier, like LRC's [offset:].
+         Kept per track, also while its lyrics are loading or missing; 0 with no track. -->
+    <property name="OffsetMs" type="x" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Sets OffsetMs for the current track (clamped to +-30000; 0 forgets it) and
+         publishes it with the shifted Lines in one PropertiesChanged before returning.
+         Fails when there is no track or lyrics are off. -->
+    <method name="SetOffset">
+      <arg name="offset_ms" type="x" direction="in"/>
+    </method>
   </interface>
 </node>

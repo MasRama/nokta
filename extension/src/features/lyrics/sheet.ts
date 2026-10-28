@@ -5,6 +5,7 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { FillLabel } from './fill.js';
 import type { LineProgress } from './logic/karaoke.js';
+import { offsetLabel, stepOffset } from './logic/offset.js';
 import { BREAK } from './logic/visible.js';
 import type { LyricWindow } from './logic/window.js';
 
@@ -13,8 +14,10 @@ export const SHEET_ROWS = 7;
 const ROW_HEIGHT = 20;
 /** The current line is larger, so it gets a taller row. */
 const CURRENT_HEIGHT = 30;
-/** How much taller the open notch gets for the lyrics view, with its padding. */
-export const SHEET_EXTRA_HEIGHT = (SHEET_ROWS - 1) * ROW_HEIGHT + CURRENT_HEIGHT + 10;
+/** The timing row under the lines: − button, label, + button. */
+const FOOTER_HEIGHT = 26;
+/** How much taller the open notch gets for the lyrics view, with its padding and the timing row. */
+export const SHEET_EXTRA_HEIGHT = (SHEET_ROWS - 1) * ROW_HEIGHT + CURRENT_HEIGHT + 10 + FOOTER_HEIGHT;
 const SLIDE_MS = 260;
 /** Each row's opacity by its distance from the current line. */
 const FADE = [255, 150, 95, 60];
@@ -22,16 +25,20 @@ const FADE = [255, 150, 95, 60];
 /**
  * Seven lines of synced lyrics around the current one, which is larger
  * and lights up as it is sung; the others fade with their distance. The
- * lines slide up when the current line changes.
+ * lines slide up when the current line changes. A click on the lines
+ * closes the view; the row under them moves the lyrics earlier or later.
  */
 export class LyricsSheet {
-    readonly actor: St.Button;
+    readonly actor: St.BoxLayout;
     private readonly box: St.BoxLayout;
     private readonly rows: St.Label[] = [];
     private readonly current = new FillLabel('nokta-lyrics-row nokta-lyrics-current', CURRENT_HEIGHT);
+    private readonly offsetText: St.Label;
     private shown: number | null = null;
+    private offsetMs = 0;
 
-    constructor(onClick: () => void) {
+    /** `onClose` for a click on the lines, `onOffset` with the timing a footer click asks for. */
+    constructor(onClose: () => void, onOffset: (offsetMs: number) => void) {
         this.box = setVertical(new St.BoxLayout({ style_class: 'nokta-lyrics-sheet', x_expand: true }));
         const middle = Math.floor(SHEET_ROWS / 2);
         for (let i = 0; i < SHEET_ROWS; i++) {
@@ -50,20 +57,58 @@ export class LyricsSheet {
             this.rows.push(row);
             this.box.add_child(row);
         }
-        this.actor = new St.Button({
+        const lines = new St.Button({
             style_class: 'nokta-lyrics-sheet-button',
             child: this.box,
             x_expand: true,
-            visible: false,
+            // The rows slide in from below; keep them off the timing row.
+            clip_to_allocation: true,
         });
-        this.actor.connect('clicked', onClick);
+        lines.connect('clicked', onClose);
+
+        this.offsetText = new St.Label({ style_class: 'nokta-lyrics-offset-label', text: offsetLabel(0) });
+        const footer = new St.BoxLayout({
+            style_class: 'nokta-lyrics-footer',
+            x_align: Clutter.ActorAlign.CENTER,
+            height: FOOTER_HEIGHT,
+        });
+        footer.add_child(
+            footerButton('list-remove-symbolic', 'Show the lyrics later', () =>
+                onOffset(stepOffset(this.offsetMs, -1)),
+            ),
+        );
+        const reset = new St.Button({
+            style_class: 'nokta-button nokta-lyrics-offset',
+            child: this.offsetText,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            accessible_name: 'Reset the lyric timing',
+        });
+        reset.connect('clicked', () => {
+            if (this.offsetMs !== 0) onOffset(0);
+        });
+        footer.add_child(reset);
+        footer.add_child(
+            footerButton('list-add-symbolic', 'Show the lyrics earlier', () => onOffset(stepOffset(this.offsetMs, 1))),
+        );
+
+        this.actor = setVertical(new St.BoxLayout({ x_expand: true, visible: false }));
+        this.actor.add_child(lines);
+        this.actor.add_child(footer);
     }
 
     setWidth(width: number): void {
         this.current.setWidth(width);
     }
 
-    show(window: LyricWindow, progress: LineProgress, playing: boolean): void {
+    /** Shows the lines around the current one; `offsetMs` is the timing they already have. */
+    show(window: LyricWindow, progress: LineProgress, playing: boolean, offsetMs: number): void {
+        if (offsetMs !== this.offsetMs) {
+            this.offsetMs = offsetMs;
+            this.offsetText.text = offsetLabel(offsetMs);
+            // The line now ends at another time.
+            this.current.restart();
+        }
         const middle = Math.floor(SHEET_ROWS / 2);
         const others = window.rows.filter((_, i) => i !== middle);
         others.forEach((text, i) => (this.rows[i].text = text));
@@ -89,4 +134,16 @@ export class LyricsSheet {
         this.current.destroy();
         this.actor.destroy();
     }
+}
+
+function footerButton(icon: string, name: string, onClick: () => void): St.Button {
+    const button = new St.Button({
+        style_class: 'nokta-button nokta-lyrics-step',
+        child: new St.Icon({ icon_name: icon, style_class: 'nokta-button-icon' }),
+        y_align: Clutter.ActorAlign.CENTER,
+        can_focus: true,
+        accessible_name: name,
+    });
+    button.connect('clicked', onClick);
+    return button;
 }

@@ -33,6 +33,8 @@ pub struct Paths {
     pub cache_dir: PathBuf,
     /// The user's own `.lrc` files.
     pub lyrics_dir: PathBuf,
+    /// The lyric timing set per song from the lyrics view, next to `lyrics_dir`.
+    pub lyrics_offsets_file: PathBuf,
     /// The freedesktop thumbnail cache that Files fills; Linux only.
     pub system_thumbnails: Option<PathBuf>,
     /// Thumbnails of copied pictures, emptied at start: in the runtime
@@ -47,6 +49,7 @@ impl Paths {
             config_file: config_home.join("nokta").join("config.toml"),
             cache_dir: cache_home.join("nokta"),
             lyrics_dir: data_home.join("nokta").join("lyrics"),
+            lyrics_offsets_file: data_home.join("nokta").join("lyrics-offsets.toml"),
             system_thumbnails: Some(cache_home.join("thumbnails")),
             clipboard_dir: cache_home.join("nokta").join("clipboard"),
         }
@@ -91,6 +94,7 @@ impl Paths {
                     clipboard_dir: cache_dir.join("clipboard"),
                     cache_dir,
                     lyrics_dir: support.join("lyrics"),
+                    lyrics_offsets_file: support.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
                 }
             }
@@ -102,6 +106,7 @@ impl Paths {
                     clipboard_dir: cache_dir.join("clipboard"),
                     cache_dir,
                     lyrics_dir: roaming.join("lyrics"),
+                    lyrics_offsets_file: roaming.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
                 }
             }
@@ -126,6 +131,10 @@ mod tests {
         assert_eq!(paths.config_file, Path::new("/c/nokta/config.toml"));
         assert_eq!(paths.cache_dir, Path::new("/k/nokta"));
         assert_eq!(paths.lyrics_dir, Path::new("/d/nokta/lyrics"));
+        assert_eq!(
+            paths.lyrics_offsets_file,
+            Path::new("/d/nokta/lyrics-offsets.toml")
+        );
         assert_eq!(
             paths.system_thumbnails.as_deref(),
             Some(Path::new("/k/thumbnails"))
@@ -152,6 +161,13 @@ mod tests {
         let vars = [("XDG_CACHE_HOME", ""), ("HOME", "/home/u")];
         let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
         let home = Path::new("/home/u");
+        assert_eq!(
+            paths.lyrics_offsets_file,
+            home.join(".local")
+                .join("share")
+                .join("nokta")
+                .join("lyrics-offsets.toml")
+        );
         assert_eq!(
             paths,
             Paths::new(
@@ -198,6 +214,13 @@ mod tests {
                 .join("nokta")
                 .join("lyrics")
         );
+        assert_eq!(
+            paths.lyrics_offsets_file,
+            library
+                .join("Application Support")
+                .join("nokta")
+                .join("lyrics-offsets.toml")
+        );
         assert!(Paths::for_system(System::MacOs, env(&[])).is_err());
     }
 
@@ -213,6 +236,10 @@ mod tests {
         assert_eq!(paths.config_file, roaming.join("nokta").join("config.toml"));
         assert_eq!(paths.cache_dir, local.join("nokta").join("cache"));
         assert_eq!(paths.lyrics_dir, roaming.join("nokta").join("lyrics"));
+        assert_eq!(
+            paths.lyrics_offsets_file,
+            roaming.join("nokta").join("lyrics-offsets.toml")
+        );
         assert!(Paths::for_system(System::Windows, env(&vars[..1])).is_err());
     }
 

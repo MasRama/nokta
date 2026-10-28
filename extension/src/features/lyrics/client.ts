@@ -1,8 +1,9 @@
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
 import { LYRICS1_XML } from '../../generated/contracts.js';
 import { PATHS, type LyricsStatus } from '../../shared/contracts.js';
-import { cached, makeProxy } from '../../shared/dbus.js';
+import { cached, callMethod, makeProxy } from '../../shared/dbus.js';
 import { Listeners } from '../../shared/listeners.js';
 import type { LyricLines } from '../../shared/logic/lyrics.js';
 
@@ -13,6 +14,8 @@ const isLine = (v: unknown): v is [number, string] =>
 export class LyricsClient {
     status: LyricsStatus | string = 'none';
     lines: LyricLines = [];
+    /** The track's lyric timing, already applied to `lines`; positive is earlier. */
+    offsetMs = 0;
     private proxy: Gio.DBusProxy | null = null;
     private changedId = 0;
     private readonly listeners = new Listeners();
@@ -23,6 +26,11 @@ export class LyricsClient {
 
     disconnect(id: number): void {
         this.listeners.remove(id);
+    }
+
+    /** Sets the current track's timing; the daemon sends the shifted lines. */
+    setOffset(offsetMs: number): void {
+        if (this.proxy) callMethod(this.proxy, 'SetOffset', new GLib.Variant('(x)', [Math.round(offsetMs)]));
     }
 
     async attach(connection: Gio.DBusConnection, cancellable: Gio.Cancellable): Promise<void> {
@@ -41,6 +49,7 @@ export class LyricsClient {
         }
         this.status = 'none';
         this.lines = [];
+        this.offsetMs = 0;
         this.listeners.emit();
     }
 
@@ -53,8 +62,10 @@ export class LyricsClient {
         if (!this.proxy) return;
         const status = cached(this.proxy, 'Status');
         const lines = cached(this.proxy, 'Lines');
+        const offsetMs = cached(this.proxy, 'OffsetMs');
         this.status = typeof status === 'string' ? status : 'none';
         this.lines = Array.isArray(lines) ? lines.filter(isLine) : [];
+        this.offsetMs = typeof offsetMs === 'number' ? offsetMs : 0;
         this.listeners.emit();
     }
 }

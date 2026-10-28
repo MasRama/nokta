@@ -73,6 +73,11 @@ export class FillLabel {
         if (animate) this.clip.ease({ width: full, duration: msLeft, mode: Clutter.AnimationMode.LINEAR });
     }
 
+    /** Starts the fill again on the next show(), for a line that moved in time. */
+    restart(): void {
+        this.key = '';
+    }
+
     destroy(): void {
         this.clip.remove_all_transitions();
         this.actor.destroy();

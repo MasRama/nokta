@@ -67,7 +67,13 @@ export const MEDIA_METHODS = {
 export interface LyricsProps {
     Status: string;
     Lines: Array<[number, string]>;
+    OffsetMs: number;
 }
+
+/** io.nokta.Lyrics1 methods and the D-Bus signature of their arguments. */
+export const LYRICS_METHODS = {
+    SetOffset: 'x',
+} as const;
 
 export type LyricsStatus =
     | 'none'
