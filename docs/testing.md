@@ -335,6 +335,23 @@ Send one with `. tools/devshell/env.sh`, then
       in the notch while Do Not Disturb is on; clicking a chat message
       opens the chat.
 
+### Screenshot previews
+
+`tools/devshell/smoke.sh` shows a fake `Screenshot captured` notification,
+made the way GNOME makes it, and then names its file as the screenshot UI
+does.
+
+- [ ] The preview shows the picture, the title, `Open` and `Show in
+      Files`, in place of the banner. `Keep on shelf` joins them once the
+      file is known.
+- [ ] `Keep on shelf` puts the file on the shelf and closes the preview.
+- [ ] `screenshot_preview = false`, or `file_shelf = false`: a normal
+      notification, or no `Keep on shelf`.
+- [ ] Real screenshots *(real session)*: Print Screen in the screenshot
+      UI shows all three buttons; Shift+Print Screen shows `Open` and
+      `Show in Files`. `Open` opens the image viewer, `Show in Files`
+      selects the file in Files, and a kept screenshot drags into a chat.
+
 ### Appearance and clock
 
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;

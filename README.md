@@ -17,7 +17,9 @@ banner: hover to keep one open, click it to open the app. A build, a
 download or a backup can show in the notch while it runs and say how it
 ended (see [Live activities](#live-activities)). Files dragged onto the
 notch stay on its shelf until you drag them into another app (see
-[File shelf](#file-shelf)). When nothing
+[File shelf](#file-shelf)). After a screenshot, the notch shows it with
+buttons to open it, show it in Files or keep it on the shelf (see
+[Screenshots](#screenshots)). When nothing
 plays, hovering the notch opens the date with the weather (see
 [`[weather]`](#weather)), the next event from GNOME's calendar, the
 running activities, the files on the shelf, a button
@@ -155,6 +157,7 @@ window then says what to fix before it saves anything.
 | `privacy_dots` | `true` | A green dot while the camera is on and an orange one while the microphone or screen sharing is in use |
 | `live_activities` | `true` | Show live activities in the notch; `false` shows none, and scripts that report them keep working |
 | `file_shelf` | `true` | Drop files on the notch to park them, then drag them out again (see [File shelf](#file-shelf)) |
+| `screenshot_preview` | `true` | After a screenshot, a preview with `Open`, `Show in Files` and `Keep on shelf` instead of its banner (see [Screenshots](#screenshots)); needs `[notifications] in_notch` |
 
 ### `[lyrics]`
 
@@ -255,6 +258,17 @@ the files.
 GNOME Shell cannot take a drop from an app, so the extension starts a small
 helper window (`gjs`, a GTK 4 window that draws nothing) and puts it under
 the notch while you drag. It is not in Alt+Tab or the overview.
+
+## Screenshots
+
+After a screenshot, the notch shows it instead of GNOME's `Screenshot
+captured` banner, with `Open`, `Show in Files` and `Keep on shelf`. A
+click on the picture opens it too. It stays as long as a notification and
+while the pointer is on it. `Keep on shelf` puts the file on the
+[file shelf](#file-shelf), ready to drag into a chat. It shows only for
+screenshots taken with the screenshot UI (Print Screen): GNOME does not say
+which file the direct shortcuts (Shift+Print Screen, Alt+Print Screen)
+saved. With saving to disk turned off in GNOME, the preview has no buttons.
 
 ## Privacy
 
