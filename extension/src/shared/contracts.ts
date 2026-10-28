@@ -89,6 +89,7 @@ export interface SettingsProps {
     Notifications: Record<string, unknown>;
     Activities: Record<string, unknown>;
     Weather: Record<string, unknown>;
+    Calendar: Record<string, unknown>;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */

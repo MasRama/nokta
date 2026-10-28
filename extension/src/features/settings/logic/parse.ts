@@ -124,6 +124,19 @@ export const DEFAULT_WEATHER: Readonly<WeatherSettings> = {
     units: 'celsius',
 };
 
+/** io.nokta.Settings1.Calendar in camelCase. */
+export interface CalendarSettings {
+    /** The next event in the open notch, and its reminders. */
+    enabled: boolean;
+    /** Minutes before an event to show it; 0 for no reminder. */
+    reminderMinutes: number;
+}
+
+export const DEFAULT_CALENDAR: Readonly<CalendarSettings> = {
+    enabled: true,
+    reminderMinutes: 5,
+};
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
@@ -173,3 +186,4 @@ export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);
 export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(raw, DEFAULT_ACTIVITIES);
 export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);
+export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);

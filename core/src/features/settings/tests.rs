@@ -198,6 +198,30 @@ fn weather_defaults_and_units() {
 }
 
 #[test]
+fn calendar_defaults_and_reminder_range() {
+    let c = Config::default().calendar;
+    assert!(c.enabled);
+    assert_eq!(c.reminder_minutes, 5);
+    let c = parse("[calendar]\nenabled = false\nreminder_minutes = 0\n").unwrap();
+    assert!(!c.calendar.enabled);
+    assert_eq!(c.calendar.reminder_minutes, 0);
+    assert_eq!(
+        parse("[calendar]\nreminder_minutes = 60\n")
+            .unwrap()
+            .calendar
+            .reminder_minutes,
+        60
+    );
+    let err = parse("[calendar]\nreminder_minutes = 61\n").unwrap_err();
+    assert!(err.message.contains("calendar.reminder_minutes"), "{err}");
+    let map = entries(Config::default().calendar.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["enabled", "reminder_minutes"]);
+    assert_eq!(map["reminder_minutes"], SettingValue::Uint(5));
+}
+
+#[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
     let keys: Vec<_> = map.keys().copied().collect();
@@ -393,6 +417,8 @@ mod edit {
         assert_eq!(parse(&text).unwrap().activities.stale_minutes, 5);
         let text = set_key("", "weather", "location", &Value::Text("Bandung".into())).unwrap();
         assert_eq!(parse(&text).unwrap().weather.location, "Bandung");
+        let text = set_key("", "calendar", "reminder_minutes", &Value::Uint(10)).unwrap();
+        assert_eq!(parse(&text).unwrap().calendar.reminder_minutes, 10);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);

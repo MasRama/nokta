@@ -17,6 +17,7 @@ pub struct Config {
     pub notifications: NotificationsConfig,
     pub activities: ActivitiesConfig,
     pub weather: WeatherConfig,
+    pub calendar: CalendarConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -176,6 +177,23 @@ impl Default for ActivitiesConfig {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct CalendarConfig {
+    pub enabled: bool,
+    /// Minutes before an event to show it; 0 for no reminder.
+    pub reminder_minutes: u32,
+}
+
+impl Default for CalendarConfig {
+    fn default() -> Self {
+        CalendarConfig {
+            enabled: true,
+            reminder_minutes: 5,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct WeatherConfig {
@@ -324,6 +342,12 @@ impl Config {
             self.activities.stale_minutes,
             1,
             1440,
+        )?;
+        check_range(
+            "calendar.reminder_minutes",
+            self.calendar.reminder_minutes,
+            0,
+            60,
         )?;
         if !WEATHER_UNITS.contains(&self.weather.units.as_str()) {
             return Err(ConfigError::invalid(format!(
@@ -514,6 +538,15 @@ impl NotificationsConfig {
 impl ActivitiesConfig {
     pub fn entries(&self) -> Entries {
         vec![("stale_minutes", self.stale_minutes.into())]
+    }
+}
+
+impl CalendarConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("enabled", self.enabled.into()),
+            ("reminder_minutes", self.reminder_minutes.into()),
+        ]
     }
 }
 

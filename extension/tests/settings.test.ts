@@ -10,11 +10,13 @@ import {
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
     DEFAULT_NOTIFICATIONS,
+    DEFAULT_CALENDAR,
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
     lyricsFrom,
     notificationsFrom,
     weatherFrom,
+    calendarFrom,
     timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
@@ -155,4 +157,10 @@ test('weather settings from table', () => {
         units: 'fahrenheit',
     });
     assert.deepEqual(weatherFrom({ location: 3 }), DEFAULT_WEATHER);
+});
+
+test('calendar settings from table', () => {
+    assert.deepEqual(DEFAULT_CALENDAR, { enabled: true, reminderMinutes: 5 });
+    assert.deepEqual(calendarFrom({ enabled: false, reminder_minutes: 0 }), { enabled: false, reminderMinutes: 0 });
+    assert.deepEqual(calendarFrom({ reminder_minutes: 'soon' }), DEFAULT_CALENDAR);
 });

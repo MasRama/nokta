@@ -57,3 +57,7 @@ stale_minutes = 30       # an activity with no update for this long ends, 1 to 1
 enabled = true           # show the weather in the open notch; asks open-meteo.com for location's forecast
 location = ""            # a place like "Jakarta", or coordinates like "-6.2,106.8"; empty shows no weather
 units = "celsius"        # "celsius" or "fahrenheit"
+
+[calendar]
+enabled = true           # show the next event from GNOME's calendar when the notch opens
+reminder_minutes = 5     # show an event this many minutes before it starts, 0 to 60; 0 = no reminder
