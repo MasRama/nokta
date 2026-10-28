@@ -15,6 +15,9 @@ declare module '@girs/clutter-14/clutter-14' {
             duration?: number;
             delay?: number;
             mode?: AnimationMode;
+            /** -1 repeats until the transition is removed. */
+            repeatCount?: number;
+            autoReverse?: boolean;
             onComplete?: () => void;
             onStopped?: (finished: boolean) => void;
         }

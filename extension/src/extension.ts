@@ -3,6 +3,13 @@ import GLib from 'gi://GLib';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import {
+    activityIcon,
+    ActivitiesClient,
+    endedAlert,
+    formatElapsed,
+    type EndedSignal,
+} from './features/activities/index.js';
 import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
@@ -23,7 +30,7 @@ import {
     type OsdContent,
     type OsdRequest,
 } from './features/osd/index.js';
-import { notificationsLabel, type PanelContent } from './features/panel/index.js';
+import { MAX_PANEL_ACTIVITIES, notificationsLabel, type PanelContent } from './features/panel/index.js';
 import { PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import {
@@ -68,6 +75,7 @@ class Session {
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
+    private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
@@ -76,6 +84,7 @@ class Session {
     private readonly mediaId: number;
     private readonly lyricsId: number;
     private readonly timerId: number;
+    private readonly activitiesId: number;
     private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
@@ -106,6 +115,7 @@ class Session {
         this.mediaId = this.media.onChanged(() => this.notches.forEach((n) => n.onMedia()));
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
         this.timerId = this.timer.onChanged(() => this.onTimer());
+        this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
             pause: () => this.timer.pause(),
@@ -132,10 +142,12 @@ class Session {
         this.media.disconnect(this.mediaId);
         this.lyrics.disconnect(this.lyricsId);
         this.timer.disconnect(this.timerId);
+        this.activities.disconnect(this.activitiesId);
         this.stopTimerTick();
         this.media.destroy();
         this.lyrics.destroy();
         this.timer.destroy();
+        this.activities.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.focusShortcut.destroy();
@@ -181,6 +193,7 @@ class Session {
             this.media.attach(connection, cancellable),
             this.lyrics.attach(connection, cancellable),
             this.timer.attach(connection, cancellable),
+            this.activities.attach(connection, cancellable),
         ]);
         if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
@@ -192,6 +205,7 @@ class Session {
         this.media.detach();
         this.lyrics.detach();
         this.timer.detach();
+        this.activities.detach();
         this.devices.detach();
     }
 
@@ -244,6 +258,7 @@ class Session {
             media: this.media,
             lyrics: this.lyrics,
             timer: this.timer,
+            activities: this.activities,
             privacy: this.privacy,
             panel: this.panel,
         };
@@ -311,6 +326,15 @@ class Session {
         this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs);
     }
 
+    /** An activity ended: a check mark or a red cross in the focused notch. */
+    private onActivityEnded({ title, success, message, elapsedUs }: EndedSignal): void {
+        const { liveActivities, alertDurationMs } = this.settings.behavior;
+        if (!liveActivities) return;
+        const alert = endedAlert(title, success, message, elapsedUs);
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), alertDurationMs);
+    }
+
     private onOsdRequest(request: OsdRequest): number | null {
         return this.showOsd(
             request.monitorIndex,
@@ -347,9 +371,25 @@ class Session {
     private panelContent(): PanelContent {
         return {
             date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
+            activities: this.panelActivities(),
             notifications: notificationsLabel(notificationCount()),
             focus: focusButtonLabel(this.timer.snapshot(), this.settings.timer.focusMinutes),
         };
+    }
+
+    private panelActivities(): PanelContent['activities'] {
+        if (!this.settings.behavior.liveActivities) return [];
+        const now = GLib.get_monotonic_time();
+        return this.activities
+            .list()
+            .slice(0, MAX_PANEL_ACTIVITIES)
+            .map((activity) => ({
+                icon: activityIcon(activity.icon),
+                title: activity.title,
+                detail: activity.detail,
+                fraction: activity.progress < 0 ? null : Math.min(activity.progress, 1),
+                elapsed: formatElapsed(now - activity.startedUs),
+            }));
     }
 
     // Notifications (0.4 spec, section 5)

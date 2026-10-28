@@ -211,3 +211,50 @@
 .nokta-panel-button-label {
     font-size: 12px;
 }
+
+.nokta-activity-badge {
+    spacing: 5px;
+}
+
+.nokta-activity-badge-icon {
+    icon-size: 14px;
+}
+
+.nokta-activity-badge-label {
+    font-size: 13px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
+.nokta-panel-activity {
+    height: 36px;
+    spacing: 10px;
+}
+
+.nokta-panel-activity-icon {
+    icon-size: 20px;
+}
+
+.nokta-panel-activity-text {
+    spacing: 2px;
+}
+
+.nokta-panel-activity-title {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.nokta-panel-activity-detail,
+.nokta-panel-activity-elapsed {
+    font-size: 11px;
+    font-feature-settings: "tnum";
+}
+
+.nokta-panel-activity-track {
+    height: 3px;
+    border-radius: 1.5px;
+}
+
+.nokta-panel-activity-fill {
+    border-radius: 1.5px;
+}

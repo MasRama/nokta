@@ -32,6 +32,8 @@ export interface Behavior {
     clockFormat: string;
     /** Dots for the camera, microphone and screen sharing. */
     privacyDots: boolean;
+    /** Live activities from apps and the nokta command. */
+    liveActivities: boolean;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -85,6 +87,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     showClock: true,
     clockFormat: 'system',
     privacyDots: true,
+    liveActivities: true,
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */
@@ -95,6 +98,16 @@ export interface NotificationSettings {
     /** Off shows only the title and the app. */
     showBody: boolean;
 }
+
+/** io.nokta.Settings1.Activities in camelCase. */
+export interface ActivitiesSettings {
+    /** An activity with no update for this long ends. */
+    staleMinutes: number;
+}
+
+export const DEFAULT_ACTIVITIES: Readonly<ActivitiesSettings> = {
+    staleMinutes: 30,
+};
 
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
@@ -143,3 +156,4 @@ export const behaviorFrom = (raw: unknown): Behavior => fromTable(raw, DEFAULT_B
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
 export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);
+export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(raw, DEFAULT_ACTIVITIES);

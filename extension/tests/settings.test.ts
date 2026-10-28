@@ -4,6 +4,8 @@ import { test } from 'node:test';
 import {
     appearanceFrom,
     behaviorFrom,
+    activitiesFrom,
+    DEFAULT_ACTIVITIES,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
@@ -134,4 +136,11 @@ test('notification_settings_from_table', () => {
         showBody: false,
     });
     assert.deepEqual(notificationsFrom({ duration_ms: 'long' }), DEFAULT_NOTIFICATIONS);
+});
+
+test('activity settings from table', () => {
+    assert.deepEqual(DEFAULT_ACTIVITIES, { staleMinutes: 30 });
+    assert.deepEqual(activitiesFrom({ stale_minutes: 90 }), { staleMinutes: 90 });
+    assert.equal(behaviorFrom({}).liveActivities, true);
+    assert.equal(behaviorFrom({ live_activities: false }).liveActivities, false);
 });

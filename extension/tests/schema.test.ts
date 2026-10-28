@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+    DEFAULT_ACTIVITIES,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
@@ -17,6 +18,7 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     lyrics: { ...DEFAULT_LYRICS },
     timer: { ...DEFAULT_TIMER },
     notifications: { ...DEFAULT_NOTIFICATIONS },
+    activities: { ...DEFAULT_ACTIVITIES },
 };
 
 test('every_setting_has_exactly_one_row', () => {
