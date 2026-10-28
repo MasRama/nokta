@@ -158,6 +158,13 @@ test('the file shelf is on unless turned off', () => {
     assert.equal(behaviorFrom({ file_shelf: false }).fileShelf, false);
 });
 
+test('the keyboard layout shows by default, Num Lock does not', () => {
+    assert.equal(behaviorFrom({}).showInputSource, true);
+    assert.equal(behaviorFrom({}).showNumLock, false);
+    assert.equal(behaviorFrom({ show_input_source: false, show_num_lock: true }).showInputSource, false);
+    assert.equal(behaviorFrom({ show_input_source: false, show_num_lock: true }).showNumLock, true);
+});
+
 test('screenshot previews are on unless turned off', () => {
     assert.equal(behaviorFrom({}).screenshotPreview, true);
     assert.equal(behaviorFrom({ screenshot_preview: false }).screenshotPreview, false);

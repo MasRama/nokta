@@ -26,6 +26,8 @@ show_lyrics = true
 replace_osd = true       # show volume, brightness and other OSD in the notch instead of GNOME's popup
 osd_duration_ms = 1500   # how long the notch shows the OSD after the last change
 show_caps_lock = true    # show a message in the notch when Caps Lock turns on or off
+show_input_source = true # show the new keyboard layout when it changes
+show_num_lock = false    # show a message in the notch when Num Lock turns on or off
 all_monitors = true      # a notch on every monitor; false = only on the primary monitor
 device_alerts = true     # show Bluetooth audio, charger and battery alerts in the notch
 alert_duration_ms = 3000 # how long a device alert stays

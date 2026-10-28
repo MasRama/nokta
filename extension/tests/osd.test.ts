@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { capsLockContent, osdContent } from '../src/features/osd/logic/content.js';
+import { inputSourceShown, lockKeyContent, osdContent } from '../src/features/osd/logic/content.js';
 import { routeOsd } from '../src/features/osd/logic/route.js';
 import { OsdTimer } from '../src/features/osd/logic/timer.js';
 
@@ -42,12 +42,49 @@ test('nothing_shows_icon_only', () => {
 
 test('content_detail_and_urgent_are_optional', () => {
     assert.equal(osdContent(0.5, 1, null).detail, undefined);
-    assert.equal(capsLockContent(true).urgent, undefined);
+    assert.equal(lockKeyContent('Caps Lock', true).urgent, undefined);
 });
 
-test('caps_lock_text', () => {
-    assert.deepEqual(capsLockContent(true), { fraction: null, text: 'Caps Lock on' });
-    assert.deepEqual(capsLockContent(false), { fraction: null, text: 'Caps Lock off' });
+test('lock_key_text', () => {
+    assert.deepEqual(lockKeyContent('Caps Lock', true), { fraction: null, text: 'Caps Lock on' });
+    assert.deepEqual(lockKeyContent('Caps Lock', false), { fraction: null, text: 'Caps Lock off' });
+    assert.deepEqual(lockKeyContent('Num Lock', true), { fraction: null, text: 'Num Lock on' });
+});
+
+test('muted_microphone_says_so_instead_of_zero', () => {
+    assert.deepEqual(osdContent(0, 1, null, ['microphone-sensitivity-muted-symbolic']), {
+        fraction: null,
+        text: 'Microphone off',
+    });
+});
+
+test('microphone_level_keeps_its_bar', () => {
+    assert.deepEqual(osdContent(0.6, 1, null, ['microphone-sensitivity-high-symbolic']), { fraction: 0.6, text: '60%' });
+});
+
+test('muted_speaker_says_muted', () => {
+    assert.deepEqual(osdContent(0, 1, null, ['audio-volume-muted-symbolic']), { fraction: null, text: 'Muted' });
+    assert.deepEqual(osdContent(0, 1, null, ['audio-volume-muted-blocking-symbolic']), { fraction: null, text: 'Muted' });
+});
+
+test('a_muted_icon_with_a_label_keeps_the_label', () => {
+    assert.deepEqual(osdContent(null, null, 'Headphones', ['audio-volume-muted-symbolic']), {
+        fraction: null,
+        text: 'Headphones',
+    });
+});
+
+test('other_icons_change_nothing', () => {
+    assert.deepEqual(osdContent(0, 1, null, ['display-brightness-symbolic']), { fraction: 0, text: '0%' });
+    assert.deepEqual(osdContent(0, 1, null, []), { fraction: 0, text: '0%' });
+});
+
+test('a_new_layout_shows_only_when_it_replaces_another', () => {
+    assert.equal(inputSourceShown({ previous: 'xkb:us', current: 'xkb:de', sources: 2 }), true);
+    assert.equal(inputSourceShown({ previous: null, current: 'xkb:us', sources: 2 }), false);
+    assert.equal(inputSourceShown({ previous: 'xkb:us', current: 'xkb:us', sources: 2 }), false);
+    assert.equal(inputSourceShown({ previous: 'xkb:us', current: 'xkb:de', sources: 1 }), false);
+    assert.equal(inputSourceShown({ previous: 'xkb:us', current: null, sources: 2 }), false);
 });
 
 /** A fake clock: schedule() queues timers, advance() runs the due ones. */

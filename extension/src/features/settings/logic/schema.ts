@@ -277,6 +277,8 @@ export const SETTINGS_PAGES: readonly Page[] = [
                     behavior('replace_osd', 'Volume and brightness in the notch', bool(), "Instead of GNOME's popup"),
                     behavior('osd_duration_ms', 'How long', int(200, 10000, 100), 'Milliseconds after the last change'),
                     behavior('show_caps_lock', 'Caps Lock', bool()),
+                    behavior('show_num_lock', 'Num Lock', bool()),
+                    behavior('show_input_source', 'Keyboard layout', bool(), 'The new layout when you switch'),
                 ],
             },
             {
