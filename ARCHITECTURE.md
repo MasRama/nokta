@@ -172,7 +172,7 @@ files in `contracts/` are the full definition; this is the overview.
 | Interface | Path | Members |
 |---|---|---|
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
-| `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)` |
+| `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`, `Shuffle`, `LoopStatus`, `CanShuffle`, `CanLoop`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)`, `SetShuffle(b)`, `SetLoopStatus(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
@@ -199,7 +199,10 @@ How both sides stay honest:
   that curve into the top edge.
 - States: **idle** (a clock), **collapsed** (small cover and equalizer bars)
   and **expanded** on hover (cover, title, artists, lyric line, seek bar,
-  controls). A pure state machine (`shared/logic/machine.ts`) decides when to
+  shuffle, previous, play, next and repeat). A click on the lyric line opens
+  seven lines of the synced lyrics around the current one
+  (`lyrics/logic/window.ts`), 150 px taller, until a click, the next track
+  or the notch closing. A pure state machine (`shared/logic/machine.ts`) decides when to
   open and close.
 - Animations use Clutter's `ease()`, so they run in the compositor and turn
   instant when GNOME animations are off.
