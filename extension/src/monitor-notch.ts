@@ -695,6 +695,7 @@ export class MonitorNotch implements ShelfNotch {
 
     private applyOsdColors(): void {
         const { foreground, accent } = this.shownPalette;
+        this.expanded.setPalette(this.shownPalette);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setForeground(foreground);
