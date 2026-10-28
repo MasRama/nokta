@@ -84,11 +84,26 @@ test('a text/uri-list has one URI per line and comments', () => {
 
 test('Items from noktad become shelf items', () => {
     assert.deepEqual(itemsFrom([['file:///tmp/a.pdf', 'a.pdf', 'x-office-document']]), [
-        { uri: 'file:///tmp/a.pdf', name: 'a.pdf', icon: 'x-office-document' },
+        { uri: 'file:///tmp/a.pdf', name: 'a.pdf', icon: 'x-office-document', thumbnail: null },
     ]);
     assert.deepEqual(itemsFrom(undefined), []);
     assert.deepEqual(itemsFrom([['only one']]), []);
     assert.deepEqual(itemsFrom('nope'), []);
+});
+
+test('an item takes its thumbnail when the daemon has one', () => {
+    const items = [
+        ['file:///tmp/a.png', 'a.png', 'image-x-generic'],
+        ['file:///tmp/b.pdf', 'b.pdf', 'x-office-document'],
+    ];
+    assert.deepEqual(
+        itemsFrom(items, { 'file:///tmp/a.png': '/cache/a.png', 'file:///tmp/gone.png': '/cache/gone.png' }).map(
+            (item) => item.thumbnail,
+        ),
+        ['/cache/a.png', null],
+    );
+    assert.deepEqual(itemsFrom(items, { 'file:///tmp/a.png': '' }).map((item) => item.thumbnail), [null, null]);
+    assert.deepEqual(itemsFrom(items, 'nope').map((item) => item.thumbnail), [null, null]);
 });
 
 test('pointIn checks a rectangle, edges included on the top left', () => {

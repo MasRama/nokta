@@ -64,7 +64,7 @@ export class ShelfClient {
     private read(): void {
         const proxy = this.proxy;
         if (!proxy) return;
-        this.current = itemsFrom(cached(proxy, 'Items'));
+        this.current = itemsFrom(cached(proxy, 'Items'), cached(proxy, 'Thumbnails'));
         this.listeners.emit();
     }
 }

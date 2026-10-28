@@ -306,11 +306,14 @@ the shelf.
       notch shows `1` in place of the clock, and the panel is 54 px taller
       with the stack and the file. The pointer on the file shows its close
       button; a click on it takes the file off and the clock comes back.
+      Later a screenshot kept on the shelf shows its thumbnail
+      (`Shelf1.Thumbnails`) in place of the icon.
 - [ ] The helper window (`nokta-shelf`) is a dock at -10000, -10000 while
       nothing needs it, and is not in Alt+Tab or the overview.
 - [ ] Drop 2 files, then drag one from the open notch onto the drop.sh
       window (start it again with no files): the window prints it and it
-      leaves the shelf. Dragging the stack takes both.
+      leaves the shelf. Dragging the stack takes both. A picture drags
+      with its thumbnail under the pointer.
 - [ ] A click on a file opens it in its app.
 - [ ] Delete or move a parked file: it leaves the shelf. More than 30
       files: the oldest go.

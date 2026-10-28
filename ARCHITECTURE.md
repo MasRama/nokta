@@ -168,7 +168,11 @@ docs/               manual test checklist, screenshots
   `Clear`): only `file://` paths that exist, each once, at most 30 (the
   oldest goes). `model.rs` is pure; the service watches the folders that
   hold them and lets a file go once it is moved or deleted. It keeps paths,
-  never copies files, and starts empty.
+  never copies files, and starts empty. `thumbnails.rs` finds each item's
+  picture off the async runtime: the thumbnail Files made
+  (`$XDG_CACHE_HOME/thumbnails/{large,normal}/md5(uri).png`) when it is not
+  older than the file, else a 128 px PNG of its own for a PNG, JPEG or WebP
+  up to 64 MB, kept in `cache_dir/thumbnails`.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -213,7 +217,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
 | `io.nokta.Weather1` | `/io/nokta/Weather` | `Status` (`s`), `Place` (`s`), `Temperature`, `High`, `Low` (`d`), `Units` (`s`), `Condition` (`s`), `IsDay` (`b`); `Refresh()` |
-| `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
+| `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first), `Thumbnails` (`a{ss}`: uri to a PNG path, for items with a picture); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with

@@ -334,7 +334,8 @@ wait_for "the clock comes back when the shelf is empty" \
 # A screenshot shows as a preview with buttons instead of its banner. The
 # fake one is made the way GNOME makes it; GNOME's screenshot UI names the
 # file a moment after the notification, and only then can it go on the shelf.
-echo smoke > "$STATE/files/smoke-shot.png"
+# A real PNG, 96 x 64, so noktad can make its thumbnail.
+echo "iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAIAAABqVuVZAAABDklEQVR42u3azQ3CMAxAYbB6Yh7YgoEYjC3Yp2cO3IAiocQvsfp87U/qT06aVj6eb+vB2I6QQCCBBBJIIIEEEsgQSCCBBJotlhke4nE9bR263Nf9Av1w+TxnlNQyLc3XS3imKKHT5doaQO0ZwkZRS4c3inI6sFFU1CGNoqgOZhR1dZj7+6kxFIhZJlJHsYIEmhaI3M7ljWUFCSSQQAIJJJBAAnUP8gd73lhWkEAzAzGzLHUUK2g0UHYRZd8/Sk8BYApDUywjE2aB49agvvlgmyx0ke6VFbkFpd9i7bnBHTADXvMtGfL9QWMaqF55/vWnfV8dZm8526M4aXX4qSGQQAIJJJBAAhkCCSSQQHPGE41QTw032CeoAAAAAElFTkSuQmCC" | base64 -d > "$STATE/files/smoke-shot.png"
 js "import('resource:///org/gnome/shell/ui/messageTray.js').then((MT) => {
 const { GLib, St, Cogl } = imports.gi;
 const pixels = new GLib.Bytes(new Uint8Array(160 * 90 * 4).fill(180));
@@ -366,6 +367,21 @@ until shelf_items | grep -q "smoke-shot.png', 'image-x-generic'"; do
 done
 ok "Keep on shelf puts the screenshot on the shelf"
 wait_for "the preview closes" "$FIND !shown('nokta-screenshot')" 5
+# noktad makes a thumbnail for a picture, and the shelf row shows it.
+i=0
+until gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf \
+    --method org.freedesktop.DBus.Properties.Get io.nokta.Shelf1 Thumbnails | grep -q "smoke-shot.png'"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the screenshot on the shelf has no thumbnail"
+    sleep 0.2
+done
+ok "the screenshot on the shelf gets a thumbnail"
+"$HERE/hover.sh" on > /dev/null
+wait_for "the shelf row shows the thumbnail instead of the icon" \
+    "$FIND find(Main.layoutManager.uiGroup, 'nokta-shelf-thumbnail').some((t) => t.mapped)" 5 \
+    "$FIND JSON.stringify([any('nokta-shelf-row'), find(Main.layoutManager.uiGroup, 'nokta-shelf-thumbnail').length, Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-shelf-thumbnail > /dev/null
+"$HERE/hover.sh" off > /dev/null
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
 wait_for "the clock comes back when the shelf is cleared" "$FIND shown('nokta-clock')" 10
 
