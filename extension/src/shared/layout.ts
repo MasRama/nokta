@@ -1,6 +1,8 @@
 import Clutter from 'gi://Clutter';
 import GObject from 'gi://GObject';
 
+import { centerOffset } from './logic/motion.js';
+
 /** Where a child of `size` goes in `space`; FILL takes all of it. */
 function place(align: Clutter.ActorAlign, space: number, size: number): [number, number] {
     switch (align) {
@@ -11,7 +13,7 @@ function place(align: Clutter.ActorAlign, space: number, size: number): [number,
         case Clutter.ActorAlign.END:
             return [space - size, size];
         default:
-            return [Math.round((space - size) / 2), size];
+            return [centerOffset(space, size), size];
     }
 }
 

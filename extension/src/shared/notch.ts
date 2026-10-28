@@ -2,9 +2,9 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import St from 'gi://St';
 
-import { Ear } from './ears.js';
 import { OverlayLayout } from './layout.js';
-import { withAlpha } from './logic/color.js';
+import { clampAlpha, parseCssColor } from './logic/color.js';
+import { envelope, frameMs, notchX } from './logic/motion.js';
 import { radiusAt } from './logic/shape.js';
 import { THEMES, type Palette } from './logic/theme.js';
 import {
@@ -16,6 +16,7 @@ import {
     type SpringParams,
     type SpringState,
 } from './logic/spring.js';
+import { Shape, type Rgba, type ShapeGeometry } from './shape.js';
 
 export type { ResizeKind } from './logic/spring.js';
 
@@ -33,8 +34,11 @@ const GLOW_IN_MS = 150;
 const GLOW_OUT_MS = 250;
 /** The glow's colour is this strong at its brightest. */
 const GLOW_ALPHA = 0.9;
+/** Room around the body for the glow's blur, in px. */
+const GLOW_MARGIN = 48;
 /** A waiting kick goes off this close to the target, before the width slows to a crawl. */
 const KICK_NEAR_PX = 3;
+const NO_COLOR: Rgba = [0, 0, 0, 0];
 
 export interface MonitorArea {
     x: number;
@@ -50,24 +54,34 @@ export interface MonitorArea {
  * they move together and a new size mid-way bends the motion instead of
  * restarting it. The corners round more as the body grows.
  *
- * `glow` lies under the body, outside `actor`, so the body's clip does not
- * cut its shadow; the owner puts it on the stage below `actor`.
+ * A shader draws the shape (`shape.ts`). While the springs move, the actors
+ * keep one size, large enough for the whole motion, and a frame only moves
+ * the shader's edges and the body's clip: no relayout and no restyle, so
+ * nothing but the shape is redrawn. Once the springs settle, the actors
+ * take the final size, which leaves every view on the same pixel.
+ *
+ * `glow` lies under the shape, outside the body's clip; it is a child of
+ * `actor` that reaches past it, so it takes no input.
  */
 export class Notch {
     readonly actor: St.Widget;
     readonly body: St.Widget;
     readonly glow: St.Widget;
+    private readonly shapeActor: St.Widget;
+    private readonly shape: Shape;
+    private readonly glowShape: Shape;
     private glowColor: string | null = null;
-    /** The shell destroys its chrome at shutdown, the glow before the body. */
-    glowGone = false;
-    private readonly leftEar: Ear;
-    private readonly rightEar: Ear;
+    /** The shell destroys its chrome at shutdown, the glow with it. */
+    private glowGone = false;
     private style: NotchStyle;
     private palette: Palette;
     private monitor: MonitorArea = { x: 0, y: 0, width: 0 };
     /** The size the body is heading to. */
     private width = 0;
     private height = 0;
+    /** The body's size as laid out: the final size at rest, room for the motion while it moves. */
+    private laidWidth = -1;
+    private laidHeight = -1;
     private shownWidth: SpringState = { value: 0, velocity: 0 };
     private shownHeight: SpringState = { value: 0, velocity: 0 };
     private spring: SpringParams = springFor('width', 1);
@@ -76,32 +90,30 @@ export class Notch {
     /** Runs only while the springs move. */
     private readonly timeline: Clutter.Timeline;
     private lastFrameUs = 0;
-    private shownRadius = -1;
 
     constructor(style: NotchStyle, palette: Palette) {
         this.style = style;
         this.palette = palette;
         this.actor = new St.Widget({
             style_class: 'nokta-notch',
-            layout_manager: new Clutter.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL }),
+            layout_manager: new Clutter.FixedLayout(),
             reactive: true,
             track_hover: true,
         });
-        this.leftEar = new Ear('left', style.earRadius, palette.background, palette.backgroundOpacity);
-        this.rightEar = new Ear('right', style.earRadius, palette.background, palette.backgroundOpacity);
+        // Hidden while faded out, so it costs no offscreen paint.
+        this.glow = new St.Widget({ style_class: 'nokta-glow', opacity: 0, visible: false });
+        this.glow.connect('destroy', () => (this.glowGone = true));
+        this.glowShape = new Shape(this.glow, true);
+        this.shapeActor = new St.Widget({ style_class: 'nokta-shape' });
+        this.shape = new Shape(this.shapeActor, false);
         this.body = new St.Widget({
             style_class: 'nokta-body',
             layout_manager: new OverlayLayout(),
             clip_to_allocation: true,
-            x_expand: true,
-            y_align: Clutter.ActorAlign.START,
         });
-        this.actor.add_child(this.leftEar.actor);
+        this.actor.add_child(this.glow);
+        this.actor.add_child(this.shapeActor);
         this.actor.add_child(this.body);
-        this.actor.add_child(this.rightEar.actor);
-        // Only its opacity: the layout manager shows and hides chrome for fullscreen apps.
-        this.glow = new St.Widget({ style_class: 'nokta-glow', opacity: 0 });
-        this.glow.connect('destroy', () => (this.glowGone = true));
         this.timeline = new Clutter.Timeline({ actor: this.actor, duration: 1000, repeat_count: -1 });
         this.timeline.connect('new-frame', () => this.onFrame());
         this.applyPalette();
@@ -123,7 +135,6 @@ export class Notch {
     /** Where to center the notch; call again when monitors change. */
     setMonitor(monitor: MonitorArea): void {
         this.monitor = monitor;
-        this.actor.y = monitor.y;
         this.jumpTo(this.width, this.height);
     }
 
@@ -160,13 +171,18 @@ export class Notch {
         this.glow.remove_all_transitions();
         const speed = this.style.animationSpeed;
         if (color) {
-            this.applyGlowStyle();
+            const [r, g, b] = parseCssColor(color) ?? [0, 0, 0];
+            this.glow.show();
+            this.glowShape.setColors({ top: [r, g, b, GLOW_ALPHA], bottom: NO_COLOR, border: NO_COLOR });
             this.glow.ease({ opacity: 255, duration: GLOW_IN_MS * speed, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
         } else {
             this.glow.ease({
                 opacity: 0,
                 duration: GLOW_OUT_MS * speed,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+                onComplete: () => {
+                    if (!this.glowColor && !this.glowGone) this.glow.hide();
+                },
             });
         }
     }
@@ -179,19 +195,20 @@ export class Notch {
         this.timeline.stop();
         this.shownWidth = { value: width, velocity: 0 };
         this.shownHeight = { value: height, velocity: 0 };
+        // The monitor or the ears may have changed: lay out again.
+        this.laidWidth = -1;
+        this.layOut(width, height);
         this.apply();
     }
 
     destroy(): void {
         this.timeline.stop();
-        if (!this.glowGone) this.glow.destroy();
         this.actor.destroy();
     }
 
     /** Where the body is once it is `width` × `height`, in stage coordinates. */
     bodyRect(width: number, height: number): { x: number; y: number; width: number; height: number } {
-        const ear = this.style.earRadius;
-        const x = this.monitor.x + Math.round((this.monitor.width - width - 2 * ear) / 2) + ear;
+        const x = notchX(this.monitor, width, this.style.earRadius) + this.style.earRadius;
         return { x, y: this.monitor.y, width, height };
     }
 
@@ -202,7 +219,10 @@ export class Notch {
         this.pendingKick = null;
     }
 
+    /** Makes room for the motion to the new target once, then starts the springs. */
     private animate(): void {
+        this.layOut(envelope(this.shownWidth.value, this.width), envelope(this.shownHeight.value, this.height));
+        this.apply();
         if (this.timeline.is_playing()) return;
         this.lastFrameUs = GLib.get_monotonic_time();
         this.timeline.start();
@@ -210,7 +230,8 @@ export class Notch {
 
     private onFrame(): void {
         const now = GLib.get_monotonic_time();
-        const dtMs = (now - this.lastFrameUs) / 1000;
+        const refresh = this.timeline.frame_clock?.get_refresh_rate() ?? 0;
+        const dtMs = frameMs((now - this.lastFrameUs) / 1000, refresh);
         this.lastFrameUs = now;
         this.shownWidth = stepSpring(this.shownWidth, this.width, dtMs, this.spring);
         this.shownHeight = stepSpring(this.shownHeight, this.height, dtMs, this.spring);
@@ -220,61 +241,77 @@ export class Notch {
             this.timeline.stop();
             this.shownWidth = { value: this.width, velocity: 0 };
             this.shownHeight = { value: this.height, velocity: 0 };
+            this.layOut(this.width, this.height);
+        } else if (this.shownWidth.value > this.laidWidth || this.shownHeight.value > this.laidHeight) {
+            // A kick on top of an overshoot: rare, so a relayout is fine.
+            this.layOut(envelope(this.shownWidth.value, this.width), envelope(this.shownHeight.value, this.height));
         }
         this.apply();
     }
 
-    /** Draws the body at the springs' size, on whole pixels so text stays sharp. */
-    private apply(): void {
-        const width = Math.round(this.shownWidth.value);
-        const height = Math.max(Math.round(this.shownHeight.value), 0);
-        const total = width + 2 * this.style.earRadius;
-        const x = this.monitor.x + Math.round((this.monitor.width - total) / 2);
-        this.actor.set_position(x, this.monitor.y);
-        this.actor.width = total;
-        this.body.height = height;
+    /** Sizes and places the actors for a body of `width` × `height`; only when that changes. */
+    private layOut(width: number, height: number): void {
+        if (width === this.laidWidth && height === this.laidHeight) return;
+        this.laidWidth = width;
+        this.laidHeight = height;
+        const ear = this.style.earRadius;
+        const total = width + 2 * ear;
+        const tall = Math.max(height, ear);
+        this.actor.set_position(notchX(this.monitor, width, ear), this.monitor.y);
+        this.actor.set_size(total, tall);
+        this.shapeActor.set_size(total, tall);
+        this.body.set_position(ear, 0);
+        this.body.set_size(width, height);
         if (!this.glowGone) {
-            this.glow.set_position(x + this.style.earRadius, this.monitor.y);
-            this.glow.set_size(width, height);
-        }
-        const radius = Math.round(radiusAt(height, { height: this.style.height, radius: this.style.cornerRadius }));
-        if (radius !== this.shownRadius) {
-            this.shownRadius = radius;
-            this.applyBodyStyle();
-            this.applyGlowStyle();
+            this.glow.set_position(-GLOW_MARGIN, 0);
+            this.glow.set_size(total + 2 * GLOW_MARGIN, tall + GLOW_MARGIN);
         }
     }
 
-    /** The body's shape, with a soft shadow in the glow's colour around it. */
-    private applyGlowStyle(): void {
-        if (!this.glowColor || this.glowGone) return;
-        const r = this.shownRadius < 0 ? this.style.cornerRadius : this.shownRadius;
-        this.glow.style =
-            `border-radius: 0 0 ${r}px ${r}px;` +
-            ` box-shadow: 0 4px 24px 4px ${withAlpha(this.glowColor, GLOW_ALPHA)};`;
+    /** Draws the shape at the springs' size and clips the views to it. */
+    private apply(): void {
+        const width = this.shownWidth.value;
+        const height = Math.max(this.shownHeight.value, 0);
+        const ear = this.style.earRadius;
+        const left = notchX(this.monitor, this.laidWidth, ear);
+        // Centred where the body rests, so its edges land on whole pixels there.
+        const center = notchX(this.monitor, this.width, ear) + ear + this.width / 2 - left;
+        const geometry: ShapeGeometry = {
+            width: this.laidWidth + 2 * ear,
+            height: Math.max(this.laidHeight, ear),
+            center,
+            bodyWidth: width,
+            bodyHeight: height,
+            earRadius: ear,
+            cornerRadius: radiusAt(height, { height: this.style.height, radius: this.style.cornerRadius }),
+        };
+        this.shape.setGeometry(geometry);
+        if (!this.glowGone) {
+            this.glowShape.setGeometry({
+                ...geometry,
+                width: geometry.width + 2 * GLOW_MARGIN,
+                height: geometry.height + GLOW_MARGIN,
+                center: center + GLOW_MARGIN,
+            });
+        }
+        if (width === this.laidWidth && height === this.laidHeight) this.body.remove_clip();
+        else this.body.set_clip(center - ear - width / 2, 0, width, height);
     }
 
     private applyPalette(): void {
-        const { background, backgroundOpacity, theme } = this.palette;
-        const { earRadius } = this.style;
-        this.leftEar.setStyle(earRadius, background, backgroundOpacity);
-        this.rightEar.setStyle(earRadius, background, backgroundOpacity);
+        const { background, backgroundOpacity, gradient, foreground, border, theme } = this.palette;
         for (const name of THEMES) this.actor.remove_style_class_name(`nokta-theme-${name}`);
         this.actor.add_style_class_name(`nokta-theme-${theme}`);
-        this.applyBodyStyle();
-    }
-
-    private applyBodyStyle(): void {
-        const { background, backgroundOpacity, gradient, foreground, border } = this.palette;
-        const r = this.shownRadius < 0 ? this.style.cornerRadius : this.shownRadius;
-        const top = withAlpha(background, backgroundOpacity);
-        let style = `background-color: ${top}; color: ${foreground}; border-radius: 0 0 ${r}px ${r}px;`;
+        // The views take their text colour from the body.
+        this.body.style = `color: ${foreground};`;
+        const [r, g, b] = parseCssColor(background) ?? [0, 0, 0];
+        const alpha = clampAlpha(backgroundOpacity);
+        const top: Rgba = [r, g, b, alpha];
+        let bottom = top;
         if (gradient) {
-            style +=
-                ` background-gradient-direction: vertical; background-gradient-start: ${top};` +
-                ` background-gradient-end: ${withAlpha(gradient, backgroundOpacity)};`;
+            const [gr, gg, gb] = parseCssColor(gradient) ?? [r, g, b];
+            bottom = [gr, gg, gb, alpha];
         }
-        if (border) style += ` border: 1px solid ${border}; border-top-width: 0;`;
-        this.body.style = style;
+        this.shape.setColors({ top, bottom, border: (border && parseCssColor(border)) || NO_COLOR });
     }
 }

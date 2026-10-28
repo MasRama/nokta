@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { parseHexColor, toHexColor, withAlpha } from '../src/shared/logic/color.js';
+import { parseCssColor, parseHexColor, toHexColor, withAlpha } from '../src/shared/logic/color.js';
+
+test('parse_css_color_reads_hex_and_rgba', () => {
+    assert.deepEqual(parseCssColor('#ff0033'), [1, 0, 0.2, 1]);
+    assert.deepEqual(parseCssColor('rgba(255, 255, 255, 0.08)'), [1, 1, 1, 0.08]);
+    assert.deepEqual(parseCssColor('rgb(0,51,255)'), [0, 0.2, 1, 1]);
+    assert.deepEqual(parseCssColor('rgba(0, 0, 0, 2)'), [0, 0, 0, 1]);
+    assert.equal(parseCssColor('red'), null);
+});
 
 test('parse_hex_color_channels', () => {
     assert.deepEqual(parseHexColor('#000000'), { r: 0, g: 0, b: 0 });
