@@ -72,9 +72,12 @@ docs/               manual test checklist, screenshots
   `notifications`, `panel`, `activities`, `weather`, `calendar`, `shelf` and `clipboard` depend on no other feature;
   `extension.ts` shows device, timer and activity alerts through the OSD
   row. The closed notch has one spot for extra information, where the clock
-  or the equalizer would be: `shared/logic/indicator.ts` picks the focus
-  timer, else a countdown, stopwatch or alarm, else the newest live
-  activity, else the shelf, and `monitor-notch.ts` puts it there.
+  or the equalizer would be: `shared/logic/indicator.ts` picks a screen
+  recording, else a call, else the focus timer, else a countdown,
+  stopwatch or alarm, else the newest live activity, else the shelf, and
+  `monitor-notch.ts` puts it there. `shared/logic/progress-line.ts` picks
+  what the line along the closed notch's bottom edge shows: that spot's
+  progress, else the song beside its cover.
   `monitor-notch.ts` also puts the shelf's row in the panel and in the open
   player, since `panel` cannot import `shelf`. In the same way it opens the
   clipboard's list, or the timer's presets, as a page over home
