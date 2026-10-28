@@ -262,3 +262,16 @@
 .nokta-toggle .nokta-button-icon {
     icon-size: 14px;
 }
+
+.nokta-lyrics-sheet {
+    padding-top: 10px;
+}
+
+.nokta-lyrics-row {
+    font-size: 13px;
+}
+
+.nokta-lyrics-current {
+    font-size: 15px;
+    font-weight: bold;
+}
