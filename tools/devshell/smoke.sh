@@ -210,6 +210,18 @@ wait_for "the dots go away" \
 wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && width() === 300" 5
 "$HERE/shot.sh" smoke-osd > /dev/null
 wait_for "the OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
+"$HERE/osd.sh" level audio-volume-muted-symbolic 0
+wait_for "a muted speaker says Muted with no bar" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Muted' && !shown('nokta-osd-track')" 5
+wait_for "the muted OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
+# Switching keyboard layouts shows the new one; this also checks that this
+# GNOME version has the input source manager where Nokta looks.
+"$HERE/osd.sh" layout
+wait_for "a layout switch shows the layout's name" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text !== '' && !/%$/.test(one('nokta-osd-text').text)" 10 \
+    "$FIND one('nokta-osd-text')?.text"
+"$HERE/shot.sh" smoke-layout > /dev/null
+wait_for "the layout OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
 
 # A notification GNOME would show as a banner shows in the notch instead.
 # This also checks that this GNOME version has the method Nokta wraps. The

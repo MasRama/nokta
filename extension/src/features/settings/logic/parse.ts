@@ -26,6 +26,9 @@ export interface Behavior {
     replaceOsd: boolean;
     osdDurationMs: number;
     showCapsLock: boolean;
+    /** The new keyboard layout when it changes. */
+    showInputSource: boolean;
+    showNumLock: boolean;
     allMonitors: boolean;
     deviceAlerts: boolean;
     alertDurationMs: number;
@@ -88,6 +91,8 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     replaceOsd: true,
     osdDurationMs: 1500,
     showCapsLock: true,
+    showInputSource: true,
+    showNumLock: false,
     allMonitors: true,
     deviceAlerts: true,
     alertDurationMs: 3000,

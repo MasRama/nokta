@@ -375,10 +375,22 @@ fn behavior_entries_have_all_keys() {
             "screenshot_preview",
             "show_caps_lock",
             "show_clock",
-            "show_lyrics"
+            "show_input_source",
+            "show_lyrics",
+            "show_num_lock"
         ]
     );
     assert_eq!(map["move_clock"], SettingValue::Bool(true));
+}
+
+#[test]
+fn layout_popups_default_on_and_num_lock_off() {
+    let b = Config::default().behavior;
+    assert!(b.show_input_source);
+    assert!(!b.show_num_lock);
+    let c = parse("[behavior]\nshow_input_source = false\nshow_num_lock = true\n").unwrap();
+    assert!(!c.behavior.show_input_source);
+    assert!(c.behavior.show_num_lock);
 }
 
 #[tokio::test]

@@ -39,8 +39,9 @@ import {
     type TrayNotification,
 } from './features/notifications/index.js';
 import {
-    CapsLockWatcher,
-    capsLockContent,
+    InputSourceWatcher,
+    LockKeysWatcher,
+    lockKeyContent,
     osdContent,
     routeOsd,
     takeOverOsd,
@@ -77,7 +78,7 @@ import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { formatClock, uses24h } from './shared/logic/format.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
-const CAPS_LOCK_ICON = 'input-keyboard-symbolic';
+const KEYBOARD_ICON = 'input-keyboard-symbolic';
 const TIMER_ICON = 'alarm-symbolic';
 
 const isCancelled = (error: unknown): boolean =>
@@ -138,7 +139,8 @@ class Session {
     private cancellable = new Gio.Cancellable();
     private restoreClock: Restore | null = null;
     private restoreOsd: Restore | null = null;
-    private capsLock: CapsLockWatcher | null = null;
+    private lockKeys: LockKeysWatcher | null = null;
+    private inputSources: InputSourceWatcher | null = null;
     private restoreBanners: Restore | null = null;
     /** Puts the calendar back under its own clock, while the notch opened it. */
     private restoreMessageList: Restore | null = null;
@@ -273,8 +275,10 @@ class Session {
         this.restoreClock = null;
         this.restoreOsd?.();
         this.restoreOsd = null;
-        this.capsLock?.destroy();
-        this.capsLock = null;
+        this.lockKeys?.destroy();
+        this.lockKeys = null;
+        this.inputSources?.destroy();
+        this.inputSources = null;
         this.restoreBanners?.();
         this.restoreBanners = null;
         this.unwatchScreenshots?.();
@@ -464,15 +468,16 @@ class Session {
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
+        const iconNames = request.icon instanceof Gio.ThemedIcon ? request.icon.get_names() : [];
         return this.showOsd(
             request.monitorIndex,
-            osdContent(request.level, request.maxLevel, request.label),
+            osdContent(request.level, request.maxLevel, request.label, iconNames),
             request.icon,
         );
     }
 
     private applyOsdSettings(): void {
-        const { replaceOsd, showCapsLock } = this.settings.behavior;
+        const { replaceOsd, showCapsLock, showNumLock, showInputSource } = this.settings.behavior;
         if (replaceOsd && !this.restoreOsd) {
             this.restoreOsd = takeOverOsd({
                 show: (request) => this.onOsdRequest(request),
@@ -483,14 +488,26 @@ class Session {
             this.restoreOsd();
             this.restoreOsd = null;
         }
-        if (showCapsLock && !this.capsLock) {
-            // GNOME has no Caps Lock popup to fall back to.
-            this.capsLock = new CapsLockWatcher((on) => {
-                this.showOsd(-1, capsLockContent(on), new Gio.ThemedIcon({ name: CAPS_LOCK_ICON }));
+        const lockKeys = showCapsLock || showNumLock;
+        if (lockKeys && !this.lockKeys) {
+            // GNOME has no Caps Lock or Num Lock popup to fall back to.
+            this.lockKeys = new LockKeysWatcher((key, on) => {
+                const { showCapsLock: caps, showNumLock: num } = this.settings.behavior;
+                if (key === 'Caps Lock' ? !caps : !num) return;
+                this.showOsd(-1, lockKeyContent(key, on), new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
             });
-        } else if (!showCapsLock && this.capsLock) {
-            this.capsLock.destroy();
-            this.capsLock = null;
+        } else if (!lockKeys && this.lockKeys) {
+            this.lockKeys.destroy();
+            this.lockKeys = null;
+        }
+        if (showInputSource && !this.inputSources) {
+            // GNOME's own switcher shows only while Super is held, so the notch shows every switch.
+            this.inputSources = new InputSourceWatcher((name) => {
+                this.showOsd(-1, { fraction: null, text: name }, new Gio.ThemedIcon({ name: KEYBOARD_ICON }));
+            });
+        } else if (!showInputSource && this.inputSources) {
+            this.inputSources.destroy();
+            this.inputSources = null;
         }
     }
 
