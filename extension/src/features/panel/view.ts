@@ -9,6 +9,7 @@ import { type ControlColors, TogglePill, Tile } from './controls.js';
 import { notificationBadge } from './logic/labels.js';
 import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
 import { SECONDARY } from '../../shared/dim.js';
+import { TONES } from '../../shared/logic/tones.js';
 import { iconFor } from '../../shared/icons.js';
 
 /** A live activity, as one panel row shows it. */
@@ -113,22 +114,22 @@ export interface PanelHandlers {
     hideCall(): void;
 }
 
-/** Each toggle's icon and name. */
-const TOGGLES: Array<[QuickToggle, string, string]> = [
-    ['do_not_disturb', 'notifications-disabled-symbolic', 'Do Not Disturb'],
-    ['caffeine', 'nokta-caffeine', 'Caffeine'],
-    ['dark_style', 'dark-mode-symbolic', 'Dark Style'],
-    ['night_light', 'night-light-symbolic', 'Night Light'],
+/** Each toggle's icon, name and tone. */
+const TOGGLES: Array<[QuickToggle, string, string, string]> = [
+    ['do_not_disturb', 'notifications-disabled-symbolic', 'Do Not Disturb', TONES.do_not_disturb],
+    ['caffeine', 'nokta-caffeine', 'Caffeine', TONES.caffeine],
+    ['dark_style', 'dark-mode-symbolic', 'Dark Style', TONES.dark_style],
+    ['night_light', 'night-light-symbolic', 'Night Light', TONES.night_light],
 ];
 
-/** Each tile's icon and name. */
-const TILES: Array<[HomeTile, string, string]> = [
-    ['notifications', 'preferences-system-notifications-symbolic', 'Notifications'],
-    ['focus', 'nokta-focus', 'Focus'],
-    ['timer', 'nokta-timer', 'Timer'],
-    ['clipboard', 'edit-paste-symbolic', 'Clipboard'],
-    ['settings', 'emblem-system-symbolic', 'Settings'],
-    ['screenshot', 'camera-photo-symbolic', 'Screenshot'],
+/** Each tile's icon, name and tone. */
+const TILES: Array<[HomeTile, string, string, string]> = [
+    ['notifications', 'preferences-system-notifications-symbolic', 'Notifications', TONES.notifications],
+    ['focus', 'nokta-focus', 'Focus', TONES.focus],
+    ['timer', 'nokta-timer', 'Timer', TONES.countdown],
+    ['clipboard', 'edit-paste-symbolic', 'Clipboard', TONES.clipboard],
+    ['settings', 'emblem-system-symbolic', 'Settings', TONES.settings],
+    ['screenshot', 'camera-photo-symbolic', 'Screenshot', TONES.screenshot],
 ];
 
 /** One live activity: icon, title, detail and elapsed time, and a thin bar. */
@@ -445,8 +446,8 @@ export class HomePanel {
         this.call = new CallRow(handlers);
 
         this.pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
-        for (const [which, icon, label] of TOGGLES) {
-            const pill = new TogglePill(iconFor(icon), label, () => handlers.toggle(which));
+        for (const [which, icon, label, tone] of TOGGLES) {
+            const pill = new TogglePill(iconFor(icon), label, tone, () => handlers.toggle(which));
             this.toggles.set(which, pill);
             this.pills.add_child(pill.actor);
         }
@@ -459,8 +460,8 @@ export class HomePanel {
             screenshot: () => handlers.openScreenshot(),
         };
         this.tileRow = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
-        for (const [which, icon, label] of TILES) {
-            const tile = new Tile(iconFor(icon), label, actions[which]);
+        for (const [which, icon, label, tone] of TILES) {
+            const tile = new Tile(iconFor(icon), label, tone, actions[which]);
             this.tiles.set(which, tile);
             this.tileRow.add_child(tile.actor);
         }

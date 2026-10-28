@@ -309,6 +309,13 @@ How both sides stay honest:
   it redraws (`shared/logic/icon-names.ts`) and falls back to the theme's
   icon for anything else (weather, files, apps); icons from GNOME, as an
   OSD's or a notification's, go through `chromeIcon()`.
+- Tones: each kind of thing has its own color (`shared/logic/tones.ts`): the
+  focus timer tomato, a countdown amber, Do Not Disturb indigo, the
+  clipboard teal and so on. A toggle or tile shows its icon in its tone and
+  fills with it while on; alerts glow in the tone of what they are about.
+  On a light notch a tone used for an icon is darkened until it reads
+  (`toneOn`). The privacy colors stay the usual ones: an orange microphone,
+  a green camera. The OSD bar takes the text color, not the cover's.
 - Text follows one type scale (caption 11, body 13, title 15, the sung
   lyric 17; semibold labels, bold digits). St CSS ignores `opacity`, so
   dimmed text is dimmed from code with the two levels in `shared/dim.ts`.
