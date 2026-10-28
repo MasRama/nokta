@@ -31,6 +31,7 @@ alert_duration_ms = 3000 # how long a device alert stays
 show_clock = true        # the time in the notch while nothing plays
 clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
 privacy_dots = true      # a green dot while the camera is on, orange while the microphone or screen is used
+live_activities = true   # show builds, downloads and other activities that apps and the nokta command report
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)
@@ -48,3 +49,6 @@ shortcut = "<Super><Alt>f"  # starts focus or stops the timer; "" = no shortcut
 in_notch = true          # show notification banners in the notch instead of GNOME's banner
 duration_ms = 5000       # how long a notification stays, 1000 to 30000
 show_body = true         # false shows only the app and the title
+
+[activities]
+stale_minutes = 30       # an activity with no update for this long ends, 1 to 1440

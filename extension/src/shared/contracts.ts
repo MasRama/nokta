@@ -16,6 +16,7 @@ export const PATHS = {
     Settings1: '/io/nokta/Settings',
     Devices1: '/io/nokta/Devices',
     Timer1: '/io/nokta/Timer',
+    Activities1: '/io/nokta/Activities',
 } as const;
 
 export interface NoktaProps {
@@ -79,6 +80,7 @@ export interface SettingsProps {
     Lyrics: Record<string, unknown>;
     Timer: Record<string, unknown>;
     Notifications: Record<string, unknown>;
+    Activities: Record<string, unknown>;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */
@@ -108,4 +110,20 @@ export const TIMER_METHODS = {
 /** io.nokta.Timer1 signals and the D-Bus signature of their arguments. */
 export const TIMER_SIGNALS = {
     Finished: 's',
+} as const;
+
+export interface ActivitiesProps {
+    /** id, title, detail, icon name, progress (0 to 1, or -1) and start time in monotonic µs. */
+    Activities: Array<[string, string, string, string, number, number]>;
+}
+
+/** io.nokta.Activities1 methods and the D-Bus signature of their arguments. */
+export const ACTIVITIES_METHODS = {
+    Set: 'ssssd',
+    End: 'sbs',
+} as const;
+
+/** io.nokta.Activities1 signals and the D-Bus signature of their arguments. */
+export const ACTIVITIES_SIGNALS = {
+    Ended: 'ssbsx',
 } as const;

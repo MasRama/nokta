@@ -1,0 +1,43 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Activities. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Activities1">
+    <!--
+      The running activities, newest first: id, title, detail, icon name,
+      progress and start time. Progress is 0 to 1, or -1 when unknown. The
+      start time is CLOCK_MONOTONIC in microseconds.
+    -->
+    <property name="Activities" type="a(ssssdx)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      Starts the activity id, or updates it. icon is an icon name; empty
+      means the default one. Fails with InvalidArgs for an empty id, an empty
+      title, or a progress that is neither -1 nor between 0 and 1. At most 8
+      activities run at a time: a ninth ends the oldest as failed. One that
+      is not set again for [activities] stale_minutes ends as failed.
+    -->
+    <method name="Set">
+      <arg name="id" type="s" direction="in"/>
+      <arg name="title" type="s" direction="in"/>
+      <arg name="detail" type="s" direction="in"/>
+      <arg name="icon" type="s" direction="in"/>
+      <arg name="progress" type="d" direction="in"/>
+    </method>
+    <!-- Ends the activity id and emits Ended; does nothing for an unknown id. -->
+    <method name="End">
+      <arg name="id" type="s" direction="in"/>
+      <arg name="success" type="b" direction="in"/>
+      <arg name="message" type="s" direction="in"/>
+    </method>
+    <!-- An activity ended, after End, a newer one replacing it, or no update. -->
+    <signal name="Ended">
+      <arg name="id" type="s"/>
+      <arg name="title" type="s"/>
+      <arg name="success" type="b"/>
+      <arg name="message" type="s"/>
+      <arg name="elapsed_us" type="x"/>
+    </signal>
+  </interface>
+</node>
