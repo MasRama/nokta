@@ -12,9 +12,11 @@ full. A focus timer from Quick Settings counts down in the notch and
 starts a short break when the session ends. While an app uses the camera,
 the microphone or screen sharing, small green and orange dots sit in the
 notch's left corner. Notifications show in the notch instead of GNOME's
-banner: hover to keep one open, click it to open the app. When nothing
-plays, hovering the notch opens the date, a button to the notification list
-and one to start or stop focus. Every monitor has
+banner: hover to keep one open, click it to open the app. A build, a
+download or a backup can show in the notch while it runs and say how it
+ended (see [Live activities](#live-activities)). When nothing
+plays, hovering the notch opens the date, the running activities, a button
+to the notification list and one to start or stop focus. Every monitor has
 its own notch,
 and these messages show on the monitor you are working on.
 
@@ -76,8 +78,8 @@ on macOS and Windows on every change.
    ```
 
    It installs into your home directory only and never uses `sudo`:
-   `~/.local/bin/noktad`, a systemd user unit, a D-Bus activation file and
-   the GNOME extension.
+   `~/.local/bin/noktad`, the `~/.local/bin/nokta` command, a systemd user
+   unit, a D-Bus activation file and the GNOME extension.
 3. Log out and log back in. GNOME on Wayland loads new extensions only at
    login.
 4. Turn the extension on:
@@ -146,6 +148,7 @@ window then says what to fix before it saves anything.
 | `show_clock` | `true` | Show the time in the notch while nothing plays |
 | `clock_format` | `"system"` | `"24h"` (17:00), `"12h"` (5:00), or `"system"` to follow GNOME's setting |
 | `privacy_dots` | `true` | A green dot while the camera is on and an orange one while the microphone or screen sharing is in use |
+| `live_activities` | `true` | Show live activities in the notch; `false` shows none, and scripts that report them keep working |
 
 ### `[lyrics]`
 
@@ -171,6 +174,12 @@ the daemon, so it keeps going while the screen is locked.
 | `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
 | `shortcut` | `"<Super><Alt>f"` | Keys that start focus or stop the timer, written like GNOME's keyboard shortcuts (`<Control><Shift>F12`); `""` means no shortcut |
 
+### `[activities]`
+
+| Key | Default | What it does |
+|---|---|---|
+| `stale_minutes` | `30` | An activity not updated for this long ends as failed, 1 to 1440 |
+
 ### `[notifications]`
 
 | Key | Default | What it does |
@@ -178,6 +187,24 @@ the daemon, so it keeps going while the screen is locked.
 | `in_notch` | `true` | Show the notifications GNOME would show as a banner in the notch instead. Critical ones, and any while an app is fullscreen, still use GNOME's banner. Do Not Disturb and each app's notification settings still apply |
 | `duration_ms` | `5000` | How long a notification stays, 1000 to 30000; it stays while the pointer is on it |
 | `show_body` | `true` | Show the message; `false` shows only the title and the app |
+
+## Live activities
+
+Any program can show what it is doing in the notch, and the `nokta`
+command makes it a one-liner for scripts:
+
+```sh
+nokta run -- cargo build --release          # shows "cargo build" while it runs, then ✓ or ✗
+nokta activity set backup --title "Backup" --detail "Photos" --progress 40
+nokta activity end backup --message "1 204 files"
+nokta activity end backup --failed --message "Disk full"
+```
+
+`nokta run` passes the command's exit code through, and the command still
+runs when Nokta is not. `nokta --help` lists every option. Programs can
+call `io.nokta.Activities1` on the session bus directly (see
+[ARCHITECTURE.md](ARCHITECTURE.md)). The newest activity shows in the closed
+notch, with its percentage when it reports one; hover to see up to three.
 
 ## Privacy
 
