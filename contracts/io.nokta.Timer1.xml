@@ -56,5 +56,65 @@
     <signal name="Finished">
       <arg name="phase" type="s"/>
     </signal>
+
+    <!--
+      Clocks: countdowns, stopwatches and alarms, apart from the focus timer.
+      At most 6, newest first. Each is id, kind ("countdown", "stopwatch" or
+      "alarm"), label (may be empty), running, duration in microseconds (a
+      countdown's length, else 0), value in microseconds at timestamp (time
+      left for a countdown or an alarm, time elapsed for a stopwatch),
+      timestamp (CLOCK_MONOTONIC in microseconds) and the alarm's time in
+      Unix microseconds (else 0). While running, a countdown or an alarm has
+      value - (now - timestamp) left and a stopwatch value + (now - timestamp)
+      elapsed. They follow the wall clock, so time spent suspended counts.
+    -->
+    <property name="Clocks" type="a(sssbxxxx)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      Starts a countdown of duration_us (1 second to 24 hours) and returns
+      its id. Fails with InvalidArgs for another length and LimitsExceeded
+      when 6 clocks exist.
+    -->
+    <method name="AddCountdown">
+      <arg name="label" type="s" direction="in"/>
+      <arg name="duration_us" type="x" direction="in"/>
+      <arg name="id" type="s" direction="out"/>
+    </method>
+    <!-- Starts a stopwatch and returns its id. Fails with LimitsExceeded when 6 clocks exist. -->
+    <method name="AddStopwatch">
+      <arg name="label" type="s" direction="in"/>
+      <arg name="id" type="s" direction="out"/>
+    </method>
+    <!--
+      Sets an alarm for unix_us, in the next 7 days, and returns its id.
+      Fails with InvalidArgs for a time in the past or further away, and
+      LimitsExceeded when 6 clocks exist.
+    -->
+    <method name="AddAlarm">
+      <arg name="label" type="s" direction="in"/>
+      <arg name="unix_us" type="x" direction="in"/>
+      <arg name="id" type="s" direction="out"/>
+    </method>
+    <!-- Pauses a running countdown or stopwatch; does nothing otherwise. -->
+    <method name="PauseClock">
+      <arg name="id" type="s" direction="in"/>
+    </method>
+    <!-- Resumes a paused countdown or stopwatch; does nothing otherwise. -->
+    <method name="ResumeClock">
+      <arg name="id" type="s" direction="in"/>
+    </method>
+    <!-- Removes a clock without ClockDone; does nothing for an unknown id. -->
+    <method name="RemoveClock">
+      <arg name="id" type="s" direction="in"/>
+    </method>
+    <!-- Removes every clock without ClockDone. -->
+    <method name="ClearClocks"/>
+    <!-- A countdown ran out or an alarm went off; it is removed. -->
+    <signal name="ClockDone">
+      <arg name="id" type="s"/>
+      <arg name="kind" type="s"/>
+      <arg name="label" type="s"/>
+    </signal>
   </interface>
 </node>

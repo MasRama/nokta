@@ -24,6 +24,20 @@ pub enum Cli {
         icon: String,
         command: Vec<String>,
     },
+    Countdown {
+        duration_us: i64,
+        label: String,
+    },
+    Stopwatch {
+        label: String,
+    },
+    /// Rings at the next time the local clock shows `hour:minute`.
+    Alarm {
+        hour: u8,
+        minute: u8,
+        label: String,
+    },
+    ClearClocks,
 }
 
 pub fn parse(args: &[String]) -> Result<Cli, String> {
@@ -84,8 +98,69 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
                 command,
             })
         }
+        ["timer", "clear"] => Ok(Cli::ClearClocks),
+        ["timer", length, label @ ..] => Ok(Cli::Countdown {
+            duration_us: parse_duration(length).ok_or_else(|| {
+                format!("the timer length is like 10m, 1h30m or 45s, got {length:?}")
+            })?,
+            label: label.join(" "),
+        }),
+        ["timer"] => Err("timer needs a length, like: nokta timer 10m Tea".into()),
+        ["stopwatch", label @ ..] => Ok(Cli::Stopwatch {
+            label: label.join(" "),
+        }),
+        ["alarm", time, label @ ..] => {
+            let (hour, minute) = parse_time_of_day(time)
+                .ok_or_else(|| format!("the alarm time is like 07:30, got {time:?}"))?;
+            Ok(Cli::Alarm {
+                hour,
+                minute,
+                label: label.join(" "),
+            })
+        }
+        ["alarm"] => Err("alarm needs a time, like: nokta alarm 07:30 Wake up".into()),
         [first, ..] => Err(format!("unknown command {first:?}")),
     }
+}
+
+/// `1h30m`, `10m`, `45s` or a bare number of minutes, in microseconds.
+/// Units go from hours down to seconds, each at most once.
+pub fn parse_duration(text: &str) -> Option<i64> {
+    if let Ok(minutes) = text.parse::<u32>() {
+        return Some(i64::from(minutes) * 60_000_000);
+    }
+    let units = [
+        ('h', 3_600_000_000_i64),
+        ('m', 60_000_000),
+        ('s', 1_000_000),
+    ];
+    let mut rest = text;
+    let mut next_unit = 0;
+    let mut total = 0_i64;
+    while !rest.is_empty() {
+        let digits = rest.find(|c: char| !c.is_ascii_digit())?;
+        if digits == 0 {
+            return None;
+        }
+        let number: i64 = rest[..digits].parse().ok()?;
+        let unit = rest[digits..].chars().next()?;
+        let index = units[next_unit..].iter().position(|(u, _)| *u == unit)? + next_unit;
+        total = total.checked_add(number.checked_mul(units[index].1)?)?;
+        next_unit = index + 1;
+        rest = &rest[digits + 1..];
+    }
+    (total > 0).then_some(total)
+}
+
+/// `07:30` or `7:30`, on a 24-hour clock.
+pub fn parse_time_of_day(text: &str) -> Option<(u8, u8)> {
+    let (hour, minute) = text.split_once(':')?;
+    if !(1..=2).contains(&hour.len()) || minute.len() != 2 {
+        return None;
+    }
+    let hour: u8 = hour.parse().ok()?;
+    let minute: u8 = minute.parse().ok()?;
+    (hour < 24 && minute < 60).then_some((hour, minute))
 }
 
 /// The program's file name, and its first argument unless that is an option:

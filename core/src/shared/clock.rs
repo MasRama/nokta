@@ -22,6 +22,17 @@ pub fn monotonic_us() -> i64 {
     i64::try_from(micros).unwrap_or(i64::MAX).saturating_add(1)
 }
 
+/// The wall clock in Unix microseconds, for what must follow the time of
+/// day (alarms) or count time spent suspended.
+pub fn wall_us() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let since = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    i64::try_from(since.as_micros()).unwrap_or(i64::MAX)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

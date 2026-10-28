@@ -449,6 +449,74 @@ async fn timer_starts_pauses_and_stops_over_dbus() {
     assert!(err.to_string().contains("InvalidArgs"), "{err}");
 }
 
+type ClockRow = (String, String, String, bool, i64, i64, i64, i64);
+
+#[tokio::test]
+async fn clocks_add_pause_and_finish_over_dbus() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Timer").await;
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let timer = zbus::Proxy::new(&conn, NAME, "/io/nokta/Timer", "io.nokta.Timer1")
+        .await
+        .unwrap();
+    let mut done = timer.receive_signal("ClockDone").await.unwrap();
+    let clocks = |changed: &HashMap<String, OwnedValue>| {
+        Vec::<ClockRow>::try_from(changed["Clocks"].try_clone().unwrap()).unwrap()
+    };
+
+    let watch: String = timer.call("AddStopwatch", &("Run",)).await.unwrap();
+    let rows = clocks(&next_change_with(&mut changes, "Clocks").await);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        (
+            rows[0].0.as_str(),
+            rows[0].1.as_str(),
+            rows[0].2.as_str(),
+            rows[0].3
+        ),
+        (watch.as_str(), "stopwatch", "Run", true)
+    );
+
+    let _: () = timer.call("PauseClock", &(&watch,)).await.unwrap();
+    let rows = clocks(&next_change_with(&mut changes, "Clocks").await);
+    assert!(!rows[0].3);
+
+    let tea: String = timer
+        .call("AddCountdown", &("Tea", 1_000_000_i64))
+        .await
+        .unwrap();
+    let rows = clocks(&next_change_with(&mut changes, "Clocks").await);
+    assert_eq!(
+        (rows[0].0.as_str(), rows[0].1.as_str(), rows[0].4),
+        (tea.as_str(), "countdown", 1_000_000)
+    );
+
+    let signal = tokio::time::timeout(Duration::from_secs(5), done.next())
+        .await
+        .expect("the countdown finishes")
+        .unwrap();
+    let (id, kind, label): (String, String, String) = signal.body().deserialize().unwrap();
+    assert_eq!(
+        (id.as_str(), kind.as_str(), label.as_str()),
+        (tea.as_str(), "countdown", "Tea")
+    );
+
+    let err = timer
+        .call::<_, _, String>("AddCountdown", &("", 0_i64))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("InvalidArgs"), "{err}");
+
+    let _: () = timer.call("ClearClocks", &()).await.unwrap();
+    loop {
+        if clocks(&next_change_with(&mut changes, "Clocks").await).is_empty() {
+            break;
+        }
+    }
+}
+
 type ActivityRow = (String, String, String, String, f64, i64);
 
 #[tokio::test]

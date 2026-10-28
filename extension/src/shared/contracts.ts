@@ -109,6 +109,8 @@ export interface TimerProps {
     TimestampUs: number;
     Sessions: number;
     LongBreak: boolean;
+    /** id, kind, label, running, duration, value and timestamp (monotonic) in µs, alarm time in Unix µs. */
+    Clocks: Array<[string, string, string, boolean, number, number, number, number]>;
 }
 
 /** io.nokta.Timer1 methods and the D-Bus signature of their arguments. */
@@ -117,11 +119,19 @@ export const TIMER_METHODS = {
     Pause: '',
     Resume: '',
     Stop: '',
+    AddCountdown: 'sx',
+    AddStopwatch: 's',
+    AddAlarm: 'sx',
+    PauseClock: 's',
+    ResumeClock: 's',
+    RemoveClock: 's',
+    ClearClocks: '',
 } as const;
 
 /** io.nokta.Timer1 signals and the D-Bus signature of their arguments. */
 export const TIMER_SIGNALS = {
     Finished: 's',
+    ClockDone: 'sss',
 } as const;
 
 export interface ActivitiesProps {

@@ -30,6 +30,7 @@ import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import {
     HomePanel,
     MAX_PANEL_ACTIVITIES,
+    MAX_PANEL_CLOCKS,
     NotchMenu,
     panelHeight,
     SubPage,
@@ -51,7 +52,17 @@ import {
     type ShelfItem,
     type ShelfNotch,
 } from './features/shelf/index.js';
-import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
+import {
+    clockColor,
+    clockText,
+    formatRemaining,
+    indicatorClock,
+    phaseColor,
+    remainingAt,
+    TimerLabel,
+    TimerPage,
+    type TimerClient,
+} from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
 import { withAlpha } from './shared/logic/color.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
@@ -85,7 +96,7 @@ const VIEW_SCALE_FROM = 0.96;
 type Drawn = NotchMode | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
 
 /** The pages that home's tiles open. */
-type PageName = 'clipboard';
+type PageName = 'clipboard' | 'timer';
 
 /** What home shows and does; owned by the session. */
 export interface PanelSource {
@@ -193,6 +204,10 @@ export class MonitorNotch implements ShelfNotch {
     private searchGrab: Clutter.Grab | null = null;
     private searchPressId = 0;
     private readonly clipboardSubPage: SubPage;
+    private readonly timerPage: TimerPage;
+    private readonly timerSubPage: SubPage;
+    /** Holds the pages; the one open shows. */
+    private readonly pages = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly menu: NotchMenu;
     private readonly pressId: number;
     private readonly machine: NotchMachine;
@@ -226,9 +241,12 @@ export class MonitorNotch implements ShelfNotch {
                 toggleFocus: () => this.onPanelClick(() => panel.toggleFocus()),
                 openSettings: () => this.onPanelClick(() => panel.openSettings()),
                 openClipboard: () => this.setPage('clipboard'),
+                openTimer: () => this.setPage('timer'),
                 openPlayer: () => this.setHomeOpen(false),
                 // A toggle acts in place; home stays open to show it.
                 toggle: (which) => panel.toggle(which),
+                pauseClock: (id, pause) => (pause ? sources.timer.pauseClock(id) : sources.timer.resumeClock(id)),
+                removeClock: (id) => sources.timer.removeClock(id),
             },
             panel.iconsDir,
         );
@@ -250,6 +268,20 @@ export class MonitorNotch implements ShelfNotch {
         });
         this.clipboardSubPage = new SubPage('Clipboard', this.clipboardPage.actor, () => this.setPage(null));
         for (const action of this.clipboardPage.actions) this.clipboardSubPage.addAction(action);
+        // What a preset starts shows in home, so it goes back there.
+        this.timerPage = new TimerPage({
+            countdown: (minutes) => {
+                sources.timer.addCountdown(minutes);
+                this.setPage(null);
+            },
+            stopwatch: () => {
+                sources.timer.addStopwatch();
+                this.setPage(null);
+            },
+        });
+        this.timerSubPage = new SubPage('Timer', this.timerPage.actor, () => this.setPage(null));
+        this.pages.add_child(this.clipboardSubPage.actor);
+        this.pages.add_child(this.timerSubPage.actor);
         // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
         this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
@@ -269,7 +301,7 @@ export class MonitorNotch implements ShelfNotch {
             collapsed: this.collapsed.actor,
             expanded: this.expanded.actor,
             panel: this.idlePanel.actor,
-            page: this.clipboardSubPage.actor,
+            page: this.pages,
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
             screenshot: this.screenshotView.actor,
@@ -360,6 +392,9 @@ export class MonitorNotch implements ShelfNotch {
         this.idlePanel.destroy();
         this.clipboardPage.destroy();
         this.clipboardSubPage.destroy();
+        this.timerPage.destroy();
+        this.timerSubPage.destroy();
+        this.pages.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
         this.idleTimer.destroy();
@@ -396,17 +431,23 @@ export class MonitorNotch implements ShelfNotch {
         this.updateTimers();
     }
 
-    /** Draws the time left; the session calls it on each change and each second. */
+    /**
+     * Draws the focus timer's time left, or else a countdown, stopwatch or
+     * alarm; the session calls it on each change and when the shown second
+     * changes.
+     */
     onTimer(): void {
         if (this.destroyed) return;
         const timer = this.sources.timer.snapshot();
-        const active = timer.state !== 'idle';
-        if (active) {
-            const text = formatRemaining(remainingAt(timer, GLib.get_monotonic_time()));
-            const color = phaseColor(timer.phase);
-            const paused = timer.state === 'paused';
-            this.idleTimer.update(text, color, paused);
-            this.collapsedTimer.update(text, color, paused);
+        const now = GLib.get_monotonic_time();
+        const clock = indicatorClock(this.sources.timer.clocks(), now);
+        let shown: [string, string, boolean] | null = null;
+        if (timer.state !== 'idle')
+            shown = [formatRemaining(remainingAt(timer, now)), phaseColor(timer.phase), timer.state === 'paused'];
+        else if (clock) shown = [clockText(clock, now), clockColor(clock.kind), !clock.running];
+        if (shown) {
+            this.idleTimer.update(...shown);
+            this.collapsedTimer.update(...shown);
         }
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
@@ -455,12 +496,22 @@ export class MonitorNotch implements ShelfNotch {
         if (this.drawn === 'panel') this.refreshPanel();
     }
 
-    /** The page's body changed height. */
+    /** A page's body changed height. */
     private resizePage(): void {
         if (this.destroyed) return;
+        this.sizePages();
         const [width, height] = this.sizeFor('page');
-        this.clipboardSubPage.actor.set_size(width, height);
         if (this.drawn === 'page') this.notch.resizeTo(width, height, 'width');
+    }
+
+    /** Each page keeps its own size; their holder takes the open one's. */
+    private sizePages(): void {
+        const width = this.sources.settings.appearance.expandedWidth;
+        this.clipboardSubPage.actor.set_size(width, subPageHeight(this.clipboardPage.height));
+        this.timerSubPage.actor.set_size(width, subPageHeight(this.timerPage.height));
+        this.clipboardSubPage.actor.visible = this.page !== 'timer';
+        this.timerSubPage.actor.visible = this.page === 'timer';
+        this.pages.set_size(...this.sizeFor('page'));
     }
 
     /** The pointer is on the notch, or it counts as on it: over the helper window, or typing a search. */
@@ -652,17 +703,19 @@ export class MonitorNotch implements ShelfNotch {
     private applyIndicator(): void {
         const indicator = chooseIndicator({
             timer: this.sources.timer.snapshot().state !== 'idle',
+            clock: indicatorClock(this.sources.timer.clocks(), GLib.get_monotonic_time()) !== null,
             activity: this.liveActivities().length > 0,
             shelf: this.sources.shelf.items().length > 0,
         });
         if (indicator !== this.indicator) {
             this.indicator = indicator;
             this.clock.actor.visible = indicator === null;
-            this.idleTimer.actor.visible = indicator === 'timer';
+            this.idleTimer.actor.visible = indicator === 'timer' || indicator === 'clock';
             this.idleBadge.actor.visible = indicator === 'activity';
             this.idleShelf.actor.visible = indicator === 'shelf';
             const aside = {
                 timer: this.collapsedTimer.actor,
+                clock: this.collapsedTimer.actor,
                 activity: this.collapsedBadge.actor,
                 shelf: this.collapsedShelf.actor,
             };
@@ -687,9 +740,9 @@ export class MonitorNotch implements ShelfNotch {
         this.updatePanelTick();
     }
 
-    /** Once a second while the open panel shows an activity's elapsed time. */
+    /** Once a second while the open panel shows an activity's elapsed time or a clock. */
     private updatePanelTick(): void {
-        const run = this.drawn === 'panel' && this.panelRows.includes('activity');
+        const run = this.drawn === 'panel' && (this.panelRows.includes('activity') || this.panelRows.includes('clock'));
         if (run && !this.panelTickId) {
             this.panelTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PANEL_TICK_MS, () => {
                 this.idlePanel.show(this.sources.panel.content());
@@ -771,6 +824,7 @@ export class MonitorNotch implements ShelfNotch {
         if (page) this.homeOpen = true;
         else this.clipboardPage.reset();
         this.page = page;
+        this.sizePages();
         this.draw(this.overlay());
     }
 
@@ -824,7 +878,10 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === 'screenshot') return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
         if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
-        if (mode === 'page') return [a.expandedWidth, subPageHeight(this.clipboardPage.height)];
+        if (mode === 'page') {
+            const body = this.page === 'timer' ? this.timerPage.height : this.clipboardPage.height;
+            return [a.expandedWidth, subPageHeight(body)];
+        }
         if (mode === 'expanded') {
             const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
             const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
@@ -839,6 +896,7 @@ export class MonitorNotch implements ShelfNotch {
             const [width, height] = this.sizeFor(mode as Drawn);
             actor.set_size(width, height);
         }
+        this.sizePages();
         // The open player's padding is 18 px a side.
         const lyricWidth = this.sources.settings.appearance.expandedWidth - 36;
         this.lyricLine.setWidth(lyricWidth);
@@ -874,6 +932,7 @@ export class MonitorNotch implements ShelfNotch {
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setColors({ foreground, accent, onAccent });
         this.clipboardPage.setColors({ foreground, accent });
+        this.timerPage.setColors({ foreground });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
     }
@@ -1022,7 +1081,15 @@ function trackKey(snapshot: { playerId: string; title: string; artists: readonly
 
 function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
+    const clocks = Math.min(content.clocks.length, MAX_PANEL_CLOCKS);
     const event: PanelRow[] = content.event ? ['event'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
-    return ['date', ...event, ...Array<PanelRow>(activities).fill('activity'), ...files, 'controls'];
+    return [
+        'date',
+        ...event,
+        ...Array<PanelRow>(activities).fill('activity'),
+        ...Array<PanelRow>(clocks).fill('clock'),
+        ...files,
+        'controls',
+    ];
 }

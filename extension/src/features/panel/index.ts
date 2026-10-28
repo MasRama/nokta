@@ -6,7 +6,9 @@ export { SubPage } from './page.js';
 export {
     HomePanel,
     MAX_PANEL_ACTIVITIES,
+    MAX_PANEL_CLOCKS,
     type PanelActivity,
+    type PanelClock,
     type PanelContent,
     type PanelEvent,
     type PanelHandlers,

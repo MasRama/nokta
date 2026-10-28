@@ -408,6 +408,35 @@
     font-feature-settings: "tnum";
 }
 
+/* A countdown, stopwatch or alarm in home: one line. */
+.nokta-panel-clock {
+    height: 26px;
+    spacing: 8px;
+}
+
+.nokta-panel-clock-icon {
+    icon-size: 16px;
+}
+
+.nokta-panel-clock-title {
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.nokta-panel-clock-detail {
+    font-size: 11px;
+}
+
+.nokta-panel-clock-time {
+    font-size: 13px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
+.nokta-panel-clock .nokta-button-icon {
+    icon-size: 14px;
+}
+
 .nokta-panel-activity-track {
     height: 3px;
     border-radius: 1.5px;
@@ -580,4 +609,19 @@
 
 .nokta-clip-empty {
     font-size: 13px;
+}
+
+/* The timer page's presets; painted from code like the toggles. */
+.nokta-timer-preset {
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.nokta-timer-stopwatch {
+    spacing: 6px;
+}
+
+.nokta-timer-stopwatch .nokta-button-icon {
+    icon-size: 14px;
 }

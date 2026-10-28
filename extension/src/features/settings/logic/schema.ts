@@ -354,7 +354,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         int(0, 12),
                         'Focus sessions; 0 for no long breaks',
                     ),
-                    timer('sound', 'Play a sound', bool(), 'When a focus session or a break ends'),
+                    timer('sound', 'Play a sound', bool(), 'When a focus session, a break, a countdown or an alarm ends'),
                     timer('quiet_notifications', 'Quiet notifications', bool(), 'No banners while you focus'),
                     timer('shortcut', 'Shortcut', text(), 'Starts focus or stops the timer, like <Super><Alt>f; empty for none'),
                 ],

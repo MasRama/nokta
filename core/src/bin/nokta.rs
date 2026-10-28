@@ -9,6 +9,10 @@ Usage:
   nokta run [--title TITLE] [--icon NAME] -- COMMAND [ARGS...]
   nokta activity set ID --title TITLE [--detail TEXT] [--icon NAME] [--progress 0-100]
   nokta activity end ID [--failed] [--message TEXT]
+  nokta timer LENGTH [LABEL...]
+  nokta timer clear
+  nokta stopwatch [LABEL...]
+  nokta alarm HH:MM [LABEL...]
   nokta settings
   nokta --version | --help
 
@@ -18,6 +22,11 @@ with its exit code. It runs the command even when noktad is not there.
 activity set starts or updates an activity; without --progress the progress
 is unknown. activity end removes it, as a success unless --failed is given.
 An activity with no update for [activities] stale_minutes ends by itself.
+
+timer starts a countdown, like 10m, 1h30m or 45s (a bare number is
+minutes); timer clear removes every countdown, stopwatch and alarm.
+stopwatch starts a stopwatch. alarm rings at the next HH:MM on the local
+24-hour clock, today or tomorrow. The notch shows them all, at most 6.
 
 settings opens Nokta's settings window.
 

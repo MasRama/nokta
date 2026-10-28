@@ -243,6 +243,16 @@ wait_for "a focus timer replaces the clock" \
 "$HERE/shot.sh" smoke-timer > /dev/null
 "$HERE/timer.sh" stop
 wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock') && !shown('nokta-timer')" 10
+# A countdown takes the clock's place too, and alerts when it runs out.
+"$HERE/timer.sh" countdown 3 "Smoke eggs"
+wait_for "a countdown replaces the clock" \
+    "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^0:0[0-3]$/.test(one('nokta-timer').text)" 5
+"$HERE/shot.sh" smoke-countdown > /dev/null
+wait_for "a finished countdown alerts with its label" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke eggs' && one('nokta-osd-detail').text === 'Timer done'" 10
+sleep 0.4
+"$HERE/shot.sh" smoke-countdown-done > /dev/null
+wait_for "the clock comes back after the alert" "$FIND shown('nokta-clock') && !shown('nokta-osd')" 15
 
 # A live activity takes the clock's place and gets a row in the panel; its
 # end shows like a device alert.
@@ -462,6 +472,26 @@ gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard --m
 wait_for "clearing keeps the pinned entry" "$FIND $CLIP_ROWS === 'Smoke clipboard text'" 5
 js "$FIND one('nokta-subpage-back').emit('clicked', 1); true" > /dev/null
 wait_for "the back arrow goes home" "$FIND shown('nokta-panel') && !shown('nokta-subpage')" 5
+# The timer tile opens its presets; one starts a countdown and goes back
+# home, which gets a 26 px row for it.
+HOME_HEIGHT=$(js "$FIND Math.round(one('nokta-body').height)")
+TIMER_TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Timer')"
+js "$FIND $TIMER_TILE.emit('clicked', 1); true" > /dev/null
+# The header and two 32 px rows of presets: 14 + 28 + 10 + 70 + 14.
+wait_for "the timer tile opens its presets" \
+    "$FIND any('nokta-timer-preset') && Math.round(one('nokta-body').height) === 136" 5 \
+    "$FIND JSON.stringify([any('nokta-timer-preset'), Math.round(one('nokta-body').height)])"
+sleep 0.4
+"$HERE/shot.sh" smoke-timer-page > /dev/null
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-timer-preset').find((b) => b.mapped && b.get_child().text === '5 min').emit('clicked', 1); true" > /dev/null
+wait_for "a preset starts a countdown and goes home with its row" \
+    "$FIND shown('nokta-panel') && any('nokta-panel-clock') && one('nokta-panel-clock-title').text === 'Timer' && Math.round(one('nokta-body').height) === $HOME_HEIGHT + 36" 5 \
+    "$FIND JSON.stringify([shown('nokta-panel'), any('nokta-panel-clock'), Math.round(one('nokta-body').height)])"
+sleep 0.4
+"$HERE/shot.sh" smoke-timer-row > /dev/null
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-panel-clock-remove').find((b) => b.mapped).emit('clicked', 1); true" > /dev/null
+wait_for "its remove button takes the row away" \
+    "$FIND !any('nokta-panel-clock') && Math.round(one('nokta-body').height) === $HOME_HEIGHT" 5
 "$HERE/hover.sh" off > /dev/null
 wait_for "the panel closes" "$FIND shown('nokta-clock') && width() === 180" 5
 # The middle of the closed notch: NOTCH_AT was taken on the open panel.
