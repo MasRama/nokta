@@ -70,6 +70,27 @@ wait_for "a playing track shows in a 260 px notch" \
     "$FIND shown('nokta-collapsed') && width() === 260" 20
 "$HERE/shot.sh" smoke-playing > /dev/null
 
+# Hovering opens the player; the fake player has shuffle and repeat, so both
+# buttons show, and a click on repeat reaches it through noktad.
+media_prop() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Media \
+        --method org.freedesktop.DBus.Properties.Get io.nokta.Media1 "$1"
+}
+"$HERE/hover.sh" on > /dev/null
+wait_for "hovering opens the player with shuffle and repeat" \
+    "$FIND shown('nokta-expanded') && find(Main.layoutManager.uiGroup, 'nokta-toggle').filter((b) => b.mapped).length === 2" 10
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-toggle')[1].emit('clicked', 1); true" > /dev/null
+i=0
+until media_prop LoopStatus | grep -q Playlist; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "repeat did not reach the player: $(media_prop LoopStatus)"
+    sleep 0.2
+done
+ok "the repeat button turns the player's repeat on"
+"$HERE/shot.sh" smoke-expanded > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
+
 "$HERE/player.sh" Stopped > /dev/null
 wait_for "the idle notch shows the clock in 180 px" \
     "$FIND shown('nokta-clock') && /^[0-9]{1,2}:[0-9]{2}/.test(one('nokta-clock').text) && width() === 180" 10

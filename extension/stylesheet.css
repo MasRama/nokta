@@ -258,3 +258,7 @@
 .nokta-panel-activity-fill {
     border-radius: 1.5px;
 }
+
+.nokta-toggle .nokta-button-icon {
+    icon-size: 14px;
+}

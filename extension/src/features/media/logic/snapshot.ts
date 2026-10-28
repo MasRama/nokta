@@ -1,4 +1,5 @@
 import type { MediaProps } from '../../../shared/contracts.js';
+import { loopStatusFrom, type LoopStatus } from './loop.js';
 import type { PlayerEntry } from './players.js';
 
 /** io.nokta.Media1's properties in camelCase. */
@@ -21,6 +22,10 @@ export interface MediaSnapshot {
     canGoNext: boolean;
     canGoPrevious: boolean;
     canSeek: boolean;
+    shuffle: boolean;
+    loopStatus: LoopStatus;
+    canShuffle: boolean;
+    canLoop: boolean;
 }
 
 export const EMPTY_SNAPSHOT: Readonly<MediaSnapshot> = {
@@ -42,6 +47,10 @@ export const EMPTY_SNAPSHOT: Readonly<MediaSnapshot> = {
     canGoNext: false,
     canGoPrevious: false,
     canSeek: false,
+    shuffle: false,
+    loopStatus: 'None',
+    canShuffle: false,
+    canLoop: false,
 };
 
 const bool = (v: unknown, d: boolean): boolean => (typeof v === 'boolean' ? v : d);
@@ -79,5 +88,9 @@ export function snapshotFrom(read: (name: keyof MediaProps) => unknown): MediaSn
         canGoNext: bool(read('CanGoNext'), d.canGoNext),
         canGoPrevious: bool(read('CanGoPrevious'), d.canGoPrevious),
         canSeek: bool(read('CanSeek'), d.canSeek),
+        shuffle: bool(read('Shuffle'), d.shuffle),
+        loopStatus: loopStatusFrom(read('LoopStatus')),
+        canShuffle: bool(read('CanShuffle'), d.canShuffle),
+        canLoop: bool(read('CanLoop'), d.canLoop),
     };
 }

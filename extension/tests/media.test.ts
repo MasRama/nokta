@@ -27,6 +27,10 @@ const props: Record<string, unknown> = {
     CanGoNext: true,
     CanGoPrevious: false,
     CanSeek: true,
+    Shuffle: true,
+    LoopStatus: 'Track',
+    CanShuffle: true,
+    CanLoop: true,
 };
 
 test('snapshot_from_all_properties', () => {
@@ -53,7 +57,15 @@ test('snapshot_from_all_properties', () => {
         canGoNext: true,
         canGoPrevious: false,
         canSeek: true,
+        shuffle: true,
+        loopStatus: 'Track',
+        canShuffle: true,
+        canLoop: true,
     });
+});
+
+test('snapshot_unknown_loop_status_is_none', () => {
+    assert.equal(snapshotFrom((name) => (name === 'LoopStatus' ? 'Forever' : undefined)).loopStatus, 'None');
 });
 
 test('snapshot_missing_or_wrong_types_are_empty', () => {

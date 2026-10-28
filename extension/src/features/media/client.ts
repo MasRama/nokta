@@ -6,6 +6,7 @@ import { PATHS } from '../../shared/contracts.js';
 import { cached, callMethod, makeProxy } from '../../shared/dbus.js';
 import { Listeners } from '../../shared/listeners.js';
 import { EMPTY_SNAPSHOT, snapshotFrom, type MediaSnapshot } from './logic/snapshot.js';
+import type { LoopStatus } from './logic/loop.js';
 
 /** io.nokta.Media1: the active player's state and its controls. */
 export class MediaClient {
@@ -63,6 +64,14 @@ export class MediaClient {
 
     selectPlayer(id: string): void {
         this.call('SelectPlayer', new GLib.Variant('(s)', [id]));
+    }
+
+    setShuffle(on: boolean): void {
+        this.call('SetShuffle', new GLib.Variant('(b)', [on]));
+    }
+
+    setLoopStatus(status: LoopStatus): void {
+        this.call('SetLoopStatus', new GLib.Variant('(s)', [status]));
     }
 
     refreshPosition(): void {
