@@ -95,7 +95,10 @@ docs/               manual test checklist, screenshots
   plays; the player's grid button opens it, its music button goes back,
   and closing the notch returns to the player). It only draws its rows (the
   date and weather, live activities, the quick toggles and the tiles) from
-  plain data, and grows to fit them (`panel/logic/height.ts`);
+  plain data, and grows to fit them (`panel/logic/height.ts`). The
+  weekday sits dimmed over a large date, the weather across from them; the
+  event, call, recording, clock and activity rows each start with an icon
+  chip, a rounded square in the row's tone at 20 % (`toneChip`);
   `extension.ts` fills them from `weather`, `calendar`, `activities`,
   `notifications`, `timer` and GNOME's settings, and asks `weather` to
   refresh when home opens. The toggles change GNOME's settings only on a

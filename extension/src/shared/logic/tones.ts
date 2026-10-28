@@ -1,4 +1,4 @@
-import { darkenTo, textOn } from './color.js';
+import { darkenTo, textOn, withAlpha } from './color.js';
 
 /**
  * Each kind of thing the notch shows has its own color: its icon, its
@@ -20,6 +20,8 @@ export const TONES = {
     screenshot: '#ff6482',
     calendar: '#ff453a',
     device: '#0a84ff',
+    call: '#ff9500',
+    recording: '#ff453a',
     urgent: '#ff453a',
     success: '#30d158',
 } as const;
@@ -32,3 +34,8 @@ export function toneOn(tone: string, light: boolean): string {
 
 /** The icon and text color on a fill of `tone`. */
 export const onTone = (tone: string): string => textOn(tone);
+
+/** A row's icon chip in home: a square of the tone at 20 % under the icon in the tone. */
+export function toneChip(tone: string, light: boolean): { fill: string; icon: string } {
+    return { fill: withAlpha(tone, 0.2), icon: toneOn(tone, light) };
+}

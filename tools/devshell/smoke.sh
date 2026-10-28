@@ -323,7 +323,7 @@ PILLS='Caffeine'
 set_home toggles "<['night_light', 'caffeine']>"
 set_home tiles "<['screenshot', 'settings']>"
 wait_for "home shows the chosen toggles and tiles in their order" \
-    "$LABELS $FIND labels('nokta-pill-label') === '$PILLS' && labels('nokta-tile-label') === 'Screenshot,Settings' && Math.round(one('nokta-body').height) === 160" 5 \
+    "$LABELS $FIND labels('nokta-pill-label') === '$PILLS' && labels('nokta-tile-label') === 'Screenshot,Settings' && Math.round(one('nokta-body').height) === 183" 5 \
     "$LABELS $FIND JSON.stringify([labels('nokta-pill-label'), labels('nokta-tile-label'), Math.round(one('nokta-body').height)])"
 "$HERE/shot.sh" smoke-home-layout > /dev/null
 FIRST_PILL="find(Main.layoutManager.uiGroup, 'nokta-pill').find((a) => a.mapped)"
@@ -337,7 +337,7 @@ else
 fi
 set_home toggles "<@as []>"
 wait_for "home without toggles is shorter" \
-    "$FIND !shown('nokta-panel-toggles') && shown('nokta-panel-tiles') && Math.round(one('nokta-body').height) === 116" 5
+    "$FIND !shown('nokta-panel-toggles') && shown('nokta-panel-tiles') && Math.round(one('nokta-body').height) === 139" 5
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-tile').find((a) => a.mapped).emit('clicked', 1); true" > /dev/null
 wait_for "the screenshot tile closes the notch and opens GNOME's screenshot UI" \
     "$FIND Main.screenshotUI.visible && Math.round(one('nokta-body').height) === 32" 5
@@ -347,7 +347,7 @@ set_home tiles "<['notifications', 'focus', 'timer', 'clipboard', 'settings']>"
 "$HERE/hover.sh" off > /dev/null
 "$HERE/hover.sh" on > /dev/null
 wait_for "home is back to its default toggles and tiles" \
-    "$LABELS $FIND labels('nokta-pill-label') === 'Do Not Disturb,Caffeine,Dark Style' && Math.round(one('nokta-body').height) === 160" 5
+    "$LABELS $FIND labels('nokta-pill-label') === 'Do Not Disturb,Caffeine,Dark Style' && Math.round(one('nokta-body').height) === 183" 5
 
 # A right click opens the notch's menu at the pointer; its Do Not Disturb
 # switch is the same setting.
@@ -410,7 +410,7 @@ if [ -S "$STATE/runtime/pulse/native" ]; then
     "$HERE/hover.sh" on > /dev/null
     # 32 px closed, 128 px for the date, toggles and tiles, 36 px for the call.
     wait_for "home shows the call with its app" \
-        "$FIND shown('nokta-panel-call') && find(one('nokta-panel-call'), 'nokta-panel-call-title')[0].text === 'Fake Call' && Math.round(one('nokta-body').height) === 196" 5 \
+        "$FIND shown('nokta-panel-call') && find(one('nokta-panel-call'), 'nokta-panel-call-title')[0].text === 'Fake Call' && Math.round(one('nokta-body').height) === 219" 5 \
         "$FIND JSON.stringify([shown('nokta-panel-call'), find(one('nokta-panel-call'), 'nokta-panel-call-title')[0]?.text, one('nokta-body').height])"
     sleep 0.4
     "$HERE/shot.sh" smoke-call-panel > /dev/null
@@ -434,7 +434,7 @@ if [ -S "$STATE/runtime/pulse/native" ]; then
     fi
     js "$FIND one('nokta-panel-call-hide').emit('clicked', 1); true" > /dev/null
     wait_for "the close button hides the call" \
-        "$FIND !shown('nokta-panel-call') && Math.round(one('nokta-body').height) === 160" 5
+        "$FIND !shown('nokta-panel-call') && Math.round(one('nokta-body').height) === 183" 5
     "$HERE/hover.sh" off > /dev/null
     wait_for "the clock comes back while the call is hidden" "$CALL shown('nokta-clock') && call() === undefined && width() === 180" 5
     "$HERE/mic.sh" off
@@ -564,7 +564,7 @@ wait_for "a live activity replaces the clock with its percentage" \
 "$HERE/hover.sh" on > /dev/null
 # 32 px closed, 128 px for the date, toggles and tiles, 46 px for one activity.
 wait_for "the panel grows a row for the activity" \
-    "$FIND shown('nokta-panel-activity') && one('nokta-panel-activity-title').text === 'Smoke build' && Math.round(one('nokta-body').height) === 206" 5
+    "$FIND shown('nokta-panel-activity') && one('nokta-panel-activity-title').text === 'Smoke build' && Math.round(one('nokta-body').height) === 229" 5
 "$HERE/shot.sh" smoke-activity-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the panel closes over the activity" "$FIND shown('nokta-activity-badge') && width() === 180" 5
@@ -581,7 +581,7 @@ js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke', date: new 
 "$HERE/hover.sh" on > /dev/null
 # 32 px closed, 128 px for the date, toggles and tiles, 28 px for the event.
 wait_for "the panel shows the next calendar event" \
-    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 188" 5 \
+    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 219" 5 \
     "$FIND JSON.stringify([shown('nokta-panel-event'), one('nokta-panel-event-title')?.text, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
 "$HERE/shot.sh" smoke-calendar-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
@@ -627,9 +627,9 @@ wait_for "the closed notch shows one file on the shelf" \
     "$FIND any('nokta-shelf-badge') && one('nokta-shelf-badge-label').text === '1' && !shown('nokta-clock')" 5 \
     "$FIND JSON.stringify([any('nokta-shelf-badge'), one('nokta-shelf-badge-label')?.text, shown('nokta-clock'), shown('nokta-shelf-badge'), one('nokta-drop-content')?.mapped, one('nokta-body').width, one('nokta-body').height, one('nokta-clock')?.get_parent()?.get_parent()?.opacity])"
 "$HERE/hover.sh" on > /dev/null
-# 32 px closed, 128 px for the date, toggles and tiles, 54 px for the shelf row.
+# 32 px closed, 151 px for the weekday and date, toggles and tiles, 54 px for the shelf row.
 wait_for "the panel shows the shelf row" \
-    "$FIND any('nokta-shelf-row') && find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).length === 2 && Math.round(one('nokta-body').height) === 214" 5 \
+    "$FIND any('nokta-shelf-row') && find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).length === 2 && Math.round(one('nokta-body').height) === 237" 5 \
     "$FIND JSON.stringify([any('nokta-shelf-row'), find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').length, Math.round(one('nokta-body').height)])"
 # The file's slot, the last one; its close button is in the top right corner.
 SLOT=$(js "$FIND const s = find(Main.layoutManager.uiGroup, 'nokta-shelf-slot').filter((s) => s.mapped).pop(); const [x, y] = s.get_transformed_position(); Math.round(x + s.width - 6) + ' ' + Math.round(y + 6)")
@@ -719,11 +719,11 @@ wait_for "a screen recording replaces the clock with a red dot and its time, and
 "$HERE/hover.sh" on > /dev/null
 # 32 px closed, 128 px for the date, toggles and tiles, 36 px for the recording.
 wait_for "home shows the recording" \
-    "$FIND shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 196" 5 \
+    "$FIND shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 219" 5 \
     "$FIND JSON.stringify([shown('nokta-panel-recording'), Math.round(one('nokta-body').height)])"
 js "$FIND one('nokta-panel-recording-stop').emit('clicked', 1); true" > /dev/null
 wait_for "its stop button stops the recording" \
-    "$FIND !$UI.screencast_in_progress && !shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 160" 5
+    "$FIND !$UI.screencast_in_progress && !shown('nokta-panel-recording') && Math.round(one('nokta-body').height) === 183" 5
 "$HERE/hover.sh" off > /dev/null
 wait_for "the clock comes back after the recording" "$FIND shown('nokta-clock') && !any('nokta-recording')" 5
 # GNOME's own "Screencast recorded" banner, for a file it recorded, shows as

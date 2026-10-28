@@ -755,8 +755,10 @@ class Session {
     // The idle panel
 
     private panelContent(): PanelContent {
+        const now = GLib.DateTime.new_now_local();
         return {
-            date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
+            weekday: now.format('%A') ?? '',
+            date: now.format('%-d %B') ?? '',
             weather: this.weather.line(),
             event: this.panelEvent(),
             recording: this.panelRecording(),

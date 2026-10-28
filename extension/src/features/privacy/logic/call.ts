@@ -1,4 +1,5 @@
 import { formatDuration } from '../../../shared/logic/format.js';
+import { TONES } from '../../../shared/logic/tones.js';
 
 /** An app recording from a microphone, as GNOME's mixer names it. */
 export interface RecordingStream {
@@ -11,10 +12,10 @@ export interface RecordingStream {
 const SKIPPED_APPS = ['org.gnome.VolumeControl', 'org.PulseAudio.pavucontrol'];
 
 /** The color of the call's microphone icon. */
-export const CALL_COLORS = { live: '#ff9500', muted: '#ff453a' } as const;
+export const CALL_COLORS = { live: TONES.call, muted: TONES.urgent } as const;
 
 /** The dot of a screen recording, like GNOME's own. */
-export const RECORDING_COLOR = '#ff453a';
+export const RECORDING_COLOR = TONES.recording;
 
 /** The app on the call: the first one recording that is not a sound settings window. */
 export function callingStream(streams: readonly RecordingStream[]): RecordingStream | null {
