@@ -55,7 +55,7 @@ import {
     type QuickToggle,
     sessionInhibitor,
 } from './features/panel/index.js';
-import { PrivacyMonitor } from './features/privacy/index.js';
+import { CallMonitor, callDetail, msUntilCallChange, PrivacyMonitor } from './features/privacy/index.js';
 import { SettingsClient } from './features/settings/index.js';
 import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
 import { ClipboardClient, ClipboardWatcher, copyToClipboard } from './features/clipboard/index.js';
@@ -136,7 +136,8 @@ class Session {
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
-    private readonly privacy = new PrivacyMonitor(() => this.notches.forEach((n) => n.onPrivacy()));
+    private readonly call = new CallMonitor();
+    private readonly privacy = new PrivacyMonitor(() => this.onPrivacy());
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly outputsId: number;
@@ -147,7 +148,9 @@ class Session {
     private readonly calendarId: number;
     private readonly shelfId: number;
     private readonly clipboardId: number;
+    private readonly callId: number;
     private timerTickId = 0;
+    private callTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
     private allMonitors: boolean;
@@ -231,6 +234,8 @@ class Session {
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
+        this.callId = this.call.onChanged(() => this.onCall());
+        this.call.setMicrophone(this.privacy.state().microphone);
         this.clipboardWatcher = new ClipboardWatcher(this.clipboard, () => this.settings.clipboard.enabled);
         this.unwatchScreenshots = watchScreenshots((uri) => this.onScreenshotSaved(uri));
         this.focusToggle = new FocusToggle({
@@ -246,6 +251,7 @@ class Session {
         this.applyOsdSettings();
         this.applyNotificationSettings();
         this.onTimer();
+        this.onCall();
         this.calendarAlarms.reschedule();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
         this.watchId = watchDaemon(
@@ -286,6 +292,9 @@ class Session {
         for (const [settings, id] of this.togglesIds) settings.disconnect(id);
         this.focusShortcut.destroy();
         this.privacy.destroy();
+        this.stopCallTick();
+        this.call.disconnect(this.callId);
+        this.call.destroy();
         this.devices.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
@@ -378,6 +387,43 @@ class Session {
         this.timerTickId = 0;
     }
 
+    // Calls
+
+    private onPrivacy(): void {
+        this.call.setMicrophone(this.privacy.state().microphone);
+        this.notches.forEach((n) => n.onPrivacy());
+    }
+
+    /** Redraws the call, and again when its shown second changes. */
+    private onCall(): void {
+        this.stopCallTick();
+        this.notches.forEach((n) => n.onCall());
+        const call = this.shownCall();
+        if (!call) return;
+        const delay = msUntilCallChange(call.startedUs, GLib.get_monotonic_time());
+        this.callTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.callTickId = 0;
+            this.onCall();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    private stopCallTick(): void {
+        if (this.callTickId) GLib.source_remove(this.callTickId);
+        this.callTickId = 0;
+    }
+
+    private shownCall(): ReturnType<CallMonitor['call']> {
+        return this.settings.behavior.callIndicator ? this.call.call() : null;
+    }
+
+    private panelCall(): PanelContent['call'] {
+        const call = this.shownCall();
+        if (!call) return null;
+        const detail = callDetail(call.startedUs, GLib.get_monotonic_time(), call.muted);
+        return { icon: call.icon, title: call.title, detail, muted: call.muted };
+    }
+
     private onFocusShortcut(): void {
         if (shortcutAction(this.timer.snapshot()) === 'focus') this.timer.start('focus');
         else this.timer.stop();
@@ -422,6 +468,7 @@ class Session {
             timer: this.timer,
             activities: this.activities,
             privacy: this.privacy,
+            call: this.call,
             panel: this.panel,
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
@@ -453,6 +500,7 @@ class Session {
         this.applyNotificationSettings();
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
+        this.onCall();
         this.onCalendar();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
     }
@@ -604,6 +652,7 @@ class Session {
             date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
             weather: this.weather.line(),
             event: this.panelEvent(),
+            call: this.panelCall(),
             activities: this.panelActivities(),
             notificationCount: notificationCount(),
             focusActive: this.timer.snapshot().state !== 'idle',

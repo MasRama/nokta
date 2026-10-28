@@ -44,7 +44,14 @@ import {
     type PanelRow,
     type QuickToggle,
 } from './features/panel/index.js';
-import { dotsFor, PrivacyDots, type PrivacyMonitor } from './features/privacy/index.js';
+import {
+    CallLabel,
+    type CallMonitor,
+    callText,
+    dotsFor,
+    PrivacyDots,
+    type PrivacyMonitor,
+} from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
 import {
     DropView,
@@ -153,6 +160,7 @@ export interface NotchSources {
     timer: TimerClient;
     activities: ActivitiesClient;
     privacy: PrivacyMonitor;
+    call: CallMonitor;
     panel: PanelSource;
     shelf: ShelfSource;
     clipboard: ClipboardSource;
@@ -169,6 +177,8 @@ export class MonitorNotch implements ShelfNotch {
     private readonly idle = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly idleTimer = new TimerLabel();
     private readonly collapsedTimer = new TimerLabel();
+    private readonly idleCall = new CallLabel();
+    private readonly collapsedCall = new CallLabel();
     private readonly idleBadge = new ActivityBadge();
     private readonly collapsedBadge = new ActivityBadge();
     private readonly idleShelf = new ShelfBadge();
@@ -262,6 +272,8 @@ export class MonitorNotch implements ShelfNotch {
                 toggle: (which) => panel.toggle(which),
                 pauseClock: (id, pause) => (pause ? sources.timer.pauseClock(id) : sources.timer.resumeClock(id)),
                 removeClock: (id) => sources.timer.removeClock(id),
+                toggleCallMute: () => sources.call.toggleMute(),
+                hideCall: () => sources.call.hide(),
             },
             panel.iconsDir,
         );
@@ -305,9 +317,11 @@ export class MonitorNotch implements ShelfNotch {
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
+        this.idle.add_child(this.idleCall.actor);
         this.idle.add_child(this.idleTimer.actor);
         this.idle.add_child(this.idleBadge.actor);
         this.idle.add_child(this.idleShelf.actor);
+        this.idleCall.actor.hide();
         this.idleTimer.actor.hide();
         this.idleBadge.actor.hide();
         this.idleShelf.actor.hide();
@@ -413,6 +427,8 @@ export class MonitorNotch implements ShelfNotch {
         this.pages.destroy();
         this.privacyDots.destroy();
         this.collapsed.setAside(null);
+        this.idleCall.destroy();
+        this.collapsedCall.destroy();
         this.idleTimer.destroy();
         this.collapsedTimer.destroy();
         this.idleBadge.destroy();
@@ -471,6 +487,19 @@ export class MonitorNotch implements ShelfNotch {
         if (shown) {
             this.idleTimer.update(...shown);
             this.collapsedTimer.update(...shown);
+        }
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
+    }
+
+    /** The call changed; the session calls it again when its shown second changes. */
+    onCall(): void {
+        if (this.destroyed) return;
+        const call = this.shownCall();
+        if (call) {
+            const now = GLib.get_monotonic_time();
+            this.idleCall.update(callText(call.startedUs, now), call.muted);
+            this.collapsedCall.update(callText(call.startedUs, now), call.muted);
         }
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
@@ -653,6 +682,7 @@ export class MonitorNotch implements ShelfNotch {
         this.onActivities();
         this.onShelf();
         this.onPrivacy();
+        this.onCall();
     }
 
     onPrivacy(): void {
@@ -718,6 +748,10 @@ export class MonitorNotch implements ShelfNotch {
 
     // State
 
+    private shownCall(): ReturnType<CallMonitor['call']> {
+        return this.sources.settings.behavior.callIndicator ? this.sources.call.call() : null;
+    }
+
     private liveActivities(): readonly Activity[] {
         return this.sources.settings.behavior.liveActivities ? this.sources.activities.list() : [];
     }
@@ -725,6 +759,7 @@ export class MonitorNotch implements ShelfNotch {
     /** The one spot in the closed notch: the clock or the indicator in idle, next to the cover while playing. */
     private applyIndicator(): void {
         const indicator = chooseIndicator({
+            call: this.shownCall() !== null,
             timer: this.sources.timer.snapshot().state !== 'idle',
             clock: indicatorClock(this.sources.timer.clocks(), GLib.get_monotonic_time()) !== null,
             activity: this.liveActivities().length > 0,
@@ -733,10 +768,12 @@ export class MonitorNotch implements ShelfNotch {
         if (indicator !== this.indicator) {
             this.indicator = indicator;
             this.clock.actor.visible = indicator === null;
+            this.idleCall.actor.visible = indicator === 'call';
             this.idleTimer.actor.visible = indicator === 'timer' || indicator === 'clock';
             this.idleBadge.actor.visible = indicator === 'activity';
             this.idleShelf.actor.visible = indicator === 'shelf';
             const aside = {
+                call: this.collapsedCall.actor,
                 timer: this.collapsedTimer.actor,
                 clock: this.collapsedTimer.actor,
                 activity: this.collapsedBadge.actor,
@@ -763,9 +800,10 @@ export class MonitorNotch implements ShelfNotch {
         this.updatePanelTick();
     }
 
-    /** Once a second while the open panel shows an activity's elapsed time or a clock. */
+    /** Once a second while the open panel shows a call's time, an activity's elapsed time or a clock. */
     private updatePanelTick(): void {
-        const run = this.drawn === 'panel' && (this.panelRows.includes('activity') || this.panelRows.includes('clock'));
+        const ticking = (row: PanelRow): boolean => row === 'call' || row === 'activity' || row === 'clock';
+        const run = this.drawn === 'panel' && this.panelRows.some(ticking);
         if (run && !this.panelTickId) {
             this.panelTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, PANEL_TICK_MS, () => {
                 this.idlePanel.show(this.sources.panel.content());
@@ -1109,10 +1147,12 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const clocks = Math.min(content.clocks.length, MAX_PANEL_CLOCKS);
     const event: PanelRow[] = content.event ? ['event'] : [];
+    const call: PanelRow[] = content.call ? ['call'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
     return [
         'date',
         ...event,
+        ...call,
         ...Array<PanelRow>(activities).fill('activity'),
         ...Array<PanelRow>(clocks).fill('clock'),
         ...files,

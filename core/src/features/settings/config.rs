@@ -84,6 +84,8 @@ pub struct Behavior {
     pub clock_format: String,
     /// Dots for the camera, microphone and screen sharing.
     pub privacy_dots: bool,
+    /// The app on a call and how long the microphone has been on.
+    pub call_indicator: bool,
     /// Live activities from apps and scripts in the notch.
     pub live_activities: bool,
     /// Park files on the notch by dropping them there.
@@ -110,6 +112,7 @@ impl Default for Behavior {
             show_clock: true,
             clock_format: "system".into(),
             privacy_dots: true,
+            call_indicator: true,
             live_activities: true,
             file_shelf: true,
             screenshot_preview: true,
@@ -550,6 +553,7 @@ impl Behavior {
             ("show_clock", self.show_clock.into()),
             ("clock_format", (&self.clock_format).into()),
             ("privacy_dots", self.privacy_dots.into()),
+            ("call_indicator", self.call_indicator.into()),
             ("live_activities", self.live_activities.into()),
             ("file_shelf", self.file_shelf.into()),
             ("screenshot_preview", self.screenshot_preview.into()),

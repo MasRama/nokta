@@ -187,7 +187,16 @@
     border-radius: 3.5px;
 }
 
-.nokta-timer {
+.nokta-call {
+    spacing: 6px;
+}
+
+.nokta-call-icon {
+    icon-size: 14px;
+}
+
+.nokta-timer,
+.nokta-call-time {
     font-size: 13px;
     font-weight: bold;
     font-feature-settings: "tnum";
@@ -409,21 +418,25 @@
 }
 
 /* A countdown, stopwatch or alarm in home: one line. */
-.nokta-panel-clock {
+.nokta-panel-clock,
+.nokta-panel-call {
     height: 26px;
     spacing: 8px;
 }
 
-.nokta-panel-clock-icon {
+.nokta-panel-clock-icon,
+.nokta-panel-call-icon {
     icon-size: 16px;
 }
 
-.nokta-panel-clock-title {
+.nokta-panel-clock-title,
+.nokta-panel-call-title {
     font-size: 12px;
     font-weight: bold;
 }
 
-.nokta-panel-clock-detail {
+.nokta-panel-clock-detail,
+.nokta-panel-call-detail {
     font-size: 11px;
 }
 
@@ -433,7 +446,8 @@
     font-feature-settings: "tnum";
 }
 
-.nokta-panel-clock .nokta-button-icon {
+.nokta-panel-clock .nokta-button-icon,
+.nokta-panel-call .nokta-button-icon {
     icon-size: 14px;
 }
 

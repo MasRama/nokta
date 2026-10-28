@@ -37,6 +37,8 @@ export interface Behavior {
     clockFormat: string;
     /** Dots for the camera, microphone and screen sharing. */
     privacyDots: boolean;
+    /** The app on a call and how long the microphone has been on, in the notch and home. */
+    callIndicator: boolean;
     /** Live activities from apps and the nokta command. */
     liveActivities: boolean;
     /** Files dropped on the notch stay there until dragged out. */
@@ -99,6 +101,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     showClock: true,
     clockFormat: 'system',
     privacyDots: true,
+    callIndicator: true,
     liveActivities: true,
     fileShelf: true,
     screenshotPreview: true,

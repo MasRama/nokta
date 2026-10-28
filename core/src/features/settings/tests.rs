@@ -362,6 +362,7 @@ fn behavior_entries_have_all_keys() {
         [
             "alert_duration_ms",
             "all_monitors",
+            "call_indicator",
             "clock_format",
             "close_delay_ms",
             "device_alerts",
@@ -381,6 +382,7 @@ fn behavior_entries_have_all_keys() {
         ]
     );
     assert_eq!(map["move_clock"], SettingValue::Bool(true));
+    assert_eq!(map["call_indicator"], SettingValue::Bool(true));
 }
 
 #[test]
