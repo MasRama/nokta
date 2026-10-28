@@ -5,7 +5,15 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
-import { LyricLine, type LyricsClient, visibleLyric } from './features/lyrics/index.js';
+import {
+    LyricLine,
+    type LyricsClient,
+    LyricsSheet,
+    lyricWindow,
+    SHEET_EXTRA_HEIGHT,
+    SHEET_ROWS,
+    visibleLyric,
+} from './features/lyrics/index.js';
 import { CollapsedMediaView, ExpandedMediaView, type MediaClient } from './features/media/index.js';
 import { NotificationTimer, NotificationView } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
@@ -74,7 +82,12 @@ export class MonitorNotch {
     private indicator: Indicator | null = null;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
-    private readonly lyricLine = new LyricLine();
+    private readonly lyricLine = new LyricLine(() => this.setLyricsOpen(!this.lyricsOpen));
+    /** The lyrics view, open in place of the lyric line until a click, the track changing or the notch closing. */
+    private readonly lyricsSheet = new LyricsSheet(() => this.setLyricsOpen(false));
+    private lyricsOpen = false;
+    /** The track the lyrics view opened for. */
+    private lyricsTrack = '';
     private readonly osdView = new OsdView();
     private readonly notificationView = new NotificationView(() => this.onNotificationClick());
     private notificationClick: (() => void) | null = null;
@@ -107,6 +120,8 @@ export class MonitorNotch {
         this.notch = new Notch(settings.appearance);
         this.expanded = new ExpandedMediaView(media);
         this.expanded.infoBox.add_child(this.lyricLine.actor);
+        // Under the cover and the title, above the seek bar.
+        this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 1);
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
@@ -191,6 +206,7 @@ export class MonitorNotch {
         this.clock.destroy();
         this.idle.destroy();
         this.lyricLine.destroy();
+        this.lyricsSheet.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
         Main.layoutManager.removeChrome(this.notch.actor);
@@ -207,6 +223,7 @@ export class MonitorNotch {
         this.expanded.update(snapshot);
         this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.machine.setAvailable(snapshot.available);
+        if (trackKey(snapshot) !== this.lyricsTrack) this.setLyricsOpen(false);
         // Open, a player coming or going swaps the media view and the idle panel.
         this.draw(this.overlay());
         this.tick();
@@ -243,6 +260,7 @@ export class MonitorNotch {
 
     onLyrics(): void {
         if (this.destroyed) return;
+        if (!this.lyricsAvailable()) this.setLyricsOpen(false);
         this.tick();
         this.updateTimers();
     }
@@ -383,6 +401,7 @@ export class MonitorNotch {
         const previous = this.drawn;
         if (mode === previous) return;
         this.drawn = mode;
+        if (mode !== 'expanded') this.setLyricsOpen(false);
         // The panel's rows give its height, so draw it before sizing.
         if (mode === 'panel') this.refreshPanel();
         const [width, height] = this.sizeFor(mode);
@@ -410,7 +429,7 @@ export class MonitorNotch {
         if (mode === 'osd') return [a.osdWidth, a.height];
         if (mode === 'notification') return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT];
         if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
-        if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight];
+        if (mode === 'expanded') return [a.expandedWidth, a.expandedHeight + (this.lyricsOpen ? SHEET_EXTRA_HEIGHT : 0)];
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }
 
@@ -484,7 +503,32 @@ export class MonitorNotch {
         const snapshot = media.snapshot();
         const position = this.positionNow();
         this.expanded.progress.update(position, snapshot.lengthUs, snapshot.canSeek);
-        this.lyricLine.show(visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position));
+        if (this.lyricsOpen) {
+            this.lyricLine.show(null);
+            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS));
+        } else {
+            this.lyricLine.show(visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position));
+        }
+    }
+
+    private lyricsAvailable(): boolean {
+        return this.sources.lyrics.status === 'synced' && this.sources.settings.behavior.showLyrics;
+    }
+
+    /** Opens or closes the lyrics view; the open notch grows or shrinks with it. */
+    private setLyricsOpen(open: boolean): void {
+        const wanted = open && this.drawn === 'expanded' && this.lyricsAvailable();
+        if (wanted === this.lyricsOpen) return;
+        this.lyricsOpen = wanted;
+        this.lyricsTrack = wanted ? trackKey(this.sources.media.snapshot()) : '';
+        this.lyricsSheet.reset();
+        this.lyricsSheet.actor.visible = wanted;
+        const [width, height] = this.sizeFor('expanded');
+        this.expanded.actor.set_size(width, height);
+        if (this.drawn === 'expanded') {
+            this.notch.resizeTo(width, height, 'width');
+            this.tick();
+        }
     }
 
     private updateTimers(): void {
@@ -527,6 +571,11 @@ export class MonitorNotch {
         this.lyricTimerId = 0;
         this.panelTickId = 0;
     }
+}
+
+/** What tells one track from the next, for closing the lyrics view. */
+function trackKey(snapshot: { playerId: string; title: string; artists: readonly string[] }): string {
+    return [snapshot.playerId, snapshot.title, ...snapshot.artists].join('\n');
 }
 
 function panelRowsFor(content: PanelContent): PanelRow[] {
