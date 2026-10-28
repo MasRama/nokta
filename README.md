@@ -17,7 +17,8 @@ banner: hover to keep one open, click it to open the app. A build, a
 download or a backup can show in the notch while it runs and say how it
 ended (see [Live activities](#live-activities)). When nothing
 plays, hovering the notch opens the date with the weather (see
-[`[weather]`](#weather)), the running activities, a button
+[`[weather]`](#weather)), the next event from GNOME's calendar, the
+running activities, a button
 to the notification list and one to start or stop focus. Every monitor has
 its own notch,
 and these messages show on the monitor you are working on.
@@ -196,6 +197,19 @@ from [Open-Meteo](https://open-meteo.com), which needs no account.
 
 `noktad` asks again when the notch opens and the reading is more than 30
 minutes old, or 5 minutes after a failed request.
+
+### `[calendar]`
+
+The open notch shows the next event from GNOME's calendar (the same events
+as the date menu, including online accounts), with its time and how soon.
+A click opens your calendar app. Before it starts the notch says
+`Standup in 5 min`, and at the start `Standup is starting`. All-day events
+are left out.
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Show the next event and its reminders |
+| `reminder_minutes` | `5` | How long before an event to show it, 0 to 60; `0` shows only the start |
 
 ### `[notifications]`
 

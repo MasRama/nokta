@@ -256,6 +256,20 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
 - [ ] The Weather group in the settings window changes all three.
 - [ ] A real city in a real session *(real session)*.
 
+### Calendar
+
+- [ ] The smoke test puts `Smoke standup` 5 minutes ahead in the date
+      menu's event source: the panel shows a calendar row, `Smoke standup`,
+      then its time and `in 6 min` dimmed, 28 px taller. Its reminder,
+      `Smoke standup in 5 min`, shows like a device alert.
+- [ ] At the start time: `Smoke standup is starting` with its start and end.
+- [ ] An all-day event shows no row. `enabled = false`: no row and no
+      reminder. `reminder_minutes = 0`: only the start.
+- [ ] A click on the row opens the calendar app, or the date menu without
+      one.
+- [ ] A real event from an online account in a real session *(real
+      session)*.
+
 ### Privacy dots
 
 `. tools/devshell/env.sh`, then with
