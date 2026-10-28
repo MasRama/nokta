@@ -1,4 +1,4 @@
-import { accentFor, luminance, mix } from './color.js';
+import { accentFor, darkenTo, luminance, mix, textOn } from './color.js';
 
 /** The values `[appearance] theme` takes; only `custom` uses the color settings. */
 export const THEMES = ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom'] as const;
@@ -34,15 +34,8 @@ export interface Palette {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-/** Darkens `color` step by step until its luminance is at most `max`. */
-function darkenTo(color: string, max: number): string {
-    let out = color;
-    for (let i = 0; i < 20 && luminance(out) > max; i++) out = mix(out, '#000000', 0.15);
-    return out;
-}
-
 function palette(theme: ThemeName, base: Omit<Palette, 'theme' | 'onAccent'>): Palette {
-    return { theme, ...base, onAccent: luminance(base.accent) > 0.4 ? '#000000' : '#ffffff' };
+    return { theme, ...base, onAccent: textOn(base.accent) };
 }
 
 /**
