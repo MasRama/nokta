@@ -89,16 +89,17 @@ until media_prop LoopStatus | grep -q Playlist; do
 done
 ok "the repeat button turns the player's repeat on"
 "$HERE/shot.sh" smoke-expanded > /dev/null
-# The fake LRCLIB has synced lyrics for the fake track: a click on the lyric
-# line opens the lyrics view 150 px taller, a click on it closes it.
+# The fake LRCLIB has synced lyrics for the fake track: they add a 44 px lyric
+# row to the 150 px player, a click on it opens the 310 px lyrics view, and a
+# click on that closes it.
 wait_for "the open player shows a synced lyric line" "$FIND shown('nokta-lyric') && one('nokta-lyric').text.length > 0" 10
 js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyric opens the lyrics view" \
-    "$FIND shown('nokta-lyrics-current') && one('nokta-lyrics-current').text.length > 0 && !shown('nokta-lyric') && Math.round(one('nokta-body').height) === 300" 5
+    "$FIND shown('nokta-lyrics-current') && one('nokta-lyrics-current').text.length > 0 && !shown('nokta-lyric') && Math.round(one('nokta-body').height) === 310" 5
 "$HERE/shot.sh" smoke-lyrics > /dev/null
 js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyrics view closes it" \
-    "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 150" 5
+    "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 

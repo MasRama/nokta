@@ -123,8 +123,10 @@ must curve inward, the notch must be centered, and no text may be clipped.
       before the track starts, or test a track LRCLIB does not know)
       *(real session)*: the lyric row is gone and the view still looks
       complete.
-- [ ] Synced lyrics: the line changes on time and crossfades; the intro and
-      empty lines show `♪`.
+- [ ] Synced lyrics: the line lights up from left to right and ends lit
+      when the next line starts; the next line shows dimmed under it. A new
+      line slides up and fades in. The intro and empty lines show `♪`, fully
+      lit. Pause: the fill stops; play: it carries on.
 - [ ] `show_lyrics = false`: the lyric row is hidden.
 - [ ] Unknown length (`LengthUs` 0, e.g. a live stream) *(real session)*:
       no progress row.
@@ -223,8 +225,9 @@ Set `focus_minutes = 1` and `break_minutes = 1` to see a whole cycle.
       (the repeat-one icon), then off.
 - [ ] A player without shuffle or repeat (a browser) *(real session)*: no
       buttons for them.
-- [ ] Click the lyric line: the notch grows by 150 px and shows seven lines,
-      the current one bright and larger; they slide up as lines change.
+- [ ] Click the lyric row: the notch grows to 310 px and shows seven lines,
+      the current one larger and lit as it is sung; they slide up as lines
+      change.
       A click on them, the next track or moving the pointer away closes it.
 
 ### Live activities

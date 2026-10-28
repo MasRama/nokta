@@ -229,10 +229,13 @@ How both sides stay honest:
   color into one palette for the body, the ears and every view, and the
   notch carries a `nokta-theme-<name>` style class for the stylesheet.
 - States: **idle** (a clock), **collapsed** (small cover and equalizer bars)
-  and **expanded** on hover (cover, title, artists, lyric line, seek bar,
-  shuffle, previous, play, next and repeat). A click on the lyric line opens
-  seven lines of the synced lyrics around the current one
-  (`lyrics/logic/window.ts`), 150 px taller, until a click, the next track
+  and **expanded** on hover (cover, title, artists, a lyric row, seek bar,
+  shuffle, previous, play, next and repeat). The lyric row shows the line
+  being sung, lit from left to right as it goes, with the next line under
+  it (`lyrics/logic/karaoke.ts`); the fill is one linear `ease()` to the end
+  of the line, restarted only when the line, the play state or the position
+  changes. A click on the row opens seven lines of the synced lyrics around
+  the current one (`lyrics/logic/window.ts`) until a click, the next track
   or the notch closing. A pure state machine (`shared/logic/machine.ts`) decides when to
   open and close.
 - The notch changes size on springs (`shared/logic/spring.ts`): width and
