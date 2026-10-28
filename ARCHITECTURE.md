@@ -21,7 +21,8 @@ Media players ──MPRIS (session D-Bus)──▶ noktad (Rust daemon)
   will be reused on other desktops and operating systems.
 - **The extension** only draws and animates. It never touches the network or
   the disk, and never does work that could block GNOME Shell's main loop: a
-  slow extension makes the whole desktop stutter.
+  slow extension makes the whole desktop stutter. Its one other process is
+  the file shelf's helper window (see [The extension](#the-extension)).
 - **The contract** is a set of versioned D-Bus interfaces in `contracts/`.
   Both sides are checked against those files in CI.
 
@@ -42,7 +43,8 @@ contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
   src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
-  src/features/     media, lyrics, settings, devices, timer, activities, weather
+  src/features/     media, lyrics, settings, devices, timer, activities, weather,
+                    shelf
   src/shared/       paths, monotonic clock, hashing, D-Bus helpers
   tests/            integration tests on a private bus, contract test
 extension/          GNOME Shell extension nokta@nokta.io
@@ -50,7 +52,8 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
-                    notifications, panel, activities, weather, calendar
+                    notifications, panel, activities, weather, calendar, shelf
+  src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, animation, clock, top bar, D-Bus helpers
   scripts/          contract code generation and checks, packing
   tests/            Node tests for the pure logic modules
@@ -65,11 +68,13 @@ docs/               manual test checklist, screenshots
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
   current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`,
-  `notifications`, `panel`, `activities`, `weather` and `calendar` depend on no other feature;
+  `notifications`, `panel`, `activities`, `weather`, `calendar` and `shelf` depend on no other feature;
   `extension.ts` shows device, timer and activity alerts through the OSD
   row. The closed notch has one spot for extra information, where the clock
   or the equalizer would be: `shared/logic/indicator.ts` picks the timer,
-  else the newest live activity, and `monitor-notch.ts` puts it there.
+  else the newest live activity, else the shelf, and `monitor-notch.ts` puts it there.
+  `monitor-notch.ts` also puts the shelf's row in the panel and in the open
+  player, since `panel` cannot import `shelf`.
   `panel` (what hovering the idle notch opens) only draws its rows (the
   date and weather, live activities, two buttons) from plain data, and grows to fit
   them (`panel/logic/height.ts`); `extension.ts` fills them from
@@ -148,6 +153,11 @@ docs/               manual test checklist, screenshots
   5 after a failure). The service asks on start, when the location or units
   change, and on `Refresh()` once stale, one request at a time. A failed
   request keeps the last reading. With no location it sends nothing.
+- **shelf** keeps the files dropped on the notch (`Add`, `Remove`,
+  `Clear`): only `file://` paths that exist, each once, at most 30 (the
+  oldest goes). `model.rs` is pure; the service watches the folders that
+  hold them and lets a file go once it is moved or deleted. It keeps paths,
+  never copies files, and starts empty.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -171,7 +181,7 @@ the Linux adapters touch D-Bus:
 
 Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
 is a Linux-only dependency. `app::Services` starts the rest (settings,
-lyrics, timer, activities, weather) on any system. CI builds and tests the daemon on macOS and
+lyrics, timer, activities, weather, shelf) on any system. CI builds and tests the daemon on macOS and
 Windows, where `noktad` says it has no frontend yet. A new system adds its
 own sources and transport next to the Linux ones; nothing in a feature's
 model changes.
@@ -192,6 +202,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
 | `io.nokta.Weather1` | `/io/nokta/Weather` | `Status` (`s`), `Place` (`s`), `Temperature`, `High`, `Low` (`d`), `Units` (`s`), `Condition` (`s`), `IsDay` (`b`); `Refresh()` |
+| `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -227,8 +238,22 @@ How both sides stay honest:
   activity. Nothing runs while paused.
 - Privacy dots follow the `visible` property of GNOME's own camera,
   microphone and screen sharing indicators; no polling, no extra D-Bus.
+- **The file shelf.** GNOME Shell cannot take a drop from an app or start a
+  drag into one; only a Wayland client can. So `shelf/helper.ts` starts
+  `shelf-helper/main.js` with gjs as the shell's own Wayland client
+  (`Meta.WaylandClient`): a GTK 4 window that draws nothing, made a dock
+  (above every window, not in Alt+Tab or the overview) and kept off every
+  monitor. `shelf/coordinator.ts` moves it under the drop area while files
+  are dragged to a notch (`MetaDnd` reports the drag) and under the shelf
+  row while the pointer is on it, and makes the notch and the top bar let
+  the pointer through meanwhile. The window takes the drop and the presses,
+  talks to noktad itself, and tells the shell what the pointer does in one
+  line per event on its standard output (`shelf/logic/protocol.ts`). It is
+  started again if it dies, three times at most. The shell moves it before
+  resizing it, since a window off every monitor never draws and so never
+  takes a new size.
 - `disable()` destroys every actor, disconnects every signal, removes every
-  main-loop source and puts the clock back.
+  main-loop source, ends the shelf's helper and puts the clock back.
 
 ## Locked stack
 
