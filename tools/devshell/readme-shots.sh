@@ -136,7 +136,7 @@ gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf \
     --method io.nokta.Shelf1.Add "$URIS" > /dev/null
 "$HERE/hover.sh" on > /dev/null
 wait_for "home" "$FIND shown('nokta-panel') && shown('nokta-panel-weather') && shown('nokta-panel-event') && find(Main.layoutManager.uiGroup, 'nokta-shelf-thumbnail').filter((t) => t.mapped).length === 2" 15
-shot home 260
+shot home 300
 
 # The clipboard history, opened from home.
 "$HERE/hover.sh" off > /dev/null

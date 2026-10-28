@@ -78,21 +78,23 @@ test('the closed notch shows a recording, else a call, else the timer, else an a
 
 test('home grows with its rows', () => {
     const controls: PanelRow[] = ['toggles', 'tiles'];
-    assert.equal(panelHeight(32, ['date', ...controls]), 160);
-    assert.equal(panelHeight(32, ['date', 'activity', ...controls]), 206);
-    assert.equal(panelHeight(32, ['date', 'activity', 'activity', ...controls]), 252);
-    assert.equal(panelHeight(40, ['date', ...controls]), 168);
-    assert.equal(panelHeight(32, ['date', 'clock', 'clock', ...controls]), 160 + 2 * 36);
-    assert.equal(panelHeight(32, ['date', 'call', ...controls]), 160 + 36);
-    assert.equal(panelHeight(32, ['date', 'recording', 'call', ...controls]), 160 + 2 * 36);
+    assert.equal(panelHeight(32, ['date', ...controls]), 183);
+    assert.equal(panelHeight(32, ['date', 'activity', ...controls]), 229);
+    assert.equal(panelHeight(32, ['date', 'activity', 'activity', ...controls]), 275);
+    assert.equal(panelHeight(40, ['date', ...controls]), 191);
+    assert.equal(panelHeight(32, ['date', 'clock', 'clock', ...controls]), 183 + 2 * 36);
+    assert.equal(panelHeight(32, ['date', 'call', ...controls]), 183 + 36);
+    assert.equal(panelHeight(32, ['date', 'recording', 'call', ...controls]), 183 + 2 * 36);
+    // The event row holds an icon chip, as tall as the other one-line rows.
+    assert.equal(panelHeight(32, ['date', 'event', ...controls]), 183 + 36);
 });
 
 test('home loses the toggles or the tiles when none are chosen', () => {
     // The pills are 32 high, the tiles 59, with 12 between them.
-    assert.equal(panelHeight(32, ['date', 'tiles']), 160 - 32 - 12);
-    assert.equal(panelHeight(32, ['date', 'toggles']), 160 - 59 - 12);
-    // Only the date and the padding under it.
-    assert.equal(panelHeight(32, ['date']), 32 + 15);
+    assert.equal(panelHeight(32, ['date', 'tiles']), 183 - 32 - 12);
+    assert.equal(panelHeight(32, ['date', 'toggles']), 183 - 59 - 12);
+    // Only the weekday and date, their overhang under the closed notch and the padding.
+    assert.equal(panelHeight(32, ['date']), 32 + 38);
 });
 
 test('a sub-page is its padding, its header and its body', () => {

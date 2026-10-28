@@ -344,24 +344,38 @@
     spacing: 10px;
 }
 
+.nokta-panel-weekday {
+    font-size: 11px;
+    font-weight: 600;
+}
+
 .nokta-panel-date {
-    font-size: 15px;
+    font-size: 22px;
     font-weight: 700;
 }
 
+/* The weekday over the date beside the camera; heights in panel/logic/height.ts. */
 .nokta-panel-heading {
+    height: 42px;
     spacing: 12px;
 }
 
 .nokta-panel-event {
-    height: 18px;
+    height: 26px;
 }
 
 .nokta-panel-event-box {
-    spacing: 8px;
+    spacing: 10px;
 }
 
-.nokta-panel-event-icon {
+/* A row's icon in home, on a square of its tone (panel/controls.ts IconChip). */
+.nokta-icon-chip {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+}
+
+.nokta-icon-chip-icon {
     icon-size: 14px;
 }
 
@@ -375,22 +389,22 @@
     font-feature-settings: "tnum";
 }
 
-.nokta-panel-weather {
+.nokta-panel-weather-now {
     spacing: 6px;
 }
 
 .nokta-panel-weather-icon {
-    icon-size: 16px;
+    icon-size: 20px;
 }
 
 .nokta-panel-weather-temperature {
-    font-size: 15px;
+    font-size: 22px;
     font-weight: 700;
     font-feature-settings: "tnum";
 }
 
 .nokta-panel-weather-detail {
-    font-size: 13px;
+    font-size: 11px;
     font-feature-settings: "tnum";
 }
 
@@ -480,10 +494,6 @@
     spacing: 10px;
 }
 
-.nokta-panel-activity-icon {
-    icon-size: 20px;
-}
-
 .nokta-panel-activity-text {
     spacing: 2px;
 }
@@ -504,13 +514,7 @@
 .nokta-panel-call,
 .nokta-panel-recording {
     height: 26px;
-    spacing: 8px;
-}
-
-.nokta-panel-clock-icon,
-.nokta-panel-call-icon,
-.nokta-panel-recording-icon {
-    icon-size: 16px;
+    spacing: 10px;
 }
 
 .nokta-panel-clock-title,

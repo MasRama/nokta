@@ -5,7 +5,7 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { OverlayLayout } from '../../shared/layout.js';
 import { mix, withAlpha } from '../../shared/logic/color.js';
-import { onTone, toneOn } from '../../shared/logic/tones.js';
+import { onTone, toneChip, toneOn } from '../../shared/logic/tones.js';
 import { iconFor } from '../../shared/icons.js';
 
 const IDLE_ALPHA = 0.1;
@@ -139,5 +139,47 @@ export class Tile {
 
     private repaint(): void {
         paint(this.circle, this.icon, this.active, this.actor.hover, this.tone, this.colors);
+    }
+}
+
+/** A row's icon in home: drawn in its tone on a square of that tone at 20 %. */
+export class IconChip {
+    readonly actor: St.Bin;
+    private readonly icon: St.Icon;
+    private tone: string;
+    private light = false;
+
+    constructor(tone: string, gicon?: Gio.Icon) {
+        this.tone = tone;
+        // GObject takes no undefined property: a chip without an icon yet gets one in show().
+        this.icon = new St.Icon({ style_class: 'nokta-icon-chip-icon', ...(gicon ? { gicon } : {}) });
+        this.actor = new St.Bin({
+            style_class: 'nokta-icon-chip',
+            child: this.icon,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.paint();
+    }
+
+    set gicon(gicon: Gio.Icon) {
+        this.icon.gicon = gicon;
+    }
+
+    setTone(tone: string): void {
+        if (tone === this.tone) return;
+        this.tone = tone;
+        this.paint();
+    }
+
+    setLight(light: boolean): void {
+        if (light === this.light) return;
+        this.light = light;
+        this.paint();
+    }
+
+    private paint(): void {
+        const { fill, icon } = toneChip(this.tone, this.light);
+        this.actor.style = `background-color: ${fill};`;
+        this.icon.style = `color: ${icon};`;
     }
 }

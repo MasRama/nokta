@@ -5,7 +5,7 @@ import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
 import { withAlpha } from '../../shared/logic/color.js';
-import { type ControlColors, TogglePill, Tile } from './controls.js';
+import { type ControlColors, IconChip, TogglePill, Tile } from './controls.js';
 import { notificationBadge } from './logic/labels.js';
 import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
 import { SECONDARY } from '../../shared/dim.js';
@@ -68,7 +68,9 @@ export type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from './logic/la
 
 /** What home shows, worked out by the session when it opens. */
 export interface PanelContent {
-    /** Today, like `Wednesday, 28 October`, in the user's language. */
+    /** Today's name, like `Wednesday`, in the user's language. */
+    weekday: string;
+    /** Today, like `28 October`. */
     date: string;
     /** Null hides the weather. */
     weather: PanelWeather | null;
@@ -132,10 +134,10 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['screenshot', 'camera-photo-symbolic', 'Screenshot', TONES.screenshot],
 ];
 
-/** One live activity: icon, title, detail and elapsed time, and a thin bar. */
+/** One live activity: icon chip in the accent, title, detail and elapsed time, and a thin bar. */
 class ActivityRow {
     readonly actor: St.BoxLayout;
-    private readonly icon: St.Icon;
+    private readonly chip = new IconChip('#ffffff');
     private readonly title: St.Label;
     private readonly detail: St.Label;
     private readonly elapsed: St.Label;
@@ -143,7 +145,6 @@ class ActivityRow {
     private readonly fill: St.Widget;
 
     constructor() {
-        this.icon = new St.Icon({ style_class: 'nokta-panel-activity-icon', y_align: Clutter.ActorAlign.CENTER });
         this.title = new St.Label({ style_class: 'nokta-panel-activity-title', x_expand: true });
         this.detail = new St.Label({ style_class: 'nokta-panel-activity-detail', x_expand: true });
         this.elapsed = new St.Label({ style_class: 'nokta-panel-activity-elapsed' });
@@ -165,14 +166,14 @@ class ActivityRow {
         text.add_child(second);
         text.add_child(this.track);
         this.actor = new St.BoxLayout({ style_class: 'nokta-panel-activity', visible: false });
-        this.actor.add_child(this.icon);
+        this.actor.add_child(this.chip.actor);
         this.actor.add_child(text);
     }
 
     show(activity: PanelActivity | undefined): void {
         this.actor.visible = activity !== undefined;
         if (!activity) return;
-        this.icon.gicon = iconFor(activity.icon);
+        this.chip.gicon = iconFor(activity.icon);
         this.title.text = activity.title;
         this.detail.text = activity.detail;
         this.elapsed.text = activity.elapsed;
@@ -180,16 +181,18 @@ class ActivityRow {
         this.fill.scale_x = activity.fraction ?? 0;
     }
 
-    setForeground(color: string): void {
-        this.track.style = `background-color: ${withAlpha(color, 0.2)};`;
-        this.fill.style = `background-color: ${color};`;
+    setColors({ foreground, accent, light }: ControlColors): void {
+        this.chip.setTone(accent);
+        this.chip.setLight(light);
+        this.track.style = `background-color: ${withAlpha(foreground, 0.2)};`;
+        this.fill.style = `background-color: ${foreground};`;
     }
 }
 
-/** One clock: its icon in the kind's color, title, detail, time, and pause and remove buttons. */
+/** One clock: its icon chip in the kind's color, title, detail, time, and pause and remove buttons. */
 class ClockRow {
     readonly actor: St.BoxLayout;
-    private readonly icon: St.Icon;
+    readonly chip = new IconChip('#ffffff');
     private readonly title: St.Label;
     private readonly detail: St.Label;
     private readonly time: St.Label;
@@ -198,7 +201,6 @@ class ClockRow {
     private clock: PanelClock | null = null;
 
     constructor(handlers: Pick<PanelHandlers, 'pauseClock' | 'removeClock'>) {
-        this.icon = new St.Icon({ style_class: 'nokta-panel-clock-icon', y_align: Clutter.ActorAlign.CENTER });
         this.title = new St.Label({ style_class: 'nokta-panel-clock-title', y_align: Clutter.ActorAlign.CENTER });
         this.detail = new St.Label({
             style_class: 'nokta-panel-clock-detail',
@@ -229,7 +231,7 @@ class ClockRow {
             if (this.clock) handlers.removeClock(this.clock.id);
         });
         this.actor = new St.BoxLayout({ style_class: 'nokta-panel-clock', visible: false });
-        for (const child of [this.icon, this.title, this.detail, this.time, this.pause, remove])
+        for (const child of [this.chip.actor, this.title, this.detail, this.time, this.pause, remove])
             this.actor.add_child(child);
     }
 
@@ -237,8 +239,8 @@ class ClockRow {
         this.clock = clock ?? null;
         this.actor.visible = clock !== undefined;
         if (!clock) return;
-        this.icon.gicon = iconFor(clock.icon);
-        this.icon.style = `color: ${clock.color};`;
+        this.chip.gicon = iconFor(clock.icon);
+        this.chip.setTone(clock.color);
         this.title.text = clock.title;
         this.detail.text = clock.detail;
         this.time.text = clock.time;
@@ -248,18 +250,13 @@ class ClockRow {
     }
 }
 
-/** The screen recording: a red dot, how long, and a stop button. */
+/** The screen recording: a red dot on its chip, how long, and a stop button. */
 class RecordingRow {
     readonly actor: St.BoxLayout;
+    readonly chip = new IconChip(TONES.recording, iconFor('media-record-symbolic'));
     private readonly time: St.Label;
 
     constructor(handlers: Pick<PanelHandlers, 'stopRecording'>) {
-        const icon = new St.Icon({
-            gicon: iconFor('media-record-symbolic'),
-            style_class: 'nokta-panel-recording-icon',
-            style: 'color: #ff453a;',
-            y_align: Clutter.ActorAlign.CENTER,
-        });
         const title = new St.Label({
             text: 'Screen recording',
             style_class: 'nokta-panel-recording-title',
@@ -275,7 +272,7 @@ class RecordingRow {
         });
         stop.connect('clicked', () => handlers.stopRecording());
         this.actor = new St.BoxLayout({ style_class: 'nokta-panel-recording', visible: false });
-        for (const child of [icon, title, this.time, stop]) this.actor.add_child(child);
+        for (const child of [this.chip.actor, title, this.time, stop]) this.actor.add_child(child);
     }
 
     show(time: string | null): void {
@@ -284,16 +281,15 @@ class RecordingRow {
     }
 }
 
-/** The call: the app's icon and name, the time, and mute and hide buttons. */
+/** The call: the app's icon on a chip in the microphone's color, its name, the time, and mute and hide buttons. */
 class CallRow {
     readonly actor: St.BoxLayout;
-    private readonly icon: St.Icon;
+    readonly chip = new IconChip(TONES.call);
     private readonly title: St.Label;
     private readonly detail: St.Label;
     private readonly muteIcon: St.Icon;
 
     constructor(handlers: Pick<PanelHandlers, 'toggleCallMute' | 'hideCall'>) {
-        this.icon = new St.Icon({ style_class: 'nokta-panel-call-icon', y_align: Clutter.ActorAlign.CENTER });
         this.title = new St.Label({ style_class: 'nokta-panel-call-title', y_align: Clutter.ActorAlign.CENTER });
         this.detail = new St.Label({
             style_class: 'nokta-panel-call-detail',
@@ -319,21 +315,22 @@ class CallRow {
         });
         hide.connect('clicked', () => handlers.hideCall());
         this.actor = new St.BoxLayout({ style_class: 'nokta-panel-call', visible: false });
-        for (const child of [this.icon, this.title, this.detail, mute, hide]) this.actor.add_child(child);
+        for (const child of [this.chip.actor, this.title, this.detail, mute, hide]) this.actor.add_child(child);
     }
 
     show(call: PanelCall | null): void {
         this.actor.visible = call !== null;
         if (!call) return;
-        this.icon.gicon = call.icon;
+        this.chip.gicon = call.icon;
+        this.chip.setTone(call.muted ? TONES.urgent : TONES.call);
         this.title.text = call.title;
         this.detail.text = call.detail;
         this.muteIcon.gicon = iconFor(call.muted ? 'microphone-disabled-symbolic' : 'audio-input-microphone-symbolic');
-        this.muteIcon.style = call.muted ? 'color: #ff453a;' : '';
+        this.muteIcon.style = call.muted ? `color: ${TONES.urgent};` : '';
     }
 }
 
-/** Today's weather at the end of the date line: icon, temperature, then the place and range dimmed. */
+/** Today's weather at the right of the heading: icon and temperature, the place and range dimmed under them. */
 class WeatherBox {
     readonly actor: St.BoxLayout;
     private readonly icon: St.Icon;
@@ -350,9 +347,14 @@ class WeatherBox {
         this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         // St CSS ignores opacity.
         this.detail.opacity = SECONDARY;
-        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-weather', visible: false });
-        this.actor.add_child(this.icon);
-        this.actor.add_child(this.temperature);
+        const now = new St.BoxLayout({ style_class: 'nokta-panel-weather-now', x_align: Clutter.ActorAlign.END });
+        now.add_child(this.icon);
+        now.add_child(this.temperature);
+        this.detail.x_align = Clutter.ActorAlign.END;
+        this.actor = setVertical(
+            new St.BoxLayout({ style_class: 'nokta-panel-weather', y_align: Clutter.ActorAlign.CENTER, visible: false }),
+        );
+        this.actor.add_child(now);
         this.actor.add_child(this.detail);
     }
 
@@ -365,22 +367,17 @@ class WeatherBox {
     }
 }
 
-/** The next event in one line: calendar icon, title, then when, dimmed. A click opens the calendar. */
+/** The next event in one line: calendar chip, title, then when, dimmed. A click opens the calendar. */
 class EventRow {
     readonly actor: St.Button;
+    readonly chip = new IconChip(TONES.calendar, iconFor('x-office-calendar-symbolic'));
     private readonly title: St.Label;
     private readonly when: St.Label;
     private readonly clickId: number;
 
     constructor(onClick: () => void) {
         const box = new St.BoxLayout({ style_class: 'nokta-panel-event-box', x_expand: true });
-        box.add_child(
-            new St.Icon({
-                style_class: 'nokta-panel-event-icon',
-                gicon: iconFor('x-office-calendar-symbolic'),
-                y_align: Clutter.ActorAlign.CENTER,
-            }),
-        );
+        box.add_child(this.chip.actor);
         this.title = new St.Label({ style_class: 'nokta-panel-event-title', y_align: Clutter.ActorAlign.CENTER });
         this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.when = new St.Label({ style_class: 'nokta-panel-event-when', y_align: Clutter.ActorAlign.CENTER });
@@ -411,6 +408,7 @@ class EventRow {
  */
 export class HomePanel {
     readonly actor: St.BoxLayout;
+    private readonly weekday: St.Label;
     private readonly date: St.Label;
     private readonly weather = new WeatherBox();
     private readonly playerButton: St.Button;
@@ -427,8 +425,15 @@ export class HomePanel {
 
     constructor(handlers: PanelHandlers) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-panel' }));
-        this.date = new St.Label({ style_class: 'nokta-panel-date', x_expand: true, y_align: Clutter.ActorAlign.CENTER });
-        this.date.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.weekday = new St.Label({ style_class: 'nokta-panel-weekday' });
+        this.weekday.opacity = SECONDARY;
+        this.date = new St.Label({ style_class: 'nokta-panel-date' });
+        for (const label of [this.weekday, this.date]) label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        const today = setVertical(
+            new St.BoxLayout({ style_class: 'nokta-panel-today', x_expand: true, y_align: Clutter.ActorAlign.CENTER }),
+        );
+        today.add_child(this.weekday);
+        today.add_child(this.date);
         this.playerButton = new St.Button({
             style_class: 'nokta-button nokta-panel-player',
             child: new St.Icon({ gicon: iconFor('audio-x-generic-symbolic'), style_class: 'nokta-button-icon' }),
@@ -438,7 +443,7 @@ export class HomePanel {
         });
         this.playerButton.connect('clicked', () => handlers.openPlayer());
         const heading = new St.BoxLayout({ style_class: 'nokta-panel-heading' });
-        heading.add_child(this.date);
+        heading.add_child(today);
         heading.add_child(this.weather.actor);
         heading.add_child(this.playerButton);
         this.event = new EventRow(() => handlers.openCalendar());
@@ -492,6 +497,7 @@ export class HomePanel {
     }
 
     show(content: PanelContent): void {
+        this.weekday.text = content.weekday;
         this.date.text = content.date;
         this.weather.show(content.weather);
         this.playerButton.visible = content.player;
@@ -510,7 +516,9 @@ export class HomePanel {
     setColors(colors: ControlColors): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
         for (const tile of this.tiles.values()) tile.setColors(colors);
-        for (const row of this.activities) row.setForeground(colors.foreground);
+        for (const row of this.activities) row.setColors(colors);
+        for (const row of this.clocks) row.chip.setLight(colors.light);
+        for (const row of [this.event, this.recording, this.call]) row.chip.setLight(colors.light);
     }
 
     destroy(): void {

@@ -10,14 +10,17 @@ export type PanelRow =
     | 'toggles'
     | 'tiles';
 
-/** The date's overhang below the closed notch, which it sits in beside the camera, and the padding under the last row. */
-const BASE_EXTRA = 15;
+/**
+ * The weekday and date's overhang below the closed notch (the heading is 42
+ * high from the top padding, beside the camera) and the padding under the last row.
+ */
+const BASE_EXTRA = 38;
 /** Between two rows, as `.nokta-panel` spacing. */
 const SPACING = 10;
 /** Between the toggles and the tiles, as `.nokta-panel-controls` spacing. */
 const CONTROLS_SPACING = 12;
 const ROW_HEIGHT: Record<Exclude<PanelRow, 'date'>, number> = {
-    event: 18,
+    event: 26,
     recording: 26,
     call: 26,
     activity: 36,
