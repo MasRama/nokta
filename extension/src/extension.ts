@@ -10,6 +10,16 @@ import {
     formatElapsed,
     type EndedSignal,
 } from './features/activities/index.js';
+import {
+    alarmAlert,
+    CalendarAlarms,
+    CalendarSource,
+    eventTime,
+    nextEvent,
+    soonLabel,
+    type Alarm,
+    type CalendarEvent,
+} from './features/calendar/index.js';
 import { deviceAlert, DevicesClient, type AlertSignal } from './features/devices/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { MediaClient } from './features/media/index.js';
@@ -50,6 +60,7 @@ import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type PanelSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
+import { formatClock, uses24h } from './shared/logic/format.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const CAPS_LOCK_ICON = 'input-keyboard-symbolic';
@@ -78,6 +89,13 @@ class Session {
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
     private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
     private readonly weather = new WeatherClient();
+    private readonly calendar = new CalendarSource();
+    private readonly calendarAlarms = new CalendarAlarms(
+        (nowMs) => this.calendarEvents(nowMs),
+        () => this.settings.calendar.reminderMinutes,
+        (alarm, nowMs) => this.onCalendarAlarm(alarm, nowMs),
+    );
+    private readonly interfaceSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.interface' });
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
@@ -88,6 +106,7 @@ class Session {
     private readonly timerId: number;
     private readonly activitiesId: number;
     private readonly weatherId: number;
+    private readonly calendarId: number;
     private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
@@ -102,6 +121,7 @@ class Session {
     private readonly panel: PanelSource = {
         content: () => this.panelContent(),
         opened: () => this.weather.refresh(),
+        openCalendar: () => this.openCalendar(),
         openNotifications: () => {
             this.restoreMessageList?.();
             this.restoreMessageList = openMessageList();
@@ -120,7 +140,8 @@ class Session {
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
         this.timerId = this.timer.onChanged(() => this.onTimer());
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
-        this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onWeather()));
+        this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
+        this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
             pause: () => this.timer.pause(),
@@ -134,6 +155,7 @@ class Session {
         this.applyOsdSettings();
         this.applyNotificationSettings();
         this.onTimer();
+        this.calendarAlarms.reschedule();
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
             () => this.onDaemonVanished(),
@@ -149,6 +171,9 @@ class Session {
         this.timer.disconnect(this.timerId);
         this.activities.disconnect(this.activitiesId);
         this.weather.disconnect(this.weatherId);
+        this.calendar.disconnect(this.calendarId);
+        this.calendarAlarms.destroy();
+        this.calendar.destroy();
         this.stopTimerTick();
         this.media.destroy();
         this.lyrics.destroy();
@@ -295,6 +320,7 @@ class Session {
         this.applyNotificationSettings();
         this.focusShortcut.set(this.settings.timer.shortcut);
         this.onTimer();
+        this.onCalendar();
     }
 
     // OSD
@@ -375,12 +401,62 @@ class Session {
         }
     }
 
+    // Calendar
+
+    /** The events changed, or the calendar settings. */
+    private onCalendar(): void {
+        this.notches.forEach((n) => n.onPanelContent());
+        this.calendarAlarms.reschedule();
+    }
+
+    /** Timed events from now to the end of tomorrow; none while the calendar is off. */
+    private calendarEvents(nowMs: number): CalendarEvent[] {
+        return this.settings.calendar.enabled ? this.calendar.events(nowMs) : [];
+    }
+
+    private onCalendarAlarm(alarm: Alarm, nowMs: number): void {
+        const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
+        if (!alert) return;
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
+        this.showOsd(-1, content, new Gio.ThemedIcon({ name: alert.icon }), this.settings.behavior.alertDurationMs);
+    }
+
+    /** A time like the notch's clock shows it. */
+    private formatTime(ms: number): string {
+        const use24h = uses24h(this.settings.behavior.clockFormat, this.interfaceSettings.get_string('clock-format'));
+        return formatClock(new Date(ms), use24h);
+    }
+
+    /** The default calendar app, like GNOME's own event list opens it; else the date menu. */
+    private openCalendar(): void {
+        const apps = Gio.AppInfo.get_recommended_for_type('text/calendar');
+        const preferred = Gio.AppInfo.get_default_for_type('text/calendar', false);
+        const app = apps.find((a) => preferred && a.equal(preferred)) ?? apps[0];
+        if (!app) {
+            this.panel.openNotifications();
+            return;
+        }
+        const context = global.create_app_launch_context(0, -1);
+        if (app.get_id() === 'org.gnome.Evolution.desktop' && app instanceof Gio.DesktopAppInfo)
+            app.launch_action('calendar', context);
+        else app.launch([], context);
+    }
+
+    private panelEvent(): PanelContent['event'] {
+        const now = Date.now();
+        const event = nextEvent(this.calendarEvents(now), now);
+        if (!event) return null;
+        const time = eventTime(event.startMs, now, (ms) => this.formatTime(ms));
+        return { title: event.title, when: `${time} · ${soonLabel(event.startMs, now)}` };
+    }
+
     // The idle panel
 
     private panelContent(): PanelContent {
         return {
             date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
             weather: this.weather.line(),
+            event: this.panelEvent(),
             activities: this.panelActivities(),
             notifications: notificationsLabel(notificationCount()),
             focus: focusButtonLabel(this.timer.snapshot(), this.settings.timer.focusMinutes),

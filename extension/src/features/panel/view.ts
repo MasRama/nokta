@@ -26,12 +26,21 @@ export interface PanelWeather {
     detail: string;
 }
 
+/** The next calendar event. */
+export interface PanelEvent {
+    title: string;
+    /** Like `10:30 · in 25 min`, shown dimmed. */
+    when: string;
+}
+
 /** What the idle panel shows, worked out by the session when it opens. */
 export interface PanelContent {
     /** Today, like `Wednesday, 28 October`, in the user's language. */
     date: string;
     /** Null hides the weather. */
     weather: PanelWeather | null;
+    /** Null hides the event row. */
+    event: PanelEvent | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
     activities: readonly PanelActivity[];
     notifications: string;
@@ -41,6 +50,7 @@ export interface PanelContent {
 export const MAX_PANEL_ACTIVITIES = 3;
 
 export interface PanelHandlers {
+    openCalendar(): void;
     openNotifications(): void;
     toggleFocus(): void;
 }
@@ -179,11 +189,51 @@ class WeatherBox {
     }
 }
 
-/** The open notch while nothing plays: the date and weather, live activities, then notifications and focus. */
+/** The next event in one line: calendar icon, title, then when, dimmed. A click opens the calendar. */
+class EventRow {
+    readonly actor: St.Button;
+    private readonly title: St.Label;
+    private readonly when: St.Label;
+    private readonly clickId: number;
+
+    constructor(onClick: () => void) {
+        const box = new St.BoxLayout({ style_class: 'nokta-panel-event-box', x_expand: true });
+        box.add_child(
+            new St.Icon({
+                style_class: 'nokta-panel-event-icon',
+                gicon: new Gio.ThemedIcon({ name: 'x-office-calendar-symbolic' }),
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+        );
+        this.title = new St.Label({ style_class: 'nokta-panel-event-title', y_align: Clutter.ActorAlign.CENTER });
+        this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.when = new St.Label({ style_class: 'nokta-panel-event-when', y_align: Clutter.ActorAlign.CENTER });
+        // St CSS ignores opacity.
+        this.when.opacity = 150;
+        box.add_child(this.title);
+        box.add_child(this.when);
+        this.actor = new St.Button({ style_class: 'nokta-panel-event', child: box, x_expand: true, visible: false });
+        this.clickId = this.actor.connect('clicked', onClick);
+    }
+
+    show(event: PanelEvent | null): void {
+        this.actor.visible = event !== null;
+        if (!event) return;
+        this.title.text = event.title;
+        this.when.text = event.when;
+    }
+
+    destroy(): void {
+        this.actor.disconnect(this.clickId);
+    }
+}
+
+/** The open notch while nothing plays: the date and weather, the next event, live activities, then notifications and focus. */
 export class IdlePanel {
     readonly actor: St.BoxLayout;
     private readonly date: St.Label;
     private readonly weather = new WeatherBox();
+    private readonly event: EventRow;
     private readonly activities: ActivityRow[] = [];
     private readonly notifications: PanelButton;
     private readonly focus: PanelButton;
@@ -195,6 +245,7 @@ export class IdlePanel {
         const heading = new St.BoxLayout({ style_class: 'nokta-panel-heading' });
         heading.add_child(this.date);
         heading.add_child(this.weather.actor);
+        this.event = new EventRow(() => handlers.openCalendar());
         this.notifications = new PanelButton('preferences-system-notifications-symbolic', () =>
             handlers.openNotifications(),
         );
@@ -203,6 +254,7 @@ export class IdlePanel {
         buttons.add_child(this.notifications.actor);
         buttons.add_child(this.focus.actor);
         this.actor.add_child(heading);
+        this.actor.add_child(this.event.actor);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
             const row = new ActivityRow();
             this.activities.push(row);
@@ -214,6 +266,7 @@ export class IdlePanel {
     show(content: PanelContent): void {
         this.date.text = content.date;
         this.weather.show(content.weather);
+        this.event.show(content.event);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.notifications.text = content.notifications;
         this.focus.text = content.focus;
@@ -226,6 +279,7 @@ export class IdlePanel {
     }
 
     destroy(): void {
+        this.event.destroy();
         this.notifications.destroy();
         this.focus.destroy();
         this.actor.destroy();

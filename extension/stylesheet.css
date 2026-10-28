@@ -195,6 +195,28 @@
     spacing: 12px;
 }
 
+.nokta-panel-event {
+    height: 18px;
+}
+
+.nokta-panel-event-box {
+    spacing: 8px;
+}
+
+.nokta-panel-event-icon {
+    icon-size: 14px;
+}
+
+.nokta-panel-event-title {
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.nokta-panel-event-when {
+    font-size: 12px;
+    font-feature-settings: "tnum";
+}
+
 .nokta-panel-weather {
     spacing: 6px;
 }

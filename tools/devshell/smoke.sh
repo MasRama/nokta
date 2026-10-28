@@ -186,6 +186,24 @@ wait_for "the end of the activity shows as an urgent alert" \
 "$HERE/shot.sh" smoke-activity-ended > /dev/null
 wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
+# A fake event in the date menu's event source gets a row in the panel, and
+# its reminder (5 minutes before, by default) shows like a device alert.
+EVENTS="Main.panel.statusArea.dateMenu._eventSource"
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke', date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }]; $EVENTS.emit('changed'); true" > /dev/null
+"$HERE/hover.sh" on > /dev/null
+# 32 px closed, 58 px for the date and the buttons, 28 px for the event.
+wait_for "the panel shows the next calendar event" \
+    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 118" 5 \
+    "$FIND JSON.stringify([shown('nokta-panel-event'), one('nokta-panel-event-title')?.text, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-calendar-panel > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the event's reminder shows in the notch" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke standup in 5 min'" 15 \
+    "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text])"
+"$HERE/shot.sh" smoke-calendar-reminder > /dev/null
+js "delete $EVENTS.getEvents; $EVENTS.emit('changed'); true" > /dev/null
+wait_for "the clock comes back after the reminder" "$FIND shown('nokta-clock')" 10
+
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10
