@@ -38,3 +38,18 @@ export function withAlpha(hex: string, alpha: number): string {
     const a = Math.round(clampAlpha(alpha) * 1000) / 1000;
     return `rgba(${byte(r)}, ${byte(g)}, ${byte(b)}, ${a})`;
 }
+
+/** `a` mixed with `b`: 0 is all `a`, 1 is all `b`. */
+export function mix(a: string, b: string, t: number): string {
+    const x = parseHexColor(a);
+    const y = parseHexColor(b);
+    const k = Math.min(1, Math.max(0, t));
+    return toHexColor({ r: x.r + (y.r - x.r) * k, g: x.g + (y.g - x.g) * k, b: x.b + (y.b - x.b) * k });
+}
+
+/** Relative luminance, 0 for black to 1 for white, as WCAG defines it. */
+export function luminance(hex: string): number {
+    const linear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const { r, g, b } = parseHexColor(hex);
+    return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+}

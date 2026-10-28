@@ -359,6 +359,13 @@ does.
 
 ### Appearance and clock
 
+- [ ] **Themes**: set `theme` to each value with a song playing, open and
+      closed. Midnight is black; graphite dark grey with a fine edge;
+      glass see-through with a fine edge; aurora a dark shade of the
+      cover's color that changes with the track (midnight without a
+      cover); paper light with dark text, also in the idle panel. Only
+      `custom` follows `background`, `foreground` and `accent`.
+
 - [ ] `clock_format = "24h"` with nothing playing: 11 pm shows `23:..`;
       `"12h"` shows `11:..`; `"system"` follows GNOME.
 - [ ] `show_clock = false`: the idle notch is empty.

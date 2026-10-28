@@ -44,11 +44,12 @@ import {
 } from './features/shelf/index.js';
 import { formatRemaining, phaseColor, remainingAt, TimerLabel, type TimerClient } from './features/timer/index.js';
 import { IdleClock } from './shared/clock.js';
-import { accentFor, withAlpha } from './shared/logic/color.js';
+import { withAlpha } from './shared/logic/color.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
+import { paletteFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { glibSchedule } from './shared/schedule.js';
 
@@ -132,6 +133,8 @@ export class MonitorNotch implements ShelfNotch {
     private indicator: Indicator | null = null;
     private readonly collapsed = new CollapsedMediaView();
     private readonly expanded: ExpandedMediaView;
+    /** The colors the views were last drawn with. */
+    private shownPalette: Palette;
     private readonly lyricLine = new LyricLine(() => this.setLyricsOpen(!this.lyricsOpen));
     /** The lyrics view, open in place of the lyric line until a click, the track changing or the notch closing. */
     private readonly lyricsSheet = new LyricsSheet(() => this.setLyricsOpen(false));
@@ -173,7 +176,8 @@ export class MonitorNotch implements ShelfNotch {
         private readonly sources: NotchSources,
     ) {
         const { settings, media } = sources;
-        this.notch = new Notch(settings.appearance);
+        this.shownPalette = this.palette();
+        this.notch = new Notch(settings.appearance, this.shownPalette);
         this.expanded = new ExpandedMediaView(media);
         this.expanded.infoBox.add_child(this.lyricLine.actor);
         // Under the cover and the title, above the seek bar.
@@ -293,12 +297,10 @@ export class MonitorNotch implements ShelfNotch {
     onMedia(): void {
         if (this.destroyed) return;
         const snapshot = this.sources.media.snapshot();
-        const { useAlbumAccent, foreground, accent: fallback } = this.sources.settings.appearance;
-        const accent = accentFor(useAlbumAccent, snapshot.accentColor, fallback);
-        this.collapsed.update(snapshot, accent);
+        this.applyPalette();
+        this.collapsed.update(snapshot, this.shownPalette.accent);
         this.collapsed.setActive(this.drawn === 'collapsed', snapshot);
         this.expanded.update(snapshot);
-        this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.machine.setAvailable(snapshot.available);
         if (trackKey(snapshot) !== this.lyricsTrack) this.setLyricsOpen(false);
         // Open, a player coming or going swaps the media view and the idle panel.
@@ -676,8 +678,24 @@ export class MonitorNotch implements ShelfNotch {
         }
     }
 
+    /** The theme's colors with the cover's worked in. */
+    private palette(): Palette {
+        const appearance = this.sources.settings.appearance;
+        return paletteFor(appearance.theme, appearance, this.sources.media.snapshot().accentColor);
+    }
+
+    /** Recolors the notch and its views when the theme or the cover's color changes. */
+    private applyPalette(): void {
+        const palette = this.palette();
+        if (JSON.stringify(palette) === JSON.stringify(this.shownPalette)) return;
+        this.shownPalette = palette;
+        this.notch.setPalette(palette);
+        this.applyOsdColors();
+    }
+
     private applyOsdColors(): void {
-        const { foreground, accent } = this.sources.settings.appearance;
+        const { foreground, accent } = this.shownPalette;
+        this.expanded.progress.setColors(accent, withAlpha(foreground, 0.25));
         this.osdView.setColors(accent, withAlpha(foreground, 0.25));
         this.idlePanel.setForeground(foreground);
         this.dropView.setForeground(foreground);

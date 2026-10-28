@@ -6,16 +6,13 @@ import { Ear } from './ears.js';
 import { OverlayLayout } from './layout.js';
 import { withAlpha } from './logic/color.js';
 import { radiusAt } from './logic/shape.js';
+import { THEMES, type Palette } from './logic/theme.js';
 import { settled, springFor, stepSpring, type ResizeKind, type SpringParams, type SpringState } from './logic/spring.js';
 
 export type { ResizeKind } from './logic/spring.js';
 
 /** The parts of the appearance config the notch shape uses. */
 export interface NotchStyle {
-    background: string;
-    /** 0 = see-through, 1 = solid; only the background, not the content. */
-    backgroundOpacity: number;
-    foreground: string;
     /** The closed notch's height, where the corners are `cornerRadius`. */
     height: number;
     cornerRadius: number;
@@ -43,6 +40,7 @@ export class Notch {
     private readonly leftEar: Ear;
     private readonly rightEar: Ear;
     private style: NotchStyle;
+    private palette: Palette;
     private monitor: MonitorArea = { x: 0, y: 0, width: 0 };
     /** The size the body is heading to. */
     private width = 0;
@@ -55,16 +53,17 @@ export class Notch {
     private lastFrameUs = 0;
     private shownRadius = -1;
 
-    constructor(style: NotchStyle) {
+    constructor(style: NotchStyle, palette: Palette) {
         this.style = style;
+        this.palette = palette;
         this.actor = new St.Widget({
             style_class: 'nokta-notch',
             layout_manager: new Clutter.BoxLayout({ orientation: Clutter.Orientation.HORIZONTAL }),
             reactive: true,
             track_hover: true,
         });
-        this.leftEar = new Ear('left', style.earRadius, style.background, style.backgroundOpacity);
-        this.rightEar = new Ear('right', style.earRadius, style.background, style.backgroundOpacity);
+        this.leftEar = new Ear('left', style.earRadius, palette.background, palette.backgroundOpacity);
+        this.rightEar = new Ear('right', style.earRadius, palette.background, palette.backgroundOpacity);
         this.body = new St.Widget({
             style_class: 'nokta-body',
             layout_manager: new OverlayLayout(),
@@ -77,15 +76,20 @@ export class Notch {
         this.actor.add_child(this.rightEar.actor);
         this.timeline = new Clutter.Timeline({ actor: this.actor, duration: 1000, repeat_count: -1 });
         this.timeline.connect('new-frame', () => this.onFrame());
-        this.applyBodyStyle();
+        this.applyPalette();
     }
 
     setAppearance(style: NotchStyle): void {
         this.style = style;
-        this.leftEar.setStyle(style.earRadius, style.background, style.backgroundOpacity);
-        this.rightEar.setStyle(style.earRadius, style.background, style.backgroundOpacity);
-        this.applyBodyStyle();
+        this.applyPalette();
         this.jumpTo(this.width, this.height);
+    }
+
+    /** The colors, which follow the theme and the cover; the size stays. */
+    setPalette(palette: Palette): void {
+        const old = this.palette;
+        this.palette = palette;
+        if (JSON.stringify(old) !== JSON.stringify(palette)) this.applyPalette();
     }
 
     /** Where to center the notch; call again when monitors change. */
@@ -162,11 +166,27 @@ export class Notch {
         }
     }
 
+    private applyPalette(): void {
+        const { background, backgroundOpacity, theme } = this.palette;
+        const { earRadius } = this.style;
+        this.leftEar.setStyle(earRadius, background, backgroundOpacity);
+        this.rightEar.setStyle(earRadius, background, backgroundOpacity);
+        for (const name of THEMES) this.actor.remove_style_class_name(`nokta-theme-${name}`);
+        this.actor.add_style_class_name(`nokta-theme-${theme}`);
+        this.applyBodyStyle();
+    }
+
     private applyBodyStyle(): void {
-        const { background, backgroundOpacity, foreground } = this.style;
+        const { background, backgroundOpacity, gradient, foreground, border } = this.palette;
         const r = this.shownRadius < 0 ? this.style.cornerRadius : this.shownRadius;
-        this.body.style =
-            `background-color: ${withAlpha(background, backgroundOpacity)}; color: ${foreground};` +
-            ` border-radius: 0 0 ${r}px ${r}px;`;
+        const top = withAlpha(background, backgroundOpacity);
+        let style = `background-color: ${top}; color: ${foreground}; border-radius: 0 0 ${r}px ${r}px;`;
+        if (gradient) {
+            style +=
+                ` background-gradient-direction: vertical; background-gradient-start: ${top};` +
+                ` background-gradient-end: ${withAlpha(gradient, backgroundOpacity)};`;
+        }
+        if (border) style += ` border: 1px solid ${border}; border-top-width: 0;`;
+        this.body.style = style;
     }
 }

@@ -2,6 +2,7 @@
 # Delete a line to go back to its default value.
 
 [appearance]
+theme = "midnight"       # "midnight", "graphite", "glass", "aurora", "paper", or "custom" to use the colors below
 height = 32              # collapsed notch height in px, slightly above the 28 px top bar
 idle_width = 180         # collapsed width when nothing plays
 playing_width = 260      # collapsed width while music plays
@@ -9,7 +10,7 @@ expanded_width = 420
 expanded_height = 150
 corner_radius = 14       # bottom corners of the notch body
 ear_radius = 8           # inward curves where the notch meets the top edge
-background = "#000000"
+background = "#000000"   # this and the next three colors apply only with theme = "custom"
 background_opacity = 1.0 # 0.0 = see-through, 1.0 = solid; text and icons stay solid
 foreground = "#ffffff"
 accent = "#ffffff"       # progress bar, equalizer and OSD bar when the cover color is not used

@@ -224,6 +224,10 @@ How both sides stay honest:
   monitor and touching the top edge. It hides when an app goes fullscreen.
   Its shape is a body with rounded bottom corners plus two Cairo-drawn "ears"
   that curve into the top edge.
+- Colors come from the theme (`[appearance] theme`): `shared/logic/theme.ts`
+  turns it, the color settings (used only by `custom`) and the cover's
+  color into one palette for the body, the ears and every view, and the
+  notch carries a `nokta-theme-<name>` style class for the stylesheet.
 - States: **idle** (a clock), **collapsed** (small cover and equalizer bars)
   and **expanded** on hover (cover, title, artists, lyric line, seek bar,
   shuffle, previous, play, next and repeat). A click on the lyric line opens

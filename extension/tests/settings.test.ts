@@ -36,6 +36,7 @@ test('appearance_from_full_table', () => {
         osd_width: 320,
         background_opacity: 0.5,
         accent: '#ff8800',
+        theme: 'paper',
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -52,6 +53,7 @@ test('appearance_from_full_table', () => {
         osdWidth: 320,
         backgroundOpacity: 0.5,
         accent: '#ff8800',
+        theme: 'paper',
     });
 });
 
