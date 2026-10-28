@@ -67,10 +67,11 @@ test('ended alerts say how it went', () => {
 });
 
 test('the closed notch shows the timer, else an activity, else the shelf', () => {
-    assert.equal(chooseIndicator({ timer: true, activity: true, shelf: true }), 'timer');
-    assert.equal(chooseIndicator({ timer: false, activity: true, shelf: true }), 'activity');
-    assert.equal(chooseIndicator({ timer: false, activity: false, shelf: true }), 'shelf');
-    assert.equal(chooseIndicator({ timer: false, activity: false, shelf: false }), null);
+    assert.equal(chooseIndicator({ timer: true, clock: true, activity: true, shelf: true }), 'timer');
+    assert.equal(chooseIndicator({ timer: false, clock: true, activity: true, shelf: true }), 'clock');
+    assert.equal(chooseIndicator({ timer: false, clock: false, activity: true, shelf: true }), 'activity');
+    assert.equal(chooseIndicator({ timer: false, clock: false, activity: false, shelf: true }), 'shelf');
+    assert.equal(chooseIndicator({ timer: false, clock: false, activity: false, shelf: false }), null);
 });
 
 test('home grows with its rows', () => {
@@ -78,6 +79,7 @@ test('home grows with its rows', () => {
     assert.equal(panelHeight(32, ['date', 'activity', 'controls']), 206);
     assert.equal(panelHeight(32, ['date', 'activity', 'activity', 'controls']), 252);
     assert.equal(panelHeight(40, ['date', 'controls']), 168);
+    assert.equal(panelHeight(32, ['date', 'clock', 'clock', 'controls']), 160 + 2 * 36);
 });
 
 test('a sub-page is its padding, its header and its body', () => {

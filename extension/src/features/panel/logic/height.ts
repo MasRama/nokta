@@ -1,5 +1,5 @@
 /** The rows of home, top to bottom. */
-export type PanelRow = 'date' | 'event' | 'activity' | 'shelf' | 'controls';
+export type PanelRow = 'date' | 'event' | 'activity' | 'clock' | 'shelf' | 'controls';
 
 /** The date, the toggles and the tiles: this much under the closed notch. */
 const BASE_EXTRA = 128;
@@ -8,6 +8,7 @@ const SPACING = 10;
 const ROW_HEIGHT: Record<Exclude<PanelRow, 'date' | 'controls'>, number> = {
     event: 18,
     activity: 36,
+    clock: 26,
     shelf: 44,
 };
 

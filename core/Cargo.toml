@@ -42,6 +42,8 @@ url = "2.5.8"
 # D-Bus serves Nokta and reads the players and devices on Linux only.
 [target.'cfg(target_os = "linux")'.dependencies]
 zbus = { version = "5", default-features = false, features = ["tokio"] }
+# `nokta alarm` reads the local time zone.
+libc = "0.2.191"
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.6", features = ["time"] }
@@ -49,4 +51,5 @@ rustix = { version = "1.1.6", features = ["time"] }
 [dev-dependencies]
 quick-xml = "0.42.0"
 tempfile = "3.27.0"
+tokio = { version = "1.54.1", features = ["test-util"] }
 wiremock = "0.6.5"

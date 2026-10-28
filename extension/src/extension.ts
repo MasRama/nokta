@@ -61,10 +61,16 @@ import { ShelfClient, ShelfCoordinator } from './features/shelf/index.js';
 import { ClipboardClient, ClipboardWatcher, copyToClipboard } from './features/clipboard/index.js';
 import {
     breakAfterFocus,
+    clockColor,
+    clockDetail,
+    clockDoneAlert,
+    clockText,
+    clockTitle,
     finishedAlert,
     FocusShortcut,
     FocusToggle,
     gnomeBanners,
+    msUntilClockChange,
     msUntilNextSecond,
     QuietBanners,
     shortcutAction,
@@ -80,6 +86,10 @@ import { moveDateMenuRight, type Restore } from './shared/topbar.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
 const TIMER_ICON = 'alarm-symbolic';
+/** The icon beside a countdown or stopwatch in home and its alert; an alarm has TIMER_ICON. */
+const CLOCK_ICON = 'nokta-timer-symbolic.svg';
+/** A finished countdown or alarm stays up this many times the alert duration. */
+const CLOCK_ALERT_FACTOR = 2;
 
 const isCancelled = (error: unknown): boolean =>
     error instanceof GLib.Error && error.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED);
@@ -101,7 +111,10 @@ class Session {
     private readonly media = new MediaClient();
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
-    private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
+    private readonly timer = new TimerClient(
+        (phase) => this.onTimerFinished(phase),
+        (kind, label) => this.onClockDone(kind, label),
+    );
     private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
     private readonly weather = new WeatherClient();
     private readonly shelf = new ShelfClient();
@@ -344,8 +357,10 @@ class Session {
         this.focusToggle.update(snapshot, now, this.settings.timer);
         this.quietBanners.update(wantsQuiet(snapshot, this.settings.timer.quietNotifications));
         this.notches.forEach((n) => n.onTimer());
-        const delay = msUntilNextSecond(snapshot, now);
-        if (delay === null) return;
+        const delays = [msUntilNextSecond(snapshot, now), msUntilClockChange(this.timer.clocks(), now)];
+        const waits = delays.filter((d): d is number => d !== null);
+        if (waits.length === 0) return;
+        const delay = Math.min(...waits);
         this.timerTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
             this.timerTickId = 0;
             this.onTimer();
@@ -370,6 +385,22 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         this.showOsd(-1, content, new Gio.ThemedIcon({ name: TIMER_ICON }), this.settings.behavior.alertDurationMs);
         if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
+    }
+
+    /** A countdown ran out or an alarm went off. */
+    private onClockDone(kind: string, label: string): void {
+        const alert = clockDoneAlert(kind, label, this.formatTime(Date.now()));
+        if (!alert) return;
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
+        const icon = kind === 'alarm' ? new Gio.ThemedIcon({ name: TIMER_ICON }) : this.extensionIcon(CLOCK_ICON);
+        this.showOsd(-1, content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs);
+        if (this.settings.timer.sound)
+            global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', alert.title, null);
+    }
+
+    /** An icon from the extension's icons folder. */
+    private extensionIcon(name: string): Gio.Icon {
+        return new Gio.FileIcon({ file: Gio.File.new_for_path(`${this.panel.iconsDir}/${name}`) });
     }
 
     // Notches
@@ -570,6 +601,7 @@ class Session {
             activities: this.panelActivities(),
             notificationCount: notificationCount(),
             focusActive: this.timer.snapshot().state !== 'idle',
+            clocks: this.panelClocks(),
             toggles: {
                 doNotDisturb: this.quietBanners.doNotDisturb,
                 caffeine: this.caffeine.on,
@@ -586,6 +618,20 @@ class Session {
         if (which === 'doNotDisturb') this.quietBanners.setDoNotDisturb(!toggles.doNotDisturb);
         else if (which === 'caffeine') this.caffeine.set(!toggles.caffeine);
         else this.interfaceSettings.set_string('color-scheme', toggles.dark ? 'default' : 'prefer-dark');
+    }
+
+    private panelClocks(): PanelContent['clocks'] {
+        const now = GLib.get_monotonic_time();
+        return this.timer.clocks().map((clock) => ({
+            id: clock.id,
+            icon: clock.kind === 'alarm' ? TIMER_ICON : `file:${CLOCK_ICON}`,
+            color: clockColor(clock.kind),
+            title: clockTitle(clock),
+            detail: clockDetail(clock, clock.alarmUnixUs ? this.formatTime(clock.alarmUnixUs / 1000) : ''),
+            time: clockText(clock, now),
+            running: clock.running,
+            canPause: clock.kind !== 'alarm',
+        }));
     }
 
     private panelActivities(): PanelContent['activities'] {

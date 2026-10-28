@@ -17,7 +17,7 @@ use crate::features::shelf;
 use crate::features::timer::logic::{Lengths, Phase, Snapshot};
 use crate::features::timer::{self, service::Command};
 use crate::features::weather::{self, openmeteo};
-use crate::shared::clock::monotonic_us;
+use crate::shared::clock::{monotonic_us, wall_us};
 use crate::shared::paths::Paths;
 
 pub struct Services {
@@ -33,11 +33,13 @@ pub struct Services {
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
 
-/// The timer's commands, its published state and the phases that finished.
+/// The timer's commands, its published state and the phases that finished,
+/// and the clocks beside it.
 pub struct Timer {
     pub commands: mpsc::Sender<Command>,
     pub state: watch::Receiver<Snapshot>,
     pub finished: mpsc::Receiver<Phase>,
+    pub clocks: timer::service::ClocksHandle,
 }
 
 impl Services {
@@ -67,6 +69,7 @@ impl Services {
         );
 
         let (commands, state, finished) = timer::service::spawn(timer_lengths(config.clone()));
+        let (clock_commands, clocks, clocks_done) = timer::service::spawn_clocks(wall_us);
         let activities = activities::service::spawn(stale_us(config.clone()));
         let weather = weather::service::spawn(
             follow(config.clone(), |c| c.weather.clone()),
@@ -85,7 +88,7 @@ impl Services {
         let clipboard = clipboard::service::spawn(
             follow(config.clone(), |c| c.clipboard.clone()),
             paths.clipboard_dir.clone(),
-            unix_time_us,
+            wall_us,
         );
 
         Services {
@@ -96,6 +99,11 @@ impl Services {
                 commands,
                 state,
                 finished,
+                clocks: timer::service::ClocksHandle {
+                    commands: clock_commands,
+                    state: clocks,
+                    done: clocks_done,
+                },
             },
             activities,
             weather,
@@ -104,13 +112,6 @@ impl Services {
             _config_watcher: config_watcher,
         }
     }
-}
-
-/// Microseconds since the Unix epoch, by the wall clock.
-fn unix_time_us() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| i64::try_from(d.as_micros()).unwrap_or(i64::MAX))
 }
 
 /// The timer's phase lengths from the current `[timer]` table.

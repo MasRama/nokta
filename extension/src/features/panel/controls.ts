@@ -74,7 +74,8 @@ export class Tile {
     private active = false;
     private colors: ControlColors = { foreground: '#ffffff', accent: '#ffffff', onAccent: '#000000' };
 
-    constructor(iconName: string, label: string, onClick: () => void) {
+    /** `icon` is a theme icon's name, or an icon. */
+    constructor(icon: string | Gio.Icon, label: string, onClick: () => void) {
         this.circle = new St.Widget({
             style_class: 'nokta-tile-circle',
             layout_manager: new OverlayLayout(),
@@ -85,7 +86,7 @@ export class Tile {
         this.circle.add_child(
             new St.Icon({
                 style_class: 'nokta-tile-icon',
-                gicon: new Gio.ThemedIcon({ name: iconName }),
+                gicon: typeof icon === 'string' ? new Gio.ThemedIcon({ name: icon }) : icon,
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
             }),

@@ -7,6 +7,7 @@ use std::time::Duration;
 
 use super::args::Cli;
 use super::client::Client;
+use super::local_time::next_time_of_day;
 
 /// Sent again this often while a command runs, so it never goes stale.
 const KEEP_ALIVE: Duration = Duration::from_secs(60);
@@ -40,6 +41,32 @@ pub async fn execute(cli: Cli) -> ExitCode {
             icon,
             command,
         } => run(&title, &icon, &command).await,
+        Cli::Countdown { duration_us, label } => {
+            clock(|timer| async move {
+                timer
+                    .call::<_, _, String>("AddCountdown", &(label, duration_us))
+                    .await
+                    .map(drop)
+            })
+            .await
+        }
+        Cli::Stopwatch { label } => {
+            clock(|timer| async move {
+                timer
+                    .call::<_, _, String>("AddStopwatch", &(label,))
+                    .await
+                    .map(drop)
+            })
+            .await
+        }
+        Cli::Alarm {
+            hour,
+            minute,
+            label,
+        } => alarm(hour, minute, label).await,
+        Cli::ClearClocks => {
+            clock(|timer| async move { timer.call("ClearClocks", &()).await }).await
+        }
         Cli::Settings => settings(),
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
     }
@@ -58,6 +85,49 @@ fn settings() -> ExitCode {
         }
         Err(err) => {
             eprintln!("nokta: cannot run gnome-extensions: {err}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn alarm(hour: u8, minute: u8, label: String) -> ExitCode {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0));
+    let Some(at) = next_time_of_day(hour, minute, now) else {
+        eprintln!("nokta: {hour:02}:{minute:02} does not happen in the next day here");
+        return ExitCode::FAILURE;
+    };
+    clock(|timer| async move {
+        timer
+            .call::<_, _, String>("AddAlarm", &(label, at * 1_000_000))
+            .await
+            .map(drop)
+    })
+    .await
+}
+
+/// Runs one call on the timer and reports a failure the way noktad words it.
+async fn clock<F, Fut>(call: F) -> ExitCode
+where
+    F: FnOnce(zbus::Proxy<'static>) -> Fut,
+    Fut: std::future::Future<Output = zbus::Result<()>>,
+{
+    let timer = match Client::timer().await {
+        Ok(timer) => timer,
+        Err(err) => {
+            eprintln!("nokta: cannot reach noktad: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match call(timer).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(zbus::Error::MethodError(_, Some(message), _)) => {
+            eprintln!("nokta: {message}");
+            ExitCode::FAILURE
+        }
+        Err(err) => {
+            eprintln!("nokta: cannot reach noktad: {err}");
             ExitCode::FAILURE
         }
     }

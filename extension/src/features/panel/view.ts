@@ -19,6 +19,22 @@ export interface PanelActivity {
     elapsed: string;
 }
 
+/** A countdown, stopwatch or alarm, as one panel row shows it. */
+export interface PanelClock {
+    id: string;
+    /** A theme icon, or `file:` and one in the extension's icons folder. */
+    icon: string;
+    color: string;
+    title: string;
+    /** Shown dimmed after the title, like `Paused · 10 min`. */
+    detail: string;
+    /** Like `4:59`. */
+    time: string;
+    running: boolean;
+    /** False for an alarm, which only goes off or is removed. */
+    canPause: boolean;
+}
+
 /** The weather beside the date. */
 export interface PanelWeather {
     icon: string;
@@ -58,6 +74,8 @@ export interface PanelContent {
     notificationCount: number | null;
     /** A focus session or a break is set. */
     focusActive: boolean;
+    /** Newest first; the panel shows the first MAX_PANEL_CLOCKS. */
+    clocks: readonly PanelClock[];
     toggles: QuickToggles;
     /** A player is open, so home has a way back to it. */
     player: boolean;
@@ -66,6 +84,7 @@ export interface PanelContent {
 }
 
 export const MAX_PANEL_ACTIVITIES = 3;
+export const MAX_PANEL_CLOCKS = 3;
 
 export interface PanelHandlers {
     openCalendar(): void;
@@ -73,8 +92,11 @@ export interface PanelHandlers {
     toggleFocus(): void;
     openSettings(): void;
     openClipboard(): void;
+    openTimer(): void;
     openPlayer(): void;
     toggle(which: QuickToggle): void;
+    pauseClock(id: string, paused: boolean): void;
+    removeClock(id: string): void;
 }
 
 /** Each toggle's icon: a theme icon, or one in the extension's icons folder. */
@@ -140,6 +162,71 @@ class ActivityRow {
     setForeground(color: string): void {
         this.track.style = `background-color: ${withAlpha(color, 0.2)};`;
         this.fill.style = `background-color: ${color};`;
+    }
+}
+
+/** One clock: its icon in the kind's color, title, detail, time, and pause and remove buttons. */
+class ClockRow {
+    readonly actor: St.BoxLayout;
+    private readonly icon: St.Icon;
+    private readonly title: St.Label;
+    private readonly detail: St.Label;
+    private readonly time: St.Label;
+    private readonly pause: St.Button;
+    private readonly pauseIcon: St.Icon;
+    private clock: PanelClock | null = null;
+
+    constructor(
+        private readonly iconsDir: string,
+        handlers: Pick<PanelHandlers, 'pauseClock' | 'removeClock'>,
+    ) {
+        this.icon = new St.Icon({ style_class: 'nokta-panel-clock-icon', y_align: Clutter.ActorAlign.CENTER });
+        this.title = new St.Label({ style_class: 'nokta-panel-clock-title', y_align: Clutter.ActorAlign.CENTER });
+        this.detail = new St.Label({
+            style_class: 'nokta-panel-clock-detail',
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.detail.opacity = 150;
+        this.time = new St.Label({ style_class: 'nokta-panel-clock-time', y_align: Clutter.ActorAlign.CENTER });
+        this.pauseIcon = new St.Icon({ style_class: 'nokta-button-icon' });
+        this.pause = new St.Button({
+            style_class: 'nokta-button nokta-panel-clock-pause',
+            child: this.pauseIcon,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        this.pause.connect('clicked', () => {
+            if (this.clock) handlers.pauseClock(this.clock.id, this.clock.running);
+        });
+        const remove = new St.Button({
+            style_class: 'nokta-button nokta-panel-clock-remove',
+            child: new St.Icon({ icon_name: 'window-close-symbolic', style_class: 'nokta-button-icon' }),
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        remove.connect('clicked', () => {
+            if (this.clock) handlers.removeClock(this.clock.id);
+        });
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-clock', visible: false });
+        for (const child of [this.icon, this.title, this.detail, this.time, this.pause, remove])
+            this.actor.add_child(child);
+    }
+
+    show(clock: PanelClock | undefined): void {
+        this.clock = clock ?? null;
+        this.actor.visible = clock !== undefined;
+        if (!clock) return;
+        this.icon.gicon = toggleIcon(clock.icon, this.iconsDir);
+        this.icon.style = `color: ${clock.color};`;
+        this.title.text = clock.title;
+        this.detail.text = clock.detail;
+        this.time.text = clock.time;
+        this.time.opacity = clock.running ? 255 : 128;
+        this.pause.visible = clock.canPause;
+        this.pauseIcon.icon_name = clock.running ? 'media-playback-pause-symbolic' : 'media-playback-start-symbolic';
     }
 }
 
@@ -226,9 +313,11 @@ export class HomePanel {
     private readonly playerButton: St.Button;
     private readonly event: EventRow;
     private readonly activities: ActivityRow[] = [];
+    private readonly clocks: ClockRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly notifications: Tile;
     private readonly focus: Tile;
+    private readonly timer: Tile;
     private readonly clipboard: Tile;
     private readonly settings: Tile;
     private readonly controls: St.BoxLayout;
@@ -262,6 +351,9 @@ export class HomePanel {
             handlers.openNotifications(),
         );
         this.focus = new Tile('alarm-symbolic', 'Focus', () => handlers.toggleFocus());
+        this.timer = new Tile(toggleIcon('file:nokta-timer-symbolic.svg', iconsDir), 'Timer', () =>
+            handlers.openTimer(),
+        );
         this.clipboard = new Tile('edit-paste-symbolic', 'Clipboard', () => handlers.openClipboard());
         this.settings = new Tile('emblem-system-symbolic', 'Settings', () => handlers.openSettings());
         const tiles = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
@@ -275,6 +367,11 @@ export class HomePanel {
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
             const row = new ActivityRow();
             this.activities.push(row);
+            this.actor.add_child(row.actor);
+        }
+        for (let i = 0; i < MAX_PANEL_CLOCKS; i++) {
+            const row = new ClockRow(iconsDir, handlers);
+            this.clocks.push(row);
             this.actor.add_child(row.actor);
         }
         this.actor.add_child(this.controls);
@@ -291,9 +388,11 @@ export class HomePanel {
         this.playerButton.visible = content.player;
         this.event.show(content.event);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
+        this.clocks.forEach((row, i) => row.show(content.clocks[i]));
         for (const [which, pill] of this.toggles) pill.set(content.toggles[which]);
         this.notifications.set(false, notificationBadge(content.notificationCount));
         this.focus.set(content.focusActive);
+        this.timer.set(content.clocks.length > 0);
         this.clipboard.actor.visible = content.clipboard;
     }
 
@@ -309,6 +408,6 @@ export class HomePanel {
     }
 
     private tiles(): Tile[] {
-        return [this.notifications, this.focus, this.clipboard, this.settings];
+        return [this.notifications, this.focus, this.timer, this.clipboard, this.settings];
     }
 }

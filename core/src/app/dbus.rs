@@ -46,6 +46,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
             None
         }
     };
+    let resume = system.clone();
     let alerts = devices::watcher::spawn(system);
 
     // Objects first, name last: a client activated by the name never sees a
@@ -65,8 +66,17 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         commands,
         state,
         finished,
+        clocks,
     } = services.timer;
-    timer::dbus::serve(&conn, commands, state, finished).await?;
+    if let Some(system) = resume {
+        let commands = clocks.commands.clone();
+        tokio::spawn(async move {
+            if let Err(err) = timer::dbus::watch_resume(system, commands).await {
+                tracing::warn!("alarms will not notice a resume: {err}");
+            }
+        });
+    }
+    timer::dbus::serve(&conn, commands, state, finished, clocks).await?;
 
     match conn
         .request_name_with_flags(BUS_NAME, RequestNameFlags::DoNotQueue.into())
