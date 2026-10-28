@@ -8,6 +8,7 @@ import { withAlpha } from '../../shared/logic/color.js';
 import { type ControlColors, TogglePill, Tile } from './controls.js';
 import { notificationBadge } from './logic/labels.js';
 import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
+import { SECONDARY } from '../../shared/dim.js';
 import { iconFor } from '../../shared/icons.js';
 
 /** A live activity, as one panel row shows it. */
@@ -205,7 +206,7 @@ class ClockRow {
         });
         this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        this.detail.opacity = 150;
+        this.detail.opacity = SECONDARY;
         this.time = new St.Label({ style_class: 'nokta-panel-clock-time', y_align: Clutter.ActorAlign.CENTER });
         this.pauseIcon = new St.Icon({ style_class: 'nokta-button-icon' });
         this.pause = new St.Button({
@@ -300,7 +301,7 @@ class CallRow {
         });
         this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        this.detail.opacity = 150;
+        this.detail.opacity = SECONDARY;
         this.muteIcon = new St.Icon({ style_class: 'nokta-button-icon' });
         const mute = new St.Button({
             style_class: 'nokta-button nokta-panel-call-mute',
@@ -347,7 +348,7 @@ class WeatherBox {
         this.detail = new St.Label({ style_class: 'nokta-panel-weather-detail', y_align: Clutter.ActorAlign.CENTER });
         this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         // St CSS ignores opacity.
-        this.detail.opacity = 150;
+        this.detail.opacity = SECONDARY;
         this.actor = new St.BoxLayout({ style_class: 'nokta-panel-weather', visible: false });
         this.actor.add_child(this.icon);
         this.actor.add_child(this.temperature);
@@ -383,7 +384,7 @@ class EventRow {
         this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.when = new St.Label({ style_class: 'nokta-panel-event-when', y_align: Clutter.ActorAlign.CENTER });
         // St CSS ignores opacity.
-        this.when.opacity = 150;
+        this.when.opacity = SECONDARY;
         box.add_child(this.title);
         box.add_child(this.when);
         this.actor = new St.Button({ style_class: 'nokta-panel-event', child: box, x_expand: true, visible: false });

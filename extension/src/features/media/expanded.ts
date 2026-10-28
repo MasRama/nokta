@@ -13,6 +13,7 @@ import type { MediaSnapshot } from './logic/snapshot.js';
 import { OutputMenu, type OutputMenuHandlers } from './output-menu.js';
 import { ProgressBar } from './progress.js';
 import { iconFor } from '../../shared/icons.js';
+import { SECONDARY } from '../../shared/dim.js';
 
 export interface MediaControls {
     playPause(): void;
@@ -80,6 +81,8 @@ export class ExpandedMediaView {
         const top = new St.BoxLayout({ style_class: 'nokta-expanded-top' });
         this.info = setVertical(new St.BoxLayout({ x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
         this.info.add_child(this.title);
+        this.artists.opacity = SECONDARY;
+        this.playerLabel.opacity = SECONDARY;
         this.info.add_child(this.artists);
         this.playerRow = new St.BoxLayout({ style_class: 'nokta-player-row' });
         this.playerLabel.x_expand = false;
@@ -214,7 +217,7 @@ export class ExpandedMediaView {
     private switchButton(icon: string, step: 1 | -1, controls: MediaControls): St.Button {
         const button = new St.Button({
             style_class: 'nokta-button nokta-player-switch',
-            child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-player-switch-icon' }),
+            child: new St.Icon({ gicon: iconFor(icon), style_class: 'nokta-player-switch-icon', opacity: SECONDARY }),
             can_focus: true,
         });
         button.connect('clicked', () => this.switchPlayer(step, controls));

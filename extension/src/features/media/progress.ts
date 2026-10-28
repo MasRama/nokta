@@ -3,6 +3,7 @@ import St from 'gi://St';
 
 import { formatDuration } from '../../shared/logic/format.js';
 import { fractionOf, positionAt } from './logic/progress.js';
+import { SECONDARY } from '../../shared/dim.js';
 
 /**
  * Elapsed time, a bar and the total time. Click or drag the bar to seek;
@@ -25,6 +26,7 @@ export class ProgressBar {
         this.actor = new St.BoxLayout({ style_class: 'nokta-progress', x_expand: true });
         this.elapsed = new St.Label({ style_class: 'nokta-time', y_align: Clutter.ActorAlign.CENTER });
         this.total = new St.Label({ style_class: 'nokta-time', y_align: Clutter.ActorAlign.CENTER });
+        for (const time of [this.elapsed, this.total]) time.opacity = SECONDARY;
         // A taller transparent hit area around the thin bar.
         this.hit = new St.Widget({
             layout_manager: new Clutter.BinLayout(),
