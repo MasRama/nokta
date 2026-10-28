@@ -38,3 +38,10 @@ export function probeOutputIds(has: (id: number) => boolean, from: number, margi
     }
     return ids;
 }
+
+/**
+ * The ids Quick Settings lists with the ones Gvc announced since: its menu
+ * may hear of a new output after we do.
+ */
+export const outputIds = (listed: readonly number[], announced: Iterable<number>): number[] =>
+    [...new Set([...listed, ...announced])].sort((a, b) => a - b);

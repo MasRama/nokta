@@ -3,7 +3,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Volume from 'resource:///org/gnome/shell/ui/status/volume.js';
 
 import { Listeners } from '../../shared/listeners.js';
-import { probeOutputIds, sortedOutputs, type AudioOutput } from './logic/outputs.js';
+import { outputIds, probeOutputIds, sortedOutputs, type AudioOutput } from './logic/outputs.js';
 
 /** How far past the last output id found the fallback search looks. */
 const PROBE_MARGIN = 64;
@@ -33,13 +33,21 @@ export class AudioOutputs {
     private readonly ids: number[] = [];
     private outputs: AudioOutput[] = [];
     private active: number | null = null;
+    /** Outputs Gvc announced; Quick Settings may not list them yet. */
+    private readonly announced = new Set<number>();
     private readonly listeners = new Listeners();
 
     constructor() {
         this.control = Volume.getMixerControl();
         this.ids.push(
-            this.control.connect('output-added', () => this.read()),
-            this.control.connect('output-removed', () => this.read()),
+            this.control.connect('output-added', (_control, id: number) => {
+                this.announced.add(id);
+                this.read();
+            }),
+            this.control.connect('output-removed', (_control, id: number) => {
+                this.announced.delete(id);
+                this.read();
+            }),
             this.control.connect('active-output-update', (_control, id: number) => {
                 this.active = id;
                 this.listeners.emit();
@@ -82,10 +90,11 @@ export class AudioOutputs {
         const ready = this.control.get_state() === Gvc.MixerControlState.READY;
         const sink = ready ? this.control.get_default_sink() : null;
         this.active = sink ? (this.control.lookup_device_from_stream(sink)?.get_id() ?? null) : null;
-        const ids = ready
+        const listed = ready
             ? (quickSettingsIds() ??
               probeOutputIds((id) => this.control.lookup_output_id(id) !== null, this.active ?? 0, PROBE_MARGIN))
             : [];
+        const ids = ready ? outputIds(listed, this.announced) : [];
         const outputs: AudioOutput[] = [];
         for (const id of ids) {
             const device = this.control.lookup_output_id(id);
