@@ -3,6 +3,7 @@
 pub mod clock;
 #[cfg(target_os = "linux")]
 pub mod dbus;
+pub mod fs;
 pub mod hash;
 pub mod http;
 pub mod paths;

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use tokio::sync::{watch, Mutex};
 use zbus::fdo;
@@ -12,6 +12,7 @@ use zbus::Connection;
 use super::edit::set_key;
 use super::{Config, Entries, SettingValue, DEFAULT_CONFIG_TOML};
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
+use crate::shared::fs::write_atomically;
 
 pub const PATH: &str = "/io/nokta/Settings";
 pub const INTERFACE: &str = "io.nokta.Settings1";
@@ -94,18 +95,6 @@ fn setting_value(value: &Value<'_>) -> Option<SettingValue> {
         ),
         _ => return None,
     })
-}
-
-/// Writes next to the file and renames it over, so nobody reads half a file.
-async fn write_atomically(path: &Path, text: &str) -> io::Result<()> {
-    if let Some(dir) = path.parent() {
-        tokio::fs::create_dir_all(dir).await?;
-    }
-    let mut name = path.file_name().unwrap_or_default().to_owned();
-    name.push(".tmp");
-    let tmp = path.with_file_name(name);
-    tokio::fs::write(&tmp, text).await?;
-    tokio::fs::rename(&tmp, path).await
 }
 
 struct SettingsInterface {
