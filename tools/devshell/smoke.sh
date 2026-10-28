@@ -289,7 +289,7 @@ else
 fi
 
 "$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
-wait_for "a volume OSD shows in a 300 px notch" "$FIND shown('nokta-osd') && width() === 300" 5
+wait_for "a volume OSD shows in a 300 px notch, without a glow" "$FIND shown('nokta-osd') && width() === 300 && one('nokta-glow').opacity === 0" 5
 "$HERE/shot.sh" smoke-osd > /dev/null
 wait_for "the OSD goes away" "$FIND !shown('nokta-osd') && width() === 180" 10
 "$HERE/osd.sh" level audio-volume-muted-symbolic 0
@@ -330,11 +330,11 @@ wait_for "the clock comes back when the timer stops" "$FIND shown('nokta-clock')
 wait_for "a countdown replaces the clock, with its progress line" \
     "$FIND shown('nokta-timer') && !shown('nokta-clock') && /^0:0[0-3]$/.test(one('nokta-timer').text) && shown('nokta-progress-line')" 5
 "$HERE/shot.sh" smoke-countdown > /dev/null
-wait_for "a finished countdown alerts with its label" \
-    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke eggs' && one('nokta-osd-detail').text === 'Timer done'" 10
+wait_for "a finished countdown alerts with its label, and glows" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke eggs' && one('nokta-osd-detail').text === 'Timer done' && one('nokta-glow').opacity > 0" 10
 sleep 0.4
 "$HERE/shot.sh" smoke-countdown-done > /dev/null
-wait_for "the clock comes back after the alert" "$FIND shown('nokta-clock') && !shown('nokta-osd')" 15
+wait_for "the clock comes back after the alert, without the glow" "$FIND shown('nokta-clock') && !shown('nokta-osd') && one('nokta-glow').opacity === 0" 15
 
 # A live activity takes the clock's place and gets a row in the panel; its
 # end shows like a device alert.

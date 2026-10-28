@@ -57,3 +57,15 @@ export function stepSpring(state: SpringState, target: number, dtMs: number, par
 export function settled(state: SpringState, target: number): boolean {
     return Math.abs(state.value - target) < SETTLED_PX && Math.abs(state.velocity) < SETTLED_PX_PER_S;
 }
+
+/**
+ * The velocity, in px per second, that pushes a spring resting at `width`
+ * past it by `fraction` of it before it swings back. The spring is linear,
+ * so the peak grows with the kick: one unit kick through stepSpring gives
+ * the scale, with the same integration error as the notch's frames.
+ */
+export function kickVelocity(width: number, params: SpringParams, fraction: number): number {
+    let state: SpringState = { value: 0, velocity: 1 };
+    while (state.velocity > 0) state = stepSpring(state, 0, SUBSTEP_MS, params);
+    return state.value > 0 ? (fraction * width) / state.value : 0;
+}
