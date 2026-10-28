@@ -82,6 +82,15 @@ export function pageHeight(count: number, searching: boolean): number {
     return (searching ? SEARCH_HEIGHT + SEARCH_SPACING : 0) + listHeight(count);
 }
 
+/** A copy that is one address and nothing else, like `https://…` or `www.…`. */
+const ADDRESS = /^(?:[a-z][a-z0-9+.-]*:\/\/|www\.)\S+$/i;
+
+/** A row's icon: a picture, a link for a copied address, else text. */
+export function entryIcon(entry: ClipboardEntry): 'nokta-image' | 'nokta-link' | 'nokta-text' {
+    if (entry.kind === 'image') return 'nokta-image';
+    return ADDRESS.test(entry.preview.trim()) ? 'nokta-link' : 'nokta-text';
+}
+
 /** What a row says, as the search reads it. */
 export const entryText = (entry: ClipboardEntry): string =>
     entry.kind === 'image' ? `Picture · ${entry.preview}` : entry.preview;

@@ -5,6 +5,7 @@ import {
     ageLabel,
     captureKind,
     entriesFrom,
+    entryIcon,
     filterEntries,
     listHeight,
     pageHeight,
@@ -113,4 +114,13 @@ test('the search row adds its height to the page', () => {
     assert.equal(pageHeight(3, false), listHeight(3));
     assert.equal(pageHeight(3, true), SEARCH_HEIGHT + 4 + listHeight(3));
     assert.equal(pageHeight(0, true), SEARCH_HEIGHT + 4 + listHeight(0));
+});
+
+test('a row shows a link for a copied address, a picture for an image and text otherwise', () => {
+    assert.equal(entryIcon(entry('1', 'text', 'https://nokta.io/docs')), 'nokta-link');
+    assert.equal(entryIcon(entry('2', 'text', '  http://localhost:8080 ')), 'nokta-link');
+    assert.equal(entryIcon(entry('3', 'text', 'www.gnome.org')), 'nokta-link');
+    assert.equal(entryIcon(entry('4', 'text', 'see https://nokta.io for more')), 'nokta-text');
+    assert.equal(entryIcon(entry('5', 'text', 'hello')), 'nokta-text');
+    assert.equal(entryIcon(entry('6', 'image', '640 × 480')), 'nokta-image');
 });
