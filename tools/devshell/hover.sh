@@ -13,13 +13,27 @@ case "${1:-on}" in
     off) Y=700 ;;
     *) echo "usage: $0 [on|off] [MONITOR]" >&2; exit 2 ;;
 esac
-shell_eval "
+# Moves the pointer DX pixels right of the notch's center. Uses the shell's
+# own monitor list: Meta's get_monitor_geometry() reads as zero wide from GJS
+# on GNOME 49 and later.
+move() {
+    OUT=$(shell_eval "
 const Clutter = imports.gi.Clutter;
 const seat = $SEAT_JS;
 global._noktaPointer ??= seat.create_virtual_device(Clutter.InputDeviceType.POINTER_DEVICE);
-const index = ${2:-global.display.get_primary_monitor()};
-const monitor = global.display.get_monitor_geometry(index);
+const monitor = Main.layoutManager.monitors[${MONITOR:-Main.layoutManager.primaryIndex}];
 global._noktaPointer.notify_absolute_motion(global.get_current_time() * 1000,
-    monitor.x + monitor.width / 2, monitor.y + $Y);
+    monitor.x + monitor.width / 2 + $1, monitor.y + $Y);
 'moved'
-" > /dev/null
+")
+    case "$OUT" in
+        *moved*) ;;
+        *) echo "hover.sh: $OUT" >&2; exit 1 ;;
+    esac
+}
+MONITOR=${2:-}
+# A second motion a moment later: GNOME 51 updates hover only once the stage
+# picks again.
+move 1
+sleep 0.1
+move 0

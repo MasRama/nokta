@@ -12,11 +12,7 @@ mkdir -p "$ROOT/build/shots"
 gdbus call --session --dest org.gnome.Shell.Screenshot --object-path /org/gnome/Shell/Screenshot \
     --method org.gnome.Shell.Screenshot.Screenshot false false "$OUT" > /dev/null
 MONITORS=$(shell_eval "
-const d = global.display;
-JSON.stringify([...Array(d.get_n_monitors()).keys()].map((i) => {
-    const g = d.get_monitor_geometry(i);
-    return [g.x, g.y, g.width];
-}))")
+JSON.stringify(Main.layoutManager.monitors.map((m) => [m.x, m.y, m.width]))")
 python3 - "$OUT" "$ROOT/build/shots/$1-notch" "$MONITORS" <<'PY'
 import re
 import sys
