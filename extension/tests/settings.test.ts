@@ -11,8 +11,10 @@ import {
     DEFAULT_LYRICS,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
+    DEFAULT_WEATHER,
     lyricsFrom,
     notificationsFrom,
+    weatherFrom,
     timerFrom,
 } from '../src/features/settings/logic/parse.js';
 
@@ -143,4 +145,14 @@ test('activity settings from table', () => {
     assert.deepEqual(activitiesFrom({ stale_minutes: 90 }), { staleMinutes: 90 });
     assert.equal(behaviorFrom({}).liveActivities, true);
     assert.equal(behaviorFrom({ live_activities: false }).liveActivities, false);
+});
+
+test('weather settings from table', () => {
+    assert.deepEqual(DEFAULT_WEATHER, { enabled: true, location: '', units: 'celsius' });
+    assert.deepEqual(weatherFrom({ enabled: false, location: 'Jakarta', units: 'fahrenheit' }), {
+        enabled: false,
+        location: 'Jakarta',
+        units: 'fahrenheit',
+    });
+    assert.deepEqual(weatherFrom({ location: 3 }), DEFAULT_WEATHER);
 });

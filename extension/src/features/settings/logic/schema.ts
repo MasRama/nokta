@@ -1,4 +1,12 @@
-import { activitiesFrom, appearanceFrom, behaviorFrom, lyricsFrom, notificationsFrom, timerFrom } from './parse.js';
+import {
+    activitiesFrom,
+    appearanceFrom,
+    behaviorFrom,
+    lyricsFrom,
+    notificationsFrom,
+    timerFrom,
+    weatherFrom,
+} from './parse.js';
 
 /**
  * Every row of the settings window, in order. Adding a setting is one line
@@ -14,7 +22,7 @@ export type RowKind =
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' };
 
-export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities';
+export type Table = 'appearance' | 'behavior' | 'lyrics' | 'timer' | 'notifications' | 'activities' | 'weather';
 
 export interface Row {
     table: Table;
@@ -59,6 +67,14 @@ const behavior = (key: string, title: string, kind: RowKind, subtitle?: string):
 
 const timer = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'timer',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const weather = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'weather',
     key,
     title,
     kind,
@@ -167,6 +183,25 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: 'Weather',
+                rows: [
+                    weather('enabled', 'Show the weather', bool(), 'Next to the date when the notch opens'),
+                    weather(
+                        'location',
+                        'Location',
+                        text(),
+                        'A city like Jakarta, or coordinates like -6.2,106.8; asks open-meteo.com',
+                    ),
+                    weather('units', 'Units', {
+                        type: 'choice',
+                        options: [
+                            { value: 'celsius', label: 'Celsius' },
+                            { value: 'fahrenheit', label: 'Fahrenheit' },
+                        ],
+                    }),
+                ],
+            },
+            {
                 title: 'Music',
                 rows: [
                     behavior('show_lyrics', 'Show lyrics', bool()),
@@ -259,6 +294,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     timer: timerFrom,
     notifications: notificationsFrom,
     activities: activitiesFrom,
+    weather: weatherFrom,
 };
 
 const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());

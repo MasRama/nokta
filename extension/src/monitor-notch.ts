@@ -51,6 +51,8 @@ type Drawn = NotchMode | 'panel' | 'osd' | 'notification';
 /** What the idle panel shows and does; owned by the session. */
 export interface PanelSource {
     content(): PanelContent;
+    /** The panel just opened. */
+    opened(): void;
     openNotifications(): void;
     toggleFocus(): void;
 }
@@ -258,6 +260,12 @@ export class MonitorNotch {
         this.applyIndicator();
     }
 
+    /** The weather beside the date changed. */
+    onWeather(): void {
+        if (this.destroyed) return;
+        if (this.drawn === 'panel') this.refreshPanel();
+    }
+
     onLyrics(): void {
         if (this.destroyed) return;
         if (!this.lyricsAvailable()) this.setLyricsOpen(false);
@@ -403,7 +411,10 @@ export class MonitorNotch {
         this.drawn = mode;
         if (mode !== 'expanded') this.setLyricsOpen(false);
         // The panel's rows give its height, so draw it before sizing.
-        if (mode === 'panel') this.refreshPanel();
+        if (mode === 'panel') {
+            this.sources.panel.opened();
+            this.refreshPanel();
+        }
         const [width, height] = this.sizeFor(mode);
         const tall = (drawn: Drawn) => drawn === 'expanded' || drawn === 'panel' || drawn === 'notification';
         const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';

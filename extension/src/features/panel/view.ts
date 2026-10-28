@@ -17,10 +17,21 @@ export interface PanelActivity {
     elapsed: string;
 }
 
+/** The weather beside the date. */
+export interface PanelWeather {
+    icon: string;
+    /** Like `31°`. */
+    temperature: string;
+    /** Shown dimmed, like `Jakarta · 33° / 25°`. */
+    detail: string;
+}
+
 /** What the idle panel shows, worked out by the session when it opens. */
 export interface PanelContent {
     /** Today, like `Wednesday, 28 October`, in the user's language. */
     date: string;
+    /** Null hides the weather. */
+    weather: PanelWeather | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
     activities: readonly PanelActivity[];
     notifications: string;
@@ -136,17 +147,54 @@ class ActivityRow {
     }
 }
 
-/** The open notch while nothing plays: the date, live activities, then notifications and focus. */
+/** Today's weather at the end of the date line: icon, temperature, then the place and range dimmed. */
+class WeatherBox {
+    readonly actor: St.BoxLayout;
+    private readonly icon: St.Icon;
+    private readonly temperature: St.Label;
+    private readonly detail: St.Label;
+
+    constructor() {
+        this.icon = new St.Icon({ style_class: 'nokta-panel-weather-icon', y_align: Clutter.ActorAlign.CENTER });
+        this.temperature = new St.Label({
+            style_class: 'nokta-panel-weather-temperature',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.detail = new St.Label({ style_class: 'nokta-panel-weather-detail', y_align: Clutter.ActorAlign.CENTER });
+        this.detail.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        // St CSS ignores opacity.
+        this.detail.opacity = 150;
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-weather', visible: false });
+        this.actor.add_child(this.icon);
+        this.actor.add_child(this.temperature);
+        this.actor.add_child(this.detail);
+    }
+
+    show(weather: PanelWeather | null): void {
+        this.actor.visible = weather !== null;
+        if (!weather) return;
+        this.icon.gicon = new Gio.ThemedIcon({ name: weather.icon });
+        this.temperature.text = weather.temperature;
+        this.detail.text = weather.detail;
+    }
+}
+
+/** The open notch while nothing plays: the date and weather, live activities, then notifications and focus. */
 export class IdlePanel {
     readonly actor: St.BoxLayout;
     private readonly date: St.Label;
+    private readonly weather = new WeatherBox();
     private readonly activities: ActivityRow[] = [];
     private readonly notifications: PanelButton;
     private readonly focus: PanelButton;
 
     constructor(handlers: PanelHandlers) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-panel' }));
-        this.date = new St.Label({ style_class: 'nokta-panel-date' });
+        this.date = new St.Label({ style_class: 'nokta-panel-date', x_expand: true, y_align: Clutter.ActorAlign.CENTER });
+        this.date.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        const heading = new St.BoxLayout({ style_class: 'nokta-panel-heading' });
+        heading.add_child(this.date);
+        heading.add_child(this.weather.actor);
         this.notifications = new PanelButton('preferences-system-notifications-symbolic', () =>
             handlers.openNotifications(),
         );
@@ -154,7 +202,7 @@ export class IdlePanel {
         const buttons = new St.BoxLayout({ style_class: 'nokta-panel-buttons' });
         buttons.add_child(this.notifications.actor);
         buttons.add_child(this.focus.actor);
-        this.actor.add_child(this.date);
+        this.actor.add_child(heading);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
             const row = new ActivityRow();
             this.activities.push(row);
@@ -165,6 +213,7 @@ export class IdlePanel {
 
     show(content: PanelContent): void {
         this.date.text = content.date;
+        this.weather.show(content.weather);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.notifications.text = content.notifications;
         this.focus.text = content.focus;

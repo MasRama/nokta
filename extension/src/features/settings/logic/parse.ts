@@ -109,6 +109,21 @@ export const DEFAULT_ACTIVITIES: Readonly<ActivitiesSettings> = {
     staleMinutes: 30,
 };
 
+/** io.nokta.Settings1.Weather in camelCase. */
+export interface WeatherSettings {
+    enabled: boolean;
+    /** A place name or `latitude,longitude`; empty for no weather. */
+    location: string;
+    /** `celsius` or `fahrenheit`. */
+    units: string;
+}
+
+export const DEFAULT_WEATHER: Readonly<WeatherSettings> = {
+    enabled: true,
+    location: '',
+    units: 'celsius',
+};
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
 };
@@ -157,3 +172,4 @@ export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRIC
 export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);
 export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(raw, DEFAULT_ACTIVITIES);
+export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);

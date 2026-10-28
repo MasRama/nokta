@@ -46,6 +46,7 @@ import {
     TimerClient,
     wantsQuiet,
 } from './features/timer/index.js';
+import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type PanelSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
@@ -76,6 +77,7 @@ class Session {
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly timer = new TimerClient((phase) => this.onTimerFinished(phase));
     private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
+    private readonly weather = new WeatherClient();
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
     private readonly focusShortcut: FocusShortcut;
@@ -85,6 +87,7 @@ class Session {
     private readonly lyricsId: number;
     private readonly timerId: number;
     private readonly activitiesId: number;
+    private readonly weatherId: number;
     private timerTickId = 0;
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
@@ -98,6 +101,7 @@ class Session {
     private restoreMessageList: Restore | null = null;
     private readonly panel: PanelSource = {
         content: () => this.panelContent(),
+        opened: () => this.weather.refresh(),
         openNotifications: () => {
             this.restoreMessageList?.();
             this.restoreMessageList = openMessageList();
@@ -116,6 +120,7 @@ class Session {
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
         this.timerId = this.timer.onChanged(() => this.onTimer());
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
+        this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onWeather()));
         this.focusToggle = new FocusToggle({
             start: (phase) => this.timer.start(phase),
             pause: () => this.timer.pause(),
@@ -143,11 +148,13 @@ class Session {
         this.lyrics.disconnect(this.lyricsId);
         this.timer.disconnect(this.timerId);
         this.activities.disconnect(this.activitiesId);
+        this.weather.disconnect(this.weatherId);
         this.stopTimerTick();
         this.media.destroy();
         this.lyrics.destroy();
         this.timer.destroy();
         this.activities.destroy();
+        this.weather.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.focusShortcut.destroy();
@@ -194,6 +201,7 @@ class Session {
             this.lyrics.attach(connection, cancellable),
             this.timer.attach(connection, cancellable),
             this.activities.attach(connection, cancellable),
+            this.weather.attach(connection, cancellable),
         ]);
         if (!cancellable.is_cancelled()) this.devices.attach(connection);
     }
@@ -206,6 +214,7 @@ class Session {
         this.lyrics.detach();
         this.timer.detach();
         this.activities.detach();
+        this.weather.detach();
         this.devices.detach();
     }
 
@@ -371,6 +380,7 @@ class Session {
     private panelContent(): PanelContent {
         return {
             date: GLib.DateTime.new_now_local().format('%A, %-d %B') ?? '',
+            weather: this.weather.line(),
             activities: this.panelActivities(),
             notifications: notificationsLabel(notificationCount()),
             focus: focusButtonLabel(this.timer.snapshot(), this.settings.timer.focusMinutes),

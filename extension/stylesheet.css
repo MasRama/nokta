@@ -191,6 +191,29 @@
     font-weight: bold;
 }
 
+.nokta-panel-heading {
+    spacing: 12px;
+}
+
+.nokta-panel-weather {
+    spacing: 6px;
+}
+
+.nokta-panel-weather-icon {
+    icon-size: 16px;
+}
+
+.nokta-panel-weather-temperature {
+    font-size: 15px;
+    font-weight: bold;
+    font-feature-settings: "tnum";
+}
+
+.nokta-panel-weather-detail {
+    font-size: 12px;
+    font-feature-settings: "tnum";
+}
+
 .nokta-panel-buttons {
     spacing: 8px;
 }
