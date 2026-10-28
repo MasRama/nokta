@@ -264,6 +264,44 @@ wait_for "the clock comes back when the shelf is empty" \
     "$FIND shown('nokta-clock') && !any('nokta-shelf-badge') && $HELPER.get_frame_rect().x === -10000" 10 \
     "$FIND const r = $HELPER.get_frame_rect(); JSON.stringify([shown('nokta-clock'), any('nokta-shelf-badge'), any('nokta-shelf-row'), [r.x, r.y, r.width, r.height], Math.round(one('nokta-body').height), global.get_pointer().slice(0, 2)])"
 
+# A screenshot shows as a preview with buttons instead of its banner. The
+# fake one is made the way GNOME makes it; GNOME's screenshot UI names the
+# file a moment after the notification, and only then can it go on the shelf.
+echo smoke > "$STATE/files/smoke-shot.png"
+js "import('resource:///org/gnome/shell/ui/messageTray.js').then((MT) => {
+const { GLib, St, Cogl } = imports.gi;
+const pixels = new GLib.Bytes(new Uint8Array(160 * 90 * 4).fill(180));
+const content = St.ImageContent.new_with_preferred_size(160, 90);
+try {
+    content.set_bytes(global.stage.context.get_backend().get_cogl_context(), pixels, Cogl.PixelFormat.RGBA_8888, 160, 90, 640);
+} catch {
+    content.set_bytes(pixels, Cogl.PixelFormat.RGBA_8888, 160, 90, 640);
+}
+const source = new MT.Source({ title: 'Screenshot', iconName: 'screenshot-recorded-symbolic' });
+Main.messageTray.add(source);
+const n = new MT.Notification({ source, title: 'Screenshot captured', body: 'You can paste the image from the clipboard.', gicon: content, isTransient: true });
+n.addAction('Show in Files', () => {});
+source.addNotification(n);
+}); true" > /dev/null
+SHOT_BUTTONS="find(Main.layoutManager.uiGroup, 'nokta-screenshot-button').map((b) => b.mapped).join()"
+wait_for "a screenshot shows as a preview with Open and Show in Files" \
+    "$FIND shown('nokta-screenshot') && $SHOT_BUTTONS === 'true,true,false'" 10 \
+    "$FIND JSON.stringify([shown('nokta-screenshot'), $SHOT_BUTTONS])"
+js "Main.screenshotUI.emit('screenshot-taken', imports.gi.Gio.File.new_for_path('$STATE/files/smoke-shot.png')); true" > /dev/null
+wait_for "the saved file adds Keep on shelf" "$FIND $SHOT_BUTTONS === 'true,true,true'" 5
+"$HERE/shot.sh" smoke-screenshot > /dev/null
+js "$FIND find(Main.layoutManager.uiGroup, 'nokta-screenshot-button')[2].emit('clicked', 1); true" > /dev/null
+i=0
+until shelf_items | grep -q "smoke-shot.png', 'image-x-generic'"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "Keep on shelf did not put the screenshot on the shelf: $(shelf_items)"
+    sleep 0.2
+done
+ok "Keep on shelf puts the screenshot on the shelf"
+wait_for "the preview closes" "$FIND !shown('nokta-screenshot')" 5
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
+wait_for "the clock comes back when the shelf is cleared" "$FIND shown('nokta-clock')" 10
+
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10
