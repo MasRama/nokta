@@ -8,6 +8,7 @@ use zbus::names::BusName;
 use zbus::Connection;
 
 use super::{nokta_iface, RunOptions, Services, BUS_NAME, USER_AGENT};
+use crate::features::activities;
 use crate::features::devices;
 use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
@@ -48,6 +49,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     lyrics::dbus::serve(&conn, services.lyrics.clone()).await?;
     settings::dbus::serve(&conn, services.config.clone(), services.config_file.clone()).await?;
     devices::dbus::serve(&conn, alerts).await?;
+    activities::dbus::serve(&conn, services.activities).await?;
     let super::Timer {
         commands,
         state,

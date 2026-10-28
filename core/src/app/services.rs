@@ -1,4 +1,5 @@
-//! The services that run on every system: settings, lyrics and the timer.
+//! The services that run on every system: settings, lyrics, the timer and
+//! live activities.
 //! Media players and device alerts are system sources; the platform part of
 //! `app` starts them and hands the media state in.
 
@@ -7,6 +8,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, watch};
 
 use super::USER_AGENT;
+use crate::features::activities;
 use crate::features::lyrics::{self, cache::Cache, lrclib, LyricsState};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
@@ -19,6 +21,7 @@ pub struct Services {
     pub config_file: PathBuf,
     pub lyrics: watch::Receiver<LyricsState>,
     pub timer: Timer,
+    pub activities: activities::service::Handle,
     /// Watches config.toml as long as the services live.
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
@@ -56,6 +59,7 @@ impl Services {
         );
 
         let (commands, state, finished) = timer::service::spawn(timer_lengths(config.clone()));
+        let activities = activities::service::spawn(stale_us(config.clone()));
 
         Services {
             config,
@@ -66,6 +70,7 @@ impl Services {
                 state,
                 finished,
             },
+            activities,
             _config_watcher: config_watcher,
         }
     }
@@ -83,6 +88,11 @@ fn timer_lengths(config: watch::Receiver<Config>) -> impl Fn() -> Lengths + Send
             sessions_before_long_break: timer.sessions_before_long_break,
         }
     }
+}
+
+/// How long an activity may go without an update, from `[activities]`.
+fn stale_us(config: watch::Receiver<Config>) -> impl Fn() -> i64 + Send + Sync + 'static {
+    move || i64::from(config.borrow().activities.stale_minutes) * 60_000_000
 }
 
 /// Follows `lyrics.enabled` from the config.

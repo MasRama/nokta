@@ -15,6 +15,7 @@ pub struct Config {
     pub lyrics: LyricsConfig,
     pub timer: TimerConfig,
     pub notifications: NotificationsConfig,
+    pub activities: ActivitiesConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -74,6 +75,8 @@ pub struct Behavior {
     pub clock_format: String,
     /// Dots for the camera, microphone and screen sharing.
     pub privacy_dots: bool,
+    /// Live activities from apps and scripts in the notch.
+    pub live_activities: bool,
 }
 
 impl Default for Behavior {
@@ -92,6 +95,7 @@ impl Default for Behavior {
             show_clock: true,
             clock_format: "system".into(),
             privacy_dots: true,
+            live_activities: true,
         }
     }
 }
@@ -155,6 +159,19 @@ impl Default for NotificationsConfig {
             duration_ms: 5000,
             show_body: true,
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(default)]
+pub struct ActivitiesConfig {
+    /// An activity not updated for this long ends.
+    pub stale_minutes: u32,
+}
+
+impl Default for ActivitiesConfig {
+    fn default() -> Self {
+        ActivitiesConfig { stale_minutes: 30 }
     }
 }
 
@@ -280,6 +297,12 @@ impl Config {
             self.notifications.duration_ms,
             1000,
             30000,
+        )?;
+        check_range(
+            "activities.stale_minutes",
+            self.activities.stale_minutes,
+            1,
+            1440,
         )?;
         if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
             return Err(ConfigError::invalid(format!(
@@ -426,6 +449,7 @@ impl Behavior {
             ("show_clock", self.show_clock.into()),
             ("clock_format", (&self.clock_format).into()),
             ("privacy_dots", self.privacy_dots.into()),
+            ("live_activities", self.live_activities.into()),
         ]
     }
 }
@@ -454,6 +478,12 @@ impl NotificationsConfig {
             ("duration_ms", self.duration_ms.into()),
             ("show_body", self.show_body.into()),
         ]
+    }
+}
+
+impl ActivitiesConfig {
+    pub fn entries(&self) -> Entries {
+        vec![("stale_minutes", self.stale_minutes.into())]
     }
 }
 

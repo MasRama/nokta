@@ -166,6 +166,21 @@ fn notifications_defaults_and_limits() {
 }
 
 #[test]
+fn activities_defaults_and_limits() {
+    assert_eq!(Config::default().activities.stale_minutes, 30);
+    assert!(Config::default().behavior.live_activities);
+    for bad in ["stale_minutes = 0", "stale_minutes = 1441"] {
+        let err = parse(&format!("[activities]\n{bad}\n")).unwrap_err();
+        assert!(err.message.contains("activities.stale_minutes"), "{err}");
+    }
+    let c = parse("[activities]\nstale_minutes = 1440\n").unwrap();
+    assert_eq!(c.activities.stale_minutes, 1440);
+    let map = entries(Config::default().activities.entries());
+    assert_eq!(map.len(), 1);
+    assert_eq!(map["stale_minutes"], SettingValue::Uint(30));
+}
+
+#[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
     let keys: Vec<_> = map.keys().copied().collect();
@@ -279,6 +294,7 @@ fn behavior_entries_have_all_keys() {
             "clock_format",
             "close_delay_ms",
             "device_alerts",
+            "live_activities",
             "move_clock",
             "open_delay_ms",
             "osd_duration_ms",
@@ -356,6 +372,8 @@ mod edit {
 
         let text = set_key("", "notifications", "in_notch", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().notifications.in_notch);
+        let text = set_key("", "activities", "stale_minutes", &Value::Uint(5)).unwrap();
+        assert_eq!(parse(&text).unwrap().activities.stale_minutes, 5);
 
         let text = set_key("", "lyrics", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().lyrics.enabled);

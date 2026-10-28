@@ -374,3 +374,62 @@ async fn timer_starts_pauses_and_stops_over_dbus() {
         .unwrap_err();
     assert!(err.to_string().contains("InvalidArgs"), "{err}");
 }
+
+type ActivityRow = (String, String, String, String, f64, i64);
+
+#[tokio::test]
+async fn activities_set_and_end_over_dbus() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Activities").await;
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let activities = zbus::Proxy::new(&conn, NAME, "/io/nokta/Activities", "io.nokta.Activities1")
+        .await
+        .unwrap();
+    let mut ended = activities.receive_signal("Ended").await.unwrap();
+
+    let _: () = activities
+        .call("Set", &("build", "cargo build", "nokta-core", "", 0.25))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "Activities").await;
+    let rows: Vec<ActivityRow> = changed["Activities"]
+        .try_clone()
+        .unwrap()
+        .try_into()
+        .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        (
+            rows[0].0.as_str(),
+            rows[0].1.as_str(),
+            rows[0].2.as_str(),
+            rows[0].4
+        ),
+        ("build", "cargo build", "nokta-core", 0.25)
+    );
+    assert!(rows[0].5 > 0, "start time is monotonic µs");
+
+    let _: () = activities
+        .call("End", &("build", false, "exit code 101"))
+        .await
+        .unwrap();
+    let signal = tokio::time::timeout(Duration::from_secs(5), ended.next())
+        .await
+        .expect("Ended in time")
+        .unwrap();
+    let (id, title, success, message, elapsed): (String, String, bool, String, i64) =
+        signal.body().deserialize().unwrap();
+    assert_eq!(
+        (id.as_str(), title.as_str(), success, message.as_str()),
+        ("build", "cargo build", false, "exit code 101")
+    );
+    assert!(elapsed >= 0);
+
+    let err = activities
+        .call::<_, _, ()>("Set", &("x", "", "", "", -1.0))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("InvalidArgs"), "{err}");
+}

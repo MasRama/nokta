@@ -16,6 +16,7 @@ const TS_TYPE = {
     d: 'number',
     'a(xs)': 'Array<[number, string]>',
     'a(ss)': 'Array<[string, string]>',
+    'a(ssssdx)': 'Array<[string, string, string, string, number, number]>',
     'a{sv}': 'Record<string, unknown>',
 };
 
