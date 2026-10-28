@@ -32,6 +32,7 @@ show_clock = true        # the time in the notch while nothing plays
 clock_format = "system"  # "24h", "12h", or "system" to follow GNOME's setting
 privacy_dots = true      # a green dot while the camera is on, orange while the microphone or screen is used
 live_activities = true   # show builds, downloads and other activities that apps and the nokta command report
+file_shelf = true        # drop files on the notch to park them, then drag them out again
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)

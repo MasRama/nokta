@@ -1,0 +1,29 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Shelf. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Shelf1">
+    <!--
+      Parks files on the shelf. Only file:// URIs of files and folders that
+      exist are taken; a file already on the shelf is skipped. The shelf keeps
+      at most 30 items and drops the oldest to make room. Nothing is copied.
+    -->
+    <method name="Add">
+      <arg name="uris" type="as" direction="in"/>
+    </method>
+    <!-- Takes one item off the shelf. An unknown URI is ignored. -->
+    <method name="Remove">
+      <arg name="uri" type="s" direction="in"/>
+    </method>
+    <!-- Takes every item off the shelf. -->
+    <method name="Clear"/>
+    <!--
+      The parked items, oldest first: URI, display name and an icon name from
+      the icon theme ("folder", "image-x-generic", "application-x-generic", ...).
+      An item leaves on its own when its file is deleted or moved away.
+    -->
+    <property name="Items" type="a(sss)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+  </interface>
+</node>

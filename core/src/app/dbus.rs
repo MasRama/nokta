@@ -13,6 +13,7 @@ use crate::features::devices;
 use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings;
+use crate::features::shelf;
 use crate::features::timer;
 use crate::features::weather;
 use crate::shared::http;
@@ -57,6 +58,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     devices::dbus::serve(&conn, alerts).await?;
     activities::dbus::serve(&conn, services.activities).await?;
     weather::dbus::serve(&conn, services.weather).await?;
+    shelf::dbus::serve(&conn, services.shelf).await?;
     let super::Timer {
         commands,
         state,
