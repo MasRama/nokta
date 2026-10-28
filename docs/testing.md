@@ -7,7 +7,7 @@ hand before a release and after any change to the extension's UI.
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
 `npm run check` (types and the contract check) and `npm run lint` also run in
@@ -450,7 +450,9 @@ the shelf.
 
 Send one with `. tools/devshell/env.sh`, then
 `gdbus call --session --dest org.gnome.Shell --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.Notify APP "uint32 0" "" TITLE BODY "@as []" "@a{sv} {}" "int32 -1"`
-(add `"@a{sv} {'urgency': <byte 2>}"` instead of `{}` for a critical one).
+(add `"@a{sv} {'urgency': <byte 2>}"` instead of `{}` for a critical one,
+and `"@as ['default', 'Open', 'reply', 'Reply', 'archive', 'Archive']"`
+instead of `"@as []"` for buttons).
 
 - [ ] A notification shows in the notch, 420 px wide and two lines tall:
       the title, then the body as plain text (markup removed, `&amp;` as
@@ -459,6 +461,15 @@ Send one with `. tools/devshell/env.sh`, then
       pointer leaves.
 - [ ] A click opens it like GNOME's banner: it leaves the message list and
       the notch closes.
+- [ ] With actions, up to three buttons show in one row under the two
+      lines, and the notch is 32 px taller (92 px). A button runs its
+      action and the notch closes; the `default` action is the click on
+      the notification, not a button.
+- [ ] × at the right closes it in the notch; it stays in GNOME's message
+      list.
+- [ ] A second and third from the same app while one shows replace it and
+      show `2`, `3` on the icon (`9+` after nine); one from another app
+      shows no count.
 - [ ] A volume OSD during a notification shows over it; the notification
       comes back when the OSD ends.
 - [ ] A critical notification uses GNOME's banner.
