@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import {
     outputIcon,
+    outputIds,
     outputLabel,
     probeOutputIds,
     sortedOutputs,
@@ -44,4 +45,9 @@ test('probing finds outputs past gaps in the ids, up to a margin after the last 
     assert.deepEqual(probeOutputIds((id) => present.has(id), 0, 40), [2, 5, 40]);
     // Starting from the active output's id reaches further.
     assert.deepEqual(probeOutputIds((id) => present.has(id), 90, 40), [2, 5, 40, 90]);
+});
+
+test('outputs announced before Quick Settings lists them still count, once each', () => {
+    assert.deepEqual(outputIds([3], [5, 3]), [3, 5]);
+    assert.deepEqual(outputIds([], []), []);
 });
