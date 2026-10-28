@@ -47,15 +47,18 @@ notifications. Hover over it to open it.
   battery is low or full.
 - **Home.** When nothing plays, hovering opens home: the date and the
   weather (see [Settings](#settings)), the next event from GNOME's calendar, running
-  activities, the files on the shelf, quick toggles for Do Not Disturb,
+  activities, timers, the files on the shelf, quick toggles for Do Not Disturb,
   Caffeine (the screen stays on) and the dark style, and tiles for the
-  notification list, focus, the clipboard and Settings. While a song plays,
+  notification list, focus, timers, the clipboard and Settings. While a song plays,
   the grid button at the player's top right opens it.
 - **Notifications** show in the notch instead of GNOME's banner. Hover to
   keep one open, click it to open the app.
 - **Focus timer.** Start it from Quick Settings or with
   <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>. It counts down in the notch
   and starts a break when the session ends.
+- **[Timers, stopwatches and alarms](#timers-stopwatches-and-alarms).**
+  Start one from home or with `nokta timer 10m Tea`; it counts in the
+  notch and rings when it is done.
 - **[Live activities](#live-activities).** A build, a download or a backup
   shows in the notch while it runs, and then says how it ended.
 - **[File shelf](#file-shelf).** Drop files on the notch to keep them
@@ -134,6 +137,25 @@ also call `io.nokta.Activities1` on the session bus (see
 [ARCHITECTURE.md](ARCHITECTURE.md)). The newest activity shows in the
 closed notch, with its percentage when it reports one. Hover to see up to
 three.
+
+### Timers, stopwatches and alarms
+
+Home's **Timer** tile starts a countdown of 1 to 30 minutes, or a
+stopwatch. The `nokta` command starts any length, a label and alarms:
+
+```sh
+nokta timer 10m Tea            # also 1h30m, 45s, or 25 for minutes
+nokta stopwatch Run
+nokta alarm 07:30 Wake up      # the next 07:30 on your clock, today or tomorrow
+nokta timer clear              # removes them all
+```
+
+The closed notch shows the countdown that ends first, else a stopwatch.
+An alarm shows there in its last hour. Home lists them with buttons to
+pause and remove. When a countdown or an alarm ends, the notch says so with
+a sound (`[timer] sound`) and stays up twice as long as other alerts. Up to
+six run at once. They run in the daemon and follow the wall clock, so an
+alarm due while the laptop slept rings when it wakes.
 
 ### File shelf
 
@@ -269,7 +291,7 @@ locked.
 | `break_minutes` | `5` | Break that starts after a focus session, 0 to 60; `0` means no break |
 | `long_break_minutes` | `15` | Long break, 1 to 60 |
 | `sessions_before_long_break` | `4` | Focus sessions before a long break, 0 to 12; `0` means never |
-| `sound` | `true` | Play a sound when a focus session or a break ends |
+| `sound` | `true` | Play a sound when a focus session, a break, a countdown or an alarm ends |
 | `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
 | `shortcut` | `"<Super><Alt>f"` | Keys that start focus or stop the timer, written like GNOME's keyboard shortcuts (`<Control><Shift>F12`); `""` means no shortcut |
 

@@ -72,12 +72,14 @@ docs/               manual test checklist, screenshots
   `notifications`, `panel`, `activities`, `weather`, `calendar`, `shelf` and `clipboard` depend on no other feature;
   `extension.ts` shows device, timer and activity alerts through the OSD
   row. The closed notch has one spot for extra information, where the clock
-  or the equalizer would be: `shared/logic/indicator.ts` picks the timer,
-  else the newest live activity, else the shelf, and `monitor-notch.ts` puts it there.
+  or the equalizer would be: `shared/logic/indicator.ts` picks the focus
+  timer, else a countdown, stopwatch or alarm, else the newest live
+  activity, else the shelf, and `monitor-notch.ts` puts it there.
   `monitor-notch.ts` also puts the shelf's row in the panel and in the open
   player, since `panel` cannot import `shelf`. In the same way it opens the
-  clipboard's list as a page over home (`panel/page.ts` draws the header
-  with the back arrow) when home's `Clipboard` tile is clicked. While the
+  clipboard's list, or the timer's presets, as a page over home
+  (`panel/page.ts` draws the header with the back arrow) when home's
+  `Clipboard` or `Timer` tile is clicked. While the
   clipboard's search field is open, `monitor-notch.ts` holds the keyboard
   with `Main.pushModal` on the notch, keeps it open as if the pointer were
   on it, and lets go on Enter, Escape, a click outside or the notch
@@ -157,6 +159,12 @@ docs/               manual test checklist, screenshots
   extension does the GNOME-only parts of focus mode: it turns notification
   banners off during focus (and back on), and binds the shortcut through
   its one GSettings key, which it copies from `config.toml`.
+  Beside it, a pure `Clocks` (`clocks.rs`) keeps up to six countdowns,
+  stopwatches and alarms. They take the wall clock rather than the
+  monotonic one, so time spent suspended counts; the task sleeps until the
+  next one is due, and logind's `PrepareForSleep(false)` on the system bus
+  wakes it after a resume. `nokta alarm HH:MM` turns the local time into a
+  Unix time in the CLI (`cli/local_time.rs`, libc's `mktime`).
 - **activities** keeps the live activities that apps and scripts report
   (`Set`, `End`): at most 8, newest first. A pure `Activities` takes `now`;
   the task around it sleeps until the oldest one goes stale
@@ -232,7 +240,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text) |
 | `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
-| `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`; signal `Finished(phase s)` |
+| `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Clocks` `a(sssbxxxx)` (id, kind, label, running, duration, value and monotonic timestamp in µs, alarm time in Unix µs); `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`, `AddCountdown(label s, duration_us x) → id s`, `AddStopwatch(label s) → id s`, `AddAlarm(label s, unix_us x) → id s`, `PauseClock(id s)`, `ResumeClock(id s)`, `RemoveClock(id s)`, `ClearClocks()`; signals `Finished(phase s)`, `ClockDone(id s, kind s, label s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
 | `io.nokta.Weather1` | `/io/nokta/Weather` | `Status` (`s`), `Place` (`s`), `Temperature`, `High`, `Low` (`d`), `Units` (`s`), `Condition` (`s`), `IsDay` (`b`); `Refresh()` |
 | `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first), `Thumbnails` (`a{ss}`: uri to a PNG path, for items with a picture); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
@@ -282,8 +290,9 @@ How both sides stay honest:
 - Timers are kept to a minimum: a minute-aligned clock while idle, the
   equalizer while collapsed and playing, a 250 ms tick plus one exact lyric
   timeout while expanded and playing, one timeout per second while a
-  focus timer runs, and one per second while the open panel shows a live
-  activity. Nothing runs while paused.
+  focus timer or the closed notch's countdown or stopwatch runs (one
+  timeout for an alarm's last hour), and one per second while the open
+  panel shows a live activity or a clock. Nothing runs while paused.
 - Privacy dots follow the `visible` property of GNOME's own camera,
   microphone and screen sharing indicators; no polling, no extra D-Bus.
 - **The file shelf.** GNOME Shell cannot take a drop from an app or start a
