@@ -137,7 +137,9 @@ docs/               manual test checklist, screenshots
   (`SelectPlayer`) stays active until another one starts playing or it
   stops. Because MPRIS does not signal
   position changes, it publishes a position snapshot (position, monotonic
-  timestamp, rate) and the extension extrapolates from it.
+  timestamp, rate) and the extension extrapolates from it. The sound output
+  switcher lives in the extension's `media` and only uses GNOME's own mixer
+  (the one Quick Settings uses); the daemon is not involved.
 - **lyrics** looks up synced lyrics when the track changes: the user's own
   `.lrc` file (next to a local song, or `Artist - Title.lrc` in the lyrics
   folder), then the cache, then LRCLIB. `clean.rs` turns browser and YouTube

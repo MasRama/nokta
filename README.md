@@ -34,7 +34,9 @@ notifications. Hover over it to open it.
 
 - **Music.** The cover, play controls, a seek bar, and shuffle and repeat
   when the player has them. With several players open, the arrows under the
-  title (or scrolling over the cover) switch between them.
+  title (or scrolling over the cover) switch between them. The speaker
+  button at the player's top right switches the sound output, for example
+  from the speakers to your headphones.
 - **Synced lyrics, karaoke style.** The line being sung lights up from left
   to right, with the next line under it. Click it to follow the lyrics
   around it. Lyrics come from [LRCLIB](https://lrclib.net), or from your
