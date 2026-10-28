@@ -4,6 +4,7 @@ import Pango from 'gi://Pango';
 import St from 'gi://St';
 
 import { setVertical } from '../../shared/compat.js';
+import { TintedButton } from '../../shared/button.js';
 import { withAlpha } from '../../shared/logic/color.js';
 
 /** A live activity, as one panel row shows it. */
@@ -53,54 +54,6 @@ export interface PanelHandlers {
     openCalendar(): void;
     openNotifications(): void;
     toggleFocus(): void;
-}
-
-const BUTTON_ALPHA = 0.12;
-const BUTTON_HOVER_ALPHA = 0.22;
-
-/** A rounded button with an icon and a label, tinted from the foreground color. */
-class PanelButton {
-    readonly actor: St.Button;
-    private readonly label: St.Label;
-    private foreground = '#ffffff';
-    private readonly hoverId: number;
-    private readonly clickId: number;
-
-    constructor(iconName: string, onClick: () => void) {
-        const box = new St.BoxLayout({ style_class: 'nokta-panel-button-box' });
-        box.add_child(
-            new St.Icon({
-                style_class: 'nokta-panel-button-icon',
-                gicon: new Gio.ThemedIcon({ name: iconName }),
-                y_align: Clutter.ActorAlign.CENTER,
-            }),
-        );
-        this.label = new St.Label({ style_class: 'nokta-panel-button-label', y_align: Clutter.ActorAlign.CENTER });
-        box.add_child(this.label);
-        this.actor = new St.Button({ style_class: 'nokta-panel-button', child: box, x_expand: true });
-        this.hoverId = this.actor.connect('notify::hover', () => this.paint());
-        this.clickId = this.actor.connect('clicked', onClick);
-        this.paint();
-    }
-
-    set text(text: string) {
-        this.label.text = text;
-    }
-
-    setForeground(color: string): void {
-        this.foreground = color;
-        this.paint();
-    }
-
-    destroy(): void {
-        this.actor.disconnect(this.hoverId);
-        this.actor.disconnect(this.clickId);
-    }
-
-    private paint(): void {
-        const alpha = this.actor.hover ? BUTTON_HOVER_ALPHA : BUTTON_ALPHA;
-        this.actor.style = `background-color: ${withAlpha(this.foreground, alpha)};`;
-    }
 }
 
 /** One live activity: icon, title, detail and elapsed time, and a thin bar. */
@@ -235,8 +188,8 @@ export class IdlePanel {
     private readonly weather = new WeatherBox();
     private readonly event: EventRow;
     private readonly activities: ActivityRow[] = [];
-    private readonly notifications: PanelButton;
-    private readonly focus: PanelButton;
+    private readonly notifications: TintedButton;
+    private readonly focus: TintedButton;
 
     constructor(handlers: PanelHandlers) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-panel' }));
@@ -246,10 +199,10 @@ export class IdlePanel {
         heading.add_child(this.date);
         heading.add_child(this.weather.actor);
         this.event = new EventRow(() => handlers.openCalendar());
-        this.notifications = new PanelButton('preferences-system-notifications-symbolic', () =>
+        this.notifications = new TintedButton('nokta-panel-button', 'preferences-system-notifications-symbolic', () =>
             handlers.openNotifications(),
         );
-        this.focus = new PanelButton('alarm-symbolic', () => handlers.toggleFocus());
+        this.focus = new TintedButton('nokta-panel-button', 'alarm-symbolic', () => handlers.toggleFocus());
         const buttons = new St.BoxLayout({ style_class: 'nokta-panel-buttons' });
         buttons.add_child(this.notifications.actor);
         buttons.add_child(this.focus.actor);
