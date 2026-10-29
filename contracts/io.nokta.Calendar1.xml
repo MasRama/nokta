@@ -1,0 +1,18 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Calendar. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Calendar1">
+    <!--
+      The meeting link (Google Meet, Zoom, Teams, Webex, Jitsi or Whereby,
+      https only) of an event in GNOME's calendar, read from Evolution Data
+      Server. event_id is the shell's id, "<source uid>\n<event uid>\n<recurrence id>".
+      Empty when the event has none or cannot be read. Answers are kept for
+      10 minutes.
+    -->
+    <method name="MeetingLink">
+      <arg name="event_id" type="s" direction="in"/>
+      <arg name="link" type="s" direction="out"/>
+    </method>
+  </interface>
+</node>

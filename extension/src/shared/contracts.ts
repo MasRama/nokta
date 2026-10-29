@@ -18,6 +18,7 @@ export const PATHS = {
     Timer1: '/io/nokta/Timer',
     Activities1: '/io/nokta/Activities',
     Weather1: '/io/nokta/Weather',
+    Calendar1: '/io/nokta/Calendar',
     Shelf1: '/io/nokta/Shelf',
     Clipboard1: '/io/nokta/Clipboard',
 } as const;
@@ -175,6 +176,11 @@ export interface WeatherProps {
 /** io.nokta.Weather1 methods and the D-Bus signature of their arguments. */
 export const WEATHER_METHODS = {
     Refresh: '',
+} as const;
+
+/** io.nokta.Calendar1 has no properties; MeetingLink answers with the link or empty. */
+export const CALENDAR_METHODS = {
+    MeetingLink: 's',
 } as const;
 
 export interface ShelfProps {
