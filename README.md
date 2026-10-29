@@ -418,7 +418,10 @@ date menu, including online accounts), each with its time; the first also
 says how soon. A click opens your calendar app. Before an event starts the
 notch says `Standup in 5 min`, then the closed notch counts down in place of
 the clock (`5 min` ... `1 min`, then `Now` for 5 minutes), and at the start
-it says `Standup is starting`. All-day events are left out.
+it says `Standup is starting`. All-day events are left out. An event with a
+Google Meet, Zoom, Teams, Webex, Jitsi or Whereby link gets a *Join*
+button on its row and its reminder: it opens the meeting and ends the
+countdown.
 
 | Key | Default | What it does |
 |---|---|---|
@@ -470,6 +473,9 @@ it says `Standup is starting`. All-day events are left out.
   [Open-Meteo](https://open-meteo.com): a place name to find its
   coordinates, then the coordinates for the forecast. With
   `location = ""`, the default, it sends nothing.
+- **Calendar.** To find an event's meeting link, `noktad` reads that one
+  event from Evolution Data Server on your computer. It sends nothing
+  anywhere; the link opens only when you press Join.
 - **Clipboard.** The history never leaves your computer and is never
   written to disk, except small thumbnails of copied pictures in
   `$XDG_RUNTIME_DIR/nokta/clipboard/` (memory, readable only by you,
