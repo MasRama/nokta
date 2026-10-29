@@ -52,7 +52,7 @@ notifications. Hover over it to open it, or press
   their battery), when the charger is plugged in or out, and when the
   battery is low or full.
 - **Home.** When nothing plays, hovering opens home: the date and the
-  weather (see [Settings](#settings)), the next event from GNOME's calendar, running
+  weather (see [Settings](#settings)), the next events from GNOME's calendar, running
   activities, timers, the files on the shelf, quick toggles for Do Not Disturb,
   Caffeine (the screen stays on) and the dark style, and tiles for the
   notification list, focus, timers, the clipboard and Settings. While a song plays,
@@ -411,17 +411,21 @@ old, or 5 minutes after a failed request.
 </details>
 
 <details>
-<summary><code>[calendar]</code>: the next event and its reminder</summary>
+<summary><code>[calendar]</code>: the agenda, reminders and the countdown</summary>
 
-Home shows the next event from GNOME's calendar (the same events as the
-date menu, including online accounts), with its time and how soon. A click
-opens your calendar app. Before it starts the notch says `Standup in 5
-min`, and at the start `Standup is starting`. All-day events are left out.
+Home lists the next events from GNOME's calendar (the same events as the
+date menu, including online accounts), each with its time; the first also
+says how soon. A click opens your calendar app. Before an event starts the
+notch says `Standup in 5 min`, then the closed notch counts down in place of
+the clock (`5 min` ... `1 min`, then `Now` for 5 minutes), and at the start
+it says `Standup is starting`. All-day events are left out.
 
 | Key | Default | What it does |
 |---|---|---|
-| `enabled` | `true` | Show the next event and its reminders |
-| `reminder_minutes` | `5` | How long before an event to show it, 0 to 60; `0` shows only the start |
+| `enabled` | `true` | Show the next events and their reminders |
+| `agenda_size` | `3` | How many events home lists, 1 to 5 |
+| `reminder_minutes` | `5` | How long before an event to show it, 0 to 60; `0` shows only the start, with no countdown |
+| `countdown` | `true` | Count down to the next event on the closed notch, from its reminder until 5 minutes after it starts |
 
 </details>
 

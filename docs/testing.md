@@ -350,12 +350,18 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
 ### Calendar
 
 - [ ] The smoke test puts `Smoke standup` 5 minutes ahead in the date
-      menu's event source: the panel shows a calendar row, `Smoke standup`,
-      then its time and `in 6 min` dimmed, 28 px taller. Its reminder,
-      `Smoke standup in 5 min`, shows like a device alert.
+      menu's event source, and `Smoke review` and `Smoke retro` later: the
+      panel lists the three soonest first, `Smoke standup` with its time and
+      `in 6 min` dimmed, the others with their time, 28 px taller per row.
+      Its reminder, `Smoke standup in 5 min`, shows like a device alert,
+      then the closed notch shows a calendar icon and `5 min` instead of the
+      clock, counting down to `Now`.
+- [ ] `agenda_size = 1`: only the first row. `countdown = false`: the clock
+      stays after the reminder.
 - [ ] At the start time: `Smoke standup is starting` with its start and end.
-- [ ] An all-day event shows no row. `enabled = false`: no row and no
-      reminder. `reminder_minutes = 0`: only the start.
+- [ ] An all-day event shows no row. `enabled = false`: no row, no
+      reminder and no countdown. `reminder_minutes = 0`: only the start,
+      no countdown.
 - [ ] A click on the row opens the calendar app, or the date menu without
       one.
 - [ ] A real event from an online account in a real session *(real
