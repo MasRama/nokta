@@ -117,6 +117,13 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] **Expanded** (`hover.sh on`, wait more than `open_delay_ms`): cover,
       title, artists, lyric line, progress with elapsed and total time,
       previous / play-pause / next.
+- [ ] **Morph**: opening, the small cover grows into the big one in its
+      place, with a little overshoot; closing, it shrinks back into the
+      closed notch. The player's rows come in from the top, one after the
+      other. With a focus timer running and nothing playing
+      (`run.sh --no-player`, `timer.sh start focus`), opening home flies
+      the timer into the Focus tile. `morph = false` or GNOME's animations
+      off: a plain fade.
 - [ ] Expanded and paused: play icon instead of pause, time stops.
 - [ ] **Players** (`run.sh --players=2`): expanded shows the player's name
       with an arrow on each side under the artists; an arrow or a wheel
