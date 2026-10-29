@@ -401,14 +401,21 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
 
 - [ ] The smoke test puts `Smoke standup` 5 minutes ahead in the date
       menu's event source, and `Smoke review` and `Smoke retro` later: the
-      panel lists the three soonest first, `Smoke standup` with its time and
-      `in 6 min` dimmed, the others with their time, 28 px taller per row.
+      panel lists the three soonest first, each with its time first,
+      `Smoke standup` with `in 6 min` dimmed, 28 px taller per row.
       Its reminder, `Smoke standup in 5 min`, shows like a device alert,
       then the closed notch shows a calendar icon and `5 min` instead of the
       clock, counting down to `Now`.
 - [ ] `fake-eds.js` gives `Smoke standup` a Meet link: its row and its
       reminder show Join; Join on the row opens the link (kept by the smoke
       test, not opened), closes the notch and the clock comes back.
+- [ ] `fake-eds.js` colors the calendars of `Smoke standup` (green,
+      `#33D17A`) and `Smoke review` (purple, `rgb(192,97,203)`): their rows
+      have a strip in that color; `Smoke retro`, in no known calendar, in
+      the calendar tone.
+- [ ] Real events in calendars of different colors in a real session: each
+      row's strip has its calendar's color in GNOME Calendar or Evolution
+      *(real session)*.
 - [ ] A real event with a Meet or Zoom link in a real session: Join opens
       the browser or the Zoom app *(real session)*.
 - [ ] `agenda_size = 1`: only the first row. `countdown = false`: the clock

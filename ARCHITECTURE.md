@@ -262,14 +262,19 @@ docs/               manual test checklist, screenshots
   change, and on `Refresh()` once stale, one request at a time. A failed
   request keeps the last reading. With no location it sends nothing.
 - **calendar** finds the meeting link of an event the shell lists
-  (`MeetingLink(event_id)`). The shell's id names the calendar source, the
+  (`MeetingLink(event_id)`), and the color of its calendar
+  (`EventColor(event_id)`). The shell's id names the calendar source, the
   event and its recurrence; `eds.rs` opens that calendar on Evolution Data
   Server and reads the event's iCalendar text. `link.rs` is pure: it
   unfolds and unescapes the text and takes the first `https://` link on a
   meeting service (Meet, Zoom, Teams, Webex, Jitsi, Whereby) from
   `X-GOOGLE-CONFERENCE`, `CONFERENCE`, `URL`, `LOCATION`, then
-  `DESCRIPTION`. Answers, a link or none, are kept 10 minutes; EDS missing
-  or slow (5 s) gives none and is logged once.
+  `DESCRIPTION`. For the color, `eds.rs` lists EDS's sources
+  (`Sources5`, `GetManagedObjects`) and `color.rs`, also pure, reads the
+  source's `[Calendar] Color` as `#rrggbb` (Evolution's `#rrggbb` or
+  `#rrrrggggbbbb`, GNOME Calendar's `rgb()`). Answers, found or none, are
+  kept 10 minutes (links by event, colors by source); EDS missing or slow
+  (5 s) gives none and is logged once for each.
 - **shelf** keeps the files dropped on the notch (`Add`, `Remove`,
   `Clear`): only `file://` paths that exist, each once, at most 30 (the
   oldest goes). `model.rs` is pure; the service watches the folders that
@@ -334,7 +339,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Clocks` `a(sssbxxxx)` (id, kind, label, running, duration, value and monotonic timestamp in µs, alarm time in Unix µs); `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`, `AddCountdown(label s, duration_us x) → id s`, `AddStopwatch(label s) → id s`, `AddAlarm(label s, unix_us x) → id s`, `PauseClock(id s)`, `ResumeClock(id s)`, `RemoveClock(id s)`, `ClearClocks()`; signals `Finished(phase s)`, `ClockDone(id s, kind s, label s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
 | `io.nokta.Weather1` | `/io/nokta/Weather` | `Status` (`s`), `Place` (`s`), `Temperature`, `High`, `Low` (`d`), `Units` (`s`), `Condition` (`s`), `IsDay` (`b`); `Refresh()` |
-| `io.nokta.Calendar1` | `/io/nokta/Calendar` | `MeetingLink(event_id s) → link s` (empty when none) |
+| `io.nokta.Calendar1` | `/io/nokta/Calendar` | `MeetingLink(event_id s) → link s`, `EventColor(event_id s) → color s` (empty when none) |
 | `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first), `Thumbnails` (`a{ss}`: uri to a PNG path, for items with a picture); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
 | `io.nokta.Clipboard1` | `/io/nokta/Clipboard` | `Items` (`a(ssssbx)`: id, kind `text` or `image`, preview, thumbnail path, pinned, copied at in Unix µs, newest first), `Paused` (`b`); `Add(kind s, text s, image ay)`, `Get(id s) → (kind s, text s, image ay)`, `Pin(id s, pinned b)`, `Remove(id s)`, `Clear()` (keeps pinned entries), `SetPaused(paused b)` |
 
