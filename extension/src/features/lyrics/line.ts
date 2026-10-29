@@ -18,6 +18,8 @@ export interface LyricNow {
     text: string;
     /** The next line with words, or null after the last. */
     next: string | null;
+    /** The current line romanized, shown in the next line's place; null when it has none. */
+    romanized: string | null;
     /** The current line's index, to tell lines apart. */
     index: number;
     fraction: number;
@@ -27,7 +29,8 @@ export interface LyricNow {
 
 /**
  * The open player's lyric row: the current line, large and lighting up as
- * it is sung, and the next one under it, dimmed. A new line slides up into
+ * it is sung, and the next one under it, dimmed; a Korean or Japanese line
+ * has its romanization there instead. A new line slides up into
  * place. A click calls `onClick`.
  */
 export class LyricLine {
@@ -69,7 +72,9 @@ export class LyricLine {
         this.index = now.index;
         this.actor.show();
         this.current.show(now.text, now.index, now.fraction, now.msLeft, now.playing);
-        this.next.text = now.next ?? '';
+        this.next.text = now.romanized ?? now.next ?? '';
+        if (now.romanized === null) this.next.remove_style_class_name('nokta-lyric-romanized');
+        else this.next.add_style_class_name('nokta-lyric-romanized');
         if (!moved) return;
         this.box.remove_all_transitions();
         this.box.translation_y = SLIDE_PX;

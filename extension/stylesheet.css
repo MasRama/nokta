@@ -78,6 +78,12 @@
     font-weight: 600;
 }
 
+/* A Korean or Japanese line's romanization, in the next line's place. */
+.nokta-lyric-romanized {
+    font-weight: 500;
+    font-style: italic;
+}
+
 .nokta-progress {
     spacing: 8px;
 }
@@ -628,6 +634,11 @@
 .nokta-lyrics-current {
     font-size: 17px;
     font-weight: 700;
+}
+
+.nokta-lyrics-romanized {
+    font-weight: 500;
+    font-style: italic;
 }
 
 /* The lyrics view's timing row: −, the offset, +. */

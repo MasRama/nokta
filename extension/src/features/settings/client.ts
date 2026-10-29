@@ -13,16 +13,19 @@ import {
     DEFAULT_BEHAVIOR,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
+    DEFAULT_LYRICS,
     homeFrom,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_TIMER,
     notificationsFrom,
+    lyricsFrom,
     timerFrom,
     type Appearance,
     type Behavior,
     type CalendarSettings,
     type ClipboardSettings,
     type HomeSettings,
+    type Lyrics,
     type NotificationSettings,
     type TimerSettings,
 } from './logic/parse.js';
@@ -35,13 +38,14 @@ export interface PreparedPicture {
 }
 
 /**
- * The notch's appearance, behavior, timer, notification, calendar, clipboard and home settings from io.nokta.Settings1. Until the
+ * The notch's appearance, behavior, lyrics, timer, notification, calendar, clipboard and home settings from io.nokta.Settings1. Until the
  * daemon answers it holds the defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
 export class SettingsClient {
     appearance: Appearance = { ...DEFAULT_APPEARANCE };
     behavior: Behavior = { ...DEFAULT_BEHAVIOR };
+    lyrics: Lyrics = { ...DEFAULT_LYRICS };
     timer: TimerSettings = { ...DEFAULT_TIMER };
     notifications: NotificationSettings = { ...DEFAULT_NOTIFICATIONS };
     calendar: CalendarSettings = { ...DEFAULT_CALENDAR };
@@ -93,6 +97,7 @@ export class SettingsClient {
         if (!this.proxy) return;
         this.appearance = appearanceFrom(cached(this.proxy, 'Appearance'));
         this.behavior = behaviorFrom(cached(this.proxy, 'Behavior'));
+        this.lyrics = lyricsFrom(cached(this.proxy, 'Lyrics'));
         this.timer = timerFrom(cached(this.proxy, 'Timer'));
         this.notifications = notificationsFrom(cached(this.proxy, 'Notifications'));
         this.calendar = calendarFrom(cached(this.proxy, 'Calendar'));

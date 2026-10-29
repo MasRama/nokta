@@ -167,11 +167,16 @@ impl Default for Behavior {
 #[serde(default)]
 pub struct LyricsConfig {
     pub enabled: bool,
+    /// A Korean or Japanese line gets a romanized line under it.
+    pub romanize: bool,
 }
 
 impl Default for LyricsConfig {
     fn default() -> Self {
-        LyricsConfig { enabled: true }
+        LyricsConfig {
+            enabled: true,
+            romanize: true,
+        }
     }
 }
 
@@ -829,6 +834,9 @@ impl WeatherConfig {
 
 impl LyricsConfig {
     pub fn entries(&self) -> Entries {
-        vec![("enabled", self.enabled.into())]
+        vec![
+            ("enabled", self.enabled.into()),
+            ("romanize", self.romanize.into()),
+        ]
     }
 }

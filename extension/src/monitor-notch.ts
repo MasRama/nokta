@@ -17,6 +17,7 @@ import {
     LyricsSheet,
     lyricWindow,
     nextLyric,
+    romanize,
     SHEET_EXTRA_HEIGHT,
     SHEET_ROWS,
     visibleLyric,
@@ -1476,14 +1477,19 @@ export class MonitorNotch implements ShelfNotch {
         this.expanded.progress.update(position, snapshot.lengthUs, snapshot.canSeek);
         const playing = snapshot.playbackStatus === 'Playing';
         const progress = lineProgress(lyrics.lines, position, snapshot.rate);
+        const romanized = (line: string): string | null => (settings.lyrics.romanize ? romanize(line) : null);
         if (this.lyricsOpen) {
             this.lyricLine.show(null);
-            this.lyricsSheet.show(lyricWindow(lyrics.lines, position, SHEET_ROWS), progress, playing, lyrics.offsetMs);
+            const around = lyricWindow(lyrics.lines, position, SHEET_ROWS);
+            const current = around.rows[Math.floor(SHEET_ROWS / 2)];
+            this.lyricsSheet.show(around, progress, playing, lyrics.offsetMs, romanized(current));
             return;
         }
         const text = visibleLyric(lyrics.status, lyrics.lines, settings.behavior.showLyrics, position);
         this.lyricLine.show(
-            text === null ? null : { text, next: nextLyric(lyrics.lines, position), ...progress, playing },
+            text === null
+                ? null
+                : { text, next: nextLyric(lyrics.lines, position), romanized: romanized(text), ...progress, playing },
         );
     }
 
