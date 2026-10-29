@@ -356,6 +356,11 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       Its reminder, `Smoke standup in 5 min`, shows like a device alert,
       then the closed notch shows a calendar icon and `5 min` instead of the
       clock, counting down to `Now`.
+- [ ] `fake-eds.js` gives `Smoke standup` a Meet link: its row and its
+      reminder show Join; Join on the row opens the link (kept by the smoke
+      test, not opened), closes the notch and the clock comes back.
+- [ ] A real event with a Meet or Zoom link in a real session: Join opens
+      the browser or the Zoom app *(real session)*.
 - [ ] `agenda_size = 1`: only the first row. `countdown = false`: the clock
       stays after the reminder.
 - [ ] At the start time: `Smoke standup is starting` with its start and end.
