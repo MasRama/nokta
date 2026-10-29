@@ -175,7 +175,10 @@ class Session {
     private readonly openShortcut: Keybinding;
     private readonly call = new CallMonitor();
     private readonly recording = new ScreenRecording();
-    private readonly privacy = new PrivacyMonitor(() => this.onPrivacy());
+    private readonly privacy = new PrivacyMonitor(
+        () => this.onPrivacy(),
+        () => this.call.recording(),
+    );
     private readonly monitorsId: number;
     private readonly mediaId: number;
     private readonly outputsId: number;
@@ -292,7 +295,11 @@ class Session {
         this.meetingLinksId = this.meetingLinks.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
-        this.callId = this.call.onChanged(() => this.onLive());
+        // An app starting or stopping to record can leave GNOME's indicator as it is.
+        this.callId = this.call.onChanged(() => {
+            this.onPrivacy();
+            this.onLive();
+        });
         this.recordingId = this.recording.onChanged(() => this.onLive());
         this.call.setMicrophone(this.privacy.state().microphone);
         this.clipboardWatcher = new ClipboardWatcher(this.clipboard, () => this.settings.clipboard.enabled);

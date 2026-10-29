@@ -76,6 +76,12 @@ export interface Behavior {
     gestures: boolean;
 }
 
+/** io.nokta.Settings1.Media in camelCase. */
+export interface MediaSettings {
+    /** The bars follow the music, which noktad records while a player plays. */
+    realEqualizer: boolean;
+}
+
 /** io.nokta.Settings1.Lyrics in camelCase. */
 export interface Lyrics {
     enabled: boolean;
@@ -242,6 +248,10 @@ export const DEFAULT_HOME: Readonly<HomeSettings> = {
     tiles: ['notifications', 'focus', 'timer', 'clipboard', 'settings'],
 };
 
+export const DEFAULT_MEDIA: Readonly<MediaSettings> = {
+    realEqualizer: false,
+};
+
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
     romanize: true,
@@ -296,6 +306,7 @@ export function behaviorFrom(raw: unknown): Behavior {
     if (!OPEN_ON.includes(behavior.openOn)) behavior.openOn = DEFAULT_BEHAVIOR.openOn;
     return behavior;
 }
+export const mediaFrom = (raw: unknown): MediaSettings => fromTable(raw, DEFAULT_MEDIA);
 export const lyricsFrom = (raw: unknown): Lyrics => fromTable(raw, DEFAULT_LYRICS);
 export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT_TIMER);
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);

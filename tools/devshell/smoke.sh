@@ -230,6 +230,47 @@ fi
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 
+# With [media] real_equalizer on, noktad records what plays (pw-record) and
+# the bars follow it: a 100 Hz tone fills the first band and leaves the
+# others low, which the pattern never holds. The bars move only with GNOME's
+# animations on (off in CI). Nokta's own recording is no call, even when
+# GNOME shows its microphone indicator for it.
+if [ -S "$STATE/runtime/pipewire-0" ] && command -v pw-record > /dev/null 2>&1; then
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set media real_equalizer "<true>" > /dev/null
+    "$HERE/tone.sh" on
+    LEVELS="Main.extensionManager.lookup('nokta@nokta.io').stateObj.session.media.levels()"
+    wait_for "noktad's levels follow a 100 Hz tone" \
+        "const l = $LEVELS; l?.length === 4 && l[0] > 0.9 && l.slice(1).every((v) => v < 0.1)" 10 "JSON.stringify($LEVELS)"
+    if [ "$(js "imports.gi.St.Settings.get().enable_animations")" = true ]; then
+        BARS="find(Main.layoutManager.uiGroup, 'nokta-equalizer').find((a) => a.mapped)?.get_children().map((b) => b.scale_y)"
+        TONE_BARS="$FIND const b = $BARS; b?.length === 4 && b[0] > 0.9 && b.slice(1).every((s) => s < 0.3)"
+        wait_for "the bars follow the tone" "$TONE_BARS" 5 "$FIND JSON.stringify($BARS)"
+        sleep 0.5
+        [ "$(js "$TONE_BARS")" = true ] || fail "the bars left the tone: $(js "$FIND JSON.stringify($BARS)")"
+        ok "the bars stay with the tone"
+    else
+        echo "smoke: skip: GNOME's animations are off, so the bars stay still"
+    fi
+    "$HERE/shot.sh" smoke-equalizer > /dev/null
+    echo "smoke: note: GNOME's microphone indicator while Nokta records: $(js "Main.panel.statusArea.quickSettings._volumeInput?._indicator.visible")"
+    [ "$(js "$FIND !find(Main.layoutManager.uiGroup, 'nokta-call').some((a) => a.mapped) && find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').every((d) => !d.mapped)")" = true ] ||
+        fail "Nokta's own recording shows as a call"
+    ok "Nokta's own recording is no call"
+    "$HERE/tone.sh" off
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set media real_equalizer "<false>" > /dev/null
+    i=0
+    until ! timeout 3 env XDG_RUNTIME_DIR="$STATE/runtime" pw-link -i | grep -q "^nokta-levels:"; do
+        i=$((i + 1))
+        [ "$i" -le 25 ] || fail "noktad still records with the setting off"
+        sleep 0.2
+    done
+    ok "with the setting off noktad stops recording"
+else
+    echo "smoke: skip: the devshell has no PipeWire, so no bars that follow the music"
+fi
+
 # The open shortcut (a real key press through GNOME's keybinding) opens the
 # focused monitor's notch and takes the keyboard with Main.pushModal: the
 # first button has the focus, Tab and Shift+Tab move it, menus still open
@@ -481,8 +522,13 @@ QS="Main.panel.statusArea.quickSettings"
 wait_for "GNOME has camera and microphone indicators" \
     "!!($QS._camera?._indicator && $QS._volumeInput?._indicator)" 10
 js "$QS._camera._indicator.visible = true; $QS._volumeInput._indicator.visible = true; true" > /dev/null
-wait_for "the camera and microphone show two dots" \
-    "$FIND find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').filter((d) => d.mapped).length === 2" 5
+# With GNOME's mixer up (the devshell's PipeWire) Nokta also asks it who
+# records, so that its own recording for the bars is no microphone dot.
+# Nobody records here: the microphone indicator shown by hand gets no dot.
+# The fake call below shows the microphone for real.
+if [ -S "$STATE/runtime/pulse/native" ]; then DOTS=1; else DOTS=2; fi
+wait_for "the camera shows a dot, the microphone one only for an app recording" \
+    "$FIND find(Main.layoutManager.uiGroup, 'nokta-privacy-dot').filter((d) => d.mapped).length === $DOTS" 5
 "$HERE/shot.sh" smoke-privacy > /dev/null
 js "$QS._camera._indicator.visible = false; $QS._volumeInput._indicator.visible = false; true" > /dev/null
 wait_for "the dots go away" \

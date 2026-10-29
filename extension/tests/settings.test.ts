@@ -9,12 +9,14 @@ import {
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
+    DEFAULT_MEDIA,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
     lyricsFrom,
+    mediaFrom,
     notificationsFrom,
     weatherFrom,
     calendarFrom,
@@ -241,6 +243,13 @@ test('weather settings from table', () => {
         units: 'fahrenheit',
     });
     assert.deepEqual(weatherFrom({ location: 3 }), DEFAULT_WEATHER);
+});
+
+test('media settings from table', () => {
+    assert.deepEqual(DEFAULT_MEDIA, { realEqualizer: false });
+    assert.deepEqual(mediaFrom({ real_equalizer: true }), { realEqualizer: true });
+    assert.deepEqual(mediaFrom({ real_equalizer: 'yes' }), DEFAULT_MEDIA);
+    assert.deepEqual(mediaFrom(undefined), DEFAULT_MEDIA);
 });
 
 test('clipboard settings from table', () => {

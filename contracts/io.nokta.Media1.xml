@@ -113,5 +113,14 @@
     <method name="SetLoopStatus">
       <arg name="status" type="s" direction="in"/>
     </method>
+    <!--
+      About 25 times a second while [media] real_equalizer is on and a player
+      plays: how loud 60-250, 250-1000, 1000-4000 and 4000-8000 Hz are in
+      what plays, each 0 to 1 against a peak that follows the music down.
+      While it is silent, zeros twice a second.
+    -->
+    <signal name="Levels">
+      <arg name="levels" type="ad"/>
+    </signal>
   </interface>
 </node>

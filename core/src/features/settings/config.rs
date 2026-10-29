@@ -12,6 +12,7 @@ pub const DEFAULT_CONFIG_TOML: &str = include_str!("default_config.toml");
 pub struct Config {
     pub appearance: Appearance,
     pub behavior: Behavior,
+    pub media: MediaConfig,
     pub lyrics: LyricsConfig,
     pub timer: TimerConfig,
     pub notifications: NotificationsConfig,
@@ -161,6 +162,14 @@ impl Default for Behavior {
             gestures: true,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct MediaConfig {
+    /// The bars follow the music: noktad records what plays (`pw-record`)
+    /// while a player plays.
+    pub real_equalizer: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -829,6 +838,12 @@ impl WeatherConfig {
             ("location", (&self.location).into()),
             ("units", (&self.units).into()),
         ]
+    }
+}
+
+impl MediaConfig {
+    pub fn entries(&self) -> Entries {
+        vec![("real_equalizer", self.real_equalizer.into())]
     }
 }
 

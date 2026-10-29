@@ -34,6 +34,8 @@ impl Daemon {
                 forecast: "http://127.0.0.1:9".into(),
                 geocoding: "http://127.0.0.1:9".into(),
             },
+            // Tests that want the bars to follow the music bring their own.
+            recorder: "/nonexistent/pw-record".into(),
         }
     }
 

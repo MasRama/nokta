@@ -1,9 +1,11 @@
 //! `io.nokta.Media1` at `/io/nokta/Media`.
 
-use tokio::sync::watch;
+use tokio::sync::{mpsc, watch};
+use zbus::object_server::SignalEmitter;
 use zbus::{fdo, Connection};
 
 use super::control::Controller;
+use super::levels::BANDS;
 use super::{LoopStatus, MediaState};
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
 
@@ -14,6 +16,7 @@ pub async fn serve(
     conn: &Connection,
     state: watch::Receiver<MediaState>,
     control: Controller,
+    mut levels: mpsc::Receiver<[f64; BANDS]>,
 ) -> zbus::Result<()> {
     conn.object_server()
         .at(
@@ -25,6 +28,15 @@ pub async fn serve(
         )
         .await?;
     spawn_change_forwarder(conn.clone(), PATH, INTERFACE, state, properties);
+    let conn = conn.clone();
+    tokio::spawn(async move {
+        let emitter = SignalEmitter::new(&conn, PATH).expect("static object path is valid");
+        while let Some(levels) = levels.recv().await {
+            if let Err(err) = MediaInterface::levels(&emitter, &levels).await {
+                tracing::debug!(%err, "cannot emit the levels");
+            }
+        }
+    });
     Ok(())
 }
 
@@ -103,6 +115,9 @@ impl MediaInterface {
         })?;
         self.control.set_loop_status(status).await.map_err(failed)
     }
+
+    #[zbus(signal)]
+    async fn levels(emitter: &SignalEmitter<'_>, levels: &[f64]) -> zbus::Result<()>;
 
     #[zbus(property)]
     fn available(&self) -> bool {

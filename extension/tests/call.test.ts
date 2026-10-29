@@ -5,6 +5,7 @@ import {
     CALL_COLORS,
     callDetail,
     callingStream,
+    microphoneInUse,
     callText,
     callTitle,
     msUntilElapsedSecond,
@@ -22,6 +23,22 @@ test('the call is the first app recording that is not a sound settings window', 
     assert.equal(callingStream([settings, firefox, stream('discord')]), firefox);
     assert.equal(callingStream([settings, pavucontrol]), null);
     assert.equal(callingStream([]), null);
+});
+
+test("nokta's own recording for the bars is not a call", () => {
+    const nokta = stream('io.nokta.Nokta', 'Nokta');
+    const zoom = stream('us.zoom.Zoom', 'ZOOM VoiceEngine');
+    assert.equal(callingStream([nokta]), null);
+    assert.equal(callingStream([nokta, zoom]), zoom);
+});
+
+test("the microphone is in use when GNOME's indicator shows for someone else", () => {
+    const nokta = stream('io.nokta.Nokta', 'Nokta');
+    assert.equal(microphoneInUse(true, [nokta]), false);
+    assert.equal(microphoneInUse(true, [nokta, stream('discord')]), true);
+    assert.equal(microphoneInUse(false, [stream('discord')]), false);
+    // Before GNOME's mixer is ready only its indicator says.
+    assert.equal(microphoneInUse(true, null), true);
 });
 
 test('a call is named after its app, else the stream, else the microphone', () => {

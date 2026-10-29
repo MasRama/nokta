@@ -3,7 +3,10 @@ import GLib from 'gi://GLib';
 import Graphene from 'gi://Graphene';
 import St from 'gi://St';
 
-import { BAR_COUNT, barLevels } from './logic/equalizer.js';
+import { BAR_COUNT, barLevels, barsFrom, easeBars } from './logic/equalizer.js';
+
+/** The music's band levels from 0 to 1 when noktad hears them, else null. */
+export type LevelSource = () => readonly number[] | null;
 
 /** Heights the bars rest at while paused. */
 const REST = [0.45, 0.75, 0.55, 0.35];
@@ -12,18 +15,21 @@ const REST = [0.45, 0.75, 0.55, 0.35];
 const STEP_MS = 83;
 
 /**
- * Four bars stepped like a level meter while music plays: a playback
- * indicator, not a spectrum. Easing them would make the compositor redraw at
- * the full frame rate for as long as music plays (measured: ~24 % of a core
- * for gnome-shell); stepping costs a fraction of that. Still when not
- * playing or when GNOME animations are off.
+ * Four bars stepped like a level meter while music plays. They follow the
+ * music's bands when noktad records it ([media] real_equalizer), else a
+ * pattern: a playback indicator, not a spectrum. Easing them with Clutter
+ * would make the compositor redraw at the full frame rate for as long as
+ * music plays (measured: ~24 % of a core for gnome-shell); stepping costs a
+ * fraction of that, so the levels are eased by the steps themselves. Still
+ * when not playing or when GNOME animations are off.
  */
 export class Equalizer {
     readonly actor: St.BoxLayout;
     private readonly bars: St.Widget[] = [];
+    private shown: readonly number[] = REST;
     private timerId = 0;
 
-    constructor() {
+    constructor(private readonly levels: LevelSource) {
         this.actor = new St.BoxLayout({ style_class: 'nokta-equalizer', y_align: Clutter.ActorAlign.CENTER });
         for (let i = 0; i < BAR_COUNT; i++) {
             const bar = new St.Widget({
@@ -45,7 +51,8 @@ export class Equalizer {
         const animate = playing && St.Settings.get().enable_animations;
         if (animate && !this.timerId) {
             this.timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, STEP_MS, () => {
-                this.show(barLevels(GLib.get_monotonic_time() / 1000));
+                const levels = this.levels();
+                this.show(levels ? easeBars(this.shown, barsFrom(levels)) : barLevels(GLib.get_monotonic_time() / 1000));
                 return GLib.SOURCE_CONTINUE;
             });
         } else if (!animate && this.timerId) {
@@ -61,6 +68,7 @@ export class Equalizer {
     }
 
     private show(levels: readonly number[]): void {
+        this.shown = levels;
         this.bars.forEach((bar, i) => (bar.scale_y = levels[i]));
     }
 }

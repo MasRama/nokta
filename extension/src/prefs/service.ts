@@ -11,6 +11,7 @@ export type Tables = Partial<Record<Table, unknown>>;
 const PROPERTIES: Record<Table, string> = {
     appearance: 'Appearance',
     behavior: 'Behavior',
+    media: 'Media',
     lyrics: 'Lyrics',
     timer: 'Timer',
     notifications: 'Notifications',

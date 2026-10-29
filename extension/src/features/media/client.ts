@@ -6,17 +6,29 @@ import { PATHS } from '../../shared/contracts.js';
 import { cached, callMethod, makeProxy } from '../../shared/dbus.js';
 import { Listeners } from '../../shared/listeners.js';
 import { EMPTY_SNAPSHOT, snapshotFrom, type MediaSnapshot } from './logic/snapshot.js';
+import { freshLevels } from './logic/equalizer.js';
 import type { LoopStatus } from './logic/loop.js';
 
 /** io.nokta.Media1: the active player's state and its controls. */
 export class MediaClient {
     private proxy: Gio.DBusProxy | null = null;
     private changedId = 0;
+    private signalId = 0;
+    private lastLevels: number[] | null = null;
+    private levelsAtMs = 0;
     private current: MediaSnapshot = { ...EMPTY_SNAPSHOT };
     private readonly listeners = new Listeners();
 
     snapshot(): MediaSnapshot {
         return this.current;
+    }
+
+    /**
+     * The music's band levels from noktad's Levels signal while they keep
+     * coming, else null. Read on each equalizer step, so they notify no one.
+     */
+    levels(): readonly number[] | null {
+        return freshLevels(this.lastLevels, this.levelsAtMs, GLib.get_monotonic_time() / 1000);
     }
 
     onChanged(callback: () => void): number {
@@ -32,6 +44,14 @@ export class MediaClient {
         this.detach();
         this.proxy = proxy;
         this.changedId = proxy.connect('g-properties-changed', () => this.read());
+        this.signalId = proxy.connect(
+            'g-signal',
+            (_proxy, _sender: string | null, signal: string, parameters: GLib.Variant) => {
+                if (signal !== 'Levels') return;
+                this.lastLevels = parameters.deepUnpack<[number[]]>()[0];
+                this.levelsAtMs = GLib.get_monotonic_time() / 1000;
+            },
+        );
         this.read();
     }
 
@@ -39,9 +59,12 @@ export class MediaClient {
     detach(): void {
         if (this.proxy) {
             this.proxy.disconnect(this.changedId);
+            this.proxy.disconnect(this.signalId);
             this.proxy = null;
             this.changedId = 0;
+            this.signalId = 0;
         }
+        this.lastLevels = null;
         this.current = { ...EMPTY_SNAPSHOT };
         this.listeners.emit();
     }

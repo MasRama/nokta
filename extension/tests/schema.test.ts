@@ -6,6 +6,7 @@ import {
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_LYRICS,
+    DEFAULT_MEDIA,
     DEFAULT_NOTIFICATIONS,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
@@ -19,6 +20,7 @@ const camel = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) =
 const DEFAULTS: Record<string, Record<string, unknown>> = {
     appearance: { ...DEFAULT_APPEARANCE },
     behavior: { ...DEFAULT_BEHAVIOR },
+    media: { ...DEFAULT_MEDIA },
     lyrics: { ...DEFAULT_LYRICS },
     timer: { ...DEFAULT_TIMER },
     notifications: { ...DEFAULT_NOTIFICATIONS },
@@ -103,6 +105,7 @@ test('variant_types_follow_the_daemon', () => {
     assert.equal(type('behavior', 'open_on'), 's');
     assert.equal(type('behavior', 'open_shortcut'), 's');
     assert.equal(type('lyrics', 'enabled'), 'b');
+    assert.equal(type('media', 'real_equalizer'), 'b');
     assert.equal(type('timer', 'shortcut'), 's');
     assert.equal(type('home', 'tiles'), 'as');
 });

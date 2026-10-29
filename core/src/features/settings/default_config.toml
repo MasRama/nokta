@@ -53,6 +53,9 @@ file_shelf = true        # drop files on the notch to park them, then drag them 
 screenshot_preview = true # after a screenshot, a preview with Open, Show in Files and Keep on shelf (needs [notifications] in_notch)
 fullscreen_alerts = "important" # over a fullscreen app: "important" (low battery, timers, alarms, reminders), "all" or "none"
 
+[media]
+real_equalizer = false   # bars that follow the music; records what plays, so GNOME may show its microphone indicator
+
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)
 romanize = true          # a romanized line under Korean and Japanese lines, done offline

@@ -64,6 +64,7 @@ fn run() -> anyhow::Result<()> {
             forecast: url_from_env("NOKTA_OPEN_METEO_URL", &defaults.forecast),
             geocoding: url_from_env("NOKTA_OPEN_METEO_GEOCODING_URL", &defaults.geocoding),
         },
+        recorder: "pw-record".to_owned(),
     };
     tokio::runtime::Builder::new_current_thread()
         .enable_all()

@@ -56,7 +56,11 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     conn.object_server()
         .at(nokta_iface::PATH, nokta_iface::NoktaInterface)
         .await?;
-    media::dbus::serve(&conn, media_state, control).await?;
+    let config = services.config.clone();
+    let levels = media::capture::spawn(options.recorder, media_state.clone(), move || {
+        config.borrow().media.real_equalizer
+    });
+    media::dbus::serve(&conn, media_state, control, levels).await?;
     lyrics::dbus::serve(&conn, services.lyrics).await?;
     settings::dbus::serve(
         &conn,

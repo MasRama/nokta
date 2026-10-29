@@ -30,3 +30,14 @@ pub async fn wait_for<T: Clone + std::fmt::Debug>(
         ),
     }
 }
+
+/// Waits until `pred` holds, checking every 50 ms, failing after `limit`.
+pub async fn wait_until(limit: Duration, mut pred: impl FnMut() -> bool) {
+    tokio::time::timeout(limit, async {
+        while !pred() {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await
+    .expect("the condition in time");
+}
