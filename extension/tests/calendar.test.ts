@@ -3,14 +3,15 @@ import { test } from 'node:test';
 
 import {
     agendaEvents,
+    agendaWhen,
     alarmAlert,
     countdownEvent,
     countdownLabel,
     countdownWindow,
     countdownChangeMs,
+    eventColor,
     eventAlert,
     eventsFrom,
-    eventTime,
     nextAlarm,
     nextEvent,
     soonLabel,
@@ -60,9 +61,20 @@ test('the next event is the first one that has not ended', () => {
     assert.equal(nextEvent([], at(8)), null);
 });
 
-test('the time says tomorrow for an event after today; the source holds no later ones', () => {
-    assert.equal(eventTime(at(10, 30), at(8), hhmm), '10:30');
-    assert.equal(eventTime(at(9, 0, 29), at(20), hhmm), 'Tomorrow 09:00');
+test('an agenda row has its time apart; the first says how soon, a later day says tomorrow', () => {
+    assert.deepEqual(agendaWhen(at(10, 25), at(10), true, hhmm), { time: '10:25', detail: 'in 25 min' });
+    assert.deepEqual(agendaWhen(at(11), at(10), false, hhmm), { time: '11:00', detail: '' });
+    assert.deepEqual(agendaWhen(at(9, 0, 29), at(10), false, hhmm), { time: '09:00', detail: 'Tomorrow' });
+    assert.deepEqual(agendaWhen(at(9, 0, 29), at(20), true, hhmm), { time: '09:00', detail: 'Tomorrow · in 13 h' });
+});
+
+test('an event color is used only as six hex digits', () => {
+    assert.equal(eventColor('#62a0ea'), '#62a0ea');
+    assert.equal(eventColor('#62A0EA'), '#62A0EA');
+    assert.equal(eventColor('#fa0'), null);
+    assert.equal(eventColor('red; background: url(x)'), null);
+    assert.equal(eventColor(''), null);
+    assert.equal(eventColor(null), null);
 });
 
 test('soon counts minutes up, then hours', () => {

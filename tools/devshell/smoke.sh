@@ -780,18 +780,25 @@ wait_for "the clock comes back after the update" "$FIND shown('nokta-clock') && 
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a
-# Meet link: its row and its reminder get a Join button.
+# Meet link: its row and its reminder get a Join button. It also colors the
+# calendars of the first two: each row has a strip in its calendar's color,
+# the third one in the calendar tone.
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
-js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke-review', date: new Date(now + 60 * 60000), end: new Date(now + 90 * 60000), summary: 'Smoke review' }, { id: ['smoke-src', 'smoke-meet', ''].join(String.fromCharCode(10)), date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }, { id: 'smoke-retro', date: new Date(now + 120 * 60000), end: new Date(now + 150 * 60000), summary: 'Smoke retro' }]; $EVENTS.emit('changed'); true" > /dev/null
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: ['smoke-work', 'smoke-review', ''].join(String.fromCharCode(10)), date: new Date(now + 60 * 60000), end: new Date(now + 90 * 60000), summary: 'Smoke review' }, { id: ['smoke-src', 'smoke-meet', ''].join(String.fromCharCode(10)), date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }, { id: 'smoke-retro', date: new Date(now + 120 * 60000), end: new Date(now + 150 * 60000), summary: 'Smoke retro' }]; $EVENTS.emit('changed'); true" > /dev/null
 "$HERE/hover.sh" on > /dev/null
 AGENDA="find(Main.layoutManager.uiGroup, 'nokta-panel-agenda-row').filter((a) => a.mapped)"
 AGENDA_TITLES="$AGENDA.map((a) => find(a, 'nokta-panel-event-title')[0].text).join()"
 JOINS="find(Main.layoutManager.uiGroup, 'nokta-panel-join').filter((a) => a.mapped)"
+AGENDA_STRIPS="$AGENDA.map((a) => find(a, 'nokta-panel-event-strip')[0].style).join()"
+AGENDA_TIMES="$AGENDA.map((a) => find(a, 'nokta-panel-event-time')[0].text)"
 # 32 px closed, 128 px for the date, toggles and tiles, 28 px for the next
 # event and 28 px more for each event after it.
 wait_for "the panel's agenda lists the events, soonest first" \
-    "$FIND $AGENDA_TITLES === 'Smoke standup,Smoke review,Smoke retro' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 275" 5 \
-    "$FIND JSON.stringify([$AGENDA_TITLES, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
+    "$FIND $AGENDA_TITLES === 'Smoke standup,Smoke review,Smoke retro' && $AGENDA_TIMES.every((t) => /^[0-9]/.test(t)) && /in [0-9]+ min$/.test(one('nokta-panel-event-when').text) && Math.round(one('nokta-body').height) === 275" 5 \
+    "$FIND JSON.stringify([$AGENDA_TITLES, $AGENDA_TIMES, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
+wait_for "each agenda row has a strip in its calendar's color" \
+    "$FIND $AGENDA_STRIPS === 'background-color: #33d17a;,background-color: #c061cb;,background-color: #ff453a;'" 10 \
+    "$FIND JSON.stringify($AGENDA_STRIPS)"
 wait_for "the event with a meeting link has a Join button" \
     "$FIND $JOINS.length === 1 && ${AGENDA}[0].contains(${JOINS}[0])" 10 \
     "$FIND JSON.stringify([$JOINS.length])"

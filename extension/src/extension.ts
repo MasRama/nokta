@@ -20,9 +20,9 @@ import {
     countdownChangeMs,
     countdownEvent,
     countdownLabel,
+    agendaWhen,
     EventAnswers,
-    eventTime,
-    soonLabel,
+    eventColor,
     type Alarm,
     type CalendarEvent,
 } from './features/calendar/index.js';
@@ -155,6 +155,7 @@ class Session {
     private readonly clipboardWatcher: ClipboardWatcher;
     private readonly calendar = new CalendarSource();
     private readonly meetingLinks = new EventAnswers('MeetingLink');
+    private readonly eventColors = new EventAnswers('EventColor');
     private readonly calendarAlarms = new CalendarAlarms(
         (nowMs) => this.calendarEvents(nowMs),
         () => this.settings.calendar.reminderMinutes,
@@ -188,6 +189,7 @@ class Session {
     private readonly weatherId: number;
     private readonly calendarId: number;
     private readonly meetingLinksId: number;
+    private readonly eventColorsId: number;
     private readonly shelfId: number;
     private readonly clipboardId: number;
     private readonly callId: number;
@@ -293,6 +295,7 @@ class Session {
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.meetingLinksId = this.meetingLinks.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
+        this.eventColorsId = this.eventColors.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
         // An app starting or stopping to record can leave GNOME's indicator as it is.
@@ -355,6 +358,8 @@ class Session {
         this.calendar.disconnect(this.calendarId);
         this.meetingLinks.disconnect(this.meetingLinksId);
         this.meetingLinks.destroy();
+        this.eventColors.disconnect(this.eventColorsId);
+        this.eventColors.destroy();
         this.shelf.disconnect(this.shelfId);
         this.clipboard.disconnect(this.clipboardId);
         this.clipboardWatcher.destroy();
@@ -431,10 +436,11 @@ class Session {
             this.shelf.attach(connection, cancellable),
             this.clipboard.attach(connection, cancellable),
             this.meetingLinks.attach(connection, cancellable),
+            this.eventColors.attach(connection, cancellable),
         ]);
         if (cancellable.is_cancelled()) return;
         this.devices.attach(connection);
-        this.askMeetingLinks();
+        this.askEventAnswers();
     }
 
     private onDaemonVanished(): void {
@@ -449,6 +455,7 @@ class Session {
         this.shelf.detach();
         this.clipboard.detach();
         this.meetingLinks.detach();
+        this.eventColors.detach();
         this.devices.detach();
     }
 
@@ -750,14 +757,15 @@ class Session {
         this.notches.forEach((n) => n.onPanelContent());
         this.calendarAlarms.reschedule();
         this.onCountdown();
-        this.askMeetingLinks();
+        this.askEventAnswers();
     }
 
-    /** Asks the daemon for the meeting links of the events home lists. */
-    private askMeetingLinks(): void {
+    /** Asks the daemon for the meeting links and calendar colors of the events home lists. */
+    private askEventAnswers(): void {
         const now = Date.now();
-        const events = agendaEvents(this.calendarEvents(now), now, MAX_PANEL_EVENTS);
-        this.meetingLinks.want(events.map((event) => event.id));
+        const ids = agendaEvents(this.calendarEvents(now), now, MAX_PANEL_EVENTS).map((event) => event.id);
+        this.meetingLinks.want(ids);
+        this.eventColors.want(ids);
     }
 
     /** Opens the event's meeting link with its default app; its countdown ends. */
@@ -855,16 +863,17 @@ class Session {
         else app.launch([], context);
     }
 
-    /** The agenda: the first event says how soon it is, the others only their time. */
+    /** The agenda: each event in its calendar's color; the first says how soon it is. */
     private panelEvents(): PanelContent['events'] {
         const now = Date.now();
         const events = agendaEvents(this.calendarEvents(now), now, this.settings.calendar.agendaSize);
         return events.map((event, i) => {
-            const time = eventTime(event.startMs, now, (ms) => this.formatTime(ms));
+            const when = agendaWhen(event.startMs, now, i === 0, (ms) => this.formatTime(ms));
             return {
                 id: event.id,
                 title: event.title,
-                when: i === 0 ? `${time} · ${soonLabel(event.startMs, now)}` : time,
+                ...when,
+                color: eventColor(this.eventColors.get(event.id)),
                 joinable: this.meetingLinks.get(event.id) !== null,
             };
         });

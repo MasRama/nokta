@@ -4,14 +4,14 @@ export { EventAnswers } from './answers.js';
 export { CalendarSource } from './source.js';
 export {
     agendaEvents,
+    agendaWhen,
     alarmAlert,
     countdownChangeMs,
     countdownEvent,
     countdownLabel,
     CALENDAR_ICON,
+    eventColor,
     eventAlert,
-    eventTime,
-    soonLabel,
     type Alarm,
     type CalendarEvent,
     type EventAlert,
