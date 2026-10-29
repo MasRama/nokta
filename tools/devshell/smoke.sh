@@ -267,6 +267,37 @@ set_open_on click
 sleep 1
 [ "$(js "$FIND shown('nokta-collapsed') && !shown('nokta-expanded')")" = true ] || fail "hovering opened the notch with open_on = click"
 ok "with open_on = click, hovering does not open the notch"
+# Gestures on the closed notch: a wheel click up raises the volume 5 % and
+# shows it in the notch; a middle click pauses the song and plays it again.
+MIXER="Main.panel.statusArea.quickSettings._volumeOutput._output._control"
+SINK="$MIXER.get_default_sink()"
+MAX_NORM="$MIXER.get_vol_max_norm()"
+if [ "$(js "!!$SINK" 2> /dev/null)" = true ]; then
+    VOLUME_WAS=$(js "$SINK.volume")
+    js "const s = $SINK; s.volume = Math.round($MAX_NORM / 2); s.push_volume(); true" > /dev/null
+    js "const Clutter = imports.gi.Clutter;
+global._noktaPointer.notify_discrete_scroll(global.get_current_time() * 1000, Clutter.ScrollDirection.UP, Clutter.ScrollSource.WHEEL);
+true" > /dev/null
+    wait_for "a scroll up on the notch raises the volume 5 % and shows it" \
+        "$FIND shown('nokta-osd') && width() === 300 && Math.abs($SINK.volume - Math.round($MAX_NORM / 2) - Math.round($MAX_NORM * 0.05)) <= 1" 5 \
+        "$FIND JSON.stringify([shown('nokta-osd'), width(), $SINK.volume, $MAX_NORM])"
+    wait_for "the volume OSD goes away" "$FIND !shown('nokta-osd') && width() === 260" 5
+    js "const s = $SINK; s.volume = $VOLUME_WAS; s.push_volume(); true" > /dev/null
+else
+    echo "smoke: skip: the devshell has no sound output, so no volume gesture"
+fi
+MEDIA_STATUS="Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.media?.snapshot().playbackStatus"
+middle_click() {
+    js "const Clutter = imports.gi.Clutter;
+const now = () => global.get_current_time() * 1000;
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_MIDDLE, Clutter.ButtonState.PRESSED);
+global._noktaPointer.notify_button(now(), Clutter.BUTTON_MIDDLE, Clutter.ButtonState.RELEASED);
+true" > /dev/null
+}
+middle_click
+wait_for "a middle click pauses the song" "$MEDIA_STATUS === 'Paused'" 5 "$MEDIA_STATUS"
+middle_click
+wait_for "and another plays it again" "$MEDIA_STATUS === 'Playing'" 5 "$MEDIA_STATUS"
 js "const Clutter = imports.gi.Clutter;
 const now = () => global.get_current_time() * 1000;
 global._noktaPointer.notify_button(now(), Clutter.BUTTON_PRIMARY, Clutter.ButtonState.PRESSED);

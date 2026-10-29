@@ -307,6 +307,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         text(),
                         'Opens the notch for the keyboard, like <Super><Alt>n; empty for none',
                     ),
+                    behavior(
+                        'gestures',
+                        'Gestures',
+                        bool(),
+                        'Scroll for volume, swipe sideways for the next song, middle click to play or pause',
+                    ),
                 ],
             },
             {

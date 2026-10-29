@@ -137,6 +137,12 @@ test('open_on_is_hover_or_click', () => {
     assert.equal(behaviorFrom({ open_on: 1 }).openOn, 'hover');
 });
 
+test('gestures_are_on_by_default', () => {
+    assert.equal(DEFAULT_BEHAVIOR.gestures, true);
+    assert.equal(behaviorFrom({ gestures: false }).gestures, false);
+    assert.equal(behaviorFrom({ gestures: 'no' }).gestures, true);
+});
+
 test('open_shortcut_is_a_free_string', () => {
     assert.equal(DEFAULT_BEHAVIOR.openShortcut, '<Super><Alt>n');
     assert.equal(behaviorFrom({ open_shortcut: '' }).openShortcut, '');
