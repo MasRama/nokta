@@ -41,6 +41,7 @@ fn properties(s: &MediaState) -> PropertyList {
         ("LengthUs", owned(s.track.length_us)),
         ("ArtPath", owned(s.art_path.as_str())),
         ("AccentColor", owned(s.accent_color.as_str())),
+        ("BackdropPath", owned(s.backdrop_path.as_str())),
         ("PositionUs", owned(s.position_us)),
         ("PositionTimestampUs", owned(s.position_timestamp_us)),
         ("Rate", owned(s.rate)),
@@ -156,6 +157,11 @@ impl MediaInterface {
     #[zbus(property)]
     fn accent_color(&self) -> String {
         self.state.borrow().accent_color.clone()
+    }
+
+    #[zbus(property)]
+    fn backdrop_path(&self) -> String {
+        self.state.borrow().backdrop_path.clone()
     }
 
     #[zbus(property)]

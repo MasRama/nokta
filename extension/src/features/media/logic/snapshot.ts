@@ -15,6 +15,8 @@ export interface MediaSnapshot {
     lengthUs: number;
     artPath: string;
     accentColor: string;
+    /** The cover downsized and blurred, empty without a cover. */
+    backdropPath: string;
     positionUs: number;
     positionTimestampUs: number;
     rate: number;
@@ -40,6 +42,7 @@ export const EMPTY_SNAPSHOT: Readonly<MediaSnapshot> = {
     lengthUs: 0,
     artPath: '',
     accentColor: '',
+    backdropPath: '',
     positionUs: 0,
     positionTimestampUs: 0,
     rate: 1,
@@ -81,6 +84,7 @@ export function snapshotFrom(read: (name: keyof MediaProps) => unknown): MediaSn
         lengthUs: num(read('LengthUs'), d.lengthUs),
         artPath: str(read('ArtPath'), d.artPath),
         accentColor: str(read('AccentColor'), d.accentColor),
+        backdropPath: str(read('BackdropPath'), d.backdropPath),
         positionUs: num(read('PositionUs'), d.positionUs),
         positionTimestampUs: num(read('PositionTimestampUs'), d.positionTimestampUs),
         rate: num(read('Rate'), d.rate),

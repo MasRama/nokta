@@ -45,6 +45,11 @@
     <property name="AccentColor" type="s" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- Local path of the cover downsized to 160 px and blurred, to show
+         behind the player; empty when there is no cover. -->
+    <property name="BackdropPath" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!-- Position snapshot in microseconds. -->
     <property name="PositionUs" type="x" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>

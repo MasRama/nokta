@@ -39,6 +39,7 @@ export interface MediaProps {
     LengthUs: number;
     ArtPath: string;
     AccentColor: string;
+    BackdropPath: string;
     PositionUs: number;
     PositionTimestampUs: number;
     Rate: number;

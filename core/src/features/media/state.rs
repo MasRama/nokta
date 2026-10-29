@@ -13,6 +13,8 @@ pub struct MediaState {
     pub track: Track,
     pub art_path: String,
     pub accent_color: String,
+    /// The cover downsized and blurred, empty when there is none.
+    pub backdrop_path: String,
     pub position_us: i64,
     pub position_timestamp_us: i64,
     pub rate: f64,
