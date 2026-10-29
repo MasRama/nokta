@@ -627,6 +627,13 @@ banner for a fake file.
 - [ ] `open_shortcut = ""` frees the keys; `"<Control><Alt>space"` moves
       them. GNOME binds nothing to `<Super><Alt>n` (`<Super>n` is its
       "focus the notification" shortcut).
+- [ ] Gestures *(real session, with a mouse and a touchpad)*: a wheel click
+      up or down over the notch changes the volume by 5 % with Nokta's OSD;
+      a two-finger scroll does so about once per wheel click's worth, not
+      wildly. A two-finger swipe left skips one song, right goes back one,
+      never two per swipe. A middle click plays or pauses. Over the
+      clipboard list the scroll moves the list, not the volume.
+      `gestures = false` turns all of it off.
 - [ ] `open_on = "click"`: `hover.sh on` does not open the notch; a click
       on it does; `hover.sh off` closes it after `close_delay_ms`. A right
       click still opens the menu.

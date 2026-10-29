@@ -163,6 +163,18 @@ outside close it. Change the keys with `open_shortcut`.
 With `open_on = "click"`, resting the pointer on the notch no longer opens
 it; click it instead. It still closes when the pointer leaves.
 
+### Gestures
+
+On the notch, open or closed:
+
+- **Scroll** up or down to change the volume by 5 %, shown in the notch.
+- **Swipe** sideways with two fingers (or tilt the wheel) to skip to the
+  next song (left) or go back (right), one song per swipe.
+- **Middle click** to play or pause.
+
+Lists and the cover keep their own scrolling. Turn this off with
+`gestures = false`.
+
 ### Live activities
 
 Any program can show what it is doing in the notch. The `nokta` command
@@ -319,6 +331,7 @@ Every key, by table:
 | `open_delay_ms` | `120` | How long the pointer must rest on the notch before it opens |
 | `close_delay_ms` | `300` | How long the notch stays open after the pointer leaves |
 | `open_shortcut` | `"<Super><Alt>n"` | Keys that open the notch for the keyboard (see [Keyboard](#keyboard)), written like GNOME's keyboard shortcuts; `""` means no shortcut |
+| `gestures` | `true` | Scroll for volume, swipe sideways for the next or previous song and middle click to play or pause (see [Gestures](#gestures)) |
 | `move_clock` | `true` | Move the GNOME clock to the right side of the top bar |
 | `show_lyrics` | `true` | Show the current lyric line in the open notch |
 | `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
