@@ -20,8 +20,8 @@ import {
     countdownChangeMs,
     countdownEvent,
     countdownLabel,
+    EventAnswers,
     eventTime,
-    MeetingLinks,
     soonLabel,
     type Alarm,
     type CalendarEvent,
@@ -154,7 +154,7 @@ class Session {
     private readonly clipboard = new ClipboardClient();
     private readonly clipboardWatcher: ClipboardWatcher;
     private readonly calendar = new CalendarSource();
-    private readonly meetingLinks = new MeetingLinks();
+    private readonly meetingLinks = new EventAnswers('MeetingLink');
     private readonly calendarAlarms = new CalendarAlarms(
         (nowMs) => this.calendarEvents(nowMs),
         () => this.settings.calendar.reminderMinutes,
@@ -762,7 +762,7 @@ class Session {
 
     /** Opens the event's meeting link with its default app; its countdown ends. */
     private joinMeeting(id: string): void {
-        const link = this.meetingLinks.link(id);
+        const link = this.meetingLinks.get(id);
         if (!link) return;
         this.dismissedCountdowns.add(id);
         this.onCountdown();
@@ -811,7 +811,7 @@ class Session {
         // button; over a fullscreen app it stays an alert.
         const { notch } = this.routeMessage(-1);
         const id = alarm.event.id;
-        if (notch && this.meetingLinks.link(id)) {
+        if (notch && this.meetingLinks.get(id)) {
             if (this.shownNotification) {
                 this.shownNotification.notch.hideNotification();
                 this.releaseNotification();
@@ -865,7 +865,7 @@ class Session {
                 id: event.id,
                 title: event.title,
                 when: i === 0 ? `${time} · ${soonLabel(event.startMs, now)}` : time,
-                joinable: this.meetingLinks.link(event.id) !== null,
+                joinable: this.meetingLinks.get(event.id) !== null,
             };
         });
     }
