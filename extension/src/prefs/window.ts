@@ -6,7 +6,7 @@ import Gtk from 'gi://Gtk';
 
 import { appearanceFrom, rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
 import { pageIcon, previewModel } from './logic/look.js';
-import { PREFS_CLASS, PREFS_CSS } from './logic/style.js';
+import { BRAND_LOGO, brandCss, PREFS_CLASS, PREFS_CSS } from './logic/style.js';
 import { NotchPreview } from './preview.js';
 import { buildRow, type SettingRow } from './rows.js';
 import { errorMessage, SettingsService } from './service.js';
@@ -45,7 +45,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
     const overlay = new Adw.ToastOverlay();
     const toast = (title: string) => overlay.add_toast(new Adw.Toast({ title, use_markup: false, timeout: 5 }));
     const resetRow = resetAllRow(window, () => service.reset(), toast);
-    const unstyle = style(window);
+    const unstyle = style(window, path);
 
     const preview = new NotchPreview();
     const gallery = new ThemeGallery((theme) =>
@@ -187,11 +187,12 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
     });
 }
 
-/** Adds the window's stylesheet; returns what takes it away again. */
-function style(window: Gtk.Window): () => void {
+/** Adds the window's stylesheet, with the logo from the extension's `path`; returns what takes it away again. */
+function style(window: Gtk.Window, path: string): () => void {
     const display = window.get_display();
     const provider = new Gtk.CssProvider();
-    provider.load_from_string(PREFS_CSS);
+    const logo = GLib.filename_to_uri(GLib.build_filenamev([path, 'icons', BRAND_LOGO]), null);
+    provider.load_from_string(PREFS_CSS + brandCss(logo));
     // Above the user's own gtk.css too: the window is dark whatever theme the system has.
     Gtk.StyleContext.add_provider_for_display(display, provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 1);
     window.add_css_class(PREFS_CLASS);
@@ -207,11 +208,16 @@ function toolbar(child: Gtk.Widget, title?: Gtk.Widget): Adw.ToolbarView {
     return view;
 }
 
-/** Nokta's name with an ember dot, at the top of the sidebar. */
+/** Nokta's wordmark at the top of the sidebar, drawn by `brandCss`. */
 function brand(): Gtk.Box {
-    const box = new Gtk.Box({ spacing: 8, halign: Gtk.Align.START, hexpand: true, margin_start: 10 });
-    box.append(new Gtk.Box({ css_classes: ['nokta-brand-dot'], valign: Gtk.Align.CENTER }));
-    box.append(new Gtk.Label({ label: 'Nokta', css_classes: ['nokta-brand'] }));
+    const box = new Gtk.Box({ halign: Gtk.Align.START, hexpand: true, margin_start: 10 });
+    const logo = new Gtk.Box({
+        css_classes: ['nokta-brand'],
+        valign: Gtk.Align.CENTER,
+        accessible_role: Gtk.AccessibleRole.IMG,
+    });
+    logo.update_property([Gtk.AccessibleProperty.LABEL], ['Nokta']);
+    box.append(logo);
     return box;
 }
 

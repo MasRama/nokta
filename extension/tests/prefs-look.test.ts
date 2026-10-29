@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { NOKTA_ICONS } from '../src/shared/logic/icon-names.js';
 import { SETTINGS_PAGES } from '../src/features/settings/logic/schema.js';
-import { EMBER, PREFS_CLASS, PREFS_CSS } from '../src/prefs/logic/style.js';
+import { BRAND_LOGO, brandCss, EMBER, PREFS_CLASS, PREFS_CSS } from '../src/prefs/logic/style.js';
 import { gradientEnds, pageIcon, previewModel, SAMPLE_SONG } from '../src/prefs/logic/look.js';
 import { paletteFor } from '../src/shared/logic/theme.js';
 import { themeSwatches } from '../src/features/settings/logic/quick.js';
@@ -32,6 +33,18 @@ test('the stylesheet works on GTK 4.14: no CSS variables, no named colors', () =
 test('the accent is ember', () => {
     assert.equal(EMBER, '#ff6a3d');
     assert.ok(PREFS_CSS.includes(EMBER));
+});
+
+test("the sidebar's logo is the light wordmark from icons/, drawn at its own proportions", () => {
+    // Run from .test-build/tests: the icons are at the extension's root.
+    assert.ok(existsSync(new URL(`../../icons/${BRAND_LOGO}`, import.meta.url)), `icons/${BRAND_LOGO} is missing`);
+    const css = brandCss('file:///ext/icons/nokta-wordmark-reverse.svg');
+    assert.ok(css.includes('url("file:///ext/icons/nokta-wordmark-reverse.svg")'));
+    assert.ok(selectors(css).every((selector) => selector.startsWith(`.${PREFS_CLASS} `)));
+    const width = Number(/min-width: (\d+)px/.exec(css)?.[1]);
+    const height = Number(/min-height: (\d+)px/.exec(css)?.[1]);
+    // The wordmark's viewBox is 900.67 x 200.
+    assert.ok(Math.abs(width / height - 900.67 / 200) < 0.05, `${width} x ${height}`);
 });
 
 test("each page of the sidebar has one of Nokta's icons", () => {
