@@ -84,6 +84,10 @@ media_prop() {
 wait_for "hovering opens the player with shuffle and repeat" \
     "$FIND shown('nokta-expanded') && find(Main.layoutManager.uiGroup, 'nokta-toggle').filter((b) => b.mapped).length === 2" 10
 [ "$(js "$FIND shown('nokta-progress-line')")" = false ] || fail "the progress line shows in the open notch"
+# The cover's flight lands and the player's rows end at full strength.
+wait_for "the cover's flight lands and the player's rows come in" \
+    "$FIND one('nokta-morph').get_n_children() === 0 && one('nokta-expanded').get_children().every((row) => row.opacity === 255 && row.translation_y === 0)" 5 \
+    "$FIND JSON.stringify([one('nokta-morph').get_n_children(), one('nokta-expanded').get_children().map((row) => row.opacity)])"
 ok "the progress line belongs to the closed notch"
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-toggle')[1].emit('clicked', 1); true" > /dev/null
 i=0

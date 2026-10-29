@@ -128,7 +128,10 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   color), paper, a picture of your own, or your own colors. The song's
   cover, blurred, can sit behind the open player in any of them. A soft
   shadow and a light rim along the edge lift the notch off the wallpaper,
-  and its buttons press in and spring back.
+  and its buttons press in and spring back. Between views the song's cover
+  flies from the closed notch into the open player and back, a running
+  timer or activity flies into its row in home, and an opening view's rows
+  come in one after the other.
 - **[Keyboard](#keyboard).** <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>
   opens the notch on the monitor you are working on, ready for Tab, Enter
   and Escape. Or have it open on a click instead of on hover.
@@ -354,6 +357,7 @@ Every key, by table:
 | `cover_backdrop` | `false` | Shows the song's cover, blurred and darkened, behind the open player, with white text |
 | `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme; a very dark cover is lightened on a dark notch and a light one darkened on paper, so they still show |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
+| `morph` | `true` | The cover flies between the closed notch and the player, a timer or activity into its row in home, and rows come in one by one; `false` keeps a plain fade |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
 | `alert_glow` | `true` | A glow under the notch in an alert's color; the bounce stays either way, unless GNOME's animations are off |

@@ -439,6 +439,13 @@ How both sides stay honest:
   it, between pixels. Once the springs settle the actors take the final
   size, which keeps every view on the same pixel. The springs step by whole
   refresh periods, so uneven frame callbacks do not make the motion uneven.
+  Above the views and inside the body's clip lies the morph layer
+  (`shared/morph.ts`): between two views it flies a `Clutter.Clone` of the
+  larger of two matching actors (the cover, or an indicator and its row's
+  icon in home) from one place to the other, while both real ones are
+  hidden. `shared/logic/morph.ts` decides what flies and the clone's
+  transform; the places are in stage coordinates, so the body's envelope
+  size does not move them.
   Its glow is a second actor with the same shader, under the shape and
   outside the body's clip, a soft shadow in the colour from
   `shared/logic/glow.ts`; it is hidden while faded out. The bottom corners
