@@ -22,6 +22,7 @@ osd_width = 300          # width while the notch shows volume, brightness or Cap
 progress_line = true     # a thin line along the closed notch for the focus timer, a countdown, an activity or the song
 alert_glow = true        # a glow under the notch in the alert's color: red when urgent, green when done or charging
 alert_motion = true      # each alert moves its own way: a timer rings, a failed activity shakes; off, they all bounce
+morph = true             # the cover flies between the closed notch and the player, and rows come in in order
 depth = true             # a soft shadow under the notch and a thin rim along its bottom edge
 follow_system_style = false # use theme under a dark system style and light_theme under a light one
 light_theme = "paper"

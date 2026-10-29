@@ -270,6 +270,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         { type: 'float', min: 0.1, max: 5, step: 0.1 },
                         '0.5 is twice as fast, 2.0 twice as slow',
                     ),
+                    appearance(
+                        'morph',
+                        'Morph between views',
+                        bool(),
+                        'The cover flies into the player and rows come in one by one',
+                    ),
                 ],
             },
         ],
