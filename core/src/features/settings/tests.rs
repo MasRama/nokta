@@ -36,6 +36,7 @@ fn defaults_match_spec() {
     assert!(a.alert_glow);
     assert!(a.depth);
     assert!(a.alert_motion);
+    assert!(a.morph);
     assert!(!a.cover_backdrop);
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
@@ -452,6 +453,7 @@ fn appearance_entries_have_all_keys() {
             "height",
             "idle_width",
             "light_theme",
+            "morph",
             "osd_width",
             "picture",
             "picture_blur",

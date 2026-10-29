@@ -49,6 +49,8 @@ pub struct Appearance {
     pub alert_glow: bool,
     /// Each alert moves its own way; off, every alert keeps the kick.
     pub alert_motion: bool,
+    /// The cover and the indicators fly between views, and rows come in in order.
+    pub morph: bool,
     /// A soft shadow under the notch and a thin rim along its bottom edge.
     pub depth: bool,
     /// One of GRADIENTS: the custom theme's fill from `background` to
@@ -89,6 +91,7 @@ impl Default for Appearance {
             progress_line: true,
             alert_glow: true,
             alert_motion: true,
+            morph: true,
             depth: true,
             gradient: "none".into(),
             background_end: "#1c1c1e".into(),
@@ -734,6 +737,7 @@ impl Appearance {
             ("progress_line", self.progress_line.into()),
             ("alert_glow", self.alert_glow.into()),
             ("alert_motion", self.alert_motion.into()),
+            ("morph", self.morph.into()),
             ("depth", self.depth.into()),
             ("gradient", (&self.gradient).into()),
             ("background_end", (&self.background_end).into()),
