@@ -184,9 +184,13 @@ export const WEATHER_METHODS = {
     Refresh: '',
 } as const;
 
-/** io.nokta.Calendar1 has no properties; MeetingLink answers with the link or empty. */
+/**
+ * io.nokta.Calendar1 has no properties; MeetingLink answers with the link or
+ * empty, EventColor with the calendar's `#rrggbb` or empty.
+ */
 export const CALENDAR_METHODS = {
     MeetingLink: 's',
+    EventColor: 's',
 } as const;
 
 export interface ShelfProps {

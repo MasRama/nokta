@@ -115,6 +115,27 @@ async fn a_meeting_link_is_empty_without_evolution_data_server() {
 }
 
 #[tokio::test]
+async fn an_event_color_is_empty_without_evolution_data_server() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    for _ in 0..2 {
+        let reply = conn
+            .call_method(
+                Some(NAME),
+                "/io/nokta/Calendar",
+                Some("io.nokta.Calendar1"),
+                "EventColor",
+                &("src\nuid\n",),
+            )
+            .await
+            .unwrap();
+        let color: String = reply.body().deserialize().unwrap();
+        assert_eq!(color, "");
+    }
+}
+
+#[tokio::test]
 async fn media_properties_follow_fake_player() {
     let bus = TestBus::start();
     let player = FakePlayer::start(bus.address(), "a", "Playing", Meta::new(1)).await;
