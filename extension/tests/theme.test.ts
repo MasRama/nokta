@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import { lightenTo, luminance, mix } from '../src/shared/logic/color.js';
 import {
+    depthFor,
     gradientDirection,
     paletteFor,
     themeFor,
@@ -200,4 +201,11 @@ test('without a picture, the picture theme draws like midnight', () => {
 test('only the picture theme shows the picture', () => {
     for (const theme of THEMES.filter((t) => t !== 'picture'))
         assert.equal(paletteFor(theme, COLORS, COVER, DARK_PICTURE).picture, null, theme);
+});
+
+test('depth gives a dark notch a light rim and a strong shadow, a light one a dark rim and a faint shadow', () => {
+    assert.deepEqual(depthFor(false, true), { rim: 'rgba(255, 255, 255, 0.1)', shadowAlpha: 0.7 });
+    assert.deepEqual(depthFor(true, true), { rim: 'rgba(0, 0, 0, 0.06)', shadowAlpha: 0.24 });
+    assert.deepEqual(depthFor(false, false), { rim: null, shadowAlpha: 0 });
+    assert.deepEqual(depthFor(true, false), { rim: null, shadowAlpha: 0 });
 });

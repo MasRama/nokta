@@ -6,7 +6,7 @@ import { OverlayLayout } from './layout.js';
 import { clampAlpha, parseCssColor } from './logic/color.js';
 import { envelope, frameMs, notchX } from './logic/motion.js';
 import { pictureRect, radiusAt, type NotchWidths } from './logic/shape.js';
-import { THEMES, type Palette } from './logic/theme.js';
+import { THEMES, type Depth, type Palette } from './logic/theme.js';
 import {
     kickVelocity,
     settled,
@@ -38,6 +38,8 @@ const PICTURE_FADE_MS = 250;
 const GLOW_ALPHA = 0.9;
 /** Room around the body for the glow's blur, in px. */
 const GLOW_MARGIN = 48;
+/** The shadow lies this much lower than the glow, which the shader already moves down 4 px. */
+const SHADOW_DROP = 2;
 /** A waiting kick goes off this close to the target, before the width slows to a crawl. */
 const KICK_NEAR_PX = 3;
 const NO_COLOR: Rgba = [0, 0, 0, 0];
@@ -76,6 +78,11 @@ export class Notch {
     private picturePath = '';
     private readonly glowShape: Shape;
     private glowColor: string | null = null;
+    /** A soft dark copy of the glow, always under it while depth is on. */
+    private readonly shadow: St.Widget;
+    private readonly shadowShape: Shape;
+    private shadowGone = false;
+    private depth: Depth | null = null;
     /** The shell destroys its chrome at shutdown, the glow with it. */
     private glowGone = false;
     private style: NotchStyle;
@@ -109,6 +116,10 @@ export class Notch {
         this.glow = new St.Widget({ style_class: 'nokta-glow', opacity: 0, visible: false });
         this.glow.connect('destroy', () => (this.glowGone = true));
         this.glowShape = new Shape(this.glow, true);
+        this.shadow = new St.Widget({ style_class: 'nokta-shadow', visible: false });
+        this.shadow.connect('destroy', () => (this.shadowGone = true));
+        this.shadowShape = new Shape(this.shadow, true);
+        this.shadowShape.setCutout(SHADOW_DROP);
         // Clipped, so the offscreen paint is the actor's size even with the picture past its edges.
         this.shapeActor = new St.Widget({ style_class: 'nokta-shape', clip_to_allocation: true });
         this.shape = new Shape(this.shapeActor, false);
@@ -119,6 +130,7 @@ export class Notch {
             layout_manager: new OverlayLayout(),
             clip_to_allocation: true,
         });
+        this.actor.add_child(this.shadow);
         this.actor.add_child(this.glow);
         this.actor.add_child(this.shapeActor);
         this.actor.add_child(this.body);
@@ -194,6 +206,17 @@ export class Notch {
                 },
             });
         }
+    }
+
+    /** The shadow under the notch and the rim inside its edge. */
+    setDepth(depth: Depth): void {
+        if (this.depth && this.depth.rim === depth.rim && this.depth.shadowAlpha === depth.shadowAlpha) return;
+        this.depth = depth;
+        const rim = depth.rim ? parseCssColor(depth.rim) : null;
+        this.shape.setRim(rim ?? NO_COLOR);
+        if (this.shadowGone) return;
+        this.shadow.visible = depth.shadowAlpha > 0;
+        this.shadowShape.setColors({ top: [0, 0, 0, depth.shadowAlpha], bottom: NO_COLOR, border: NO_COLOR });
     }
 
     /** Sets the size without animating. */
@@ -276,6 +299,10 @@ export class Notch {
             this.glow.set_position(-GLOW_MARGIN, 0);
             this.glow.set_size(total + 2 * GLOW_MARGIN, tall + GLOW_MARGIN);
         }
+        if (!this.shadowGone) {
+            this.shadow.set_position(-GLOW_MARGIN, SHADOW_DROP);
+            this.shadow.set_size(total + 2 * GLOW_MARGIN, tall + GLOW_MARGIN);
+        }
     }
 
     /** Draws the shape at the springs' size and clips the views to it. */
@@ -296,14 +323,14 @@ export class Notch {
             cornerRadius: radiusAt(height, { height: this.style.height, radius: this.style.cornerRadius }),
         };
         this.shape.setGeometry(geometry);
-        if (!this.glowGone) {
-            this.glowShape.setGeometry({
-                ...geometry,
-                width: geometry.width + 2 * GLOW_MARGIN,
-                height: geometry.height + GLOW_MARGIN,
-                center: center + GLOW_MARGIN,
-            });
-        }
+        const halo = {
+            ...geometry,
+            width: geometry.width + 2 * GLOW_MARGIN,
+            height: geometry.height + GLOW_MARGIN,
+            center: center + GLOW_MARGIN,
+        };
+        if (!this.glowGone) this.glowShape.setGeometry(halo);
+        if (!this.shadowGone) this.shadowShape.setGeometry(halo);
         if (width === this.laidWidth && height === this.laidHeight) this.body.remove_clip();
         else this.body.set_clip(center - ear - width / 2, 0, width, height);
     }

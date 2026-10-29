@@ -101,7 +101,7 @@ import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
 import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
-import { paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
+import { depthFor, paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
 import { PressFeedback } from './shared/press.js';
@@ -342,6 +342,7 @@ export class MonitorNotch implements ShelfNotch {
         this.collapsed = new CollapsedMediaView(() => media.levels());
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
+        this.applyDepth();
         this.expanded = new ExpandedMediaView(media, () => this.setHomeOpen(true), {
             select: (id) => sources.outputs.select(id),
             opened: (open) => {
@@ -970,6 +971,7 @@ export class MonitorNotch implements ShelfNotch {
     applySettings(): void {
         if (this.destroyed) return;
         this.notch.setAppearance(this.sources.settings.appearance);
+        this.applyDepth();
         this.applyViewSizes();
         const [width, height] = this.sizeFor(this.drawn);
         this.notch.resizeTo(width, height, 'width');
@@ -1406,10 +1408,16 @@ export class MonitorNotch implements ShelfNotch {
     /** Recolors the notch and its views when the theme or the cover's color changes. */
     private applyPalette(): void {
         const palette = this.palette();
+        this.applyDepth(palette);
         if (JSON.stringify(palette) === JSON.stringify(this.shownPalette)) return;
         this.shownPalette = palette;
         this.notch.setPalette(palette);
         this.applyOsdColors();
+    }
+
+    /** The shadow and the rim follow `[appearance] depth` and whether the notch is light. */
+    private applyDepth(palette = this.palette()): void {
+        this.notch.setDepth(depthFor(palette.light, this.sources.settings.appearance.depth));
     }
 
     private applyOsdColors(): void {
