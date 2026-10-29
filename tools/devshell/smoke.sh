@@ -149,6 +149,30 @@ wait_for "romanize off brings the next line back" \
     "$FIND JSON.stringify([one('nokta-lyric')?.text, one('nokta-lyric-next')?.text])"
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
     --method io.nokta.Settings1.Set lyrics romanize "<true>" > /dev/null
+# The lyrics view's corner button opens the lyrics full screen over the
+# blurred cover, every Korean or Japanese line romanized; Escape closes it
+# and gives the keyboard back. The notch closed under it, and opens again
+# under the pointer with the player.
+gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/mpris/MediaPlayer2 \
+    --method org.mpris.MediaPlayer2.Player.SetPosition /io/nokta/devshell/track/1 61000000 > /dev/null
+js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
+wait_for "the lyrics view has a full-screen button" "$FIND shown('nokta-lyrics-fullscreen-button')" 5
+js "$FIND one('nokta-lyrics-fullscreen-button').emit('clicked', 1); true" > /dev/null
+FULL_ROMANIZED="JSON.stringify(find(Main.layoutManager.uiGroup, 'nokta-lyrics-fullscreen-romanized').filter((a) => a.mapped).map((a) => a.text))"
+wait_for "full-screen lyrics cover the monitor with the line and its romanizations" \
+    "$FIND shown('nokta-lyrics-fullscreen') && one('nokta-lyrics-fullscreen').opacity === 255 && one('nokta-lyrics-fullscreen').width === Main.layoutManager.monitors[0].width && one('nokta-lyrics-fullscreen-current').text === 'Turn it up, 사랑해' && $FULL_ROMANIZED === JSON.stringify(['Turn it up, saranghae', 'Night drive, kimito']) && Main.modalActorFocusStack.some((m) => m.actor === one('nokta-lyrics-fullscreen'))" 5 \
+    "$FIND const f = one('nokta-lyrics-fullscreen'); JSON.stringify([shown('nokta-lyrics-fullscreen'), f?.opacity, f?.width, Main.layoutManager.monitors[0].width, one('nokta-lyrics-fullscreen-current')?.text, $FULL_ROMANIZED, Main.modalActorFocusStack.length])"
+# The view's own grab, so the check holds whatever the notch under it does.
+js "$FIND global._noktaFullscreen = one('nokta-lyrics-fullscreen'); true" > /dev/null
+"$HERE/shot.sh" smoke-lyrics-fullscreen > /dev/null
+"$HERE/keys.sh" Escape
+wait_for "Escape closes the full-screen lyrics and lets the keyboard go" \
+    "$FIND !any('nokta-lyrics-fullscreen') && !Main.modalActorFocusStack.some((m) => m.actor === global._noktaFullscreen)" 5 \
+    "$FIND JSON.stringify([any('nokta-lyrics-fullscreen'), Main.modalActorFocusStack.length])"
+js "delete global._noktaFullscreen; true" > /dev/null
+wait_for "the player opens again under the pointer" \
+    "$FIND shown('nokta-expanded') && !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5 \
+    "$FIND JSON.stringify([shown('nokta-expanded'), shown('nokta-lyrics-sheet'), shown('nokta-lyric'), Math.round(one('nokta-body')?.height ?? -1)])"
 # The grid button at the player's top right opens home, whose music button
 # goes back to the player.
 js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null

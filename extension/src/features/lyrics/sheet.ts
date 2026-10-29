@@ -28,7 +28,8 @@ const FADE = [255, 150, 95, 60];
  * and lights up as it is sung; the others fade with their distance. The
  * lines slide up when the current line changes. A Korean or Japanese
  * current line has its romanization in the row under it. A click on the lines
- * closes the view; the row under them moves the lyrics earlier or later.
+ * closes the view; the row under them moves the lyrics earlier or later,
+ * and its button on the right opens them full screen.
  */
 export class LyricsSheet {
     readonly actor: St.BoxLayout;
@@ -39,8 +40,11 @@ export class LyricsSheet {
     private shown: number | null = null;
     private offsetMs = 0;
 
-    /** `onClose` for a click on the lines, `onOffset` with the timing a footer click asks for. */
-    constructor(onClose: () => void, onOffset: (offsetMs: number) => void) {
+    /**
+     * `onClose` for a click on the lines, `onOffset` with the timing a footer
+     * click asks for, `onFullscreen` for the full-screen button.
+     */
+    constructor(onClose: () => void, onOffset: (offsetMs: number) => void, onFullscreen: () => void) {
         this.box = setVertical(new St.BoxLayout({ style_class: 'nokta-lyrics-sheet', x_expand: true }));
         const middle = Math.floor(SHEET_ROWS / 2);
         for (let i = 0; i < SHEET_ROWS; i++) {
@@ -94,9 +98,21 @@ export class LyricsSheet {
             footerButton('list-add-symbolic', 'Show the lyrics earlier', () => onOffset(stepOffset(this.offsetMs, 1))),
         );
 
+        // The timing buttons stay centred: a spacer as wide as the corner the full-screen button sits in.
+        const fullscreen = footerButton('view-fullscreen-symbolic', 'Full-screen lyrics', onFullscreen);
+        fullscreen.add_style_class_name('nokta-lyrics-fullscreen-button');
+        const corner = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_expand: true });
+        fullscreen.x_align = Clutter.ActorAlign.END;
+        fullscreen.x_expand = true;
+        corner.add_child(fullscreen);
+        const bottom = new St.BoxLayout({ x_expand: true, height: FOOTER_HEIGHT });
+        bottom.add_child(new St.Widget({ x_expand: true }));
+        bottom.add_child(footer);
+        bottom.add_child(corner);
+
         this.actor = setVertical(new St.BoxLayout({ x_expand: true, visible: false }));
         this.actor.add_child(lines);
-        this.actor.add_child(footer);
+        this.actor.add_child(bottom);
     }
 
     setWidth(width: number): void {

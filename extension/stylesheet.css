@@ -641,6 +641,50 @@
     font-style: italic;
 }
 
+/* Full-screen lyrics: the blurred cover, darkened, under three large lines. */
+.nokta-lyrics-fullscreen {
+    background-color: #000;
+}
+
+.nokta-lyrics-fullscreen-backdrop {
+    background-size: cover;
+    background-position: center;
+}
+
+.nokta-lyrics-fullscreen-shade {
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.nokta-lyrics-fullscreen-column {
+    spacing: 32px;
+}
+
+.nokta-lyrics-fullscreen-heading {
+    font-size: 18px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    padding-bottom: 20px;
+}
+
+.nokta-lyrics-fullscreen-line {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.nokta-lyrics-fullscreen-current {
+    font-size: 64px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.nokta-lyrics-fullscreen-romanized {
+    font-size: 22px;
+    font-weight: 500;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.7);
+}
+
 /* The lyrics view's timing row: −, the offset, +. */
 .nokta-lyrics-footer {
     spacing: 6px;

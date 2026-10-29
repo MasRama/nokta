@@ -15,9 +15,12 @@ import {
     lineProgress,
     type LyricsClient,
     LyricsSheet,
+    fullscreenLines,
+    LyricsFullscreen,
     lyricWindow,
     nextLyric,
     romanize,
+    type FullscreenFrame,
     SHEET_EXTRA_HEIGHT,
     SHEET_ROWS,
     visibleLyric,
@@ -249,7 +252,9 @@ export class MonitorNotch implements ShelfNotch {
     private readonly lyricsSheet = new LyricsSheet(
         () => this.setLyricsOpen(false),
         (offsetMs) => this.sources.lyrics.setOffset(offsetMs),
+        () => this.lyricsFullscreen.open(this.monitorIndex),
     );
+    private readonly lyricsFullscreen = new LyricsFullscreen(() => this.fullscreenFrame());
     private lyricsOpen = false;
     /** The track the lyrics view opened for. */
     private lyricsTrack = '';
@@ -571,6 +576,7 @@ export class MonitorNotch implements ShelfNotch {
         this.idle.destroy();
         this.lyricLine.destroy();
         this.lyricsSheet.destroy();
+        this.lyricsFullscreen.destroy();
         this.collapsed.destroy();
         this.expanded.destroy();
         Main.layoutManager.removeChrome(this.notch.actor);
@@ -1491,6 +1497,22 @@ export class MonitorNotch implements ShelfNotch {
                 ? null
                 : { text, next: nextLyric(lyrics.lines, position), romanized: romanized(text), ...progress, playing },
         );
+    }
+
+    /** What the full-screen lyrics show now; null closes them. */
+    private fullscreenFrame(): FullscreenFrame | null {
+        if (this.destroyed || !this.lyricsAvailable()) return null;
+        const { media, lyrics, settings } = this.sources;
+        const snapshot = media.snapshot();
+        const position = this.positionNow();
+        return {
+            lines: fullscreenLines(lyrics.lines, position, settings.lyrics.romanize),
+            ...lineProgress(lyrics.lines, position, snapshot.rate),
+            playing: snapshot.playbackStatus === 'Playing',
+            title: snapshot.title,
+            artist: snapshot.artists.join(', '),
+            backdropPath: snapshot.backdropPath,
+        };
     }
 
     private lyricsAvailable(): boolean {
