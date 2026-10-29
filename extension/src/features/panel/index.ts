@@ -1,3 +1,4 @@
+export { anchorRow } from './logic/anchor.js';
 export { Caffeine, type Inhibitor } from './logic/caffeine.js';
 export { panelHeight, subPageHeight, type PanelRow } from './logic/height.js';
 export { sessionInhibitor } from './inhibitor.js';

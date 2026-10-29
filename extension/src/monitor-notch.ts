@@ -43,6 +43,7 @@ import {
 } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
 import {
+    anchorRow,
     HomePanel,
     MAX_PANEL_ACTIVITIES,
     MAX_PANEL_CLOCKS,
@@ -110,7 +111,7 @@ import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
 import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
 import { depthFor, paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
-import { MorphLayer } from './shared/morph.js';
+import { MorphLayer, stageRect } from './shared/morph.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
 import { PressFeedback } from './shared/press.js';
@@ -1589,20 +1590,47 @@ export class MonitorNotch implements ShelfNotch {
         });
     }
 
-    /** The cover flies between the closed notch and the player, with `[appearance] morph`. */
+    /**
+     * With `[appearance] morph`, the cover flies between the closed notch
+     * and the player, and the closed notch's indicator into its row in home.
+     */
     private flyBetween(previous: Drawn, mode: Drawn): void {
         const { morph, animationSpeed } = this.sources.settings.appearance;
         const flight = flies(previous, mode, {
             morph,
             animations: St.Settings.get().enable_animations,
-            indicator: false,
+            indicator: this.indicator !== null,
         });
-        if (flight !== 'cover') return;
-        const opening = mode === 'expanded';
-        const small = this.collapsed.coverActor;
-        const big = this.expanded.coverActor;
-        const [from, to] = opening ? [small, big] : [big, small];
-        this.morph.fly(from, to, () => this.restRect(to, mode), big, opening, animationSpeed);
+        if (flight === 'cover') {
+            const opening = mode === 'expanded';
+            const small = this.collapsed.coverActor;
+            const big = this.expanded.coverActor;
+            const [from, to] = opening ? [small, big] : [big, small];
+            this.morph.fly(from, stageRect(from), to, () => this.restRect(to, mode), big, opening, animationSpeed);
+        } else if (flight === 'indicator' && this.indicator) {
+            const anchor = anchorRow(this.indicator, this.panelRows);
+            const to = anchor === 'shelf' ? this.panelShelf.firstSlot : anchor ? this.idlePanel.anchorFor(anchor) : null;
+            if (!to) return;
+            const from = this.idleIndicator(this.indicator);
+            // From the indicator's icon, a square at its left, so the clone of the row's icon only shrinks.
+            const rect = stageRect(from);
+            const square = rect ? { ...rect, width: rect.height } : null;
+            this.morph.fly(from, square, to, () => this.restRect(to, mode), to, true, animationSpeed);
+        }
+    }
+
+    /** The closed notch's widget for `indicator`. */
+    private idleIndicator(indicator: Indicator): Clutter.Actor {
+        const widgets: Record<Indicator, Clutter.Actor> = {
+            recording: this.idleRecording.actor,
+            call: this.idleCall.actor,
+            timer: this.idleTimer.actor,
+            clock: this.idleTimer.actor,
+            activity: this.idleBadge.actor,
+            meeting: this.idleCountdown.actor,
+            shelf: this.idleShelf.actor,
+        };
+        return widgets[indicator];
     }
 
     /**
