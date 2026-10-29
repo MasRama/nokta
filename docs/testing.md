@@ -552,6 +552,13 @@ banner for a fake file.
       turns the notch to `light_theme` (Paper) at once, and Dark back to
       `theme`; with the light style on, a swatch on the notch's settings page
       changes `light_theme` and the notch shows it.
+- [ ] `theme = "picture"`, `picture = "~/Pictures/..."`: the closed notch
+      shows the top middle of the picture, darkened, with readable text;
+      opening shows more of the same picture, not a stretched one.
+      `picture_blur = 20` blurs it; `picture_darken = 0.8` makes it nearly
+      black. A missing file draws like midnight, and the settings window's
+      Picture row says it can't read it. The settings window's preview,
+      Picture card and the notch's Picture swatch show the picture.
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
 - [ ] **Progress line**: a song playing, closed: a thin line in the accent

@@ -282,7 +282,7 @@ Every key, by table:
 
 | Key | Default | What it does |
 |---|---|---|
-| `theme` | `"midnight"` | `"midnight"` (black), `"graphite"` (dark grey with a fine edge), `"glass"` (see-through), `"aurora"` (tinted with the cover's color), `"paper"` (light), or `"custom"` for the colors below |
+| `theme` | `"midnight"` | `"midnight"` (black), `"graphite"` (dark grey with a fine edge), `"glass"` (see-through), `"aurora"` (tinted with the cover's color), `"paper"` (light), `"picture"` (a picture of your own behind the notch), or `"custom"` for the colors below |
 | `follow_system_style` | `false` | Use `theme` while the system's style is dark and `light_theme` while it is light, switching as it changes |
 | `light_theme` | `"paper"` | The theme for the light style, with `follow_system_style = true`; any value `theme` takes |
 | `height` | `32` | Height of the closed notch in pixels |
@@ -298,6 +298,9 @@ Every key, by table:
 | `background_opacity` | `1.0` | `0.0` makes the notch background see-through, `1.0` solid; text and icons stay solid; with `theme = "custom"` |
 | `foreground` | `"#ffffff"` | Text and icon color, with `theme = "custom"` |
 | `accent` | `"#ffffff"` | Color of the seek bar, the play button, the equalizer and the volume bar when the cover's color is not used, with `theme = "custom"` |
+| `picture` | `""` | The picture shown with `theme = "picture"`, a PNG, JPEG or WebP path; `~/` is your home. The closed notch shows the top middle of it and opening shows more |
+| `picture_darken` | `0.35` | How much darker the picture is drawn so text stays readable, `0.0` to `0.8` |
+| `picture_blur` | `0` | Blurs the picture by this many pixels, `0` to `40` |
 | `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
