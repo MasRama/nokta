@@ -103,7 +103,23 @@ shot player 360
 js "$FIND one('nokta-lyric-button').emit('clicked', 1); true"
 wait_for "the lyrics" "$FIND shown('nokta-lyrics-current') && Math.round(one('nokta-body').height) === 336" 5
 shot lyrics 360
-js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true"
+
+# Full-screen lyrics at the Korean line, the whole monitor scaled down.
+gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/mpris/MediaPlayer2 \
+    --method org.mpris.MediaPlayer2.Player.SetPosition /io/nokta/devshell/track/1 61000000 > /dev/null
+wait_for "the Korean line" "$FIND one('nokta-lyrics-current').text === 'Turn it up, 사랑해'" 5
+js "$FIND one('nokta-lyrics-fullscreen-button').emit('clicked', 1); true"
+wait_for "full-screen lyrics" "$FIND shown('nokta-lyrics-fullscreen') && one('nokta-lyrics-fullscreen').opacity === 255" 5
+sleep 1.5
+"$HERE/shot.sh" readme > /dev/null
+python3 - "$ROOT/build/shots/readme.png" "$OUT/fullscreen-lyrics.png" <<'PY'
+import sys
+from PIL import Image
+Image.open(sys.argv[1]).resize((1280, 720), Image.LANCZOS).save(sys.argv[2], optimize=True)
+PY
+echo "readme-shots: docs/images/fullscreen-lyrics.png"
+"$HERE/keys.sh" Escape
+wait_for "full-screen lyrics close" "$FIND !any('nokta-lyrics-fullscreen')" 5
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 10
 
@@ -126,7 +142,7 @@ shot focus-timer 120
 "$HERE/player.sh" Stopped
 wait_for "the clock" "$FIND shown('nokta-clock')" 10
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
-js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'review', date: new Date(now + 25 * 60000), end: new Date(now + 55 * 60000), summary: 'Design review' }]; $EVENTS.emit('changed'); true"
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'review', date: new Date(now + 25 * 60000), end: new Date(now + 55 * 60000), summary: 'Design review' }, { id: 'lunch', date: new Date(now + 150 * 60000), end: new Date(now + 210 * 60000), summary: 'Lunch with Dinda' }, { id: 'sync', date: new Date(now + 300 * 60000), end: new Date(now + 330 * 60000), summary: 'Weekly sync' }]; $EVENTS.emit('changed'); true"
 mkdir -p "$STATE/files"
 picture "$STATE/files/Sunset.png" 250,140,90 90,60,140
 picture "$STATE/files/Lagoon.png" 60,170,200 20,70,120
@@ -136,7 +152,7 @@ gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf \
     --method io.nokta.Shelf1.Add "$URIS" > /dev/null
 "$HERE/hover.sh" on > /dev/null
 wait_for "home" "$FIND shown('nokta-panel') && shown('nokta-panel-weather') && shown('nokta-panel-event') && find(Main.layoutManager.uiGroup, 'nokta-shelf-thumbnail').filter((t) => t.mapped).length === 2" 15
-shot home 300
+shot home 360
 
 # The clipboard history, opened from home.
 "$HERE/hover.sh" off > /dev/null
@@ -187,6 +203,40 @@ for theme in glass paper; do
 done
 set_key appearance theme "<'midnight'>"
 
+# A picture of your own behind the notch, and the cover behind the player.
+python3 - "$STATE/files/Dusk.png" <<'PY'
+import math, sys
+from PIL import Image, ImageDraw, ImageFilter
+width, height = 1200, 600
+image = Image.new('RGB', (width, height))
+draw = ImageDraw.Draw(image)
+for y in range(height):
+    t = y / (height - 1)
+    top, bottom = (38, 32, 92), (238, 128, 92)
+    draw.line([(0, y), (width, y)], fill=tuple(int(a + (b - a) * t) for a, b in zip(top, bottom)))
+draw.ellipse((520, 300, 680, 460), fill=(255, 210, 150))
+for i, (base, color) in enumerate([(430, (70, 44, 96)), (480, (44, 28, 70)), (530, (24, 16, 44))]):
+    points = [(x, base - 50 * math.sin(x / (170 + 60 * i) + i * 1.7)) for x in range(0, width + 1, 10)]
+    draw.polygon(points + [(width, height), (0, height)], fill=color)
+image.filter(ImageFilter.GaussianBlur(1)).save(sys.argv[1])
+PY
+set_key appearance picture "<'$STATE/files/Dusk.png'>"
+set_key appearance theme "<'picture'>"
+"$HERE/hover.sh" on > /dev/null
+wait_for "the player on the picture" "$FIND shown('nokta-expanded') && shown('nokta-picture') && one('nokta-picture').opacity === 255" 10
+shot picture 340
+"$HERE/hover.sh" off > /dev/null
+wait_for "the player closes" "$FIND shown('nokta-collapsed')" 10
+set_key appearance theme "<'midnight'>"
+set_key appearance picture "<''>"
+set_key appearance cover_backdrop "<true>"
+"$HERE/hover.sh" on > /dev/null
+wait_for "the player on its cover" "$FIND shown('nokta-expanded') && shown('nokta-picture') && one('nokta-picture').opacity === 255" 10
+shot backdrop 340
+"$HERE/hover.sh" off > /dev/null
+wait_for "the player closes" "$FIND shown('nokta-collapsed')" 10
+set_key appearance cover_backdrop "<false>"
+
 # The settings page home's Settings tile opens, and the settings window.
 # While nothing plays, the open notch is home.
 "$HERE/player.sh" Stopped
@@ -195,7 +245,7 @@ wait_for "the clock" "$FIND shown('nokta-clock')" 10
 TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'Settings')"
 wait_for "the settings tile" "$FIND shown('nokta-panel') && $TILE?.mapped === true" 10
 js "$FIND $TILE.emit('clicked', 1); true"
-wait_for "the settings page" "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 6" 5
+wait_for "the settings page" "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 7" 5
 shot settings-page 330
 "$HERE/hover.sh" off > /dev/null
 wait_for "the notch closes" "$FIND !any('nokta-subpage')" 10
