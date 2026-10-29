@@ -209,7 +209,8 @@ docs/               manual test checklist, screenshots
   the full-screen lyrics (`features/lyrics/fullscreen.ts`): an actor over
   one monitor on top of `Main.uiGroup`, modal through `Main.pushModal`,
   reading the notch's lyrics and position every 100 ms and closing itself
-  when the song has no synced lyrics any more.
+  when the song has no synced lyrics any more. Its seek bar and buttons
+  are the player's (`ProgressBar`, `MediaControls` from `features/media`).
 - **devices** follows UPower and BlueZ on the system bus and emits an
   `Alert` signal when a Bluetooth audio device connects or disconnects, the
   charger is plugged or unplugged, the battery gets low (20 %) or critical
