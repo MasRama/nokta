@@ -37,7 +37,8 @@ notifications. Hover over it to open it, or press
   when the player has them. With several players open, the arrows under the
   title (or scrolling over the cover) switch between them. The speaker
   button at the player's top right switches the sound output, for example
-  from the speakers to your headphones.
+  from the speakers to your headphones. With `[media] real_equalizer` on,
+  the bars follow the music's bass, mids and highs instead of a pattern.
 - **Synced lyrics, karaoke style.** The line being sung lights up from left
   to right, with the next line under it. Click it to follow the lyrics
   around it. Lyrics come from [LRCLIB](https://lrclib.net), or from your
@@ -366,6 +367,15 @@ Every key, by table:
 </details>
 
 <details>
+<summary><code>[media]</code>: the bars that follow the music</summary>
+
+| Key | Default | What it does |
+|---|---|---|
+| `real_equalizer` | `false` | The bars follow the music: while a player plays, `noktad` records what your speakers play with `pw-record` (PipeWire) and measures it. GNOME may show its microphone indicator meanwhile |
+
+</details>
+
+<details>
 <summary><code>[lyrics]</code>: looking lyrics up</summary>
 
 | Key | Default | What it does |
@@ -494,6 +504,12 @@ countdown.
   written to disk, except small thumbnails of copied pictures in
   `$XDG_RUNTIME_DIR/nokta/clipboard/` (memory, readable only by you,
   emptied when `noktad` starts and when an entry goes).
+- **Bars that follow the music.** With `[media] real_equalizer = true`,
+  `noktad` records what your speakers play while a player plays, never the
+  microphone, and stops 2 seconds after the music does. The sound is only
+  measured, four levels 25 times a second, and never stored or sent. GNOME
+  counts any recording as the microphone in use, so its indicator may show
+  meanwhile; Nokta's own dots and call view leave it out.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.

@@ -179,7 +179,16 @@ docs/               manual test checklist, screenshots
   position changes, it publishes a position snapshot (position, monotonic
   timestamp, rate) and the extension extrapolates from it. The sound output
   switcher lives in the extension's `media` and only uses GNOME's own mixer
-  (the one Quick Settings uses); the daemon is not involved.
+  (the one Quick Settings uses); the daemon is not involved. With
+  `[media] real_equalizer` on and a player playing, `capture.rs` runs
+  `pw-record` on the default output's monitor (16 kHz mono s16 on stdout,
+  `application.id` `io.nokta.Nokta`), `levels.rs` turns each 40 ms into
+  four band levels against a peak that decays, and `Media1.Levels` carries
+  them (zeros only twice a second while silent). Recording stops 2 s after
+  playback or the key, and waits 30 s after `pw-record` fails; without it
+  the bars keep their pattern. The extension reads the newest levels on
+  each equalizer step, and its privacy dots and call view skip
+  `io.nokta.Nokta`'s recording.
 - **lyrics** looks up synced lyrics when the track changes: the user's own
   `.lrc` file (next to a local song, or `Artist - Title.lrc` in the lyrics
   folder), then the cache, then LRCLIB. `clean.rs` turns browser and YouTube

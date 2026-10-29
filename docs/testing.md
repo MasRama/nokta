@@ -99,6 +99,15 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] **Collapsed, playing**: small cover on the left, equalizer bars moving
       on the right, `playing_width` wide.
 - [ ] **Collapsed, paused**: same, bars at rest.
+- [ ] The smoke test turns `[media] real_equalizer` on and links a 100 Hz
+      tone to `noktad`'s recording (`tone.sh`, no session manager here):
+      the first bar stays full, the others low; no call view and no
+      microphone dot for Nokta's own recording; with the key off the
+      recording goes within 5 s.
+- [ ] Bars that follow the music in a real session *(real session)*: a
+      song moves the bars with its bass and highs; pause, and after 2 s
+      `pw-record` is gone (`pgrep pw-record`); GNOME's microphone indicator
+      shows while it records, Nokta's dots do not.
 - [ ] **Expanded** (`hover.sh on`, wait more than `open_delay_ms`): cover,
       title, artists, lyric line, progress with elapsed and total time,
       previous / play-pause / next.
