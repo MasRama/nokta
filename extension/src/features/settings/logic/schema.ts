@@ -321,6 +321,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Scroll for volume, swipe sideways for the next song, middle click to play or pause',
                     ),
+                    behavior(
+                        'track_peek',
+                        'Show a new song',
+                        bool(),
+                        'The closed notch shows its title and artist for a moment',
+                    ),
                 ],
             },
             {

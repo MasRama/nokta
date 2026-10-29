@@ -76,6 +76,8 @@ export interface Behavior {
     openShortcut: string;
     /** Scroll for volume, swipe for songs and middle click for play/pause on the notch. */
     gestures: boolean;
+    /** The closed notch shows a new song's title for a moment. */
+    trackPeek: boolean;
 }
 
 /** io.nokta.Settings1.Media in camelCase. */
@@ -159,6 +161,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     openOn: 'hover',
     openShortcut: '<Super><Alt>n',
     gestures: true,
+    trackPeek: true,
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */

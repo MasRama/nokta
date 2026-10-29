@@ -49,6 +49,7 @@ fn defaults_match_spec() {
     assert!(b.show_clock);
     assert_eq!(b.clock_format, "system");
     assert!(b.gestures);
+    assert!(b.track_peek);
     assert!(c.lyrics.enabled);
     assert!(c.lyrics.romanize);
     assert!(
@@ -494,7 +495,8 @@ fn behavior_entries_have_all_keys() {
             "show_clock",
             "show_input_source",
             "show_lyrics",
-            "show_num_lock"
+            "show_num_lock",
+            "track_peek"
         ]
     );
     assert_eq!(map["move_clock"], SettingValue::Bool(true));

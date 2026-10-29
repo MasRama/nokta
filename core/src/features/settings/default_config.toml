@@ -35,6 +35,7 @@ close_delay_ms = 300     # time after the pointer leaves before it closes
 open_on = "hover"        # "hover" opens it when the pointer rests on it, "click" only on a click
 open_shortcut = "<Super><Alt>n" # opens the notch and takes the keyboard (Tab, Enter, Escape); "" = no shortcut
 gestures = true          # on the notch: scroll for volume, swipe sideways for the next or previous song, middle click to play or pause
+track_peek = true        # the closed notch shows a new song's title and artist for 3 s
 move_clock = true        # move the GNOME clock to the right side of the top bar
 show_lyrics = true
 replace_osd = true       # show volume, brightness and other OSD in the notch instead of GNOME's popup
