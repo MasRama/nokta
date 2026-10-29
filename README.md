@@ -197,7 +197,10 @@ three.
 Apps that show progress on the dock (Firefox and Chromium-based browsers
 downloading, Files copying, and others) show it in the notch on their own,
 once it has lasted a second and a half, and end as done when the dock's
-bar goes. Turn that off with `auto_progress = false`.
+bar goes. System updates and installs through PackageKit (GNOME Software,
+`pkcon`) show too: what is being installed, what it is doing and how far it
+is, then whether it worked. Nokta only listens while PackageKit runs; it
+never starts it. `auto_progress = false` turns both off.
 
 ### Timers, stopwatches and alarms
 
@@ -395,7 +398,7 @@ locked.
 | Key | Default | What it does |
 |---|---|---|
 | `stale_minutes` | `30` | An activity not updated for this long ends as failed, 1 to 1440 |
-| `auto_progress` | `true` | Show the progress apps report to the dock (downloads, file copies) as activities |
+| `auto_progress` | `true` | Show the progress apps report to the dock (downloads, file copies) and PackageKit's installs and updates as activities |
 
 </details>
 
@@ -546,8 +549,8 @@ GNOME Shell without touching your session.
 Nokta has two parts:
 
 - **`noktad`**, a small Rust daemon. It follows your media players (MPRIS),
-  fetches lyrics and the weather, watches the battery (UPower) and
-  Bluetooth (BlueZ), runs the focus timer, keeps the shelf and the
+  fetches lyrics and the weather, watches the battery (UPower),
+  Bluetooth (BlueZ) and system updates (PackageKit), runs the focus timer, keeps the shelf and the
   clipboard history, and reads your settings.
 - **A frontend** that draws the notch and talks to the daemon. On Linux it
   is a GNOME Shell extension, and they talk over D-Bus.

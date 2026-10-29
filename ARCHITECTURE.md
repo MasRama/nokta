@@ -230,7 +230,14 @@ docs/               manual test checklist, screenshots
   activity `app:<desktop id>`, named from its desktop entry
   (`desktop.rs`), once its progress has been visible for 1.5 s, updated at
   most twice a second, ended as done when the bar hides and as stopped
-  when the app leaves the bus. `[activities] auto_progress` turns it off.
+  when the app leaves the bus. `packagekit_watch.rs` follows PackageKit on
+  the system bus and feeds the pure `packagekit.rs`: installs, removals,
+  updates and system upgrades become `packagekit:<transaction path>`,
+  simulations and download-only runs are skipped, and `Finished` ends them
+  as done, failed or cancelled. It never starts PackageKit: it asks the bus
+  for its owner and calls it by that unique name, and reads all of
+  PackageKit's signals from one stream so `Finished` comes before the list
+  that drops its transaction. `[activities] auto_progress` turns both off.
 - **weather** reads the current weather at `[weather] location` from
   Open-Meteo. The location is coordinates (`-6.2,106.8`) or a place name,
   which the geocoding API turns into coordinates once. `model.rs` is pure:
@@ -283,7 +290,8 @@ the Linux adapters touch D-Bus:
 
 - each feature's `dbus.rs`, which serves it;
 - the system sources: MPRIS in `media` (`mpris`, `watcher`, `control`) and
-  UPower and BlueZ in `devices` (`upower`, `bluez`, `watcher`);
+  UPower and BlueZ in `devices` (`upower`, `bluez`, `watcher`), the dock
+  and PackageKit in `activities` (`launcher_watch`, `packagekit_watch`);
 - `app/dbus.rs`, which starts those sources, serves everything and owns the
   bus name.
 
