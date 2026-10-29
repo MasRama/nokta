@@ -637,29 +637,44 @@ wait_for "the end of the activity shows as an urgent alert" \
 wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
 # Fake events in the date menu's event source fill the panel's agenda, the
-# first one's reminder (5 minutes before, by default) shows like a device
-# alert, and the closed notch then counts down to it.
+# first one's reminder (5 minutes before, by default) shows in the notch, and
+# the closed notch then counts down to it. fake-eds.js gives that event a
+# Meet link: its row and its reminder get a Join button.
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
-js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke-review', date: new Date(now + 60 * 60000), end: new Date(now + 90 * 60000), summary: 'Smoke review' }, { id: 'smoke', date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }, { id: 'smoke-retro', date: new Date(now + 120 * 60000), end: new Date(now + 150 * 60000), summary: 'Smoke retro' }]; $EVENTS.emit('changed'); true" > /dev/null
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke-review', date: new Date(now + 60 * 60000), end: new Date(now + 90 * 60000), summary: 'Smoke review' }, { id: ['smoke-src', 'smoke-meet', ''].join(String.fromCharCode(10)), date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }, { id: 'smoke-retro', date: new Date(now + 120 * 60000), end: new Date(now + 150 * 60000), summary: 'Smoke retro' }]; $EVENTS.emit('changed'); true" > /dev/null
 "$HERE/hover.sh" on > /dev/null
 AGENDA="find(Main.layoutManager.uiGroup, 'nokta-panel-agenda-row').filter((a) => a.mapped)"
 AGENDA_TITLES="$AGENDA.map((a) => find(a, 'nokta-panel-event-title')[0].text).join()"
+JOINS="find(Main.layoutManager.uiGroup, 'nokta-panel-join').filter((a) => a.mapped)"
 # 32 px closed, 128 px for the date, toggles and tiles, 28 px for the next
 # event and 28 px more for each event after it.
 wait_for "the panel's agenda lists the events, soonest first" \
     "$FIND $AGENDA_TITLES === 'Smoke standup,Smoke review,Smoke retro' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 275" 5 \
     "$FIND JSON.stringify([$AGENDA_TITLES, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
+wait_for "the event with a meeting link has a Join button" \
+    "$FIND $JOINS.length === 1 && ${AGENDA}[0].contains(${JOINS}[0])" 10 \
+    "$FIND JSON.stringify([$JOINS.length])"
 "$HERE/shot.sh" smoke-calendar-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
-wait_for "the event's reminder shows in the notch" \
-    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke standup in 5 min'" 15 \
-    "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text])"
+wait_for "the event's reminder shows in the notch with a Join button" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === 'Smoke standup in 5 min' && $NOTE_BUTTONS === 'Join' && width() === 420" 15 \
+    "$FIND JSON.stringify([shown('nokta-notification'), one('nokta-notification-title')?.text, $NOTE_BUTTONS, width()])"
 "$HERE/shot.sh" smoke-calendar-reminder > /dev/null
 COUNTDOWN="find(Main.layoutManager.uiGroup, 'nokta-countdown-label').find((a) => a.mapped)?.text"
 wait_for "after the reminder, the closed notch counts down to the event" \
-    "$FIND !shown('nokta-osd') && !shown('nokta-clock') && /^[45] min$/.test($COUNTDOWN ?? '')" 15 \
-    "$FIND JSON.stringify([shown('nokta-osd'), shown('nokta-clock'), $COUNTDOWN])"
+    "$FIND !shown('nokta-notification') && !shown('nokta-clock') && /^[45] min$/.test($COUNTDOWN ?? '')" 15 \
+    "$FIND JSON.stringify([shown('nokta-notification'), shown('nokta-clock'), $COUNTDOWN])"
 "$HERE/shot.sh" smoke-calendar-countdown > /dev/null
+# The link would open a browser: the smoke test only keeps it.
+js "globalThis.noktaSmokeLaunch = imports.gi.Gio.AppInfo.launch_default_for_uri; imports.gi.Gio.AppInfo.launch_default_for_uri = (uri) => { globalThis.noktaSmokeJoined = uri; return true; }; true" > /dev/null
+"$HERE/hover.sh" on > /dev/null
+wait_for "home opens over the countdown" "$FIND $JOINS.length === 1" 5
+js "$FIND ${JOINS}[0].emit('clicked', 1); true" > /dev/null
+wait_for "Join opens the meeting link, closes the notch and ends the countdown" \
+    "$FIND globalThis.noktaSmokeJoined === 'https://meet.google.com/smo-kest-and' && shown('nokta-clock') && !any('nokta-countdown')" 5 \
+    "$FIND JSON.stringify([globalThis.noktaSmokeJoined, shown('nokta-clock'), any('nokta-countdown')])"
+"$HERE/hover.sh" off > /dev/null
+js "imports.gi.Gio.AppInfo.launch_default_for_uri = globalThis.noktaSmokeLaunch; true" > /dev/null
 js "delete $EVENTS.getEvents; $EVENTS.emit('changed'); true" > /dev/null
 wait_for "the clock comes back without events" "$FIND shown('nokta-clock') && !any('nokta-countdown')" 10
 

@@ -407,6 +407,14 @@
     spacing: 10px;
 }
 
+.nokta-panel-join {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 /* A row's icon in home, on a square of its tone (panel/controls.ts IconChip). */
 .nokta-icon-chip {
     width: 26px;
