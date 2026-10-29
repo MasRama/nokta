@@ -98,6 +98,7 @@ import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource 
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { Keybinding } from './shared/keybinding.js';
+import { alertMotion, type AlertMotion } from './shared/logic/alert-motion.js';
 import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
@@ -565,7 +566,7 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const tone = { color: phaseColor(phase === 'break' ? 'break' : 'focus') };
         const icon = iconFor(TIMER_ICON);
-        this.showOsd(-1, 'focus', content, icon, this.settings.behavior.alertDurationMs, tone);
+        this.showOsd(-1, 'focus', content, icon, this.settings.behavior.alertDurationMs, tone, this.motion('timer-done'));
         if (settings.sound) global.display.get_sound_player().play_from_theme('complete', alert.title, null);
     }
 
@@ -576,7 +577,8 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
         const icon = kind === 'alarm' ? iconFor(TIMER_ICON) : iconFor(CLOCK_ICON);
         const tone = { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') };
-        this.showOsd(-1, 'clock', content, icon, CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs, tone);
+        const durationMs = CLOCK_ALERT_FACTOR * this.settings.behavior.alertDurationMs;
+        this.showOsd(-1, 'clock', content, icon, durationMs, tone, this.motion('clock-done'));
         if (this.settings.timer.sound)
             global.display.get_sound_player().play_from_theme('alarm-clock-elapsed', alert.title, null);
     }
@@ -670,11 +672,17 @@ class Session {
         icon: Gio.Icon | null,
         durationMs?: number,
         tone?: AlertTone,
+        motion?: AlertMotion,
     ): number | null {
         const { notch, monitor } = this.routeMessage(requested, kind);
         if (!notch) return monitor;
-        notch.showOsd(content, icon, durationMs, tone);
+        notch.showOsd(content, icon, durationMs, tone, motion);
         return null;
+    }
+
+    /** How the alert for `event` moves, with `[appearance] alert_motion`. */
+    private motion(event: string): AlertMotion {
+        return alertMotion(event, this.settings.appearance.alertMotion);
     }
 
     /** A device alert in the focused notch; skipped when that notch cannot show it. */
@@ -692,7 +700,7 @@ class Session {
         const charged = kind === 'charger-plugged' || kind === 'battery-full';
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device };
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
-        this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone);
+        this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone, this.motion(kind));
     }
 
     /** An activity ended: a check mark or a red cross in the focused notch. */
@@ -702,7 +710,8 @@ class Session {
         const alert = endedAlert(title, success, message, elapsedUs);
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone = success ? 'success' : 'urgent';
-        this.showOsd(-1, 'activity', content, iconFor(alert.icon), alertDurationMs, tone);
+        const motion = this.motion(success ? 'activity-done' : 'activity-failed');
+        this.showOsd(-1, 'activity', content, iconFor(alert.icon), alertDurationMs, tone, motion);
     }
 
     private onOsdRequest(request: OsdRequest): number | null {
@@ -839,7 +848,7 @@ class Session {
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone: AlertTone = alert.urgent ? 'urgent' : { color: TONES.calendar };
         const icon = iconFor(alert.icon);
-        this.showOsd(-1, 'calendar', content, icon, alertDurationMs, tone);
+        this.showOsd(-1, 'calendar', content, icon, alertDurationMs, tone, this.motion('calendar'));
     }
 
     /** A time like the notch's clock shows it. */

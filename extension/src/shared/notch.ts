@@ -16,6 +16,8 @@ import {
     type SpringParams,
     type SpringState,
 } from './logic/spring.js';
+import { playSteps } from './keyframes.js';
+import type { Step } from './logic/keyframes.js';
 import { Shape, type Rgba, type ShapeGeometry } from './shape.js';
 
 export type { ResizeKind } from './logic/spring.js';
@@ -43,6 +45,8 @@ const SHADOW_DROP = 2;
 /** A waiting kick goes off this close to the target, before the width slows to a crawl. */
 const KICK_NEAR_PX = 3;
 const NO_COLOR: Rgba = [0, 0, 0, 0];
+/** A pulsing glow dims to this between beats. */
+const PULSE_LOW = 70;
 
 export interface MonitorArea {
     x: number;
@@ -85,6 +89,8 @@ export class Notch {
     private depth: Depth | null = null;
     /** The shell destroys its chrome at shutdown, the glow with it. */
     private glowGone = false;
+    /** The glow beats, for a low battery. */
+    private pulsing = false;
     private style: NotchStyle;
     private palette: Palette;
     private monitor: MonitorArea = { x: 0, y: 0, width: 0 };
@@ -208,6 +214,41 @@ export class Notch {
         }
     }
 
+    /**
+     * The glow, already set, beats `beats` times, `beatMs` a beat, and ends
+     * at full strength; not with animations off.
+     */
+    pulseGlow(beats: number, beatMs: number): void {
+        if (!this.glowColor || this.glowGone || !St.Settings.get().enable_animations) return;
+        this.glow.remove_all_transitions();
+        this.glow.show();
+        this.glow.opacity = 255;
+        this.pulsing = true;
+        this.glow.ease({
+            opacity: PULSE_LOW,
+            duration: Math.round((beatMs / 2) * this.style.animationSpeed),
+            mode: Clutter.AnimationMode.EASE_IN_OUT_SINE,
+            autoReverse: true,
+            repeatCount: beats * 2 - 1,
+            onStopped: () => (this.pulsing = false),
+        });
+    }
+
+    /** The notch shakes sideways through `steps` of `translation_x`, instead of the kick; not with animations off. */
+    shake(steps: readonly Step[]): void {
+        this.stopShake();
+        if (St.Settings.get().enable_animations) playSteps(this.actor, 'translation_x', steps);
+    }
+
+    /** Stops the last alert's shake and pulse, for a new alert. */
+    stopMotion(): void {
+        this.stopShake();
+        if (!this.pulsing || this.glowGone) return;
+        this.glow.remove_all_transitions();
+        this.glow.opacity = this.glowColor ? 255 : 0;
+        this.pulsing = false;
+    }
+
     /** The shadow under the notch and the rim inside its edge. */
     setDepth(depth: Depth): void {
         if (this.depth && this.depth.rim === depth.rim && this.depth.shadowAlpha === depth.shadowAlpha) return;
@@ -225,6 +266,7 @@ export class Notch {
         this.height = height;
         this.pendingKick = null;
         this.timeline.stop();
+        this.stopShake();
         this.shownWidth = { value: width, velocity: 0 };
         this.shownHeight = { value: height, velocity: 0 };
         // The monitor or the ears may have changed: lay out again.
@@ -242,6 +284,11 @@ export class Notch {
     bodyRect(width: number, height: number): { x: number; y: number; width: number; height: number } {
         const x = notchX(this.monitor, width, this.style.earRadius) + this.style.earRadius;
         return { x, y: this.monitor.y, width, height };
+    }
+
+    private stopShake(): void {
+        this.actor.remove_transition('translation-x');
+        this.actor.translation_x = 0;
     }
 
     private applyKick(): void {
