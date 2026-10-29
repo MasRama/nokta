@@ -329,6 +329,13 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       update for 1 minute`.
 - [ ] `live_activities = false` while running: nothing shows; `Set` still
       works.
+- [ ] The smoke test reports `nokta-smoke-browser.desktop` at 30 % on the
+      dock from the shell's own bus connection: after 1.5 s `Smoke Browser`
+      shows as an activity at `30%`, then `60%`; the bar hidden ends it as
+      `Done`. `auto_progress = false`: nothing shows.
+- [ ] A Firefox download and a Files copy in a real session: each shows
+      while it runs and ends as done; closing Firefox mid-download ends it
+      as stopped *(real session)*.
 - [ ] After `. tools/devshell/env.sh`, `target/release/nokta run -- sleep 5`:
       `sleep 5` while it runs, then `Done in 5 s`. Again in a real session
       *(real session)*.

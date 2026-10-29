@@ -194,6 +194,11 @@ also call `io.nokta.Activities1` on the session bus (see
 closed notch, with its percentage when it reports one. Hover to see up to
 three.
 
+Apps that show progress on the dock (Firefox and Chromium-based browsers
+downloading, Files copying, and others) show it in the notch on their own,
+once it has lasted a second and a half, and end as done when the dock's
+bar goes. Turn that off with `auto_progress = false`.
+
 ### Timers, stopwatches and alarms
 
 Home's **Timer** tile starts a countdown of 1 to 30 minutes, or a
@@ -390,6 +395,7 @@ locked.
 | Key | Default | What it does |
 |---|---|---|
 | `stale_minutes` | `30` | An activity not updated for this long ends as failed, 1 to 1440 |
+| `auto_progress` | `true` | Show the progress apps report to the dock (downloads, file copies) as activities |
 
 </details>
 

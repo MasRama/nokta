@@ -225,6 +225,12 @@ docs/               manual test checklist, screenshots
   `nokta settings` (it runs `gnome-extensions prefs`),
   `nokta activity set|end` and `nokta run -- CMD`, which shows the command
   while it runs and passes its exit code through.
+  `launcher_watch.rs` listens for `com.canonical.Unity.LauncherEntry.Update`
+  from any app (what docks read) and feeds the pure `launcher.rs`: an
+  activity `app:<desktop id>`, named from its desktop entry
+  (`desktop.rs`), once its progress has been visible for 1.5 s, updated at
+  most twice a second, ended as done when the bar hides and as stopped
+  when the app leaves the bus. `[activities] auto_progress` turns it off.
 - **weather** reads the current weather at `[weather] location` from
   Open-Meteo. The location is coordinates (`-6.2,106.8`) or a place name,
   which the geocoding API turns into coordinates once. `model.rs` is pure:
