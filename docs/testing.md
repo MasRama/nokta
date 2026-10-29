@@ -543,6 +543,11 @@ banner for a fake file.
 - [ ] `show_clock = false`: the idle notch is empty.
 - [ ] `background_opacity = 0.4`: body and ears see-through, the clock text
       solid.
+- [ ] `theme = "custom"`, `background = "#ff0000"`, `background_end =
+      "#0000ff"`: `gradient = "down"` runs red at the top to blue at the
+      bottom, `"across"` red at the left to blue at the right, `"diagonal"`
+      from the top left to the bottom right, ears in the top's color; the
+      settings window's preview and Custom card run the same way.
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
 - [ ] **Progress line**: a song playing, closed: a thin line in the accent
