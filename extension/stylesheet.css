@@ -652,28 +652,56 @@
 }
 
 .nokta-lyrics-fullscreen-shade {
-    background-color: rgba(0, 0, 0, 0.55);
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+/* The cover's colors, drifting slowly behind the lyrics. */
+.nokta-lyrics-fullscreen-blob {
+    background-gradient-direction: radial;
 }
 
 .nokta-lyrics-fullscreen-column {
-    spacing: 32px;
+    spacing: 48px;
 }
 
-.nokta-lyrics-fullscreen-heading {
+.nokta-lyrics-fullscreen-header {
+    spacing: 20px;
+}
+
+.nokta-lyrics-fullscreen-cover {
+    width: 96px;
+    height: 96px;
+    border-radius: 14px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.nokta-lyrics-fullscreen-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+}
+
+.nokta-lyrics-fullscreen-artist {
     font-size: 18px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.6);
-    padding-bottom: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    padding-top: 4px;
+}
+
+.nokta-lyrics-fullscreen-lines {
+    spacing: 28px;
 }
 
 .nokta-lyrics-fullscreen-line {
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 700;
     color: #fff;
 }
 
 .nokta-lyrics-fullscreen-current {
-    font-size: 64px;
+    font-size: 72px;
     font-weight: 800;
     color: #fff;
 }
@@ -683,6 +711,72 @@
     font-weight: 500;
     font-style: italic;
     color: rgba(255, 255, 255, 0.7);
+}
+
+.nokta-lyrics-fullscreen-controls {
+    spacing: 18px;
+    padding-bottom: 32px;
+}
+
+.nokta-lyrics-fullscreen-controls .nokta-time {
+    color: #fff;
+    font-size: 15px;
+    min-width: 48px;
+}
+
+.nokta-lyrics-fullscreen-buttons {
+    spacing: 28px;
+}
+
+.nokta-lyrics-fullscreen-control {
+    border-radius: 999px;
+    color: #fff;
+}
+
+.nokta-lyrics-fullscreen-control:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.nokta-lyrics-fullscreen-control:focus {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.nokta-lyrics-fullscreen-control:insensitive {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.nokta-lyrics-fullscreen-skip {
+    padding: 12px;
+}
+
+.nokta-lyrics-fullscreen-skip StIcon {
+    icon-size: 28px;
+}
+
+.nokta-lyrics-fullscreen-play {
+    padding: 18px;
+    background-color: #fff;
+    color: #000;
+}
+
+.nokta-lyrics-fullscreen-play:hover {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+.nokta-lyrics-fullscreen-play StIcon {
+    icon-size: 32px;
+}
+
+.nokta-lyrics-fullscreen-chrome {
+    padding: 24px;
+}
+
+.nokta-lyrics-fullscreen-close {
+    padding: 12px;
+}
+
+.nokta-lyrics-fullscreen-close StIcon {
+    icon-size: 22px;
 }
 
 /* The lyrics view's timing row: −, the offset, +. */

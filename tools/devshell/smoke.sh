@@ -164,6 +164,14 @@ wait_for "full-screen lyrics cover the monitor with the line and its romanizatio
     "$FIND const f = one('nokta-lyrics-fullscreen'); JSON.stringify([shown('nokta-lyrics-fullscreen'), f?.opacity, f?.width, Main.layoutManager.monitors[0].width, one('nokta-lyrics-fullscreen-current')?.text, $FULL_ROMANIZED, Main.modalActorFocusStack.length])"
 # The view's own grab, so the check holds whatever the notch under it does.
 js "$FIND global._noktaFullscreen = one('nokta-lyrics-fullscreen'); true" > /dev/null
+wait_for "full-screen lyrics show the cover, title, artist and the controls" \
+    "$FIND shown('nokta-lyrics-fullscreen-cover') && one('nokta-lyrics-fullscreen-title').text === 'Midnight Static' && one('nokta-lyrics-fullscreen-artist').text === 'The Paper Lanterns' && shown('nokta-lyrics-fullscreen-play') && shown('nokta-lyrics-fullscreen-close') && find(Main.layoutManager.uiGroup, 'nokta-lyrics-fullscreen-line').filter((a) => a.mapped).length === 5" 5 \
+    "$FIND JSON.stringify([shown('nokta-lyrics-fullscreen-cover'), one('nokta-lyrics-fullscreen-title')?.text, one('nokta-lyrics-fullscreen-artist')?.text, shown('nokta-lyrics-fullscreen-play'), shown('nokta-lyrics-fullscreen-close'), find(Main.layoutManager.uiGroup, 'nokta-lyrics-fullscreen-line').filter((a) => a.mapped).length])"
+FULL_STATUS="Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.media?.snapshot().playbackStatus"
+"$HERE/keys.sh" space
+wait_for "Space pauses the song from full-screen lyrics" "$FIND $FULL_STATUS === 'Paused' && any('nokta-lyrics-fullscreen')" 5 "$FULL_STATUS"
+js "$FIND one('nokta-lyrics-fullscreen-play').emit('clicked', 1); true" > /dev/null
+wait_for "the play button plays it again and leaves the view open" "$FIND $FULL_STATUS === 'Playing' && any('nokta-lyrics-fullscreen')" 5 "$FULL_STATUS"
 "$HERE/shot.sh" smoke-lyrics-fullscreen > /dev/null
 "$HERE/keys.sh" Escape
 wait_for "Escape closes the full-screen lyrics and lets the keyboard go" \
