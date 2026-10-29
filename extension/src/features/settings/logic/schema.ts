@@ -187,6 +187,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Under the notch: red when urgent, green when done or charging',
                     ),
+                    appearance(
+                        'depth',
+                        'Depth',
+                        bool(),
+                        'A soft shadow under the notch and a light rim along its edge',
+                    ),
                 ],
             },
             {

@@ -24,6 +24,8 @@ export interface Appearance {
     progressLine: boolean;
     /** A glow under the notch in the colour of an alert. */
     alertGlow: boolean;
+    /** A soft shadow under the notch and a thin rim along its bottom edge. */
+    depth: boolean;
     /** One of GRADIENTS in shared/logic/theme.ts: custom's fill toward `backgroundEnd`, or flat. */
     gradient: string;
     backgroundEnd: string;
@@ -122,6 +124,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     theme: 'midnight',
     progressLine: true,
     alertGlow: true,
+    depth: true,
     gradient: 'none',
     backgroundEnd: '#1c1c1e',
     followSystemStyle: false,
