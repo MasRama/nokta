@@ -34,6 +34,7 @@ fn defaults_match_spec() {
     assert_eq!(a.theme, "midnight");
     assert!(a.progress_line);
     assert!(a.alert_glow);
+    assert!(a.depth);
     assert!(!a.cover_backdrop);
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
@@ -438,6 +439,7 @@ fn appearance_entries_have_all_keys() {
             "background_opacity",
             "corner_radius",
             "cover_backdrop",
+            "depth",
             "ear_radius",
             "expanded_height",
             "expanded_width",

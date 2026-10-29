@@ -47,6 +47,8 @@ pub struct Appearance {
     pub progress_line: bool,
     /// A glow under the notch in the colour of an alert.
     pub alert_glow: bool,
+    /// A soft shadow under the notch and a thin rim along its bottom edge.
+    pub depth: bool,
     /// One of GRADIENTS: the custom theme's fill from `background` to
     /// `background_end`, or flat.
     pub gradient: String,
@@ -84,6 +86,7 @@ impl Default for Appearance {
             theme: "midnight".into(),
             progress_line: true,
             alert_glow: true,
+            depth: true,
             gradient: "none".into(),
             background_end: "#1c1c1e".into(),
             follow_system_style: false,
@@ -724,6 +727,7 @@ impl Appearance {
             ("theme", (&self.theme).into()),
             ("progress_line", self.progress_line.into()),
             ("alert_glow", self.alert_glow.into()),
+            ("depth", self.depth.into()),
             ("gradient", (&self.gradient).into()),
             ("background_end", (&self.background_end).into()),
             ("follow_system_style", self.follow_system_style.into()),
