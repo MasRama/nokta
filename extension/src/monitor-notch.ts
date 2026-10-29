@@ -254,7 +254,12 @@ export class MonitorNotch implements ShelfNotch {
         (offsetMs) => this.sources.lyrics.setOffset(offsetMs),
         () => this.lyricsFullscreen.open(this.monitorIndex),
     );
-    private readonly lyricsFullscreen = new LyricsFullscreen(() => this.fullscreenFrame());
+    private readonly lyricsFullscreen = new LyricsFullscreen(() => this.fullscreenFrame(), {
+        playPause: () => this.sources.media.playPause(),
+        next: () => this.sources.media.next(),
+        previous: () => this.sources.media.previous(),
+        setPosition: (us) => this.sources.media.setPosition(us),
+    });
     private lyricsOpen = false;
     /** The track the lyrics view opened for. */
     private lyricsTrack = '';
@@ -1512,7 +1517,15 @@ export class MonitorNotch implements ShelfNotch {
             playing: snapshot.playbackStatus === 'Playing',
             title: snapshot.title,
             artist: snapshot.artists.join(', '),
+            artPath: snapshot.artPath,
+            accentColor: snapshot.accentColor,
             backdropPath: snapshot.backdropPath,
+            positionUs: position,
+            lengthUs: snapshot.lengthUs,
+            canPlayPause: snapshot.canPlayPause,
+            canGoNext: snapshot.canGoNext,
+            canGoPrevious: snapshot.canGoPrevious,
+            canSeek: snapshot.canSeek,
         };
     }
 
