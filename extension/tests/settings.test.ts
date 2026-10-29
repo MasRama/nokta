@@ -151,8 +151,8 @@ test('open_shortcut_is_a_free_string', () => {
 });
 
 test('lyrics_table', () => {
-    assert.deepEqual(DEFAULT_LYRICS, { enabled: true });
-    assert.deepEqual(lyricsFrom({ enabled: false }), { enabled: false });
+    assert.deepEqual(DEFAULT_LYRICS, { enabled: true, romanize: true });
+    assert.deepEqual(lyricsFrom({ enabled: false, romanize: false }), { enabled: false, romanize: false });
     assert.equal(behaviorFrom({ all_monitors: false }).allMonitors, false);
     assert.equal(DEFAULT_APPEARANCE.osdWidth, 300);
     const behavior = behaviorFrom({ replace_osd: false, osd_duration_ms: 900, show_caps_lock: false });

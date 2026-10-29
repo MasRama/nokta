@@ -79,6 +79,8 @@ export interface Behavior {
 /** io.nokta.Settings1.Lyrics in camelCase. */
 export interface Lyrics {
     enabled: boolean;
+    /** A Korean or Japanese line gets a romanized line under it. */
+    romanize: boolean;
 }
 
 /** io.nokta.Settings1.Timer in camelCase. */
@@ -242,6 +244,7 @@ export const DEFAULT_HOME: Readonly<HomeSettings> = {
 
 export const DEFAULT_LYRICS: Readonly<Lyrics> = {
     enabled: true,
+    romanize: true,
 };
 
 export const DEFAULT_TIMER: Readonly<TimerSettings> = {

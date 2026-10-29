@@ -7,7 +7,7 @@ import { FillLabel } from './fill.js';
 import type { LineProgress } from './logic/karaoke.js';
 import { offsetLabel, stepOffset } from './logic/offset.js';
 import { BREAK } from './logic/visible.js';
-import type { LyricWindow } from './logic/window.js';
+import { romanizedRows, type LyricWindow } from './logic/window.js';
 import { iconFor } from '../../shared/icons.js';
 
 /** The lyrics view's rows; the middle one is the current line. */
@@ -26,7 +26,8 @@ const FADE = [255, 150, 95, 60];
 /**
  * Seven lines of synced lyrics around the current one, which is larger
  * and lights up as it is sung; the others fade with their distance. The
- * lines slide up when the current line changes. A click on the lines
+ * lines slide up when the current line changes. A Korean or Japanese
+ * current line has its romanization in the row under it. A click on the lines
  * closes the view; the row under them moves the lyrics earlier or later.
  */
 export class LyricsSheet {
@@ -102,8 +103,11 @@ export class LyricsSheet {
         this.current.setWidth(width);
     }
 
-    /** Shows the lines around the current one; `offsetMs` is the timing they already have. */
-    show(window: LyricWindow, progress: LineProgress, playing: boolean, offsetMs: number): void {
+    /**
+     * Shows the lines around the current one; `offsetMs` is the timing they
+     * already have, `romanized` the current line's romanization or null.
+     */
+    show(window: LyricWindow, progress: LineProgress, playing: boolean, offsetMs: number, romanized: string | null): void {
         if (offsetMs !== this.offsetMs) {
             this.offsetMs = offsetMs;
             this.offsetText.text = offsetLabel(offsetMs);
@@ -111,8 +115,11 @@ export class LyricsSheet {
             this.current.restart();
         }
         const middle = Math.floor(SHEET_ROWS / 2);
-        const others = window.rows.filter((_, i) => i !== middle);
+        const others = romanizedRows(window.rows, romanized).filter((_, i) => i !== middle);
         others.forEach((text, i) => (this.rows[i].text = text));
+        // this.rows skips the current line: the row under it is this.rows[middle].
+        if (romanized === null) this.rows[middle].remove_style_class_name('nokta-lyrics-romanized');
+        else this.rows[middle].add_style_class_name('nokta-lyrics-romanized');
         const text = window.rows[middle] || BREAK;
         this.current.show(text, window.current, progress.fraction, progress.msLeft, playing);
         const previous = this.shown;

@@ -129,6 +129,26 @@ ok "the offset is back to 0"
 js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the lyrics view closes it" \
     "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5
+# A Korean line gets its romanization in the next line's place, offline.
+gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/mpris/MediaPlayer2 \
+    --method org.mpris.MediaPlayer2.Player.SetPosition /io/nokta/devshell/track/1 61000000 > /dev/null
+wait_for "a Korean line shows romanized under it" \
+    "$FIND one('nokta-lyric').text === 'Turn it up, 사랑해' && one('nokta-lyric-next').text === 'Turn it up, saranghae' && one('nokta-lyric-next').has_style_class_name('nokta-lyric-romanized') && Math.round(one('nokta-body').height) === 194" 5 \
+    "$FIND JSON.stringify([one('nokta-lyric')?.text, one('nokta-lyric-next')?.text, Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-lyric-romanized > /dev/null
+js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
+wait_for "the lyrics view puts it in the row under the line" \
+    "$FIND one('nokta-lyrics-current').text === 'Turn it up, 사랑해' && one('nokta-lyrics-romanized').text === 'Turn it up, saranghae' && Math.round(one('nokta-body').height) === 336" 5 \
+    "$FIND JSON.stringify([one('nokta-lyrics-current')?.text, one('nokta-lyrics-romanized')?.text])"
+"$HERE/shot.sh" smoke-lyrics-romanized > /dev/null
+js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set lyrics romanize "<false>" > /dev/null
+wait_for "romanize off brings the next line back" \
+    "$FIND one('nokta-lyric').text === 'Turn it up, 사랑해' && one('nokta-lyric-next').text === 'Night drive, きみと' && !one('nokta-lyric-next').has_style_class_name('nokta-lyric-romanized')" 5 \
+    "$FIND JSON.stringify([one('nokta-lyric')?.text, one('nokta-lyric-next')?.text])"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set lyrics romanize "<true>" > /dev/null
 # The grid button at the player's top right opens home, whose music button
 # goes back to the player.
 js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null

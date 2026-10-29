@@ -49,6 +49,13 @@ fn defaults_match_spec() {
     assert_eq!(b.clock_format, "system");
     assert!(b.gestures);
     assert!(c.lyrics.enabled);
+    assert!(c.lyrics.romanize);
+    assert!(
+        !parse("[lyrics]\nromanize = false\n")
+            .unwrap()
+            .lyrics
+            .romanize
+    );
 }
 
 #[test]
@@ -330,9 +337,11 @@ fn home_defaults_names_and_limits() {
 #[test]
 fn lyrics_entries_have_all_keys() {
     let map = entries(Config::default().lyrics.entries());
-    let keys: Vec<_> = map.keys().copied().collect();
-    assert_eq!(keys, ["enabled"]);
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["enabled", "romanize"]);
     assert_eq!(map["enabled"], SettingValue::Bool(true));
+    assert_eq!(map["romanize"], SettingValue::Bool(true));
 }
 
 #[test]

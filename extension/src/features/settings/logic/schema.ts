@@ -381,6 +381,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         subtitle: 'Sends artist, title, album and duration to lrclib.net',
                         kind: bool(),
                     },
+                    {
+                        table: 'lyrics',
+                        key: 'romanize',
+                        title: 'Romanize lyrics',
+                        subtitle: 'A line in Latin letters under Korean and Japanese lines',
+                        kind: bool(),
+                    },
                 ],
             },
             {

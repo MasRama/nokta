@@ -55,6 +55,7 @@ fullscreen_alerts = "important" # over a fullscreen app: "important" (low batter
 
 [lyrics]
 enabled = true           # look up synced lyrics on lrclib.net (sends artist, title, album, duration)
+romanize = true          # a romanized line under Korean and Japanese lines, done offline
 
 [timer]
 focus_minutes = 25       # length of a focus session, 1 to 180
