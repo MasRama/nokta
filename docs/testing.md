@@ -313,12 +313,19 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
 - [ ] The smoke test opens the lyrics view's corner button at the Korean
       line: the full-screen view covers the monitor, the cover blurred
       behind, `Turn it up, 사랑해` large and lighting up with
-      `saranghae` under it and `kimito` under the next line; Escape closes
+      `saranghae` under it and `kimito` under the next line, the cover,
+      `Midnight Static`, `The Paper Lanterns`, five lines around the
+      current one, the play button and ×; Space pauses the song and the
+      play button plays it again with the view still open; Escape closes
       it, gives the keyboard back, and the player opens again under the
       pointer.
 - [ ] Full-screen lyrics in a real session *(real session)*: a click
-      closes them too; the next song without lyrics closes them; on two
-      monitors they cover only the one the notch is on.
+      closes them too, but not one on a button or the seek bar; the
+      buttons and seek bar fade out 3 s after the pointer stops and come
+      back when it moves; dragging the seek bar seeks; the colors behind
+      drift slowly and follow the cover; the next song without lyrics
+      closes them; on two monitors they cover only the one the notch is
+      on.
 - [ ] A K-pop or J-pop song with synced lyrics *(real session)*: Hangul
       and kana lines read sensibly romanized, kanji stay, English lines
       show the next line as before.

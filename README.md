@@ -55,7 +55,10 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   pronunciation in Latin letters under it (사랑해 → saranghae, きって →
   kitte), worked out on your computer; kanji stay as they are. The
   button in the corner of the lyrics view puts them full screen, karaoke
-  style, over the song's blurred cover; Escape or a click closes it.
+  style: the cover, the title and the lines around the one being sung,
+  over the cover's colors drifting slowly. Moving the pointer shows the
+  seek bar and the play buttons; Space plays or pauses, and Escape, × or
+  a click elsewhere closes it.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
   Lock and the keyboard layout show in the notch instead of GNOME's popup.
   A muted speaker or microphone says so.
