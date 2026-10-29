@@ -114,7 +114,12 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
 - **Alerts that pop.** When an alert opens (a device, a timer, an
   activity, an event or a notification), the notch bounces a little wider
   and glows underneath: red when urgent, green when something finished or
-  the charger is in, in a timer's own color, else in the accent.
+  the charger is in, in a timer's own color, else in the accent. Each
+  alert also moves its own way: a finished timer rings its icon like a
+  bell, a finished activity pops its icon and a failed one shakes the
+  notch, the charger fills the battery from empty, a full battery sweeps
+  it once, a low battery's glow beats three times and a Bluetooth device
+  slides in.
 - **Over fullscreen apps.** The notch hides while a video or a game is
   fullscreen, and still comes up for what matters: a low battery, the
   focus timer, a timer or alarm that is done and a calendar reminder.
@@ -352,6 +357,7 @@ Every key, by table:
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
 | `alert_glow` | `true` | A glow under the notch in an alert's color; the bounce stays either way, unless GNOME's animations are off |
+| `alert_motion` | `true` | Each alert moves its own way (a timer rings, a failed activity shakes); `false` gives every alert the bounce |
 | `depth` | `true` | A soft shadow under the notch and a light rim along its bottom edge |
 
 </details>

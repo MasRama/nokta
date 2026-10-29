@@ -657,6 +657,13 @@ banner for a fake file.
       countdown glows orange, a focus session in its phase color, a
       notification or `Connected` in the accent.
 - [ ] A volume, brightness or Caps Lock popup neither bounces nor glows.
+- [ ] **A motion per alert**: a finished countdown rings the icon (about
+      ±14°, damped), `device.sh connect` slides the icon in from the left,
+      `device.sh plug` fills the battery from empty, `device.sh full`
+      dims the fill once, `device.sh percent 8` then `unplug` beats the red
+      glow three times without the bounce, `activity.sh end ID ok` pops the
+      icon and `activity.sh end ID failed` shakes the notch sideways. Each
+      ends at rest. `alert_motion = false`: they all bounce.
 - [ ] `alert_glow = false`: the bounce stays, no glow. GNOME's animations
       off (Accessibility, Reduce Animation): the glow shows, no bounce.
 

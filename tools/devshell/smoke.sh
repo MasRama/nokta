@@ -754,6 +754,11 @@ wait_for "the panel closes over the activity" "$FIND shown('nokta-activity-badge
 wait_for "the end of the activity shows as an urgent alert" \
     "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke build' && one('nokta-osd-detail').text === 'Disk full' && one('nokta-osd').has_style_class_name('nokta-osd-urgent')" 5
 "$HERE/shot.sh" smoke-activity-ended > /dev/null
+# A failed activity shakes the notch instead of the bounce, and the shake
+# ends with the notch in its place.
+wait_for "the failed activity's shake ends with the notch in its place" \
+    "$FIND shown('nokta-osd') && one('nokta-notch').translation_x === 0" 5 \
+    "$FIND one('nokta-notch').translation_x"
 wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
 # An app's progress on the dock becomes an activity too. The shell's own
