@@ -10,7 +10,7 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   <img src="docs/images/lyrics.png" width="49%" alt="The lyrics view, the sung part of the line lit up">
 </p>
 <p align="center">
-  <img src="docs/images/home.png" width="49%" alt="Home: the date, the weather, the next events, files on the shelf, quick toggles and tiles">
+  <img src="docs/images/home.png" width="49%" alt="Home: the date, the weather, the next events marked in their calendars' colors, files on the shelf, quick toggles and tiles">
   <img src="docs/images/clipboard.png" width="49%" alt="The clipboard history opened from home">
 </p>
 <p align="center">
@@ -34,7 +34,7 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   <img src="docs/images/backdrop.png" width="49%" alt="The song's cover, blurred, behind the open player">
 </p>
 <p align="center">
-  <img src="docs/images/fullscreen-lyrics.png" width="98%" alt="Full-screen lyrics over the song's blurred cover, Korean and Japanese lines with their pronunciation under them">
+  <img src="docs/images/fullscreen-lyrics.png" width="98%" alt="Full-screen lyrics as a player: the cover, title and artist, Korean and Japanese lines with their pronunciation under them, the seek bar and playback controls">
 </p>
 
 ## Features
