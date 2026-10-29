@@ -142,7 +142,7 @@ shot focus-timer 120
 "$HERE/player.sh" Stopped
 wait_for "the clock" "$FIND shown('nokta-clock')" 10
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
-js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'review', date: new Date(now + 25 * 60000), end: new Date(now + 55 * 60000), summary: 'Design review' }, { id: 'lunch', date: new Date(now + 150 * 60000), end: new Date(now + 210 * 60000), summary: 'Lunch with Dinda' }, { id: 'sync', date: new Date(now + 300 * 60000), end: new Date(now + 330 * 60000), summary: 'Weekly sync' }]; $EVENTS.emit('changed'); true"
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: ['smoke-work', 'review', ''].join(String.fromCharCode(10)), date: new Date(now + 25 * 60000), end: new Date(now + 55 * 60000), summary: 'Design review' }, { id: ['smoke-src', 'lunch', ''].join(String.fromCharCode(10)), date: new Date(now + 150 * 60000), end: new Date(now + 210 * 60000), summary: 'Lunch with Dinda' }, { id: ['smoke-home', 'sync', ''].join(String.fromCharCode(10)), date: new Date(now + 300 * 60000), end: new Date(now + 330 * 60000), summary: 'Weekly sync' }]; $EVENTS.emit('changed'); true"
 mkdir -p "$STATE/files"
 picture "$STATE/files/Sunset.png" 250,140,90 90,60,140
 picture "$STATE/files/Lagoon.png" 60,170,200 20,70,120

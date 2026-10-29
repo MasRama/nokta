@@ -37,6 +37,7 @@ const SOURCES_PATH = '/org/gnome/evolution/dataserver/SourceManager';
 const SOURCES = {
     'smoke-src': '[Data Source]\nDisplayName=Smoke\n\n[Calendar]\nBackendName=local\nColor=#33D17A\n',
     'smoke-work': '[Data Source]\nDisplayName=Work\n\n[Calendar]\nBackendName=local\nColor=rgb(192,97,203)\n',
+    'smoke-home': '[Data Source]\nDisplayName=Home\n\n[Calendar]\nBackendName=local\nColor=#62a0ea\n',
     'smoke-tasks': '[Data Source]\nDisplayName=Tasks\n\n[Task List]\nColor=#ff0000\n',
 };
 
