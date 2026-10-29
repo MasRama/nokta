@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use zbus::Connection;
 
-use super::cache::LinkCache;
+use super::cache::AnswerCache;
 use super::eds;
 
 pub const PATH: &str = "/io/nokta/Calendar";
@@ -17,7 +17,7 @@ const EDS_TIMEOUT: Duration = Duration::from_secs(5);
 pub async fn serve(conn: &Connection) -> zbus::Result<()> {
     let iface = CalendarInterface {
         conn: conn.clone(),
-        cache: Mutex::new(LinkCache::default()),
+        cache: Mutex::new(AnswerCache::default()),
         warned: AtomicBool::new(false),
     };
     conn.object_server().at(PATH, iface).await?;
@@ -26,7 +26,7 @@ pub async fn serve(conn: &Connection) -> zbus::Result<()> {
 
 struct CalendarInterface {
     conn: Connection,
-    cache: Mutex<LinkCache>,
+    cache: Mutex<AnswerCache>,
     /// EDS failing is said once, not for every event.
     warned: AtomicBool,
 }

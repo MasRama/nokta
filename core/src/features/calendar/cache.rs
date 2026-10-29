@@ -1,29 +1,29 @@
-//! Meeting links already read from EDS.
+//! Answers already read from EDS: an event's meeting link, a calendar's color.
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-/// How long an answer, a link or none, is kept for an event id.
+/// How long an answer, found or empty, is kept for its key.
 const KEEP: Duration = Duration::from_secs(10 * 60);
 
 #[derive(Default)]
-pub struct LinkCache {
-    links: HashMap<String, (Instant, String)>,
+pub struct AnswerCache {
+    answers: HashMap<String, (Instant, String)>,
 }
 
-impl LinkCache {
-    /// The link read for `id` less than 10 minutes before `now`; empty when it had none.
-    pub fn get(&self, id: &str, now: Instant) -> Option<&str> {
-        self.links
-            .get(id)
+impl AnswerCache {
+    /// The answer read for `key` less than 10 minutes before `now`; empty when there was none.
+    pub fn get(&self, key: &str, now: Instant) -> Option<&str> {
+        self.answers
+            .get(key)
             .filter(|(at, _)| now.duration_since(*at) < KEEP)
-            .map(|(_, link)| link.as_str())
+            .map(|(_, answer)| answer.as_str())
     }
 
-    /// Keeps `link` for `id`, and forgets the answers that went stale.
-    pub fn put(&mut self, id: &str, link: String, now: Instant) {
-        self.links
+    /// Keeps `answer` for `key`, and forgets the answers that went stale.
+    pub fn put(&mut self, key: &str, answer: String, now: Instant) {
+        self.answers
             .retain(|_, (at, _)| now.duration_since(*at) < KEEP);
-        self.links.insert(id.to_owned(), (now, link));
+        self.answers.insert(key.to_owned(), (now, answer));
     }
 }

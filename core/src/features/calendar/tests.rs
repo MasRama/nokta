@@ -124,11 +124,11 @@ fn the_shells_event_id_splits_into_source_uid_and_recurrence() {
 }
 
 #[test]
-fn a_link_is_kept_for_ten_minutes() {
-    use super::cache::LinkCache;
+fn an_answer_is_kept_for_ten_minutes() {
+    use super::cache::AnswerCache;
     use std::time::{Duration, Instant};
     let start = Instant::now();
-    let mut cache = LinkCache::default();
+    let mut cache = AnswerCache::default();
     assert_eq!(cache.get("a", start), None);
     cache.put("a", "https://meet.google.com/a".to_owned(), start);
     // An event without a link is kept too, as empty.
