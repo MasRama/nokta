@@ -18,9 +18,10 @@ Run from the repository root unless noted.
 | Lint the extension | `cd extension && npm run lint` |
 | Test the extension logic | `cd extension && npm test` |
 | Pack the extension | `cd extension && npm run pack` |
-| Lint shell scripts | `shellcheck packaging/*.sh packaging/tests/*.sh tools/devshell/*.sh extension/scripts/*.sh` |
+| Lint shell scripts | `shellcheck packaging/*.sh packaging/tests/*.sh tools/*.sh tools/devshell/*.sh extension/scripts/*.sh` |
 | Check the installer | `NOKTAD=target/debug/noktad packaging/tests/install-dry-run.sh` |
 | Try the UI | `tools/devshell/run.sh`, see [docs/testing.md](docs/testing.md) |
+| Everything CI runs, before a push | `tools/precheck.sh` (`--quick` skips the GNOME 46-51 containers) |
 
 Run heavy commands (anything that compiles, bundles or tests) one at a time,
 never in parallel. Several `cargo` and `tsc` runs at once make the machine
