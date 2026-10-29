@@ -72,6 +72,7 @@ show_body = true         # false shows only the app and the title
 
 [activities]
 stale_minutes = 30       # an activity with no update for this long ends, 1 to 1440
+auto_progress = true     # downloads and copies that apps show on the dock, and system updates
 
 [weather]
 enabled = true           # show the weather in the open notch; asks open-meteo.com for location's forecast

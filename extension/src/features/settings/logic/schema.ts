@@ -423,6 +423,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         subtitle: 'Minutes',
                         kind: int(1, 1440),
                     },
+                    {
+                        table: 'activities',
+                        key: 'auto_progress',
+                        title: 'Downloads and updates',
+                        subtitle: 'Progress that apps show on the dock, and system updates',
+                        kind: bool(),
+                    },
                 ],
             },
             {

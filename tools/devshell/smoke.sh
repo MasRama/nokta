@@ -636,6 +636,29 @@ wait_for "the end of the activity shows as an urgent alert" \
 "$HERE/shot.sh" smoke-activity-ended > /dev/null
 wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
+# An app's progress on the dock becomes an activity too. The shell's own
+# connection sends it, so the sender stays on the bus like a real app.
+mkdir -p "$STATE/data/applications"
+printf '[Desktop Entry]\nType=Application\nName=Smoke Browser\nIcon=web-browser\n' \
+    > "$STATE/data/applications/nokta-smoke-browser.desktop"
+dock() {
+    js "imports.gi.Gio.DBus.session.emit_signal(null, '/com/canonical/unity/launcherentry/1', 'com.canonical.Unity.LauncherEntry', 'Update', new imports.gi.GLib.Variant('(sa{sv})', ['application://nokta-smoke-browser.desktop', { progress: new imports.gi.GLib.Variant('d', $1), 'progress-visible': new imports.gi.GLib.Variant('b', $2) }])); true" > /dev/null
+}
+dock 0.3 true
+wait_for "dock progress becomes an activity after a moment" \
+    "$FIND shown('nokta-activity-badge') && one('nokta-activity-badge-label').text === '30%'" 10 \
+    "$FIND JSON.stringify([shown('nokta-activity-badge'), one('nokta-activity-badge-label')?.text])"
+dock 0.6 true
+wait_for "its progress follows the dock" "$FIND one('nokta-activity-badge-label').text === '60%'" 5
+dock 1.0 false
+wait_for "the dock hiding it ends the activity as done" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke Browser' && one('nokta-osd-detail').text === 'Done' && !one('nokta-osd').has_style_class_name('nokta-osd-urgent')" 5 \
+    "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text, one('nokta-osd-detail')?.text])"
+# The alert springs open first.
+sleep 0.5
+"$HERE/shot.sh" smoke-dock-done > /dev/null
+wait_for "the clock comes back after the dock's activity" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
+
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a

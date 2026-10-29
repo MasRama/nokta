@@ -891,3 +891,64 @@ async fn copies_are_kept_given_back_and_cleared() {
     }
     panic!("Clear kept the entry");
 }
+
+#[tokio::test]
+async fn dock_progress_becomes_an_activity_that_stops_with_its_app() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Activities").await;
+    let activities = zbus::Proxy::new(&conn, NAME, "/io/nokta/Activities", "io.nokta.Activities1")
+        .await
+        .unwrap();
+    let mut ended = activities.receive_signal("Ended").await.unwrap();
+
+    let app = bus.connect().await;
+    let props: HashMap<&str, zbus::zvariant::Value<'_>> =
+        HashMap::from([("progress", 0.5.into()), ("progress-visible", true.into())]);
+    let rows = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            // Repeated, as an app does; the first may come before noktad listens.
+            app.emit_signal(
+                None::<&str>,
+                "/com/canonical/unity/launcherentry/1",
+                "com.canonical.Unity.LauncherEntry",
+                "Update",
+                &("application://nokta-test.desktop", &props),
+            )
+            .await
+            .unwrap();
+            let rows: Vec<ActivityRow> = get(&p, "io.nokta.Activities1", "Activities")
+                .await
+                .try_into()
+                .unwrap();
+            if !rows.is_empty() {
+                return rows;
+            }
+            tokio::time::sleep(Duration::from_millis(300)).await;
+        }
+    })
+    .await
+    .expect("the dock progress shows within 5 s");
+    assert_eq!(
+        (
+            rows[0].0.as_str(),
+            rows[0].1.as_str(),
+            rows[0].2.as_str(),
+            rows[0].4
+        ),
+        ("app:nokta-test.desktop", "nokta-test", "In progress", 0.5)
+    );
+
+    drop(app);
+    let signal = tokio::time::timeout(Duration::from_secs(5), ended.next())
+        .await
+        .expect("Ended in time")
+        .unwrap();
+    let (id, _, success, message, _): (String, String, bool, String, i64) =
+        signal.body().deserialize().unwrap();
+    assert_eq!(
+        (id.as_str(), success, message.as_str()),
+        ("app:nokta-test.desktop", false, "Stopped")
+    );
+}
