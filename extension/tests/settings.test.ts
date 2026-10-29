@@ -141,6 +141,12 @@ test('open_on_is_hover_or_click', () => {
     assert.equal(behaviorFrom({ open_on: 1 }).openOn, 'hover');
 });
 
+test('the track peek is on by default', () => {
+    assert.equal(DEFAULT_BEHAVIOR.trackPeek, true);
+    assert.equal(behaviorFrom({ track_peek: false }).trackPeek, false);
+    assert.equal(behaviorFrom({ track_peek: 'no' }).trackPeek, true);
+});
+
 test('gestures_are_on_by_default', () => {
     assert.equal(DEFAULT_BEHAVIOR.gestures, true);
     assert.equal(behaviorFrom({ gestures: false }).gestures, false);

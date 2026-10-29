@@ -135,6 +135,8 @@ pub struct Behavior {
     pub open_shortcut: String,
     /// Scroll for volume, swipe for songs and middle click for play/pause on the notch.
     pub gestures: bool,
+    /// The closed notch shows a new song's title for a moment.
+    pub track_peek: bool,
 }
 
 impl Default for Behavior {
@@ -163,6 +165,7 @@ impl Default for Behavior {
             open_on: "hover".into(),
             open_shortcut: "<Super><Alt>n".into(),
             gestures: true,
+            track_peek: true,
         }
     }
 }
@@ -766,6 +769,7 @@ impl Behavior {
             ("open_on", (&self.open_on).into()),
             ("open_shortcut", (&self.open_shortcut).into()),
             ("gestures", self.gestures.into()),
+            ("track_peek", self.track_peek.into()),
         ]
     }
 }
