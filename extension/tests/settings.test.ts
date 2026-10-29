@@ -207,8 +207,11 @@ test('notification_settings_from_table', () => {
 });
 
 test('activity settings from table', () => {
-    assert.deepEqual(DEFAULT_ACTIVITIES, { staleMinutes: 30 });
-    assert.deepEqual(activitiesFrom({ stale_minutes: 90 }), { staleMinutes: 90 });
+    assert.deepEqual(DEFAULT_ACTIVITIES, { staleMinutes: 30, autoProgress: true });
+    assert.deepEqual(activitiesFrom({ stale_minutes: 90, auto_progress: false }), {
+        staleMinutes: 90,
+        autoProgress: false,
+    });
     assert.equal(behaviorFrom({}).liveActivities, true);
     assert.equal(behaviorFrom({ live_activities: false }).liveActivities, false);
 });

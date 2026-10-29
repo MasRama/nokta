@@ -163,10 +163,13 @@ export interface NotificationSettings {
 export interface ActivitiesSettings {
     /** An activity with no update for this long ends. */
     staleMinutes: number;
+    /** Progress that apps report to the dock, and system updates, show as activities. */
+    autoProgress: boolean;
 }
 
 export const DEFAULT_ACTIVITIES: Readonly<ActivitiesSettings> = {
     staleMinutes: 30,
+    autoProgress: true,
 };
 
 /** io.nokta.Settings1.Weather in camelCase. */

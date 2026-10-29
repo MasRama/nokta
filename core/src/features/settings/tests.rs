@@ -173,6 +173,7 @@ fn notifications_defaults_and_limits() {
 #[test]
 fn activities_defaults_and_limits() {
     assert_eq!(Config::default().activities.stale_minutes, 30);
+    assert!(Config::default().activities.auto_progress);
     assert!(Config::default().behavior.live_activities);
     assert!(Config::default().behavior.file_shelf);
     assert!(Config::default().behavior.screenshot_preview);
@@ -182,9 +183,16 @@ fn activities_defaults_and_limits() {
     }
     let c = parse("[activities]\nstale_minutes = 1440\n").unwrap();
     assert_eq!(c.activities.stale_minutes, 1440);
+    assert!(
+        !parse("[activities]\nauto_progress = false\n")
+            .unwrap()
+            .activities
+            .auto_progress
+    );
     let map = entries(Config::default().activities.entries());
-    assert_eq!(map.len(), 1);
+    assert_eq!(map.len(), 2);
     assert_eq!(map["stale_minutes"], SettingValue::Uint(30));
+    assert_eq!(map["auto_progress"], SettingValue::Bool(true));
 }
 
 #[test]

@@ -65,6 +65,12 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     )
     .await?;
     devices::dbus::serve(&conn, alerts).await?;
+    let config = services.config.clone();
+    activities::launcher_watch::spawn(
+        conn.clone(),
+        services.activities.commands.clone(),
+        move || config.borrow().activities.auto_progress,
+    );
     activities::dbus::serve(&conn, services.activities).await?;
     weather::dbus::serve(&conn, services.weather).await?;
     calendar::dbus::serve(&conn).await?;

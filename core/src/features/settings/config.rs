@@ -230,11 +230,16 @@ impl Default for NotificationsConfig {
 pub struct ActivitiesConfig {
     /// An activity not updated for this long ends.
     pub stale_minutes: u32,
+    /// Progress that apps report to the dock, and system updates, show as activities.
+    pub auto_progress: bool,
 }
 
 impl Default for ActivitiesConfig {
     fn default() -> Self {
-        ActivitiesConfig { stale_minutes: 30 }
+        ActivitiesConfig {
+            stale_minutes: 30,
+            auto_progress: true,
+        }
     }
 }
 
@@ -776,7 +781,10 @@ impl NotificationsConfig {
 
 impl ActivitiesConfig {
     pub fn entries(&self) -> Entries {
-        vec![("stale_minutes", self.stale_minutes.into())]
+        vec![
+            ("stale_minutes", self.stale_minutes.into()),
+            ("auto_progress", self.auto_progress.into()),
+        ]
     }
 }
 
