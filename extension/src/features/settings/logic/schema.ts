@@ -168,6 +168,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         'Tint the progress bar, equalizer and play button with the album cover',
                     ),
                     appearance(
+                        'cover_backdrop',
+                        'Cover behind the player',
+                        bool(),
+                        "The song's cover, blurred, fills the open player",
+                    ),
+                    appearance(
                         'progress_line',
                         'Progress line',
                         bool(),

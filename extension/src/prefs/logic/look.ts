@@ -1,4 +1,5 @@
 import type { NoktaIcon } from '../../shared/logic/icon-names.js';
+import { backdropPalette } from '../../shared/logic/backdrop.js';
 import { paletteFor, type Palette, type PictureState, type ThemeColors } from '../../shared/logic/theme.js';
 
 /** The sidebar's icon for each page of SETTINGS_PAGES, from Nokta's own set. */
@@ -30,6 +31,8 @@ export interface PreviewAppearance extends ThemeColors {
     progressLine: boolean;
     cornerRadius: number;
     earRadius: number;
+    /** The song's blurred cover behind the open player. */
+    coverBackdrop?: boolean;
 }
 
 /** What the preview draws: the notch open on the sample song. */
@@ -43,10 +46,15 @@ export interface PreviewModel {
     earRadius: number;
 }
 
-/** `picture` is the picture theme's image, as the daemon prepared it. */
+/**
+ * `picture` is the picture theme's image, as the daemon prepared it. With the
+ * cover behind the player, the sample song has no image: its color stands in.
+ */
 export function previewModel(appearance: PreviewAppearance, picture: PictureState | null = null): PreviewModel {
     return {
-        palette: paletteFor(appearance.theme, appearance, SAMPLE_SONG.cover, picture),
+        palette: appearance.coverBackdrop
+            ? { ...backdropPalette(appearance, SAMPLE_SONG.cover, ''), picture: null }
+            : paletteFor(appearance.theme, appearance, SAMPLE_SONG.cover, picture),
         title: SAMPLE_SONG.title,
         artist: SAMPLE_SONG.artist,
         progress: appearance.progressLine ? SAMPLE_SONG.position : null,

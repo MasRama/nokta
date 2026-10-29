@@ -93,6 +93,7 @@ import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
+import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
 import { paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
@@ -1245,6 +1246,8 @@ export class MonitorNotch implements ShelfNotch {
         const previous = this.drawn;
         if (mode === previous) return;
         this.drawn = mode;
+        // The open player may show the blurred cover.
+        this.applyPalette();
         if (mode !== 'expanded') {
             this.setLyricsOpen(false);
             this.expanded.closeMenus();
@@ -1334,12 +1337,15 @@ export class MonitorNotch implements ShelfNotch {
         if (this.drawn === 'expanded') this.notch.resizeTo(width, height, 'width');
     }
 
-    /** The theme's colors with the cover's worked in. */
+    /** The theme's colors with the cover's worked in, or the blurred cover's behind the open player. */
     private palette(): Palette {
         const appearance = this.sources.settings.appearance;
+        const { accentColor, backdropPath } = this.sources.media.snapshot();
+        const backdrop = backdropFor({ on: appearance.coverBackdrop, view: this.drawn, backdrop: backdropPath });
+        if (backdrop) return backdropPalette(appearance, accentColor, backdrop);
         const theme = themeFor(appearance, this.sources.systemStyle.dark());
         const picture = { ...this.sources.settings.picture, darken: appearance.pictureDarken };
-        return paletteFor(theme, appearance, this.sources.media.snapshot().accentColor, picture);
+        return paletteFor(theme, appearance, accentColor, picture);
     }
 
     /** Recolors the notch and its views when the theme or the cover's color changes. */

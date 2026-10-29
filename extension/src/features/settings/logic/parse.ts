@@ -35,6 +35,8 @@ export interface Appearance {
     /** 0 to 0.8: how much the picture is darkened under the text. */
     pictureDarken: number;
     pictureBlur: number;
+    /** The song's blurred cover behind the open player. */
+    coverBackdrop: boolean;
 }
 
 export interface Behavior {
@@ -117,6 +119,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     picture: '',
     pictureDarken: 0.35,
     pictureBlur: 0,
+    coverBackdrop: false,
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {

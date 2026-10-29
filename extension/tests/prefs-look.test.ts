@@ -68,6 +68,14 @@ test("the preview's accent follows the cover only while that setting is on", () 
     assert.equal(previewModel({ ...appearance, useAlbumAccent: true }).palette.accent, SAMPLE_SONG.cover);
 });
 
+test("with the cover behind the player, the preview shows the sample cover's color under white text", () => {
+    const model = previewModel({ ...appearance, theme: 'paper', coverBackdrop: true });
+    assert.equal(model.palette.foreground, '#ffffff');
+    assert.equal(model.palette.light, false);
+    assert.equal(model.palette.picture, null);
+    assert.notEqual(model.palette.background, paletteFor('paper', appearance, SAMPLE_SONG.cover).background);
+});
+
 test('the progress line shows only while it is on', () => {
     assert.equal(previewModel(appearance).progress, SAMPLE_SONG.position);
     assert.equal(previewModel({ ...appearance, progressLine: false }).progress, null);
