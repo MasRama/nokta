@@ -207,10 +207,11 @@ if [ "$START_DAEMON" = 1 ]; then
     gjs -m "$HERE/fake-devices.js" > "$STATE/devices.log" 2>&1 &
     PIDS="$PIDS $!"
     wait_name io.nokta.devshell.FakeDevices
-    # noktad reads meeting links from this calendar server.
+    # noktad reads meeting links and calendar colors from this calendar server.
     gjs -m "$HERE/fake-eds.js" > "$STATE/eds.log" 2>&1 &
     PIDS="$PIDS $!"
     wait_name org.gnome.evolution.dataserver.Calendar8
+    wait_name org.gnome.evolution.dataserver.Sources5
     DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" NOKTA_LRCLIB_URL="http://127.0.0.1:$PORT" \
         NOKTA_OPEN_METEO_URL="http://127.0.0.1:$PORT" NOKTA_OPEN_METEO_GEOCODING_URL="http://127.0.0.1:$PORT" \
         "$NOKTAD" > "$STATE/noktad.log" 2>&1 &

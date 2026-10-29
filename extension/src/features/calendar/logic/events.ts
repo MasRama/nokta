@@ -117,10 +117,29 @@ export function countdownEvent(
     return shown;
 }
 
-/** `10:30` today, `Tomorrow 09:00` after; `formatTime` follows the clock setting. */
-export function eventTime(startMs: number, nowMs: number, formatTime: (ms: number) => string): string {
-    const time = formatTime(startMs);
-    return daysFrom(nowMs, startMs) >= 1 ? `Tomorrow ${time}` : time;
+/** An agenda row's time column, and what it says dimmed after the title. */
+export interface AgendaWhen {
+    time: string;
+    /** `in 25 min` for the first event, `Tomorrow` for a later day, both, or empty. */
+    detail: string;
+}
+
+/** When an agenda event starts, in its row; `first` is the soonest one, `formatTime` follows the clock setting. */
+export function agendaWhen(
+    startMs: number,
+    nowMs: number,
+    first: boolean,
+    formatTime: (ms: number) => string,
+): AgendaWhen {
+    const parts = [];
+    if (daysFrom(nowMs, startMs) >= 1) parts.push('Tomorrow');
+    if (first) parts.push(soonLabel(startMs, nowMs));
+    return { time: formatTime(startMs), detail: parts.join(' · ') };
+}
+
+/** The daemon's color for an event's calendar, when it is `#rrggbb`. */
+export function eventColor(color: string | null): string | null {
+    return color !== null && /^#[0-9a-f]{6}$/i.test(color) ? color : null;
 }
 
 /** `in 25 min`, `in 2 h 5 min`, or `now` once it has started. */

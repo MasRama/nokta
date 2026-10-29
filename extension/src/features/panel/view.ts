@@ -62,8 +62,12 @@ export interface PanelEvent {
     /** The shell's event id. */
     id: string;
     title: string;
-    /** Like `10:30 · in 25 min` for the first, `Tomorrow 09:00` after; shown dimmed. */
-    when: string;
+    /** Like `10:30`, in the row's time column. */
+    time: string;
+    /** Like `in 25 min` for the first, `Tomorrow` for a later day; shown dimmed, may be empty. */
+    detail: string;
+    /** Its calendar's `#rrggbb`, for the strip; null uses the calendar tone. */
+    color: string | null;
     /** Whether it has a meeting link, for its Join button. */
     joinable: boolean;
 }
@@ -374,26 +378,31 @@ class WeatherBox {
     }
 }
 
-/** An event in one line: calendar chip, title, then when, dimmed. A click opens the calendar. */
+/**
+ * An event in one line: a strip in its calendar's color, its time, the
+ * title, then how soon, dimmed. A click opens the calendar.
+ */
 class EventRow {
     readonly actor: St.Button;
-    readonly chip = new IconChip(TONES.calendar, iconFor('x-office-calendar-symbolic'));
+    private readonly strip: St.Widget;
+    private readonly time: St.Label;
     private readonly title: St.Label;
-    private readonly when: St.Label;
+    private readonly detail: St.Label;
     private readonly join: St.Button;
     private readonly clickId: number;
     private id = '';
+    private color = '';
 
     constructor(onClick: () => void, onJoin: (id: string) => void) {
         const box = new St.BoxLayout({ style_class: 'nokta-panel-event-box', x_expand: true });
-        box.add_child(this.chip.actor);
+        this.strip = new St.Widget({ style_class: 'nokta-panel-event-strip', y_align: Clutter.ActorAlign.CENTER });
+        this.time = new St.Label({ style_class: 'nokta-panel-event-time', y_align: Clutter.ActorAlign.CENTER });
         this.title = new St.Label({ style_class: 'nokta-panel-event-title', y_align: Clutter.ActorAlign.CENTER });
         this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        this.when = new St.Label({ style_class: 'nokta-panel-event-when', y_align: Clutter.ActorAlign.CENTER });
+        this.detail = new St.Label({ style_class: 'nokta-panel-event-when', y_align: Clutter.ActorAlign.CENTER });
         // St CSS ignores opacity.
-        this.when.opacity = SECONDARY;
-        box.add_child(this.title);
-        box.add_child(this.when);
+        this.detail.opacity = SECONDARY;
+        for (const child of [this.strip, this.time, this.title, this.detail]) box.add_child(child);
         this.join = new St.Button({
             style_class: 'nokta-panel-join',
             label: 'Join',
@@ -419,9 +428,15 @@ class EventRow {
         this.actor.visible = event !== undefined;
         if (!event) return;
         this.id = event.id;
+        this.time.text = event.time;
         this.title.text = event.title;
-        this.when.text = event.when;
+        this.detail.text = event.detail;
+        this.detail.visible = event.detail !== '';
         this.join.visible = event.joinable;
+        const color = event.color ?? TONES.calendar;
+        if (color === this.color) return;
+        this.color = color;
+        this.strip.style = `background-color: ${color};`;
     }
 
     destroy(): void {
@@ -557,7 +572,7 @@ export class HomePanel {
         for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setColors(colors);
         for (const row of this.clocks) row.chip.setLight(colors.light);
-        for (const row of [...this.events, this.recording, this.call]) row.chip.setLight(colors.light);
+        for (const row of [this.recording, this.call]) row.chip.setLight(colors.light);
     }
 
     destroy(): void {

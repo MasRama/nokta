@@ -432,6 +432,20 @@
     icon-size: 14px;
 }
 
+/* The event's calendar color (panel/view.ts EventRow). */
+.nokta-panel-event-strip {
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+}
+
+.nokta-panel-event-time {
+    min-width: 40px;
+    font-size: 13px;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+}
+
 .nokta-panel-event-title {
     font-size: 13px;
     font-weight: 600;
