@@ -7,6 +7,7 @@ import { OverlayLayout } from '../../shared/layout.js';
 import { mix, withAlpha } from '../../shared/logic/color.js';
 import { onTone, toneChip, toneOn } from '../../shared/logic/tones.js';
 import { iconFor } from '../../shared/icons.js';
+import { LIFT, POP, popsOn } from './logic/motion.js';
 
 const IDLE_ALPHA = 0.1;
 const HOVER_ALPHA = 0.18;
@@ -39,6 +40,26 @@ function paint(surface: St.Widget, icon: St.Icon, on: boolean, hover: boolean, t
     }
 }
 
+/** The icon grows a little and settles back, as its control turns on. */
+function pop(icon: St.Icon): void {
+    if (!St.Settings.get().enable_animations) return;
+    icon.set_pivot_point(0.5, 0.5);
+    icon.remove_all_transitions();
+    icon.ease({
+        scale_x: POP.peak,
+        scale_y: POP.peak,
+        duration: POP.upMs,
+        mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        onComplete: () =>
+            icon.ease({
+                scale_x: POP.from,
+                scale_y: POP.from,
+                duration: POP.downMs,
+                mode: Clutter.AnimationMode.EASE_OUT_BACK,
+            }),
+    });
+}
+
 /** A quick toggle: a pill with an icon and a name, filled with its tone while on. */
 export class TogglePill {
     readonly actor: St.Button;
@@ -63,6 +84,7 @@ export class TogglePill {
     }
 
     set(on: boolean): void {
+        if (popsOn(this.on, on)) pop(this.icon);
         this.on = on;
         this.actor.checked = on;
         this.repaint();
@@ -119,12 +141,16 @@ export class Tile {
         box.add_child(this.circle);
         box.add_child(new St.Label({ style_class: 'nokta-tile-label', text: label, x_align: Clutter.ActorAlign.CENTER }));
         this.actor = new St.Button({ style_class: 'nokta-tile', child: box, x_expand: true, can_focus: true });
-        this.actor.connect('notify::hover', () => this.repaint());
+        this.actor.connect('notify::hover', () => {
+            this.repaint();
+            this.lift(this.actor.hover);
+        });
         this.actor.connect('clicked', onClick);
         this.repaint();
     }
 
     set(active: boolean, badge: string | null = null): void {
+        if (popsOn(this.active, active)) pop(this.icon);
         this.active = active;
         this.badge.visible = badge !== null;
         if (badge !== null) this.badge.text = badge;
@@ -139,6 +165,19 @@ export class Tile {
 
     private repaint(): void {
         paint(this.circle, this.icon, this.active, this.actor.hover, this.tone, this.colors);
+    }
+
+    /** The square rises and grows a little under the pointer. */
+    private lift(up: boolean): void {
+        if (!St.Settings.get().enable_animations) return;
+        this.circle.set_pivot_point(0.5, 0.5);
+        this.circle.ease({
+            translation_y: up ? LIFT.y : 0,
+            scale_x: up ? LIFT.scale : 1,
+            scale_y: up ? LIFT.scale : 1,
+            duration: LIFT.ms,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
     }
 }
 

@@ -114,6 +114,7 @@
 .nokta-button {
     padding: 4px;
     border-radius: 99px;
+    transition-duration: 150ms;
 }
 
 .nokta-button:hover {
@@ -488,9 +489,11 @@
     spacing: 8px;
 }
 
+/* The colour cross-fades as a toggle turns on or off, and on hover. */
 .nokta-pill {
     border-radius: 12px;
     padding: 8px 10px;
+    transition-duration: 150ms;
 }
 
 .nokta-pill-box {
@@ -513,6 +516,7 @@
 /* A rounded square, like the pills' corners. */
 .nokta-tile-circle {
     border-radius: 13px;
+    transition-duration: 150ms;
 }
 
 .nokta-tile-icon {
