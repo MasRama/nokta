@@ -659,6 +659,26 @@ sleep 0.5
 "$HERE/shot.sh" smoke-dock-done > /dev/null
 wait_for "the clock comes back after the dock's activity" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
+# A system update through PackageKit shows the same way. The fake starts
+# PackageKit with it, after noktad, as a real update does.
+"$HERE/device.sh" update 25
+wait_for "a system update becomes an activity" \
+    "$FIND shown('nokta-activity-badge') && one('nokta-activity-badge-label').text === '25%'" 10 \
+    "$FIND JSON.stringify([shown('nokta-activity-badge'), one('nokta-activity-badge-label')?.text])"
+"$HERE/device.sh" update 70
+"$HERE/hover.sh" on > /dev/null
+wait_for "the panel names the update and what it is doing" \
+    "$FIND one('nokta-panel-activity-title').text === 'Installing updates' && one('nokta-panel-activity-detail').text === 'Downloading' && Math.round(one('nokta-body').height) === 229" 5 \
+    "$FIND JSON.stringify([one('nokta-panel-activity-title')?.text, one('nokta-panel-activity-detail')?.text, Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-update-panel > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the panel closes over the update" "$FIND shown('nokta-activity-badge') && one('nokta-activity-badge-label').text === '70%' && width() === 180" 5
+"$HERE/device.sh" update-done
+wait_for "the finished update ends as done" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Installing updates' && one('nokta-osd-detail').text === 'Done'" 5 \
+    "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text, one('nokta-osd-detail')?.text])"
+wait_for "the clock comes back after the update" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
+
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a

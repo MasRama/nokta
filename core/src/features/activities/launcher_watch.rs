@@ -93,7 +93,7 @@ async fn watch(
     Ok(())
 }
 
-async fn send(commands: &mpsc::Sender<Command>, action: Action) {
+pub(super) async fn send(commands: &mpsc::Sender<Command>, action: Action) {
     let command = match action {
         Action::Set(id, update) => {
             let (reply, answer) = oneshot::channel();

@@ -48,6 +48,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         }
     };
     let resume = system.clone();
+    let packagekit = system.clone();
     let alerts = devices::watcher::spawn(system);
 
     // Objects first, name last: a client activated by the name never sees a
@@ -68,6 +69,12 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     let config = services.config.clone();
     activities::launcher_watch::spawn(
         conn.clone(),
+        services.activities.commands.clone(),
+        move || config.borrow().activities.auto_progress,
+    );
+    let config = services.config.clone();
+    activities::packagekit_watch::spawn(
+        packagekit,
         services.activities.commands.clone(),
         move || config.borrow().activities.auto_progress,
     );
