@@ -24,6 +24,8 @@ export interface Appearance {
     progressLine: boolean;
     /** A glow under the notch in the colour of an alert. */
     alertGlow: boolean;
+    /** Each alert moves its own way; off, every alert keeps the kick. */
+    alertMotion: boolean;
     /** A soft shadow under the notch and a thin rim along its bottom edge. */
     depth: boolean;
     /** One of GRADIENTS in shared/logic/theme.ts: custom's fill toward `backgroundEnd`, or flat. */
@@ -126,6 +128,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     theme: 'midnight',
     progressLine: true,
     alertGlow: true,
+    alertMotion: true,
     depth: true,
     gradient: 'none',
     backgroundEnd: '#1c1c1e',

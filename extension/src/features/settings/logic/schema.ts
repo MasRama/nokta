@@ -188,6 +188,12 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         'Under the notch: red when urgent, green when done or charging',
                     ),
                     appearance(
+                        'alert_motion',
+                        'Alert motion',
+                        bool(),
+                        'A timer rings, a failed activity shakes, a charger fills the battery',
+                    ),
+                    appearance(
                         'depth',
                         'Depth',
                         bool(),

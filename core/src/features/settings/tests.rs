@@ -35,6 +35,7 @@ fn defaults_match_spec() {
     assert!(a.progress_line);
     assert!(a.alert_glow);
     assert!(a.depth);
+    assert!(a.alert_motion);
     assert!(!a.cover_backdrop);
     let b = &c.behavior;
     assert_eq!((b.open_delay_ms, b.close_delay_ms), (120, 300));
@@ -434,6 +435,7 @@ fn appearance_entries_have_all_keys() {
         [
             "accent",
             "alert_glow",
+            "alert_motion",
             "animation_speed",
             "background",
             "background_end",
