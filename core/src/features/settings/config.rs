@@ -129,6 +129,8 @@ pub struct Behavior {
     pub open_on: String,
     /// Opens the notch and takes the keyboard, in GNOME's key syntax; empty for none.
     pub open_shortcut: String,
+    /// Scroll for volume, swipe for songs and middle click for play/pause on the notch.
+    pub gestures: bool,
 }
 
 impl Default for Behavior {
@@ -156,6 +158,7 @@ impl Default for Behavior {
             fullscreen_alerts: "important".into(),
             open_on: "hover".into(),
             open_shortcut: "<Super><Alt>n".into(),
+            gestures: true,
         }
     }
 }
@@ -732,6 +735,7 @@ impl Behavior {
             ("fullscreen_alerts", (&self.fullscreen_alerts).into()),
             ("open_on", (&self.open_on).into()),
             ("open_shortcut", (&self.open_shortcut).into()),
+            ("gestures", self.gestures.into()),
         ]
     }
 }

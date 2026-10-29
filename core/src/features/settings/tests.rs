@@ -47,6 +47,7 @@ fn defaults_match_spec() {
     assert_eq!(b.alert_duration_ms, 3000);
     assert!(b.show_clock);
     assert_eq!(b.clock_format, "system");
+    assert!(b.gestures);
     assert!(c.lyrics.enabled);
 }
 
@@ -427,6 +428,7 @@ fn behavior_entries_have_all_keys() {
             "device_alerts",
             "file_shelf",
             "fullscreen_alerts",
+            "gestures",
             "live_activities",
             "move_clock",
             "open_delay_ms",

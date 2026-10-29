@@ -7,6 +7,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
 import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
+import { NotchGestures } from './features/gestures/index.js';
 import {
     LYRIC_ROW_EXTRA,
     LyricLine,
@@ -286,6 +287,7 @@ export class MonitorNotch implements ShelfNotch {
     /** Holds the pages; the one open shows. */
     private readonly pages = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly menu: NotchMenu;
+    private readonly gestures: NotchGestures;
     private readonly pressId: number;
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
@@ -468,6 +470,13 @@ export class MonitorNotch implements ShelfNotch {
             });
             return Clutter.EVENT_STOP;
         });
+        this.gestures = new NotchGestures(this.notch.actor, monitorIndex, {
+            enabled: () => sources.settings.behavior.gestures,
+            hasPlayer: () => sources.media.snapshot().available,
+            playPause: () => sources.media.playPause(),
+            next: () => sources.media.next(),
+            previous: () => sources.media.previous(),
+        });
         // GNOME 50 and later destroy the notch themselves when the shell
         // shuts down, while the clients may still report changes.
         this.destroyId = this.notch.actor.connect('destroy', () => this.destroy());
@@ -509,6 +518,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
         this.notch.actor.disconnect(this.pressId);
+        this.gestures.destroy();
         this.notch.actor.disconnect(this.destroyId);
         global.display.disconnect(this.fullscreenId);
         global.window_group.disconnect(this.windowsShownId);

@@ -72,6 +72,8 @@ export interface Behavior {
     openOn: OpenOn;
     /** Opens the notch and takes the keyboard, in GNOME's key syntax; empty for none. */
     openShortcut: string;
+    /** Scroll for volume, swipe for songs and middle click for play/pause on the notch. */
+    gestures: boolean;
 }
 
 /** io.nokta.Settings1.Lyrics in camelCase. */
@@ -145,6 +147,7 @@ export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
     fullscreenAlerts: 'important',
     openOn: 'hover',
     openShortcut: '<Super><Alt>n',
+    gestures: true,
 };
 
 /** io.nokta.Settings1.Notifications in camelCase. */
