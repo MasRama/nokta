@@ -1,6 +1,6 @@
 {
   "name": "nokta-extension",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "GNOME Shell extension for Nokta, a dynamic island for the desktop",
   "license": "GPL-3.0-or-later",

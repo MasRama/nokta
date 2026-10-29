@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.8.0](https://github.com/MasRama/nokta/compare/v0.7.0...v0.8.0) (2026-10-29)
+
+
+### Features
+
+* **clipboard:** show a link icon for a copied address ([7c17976](https://github.com/MasRama/nokta/commit/7c17976ea63272fd9690e5bfe53d1ec6b22ceff4))
+* **extension:** draw Nokta's own icons ([8e08f20](https://github.com/MasRama/nokta/commit/8e08f208f4ce46cf4baf57b893f380d58cb773e4))
+* **extension:** one type scale for every view ([d6ba1fb](https://github.com/MasRama/nokta/commit/d6ba1fb16712fdf6892fbfc57c8a47429f1def7b))
+* **media:** give the open player a glowing cover, its own equalizer and bolder controls ([02b94cb](https://github.com/MasRama/nokta/commit/02b94cb1bf0006604c4e4facdab9fc6c6a9e521b))
+* **notifications:** set a symbolic notification icon on a square of the accent ([79a384a](https://github.com/MasRama/nokta/commit/79a384a800b03d8d7e1e8bc0206be2f12f1ff724))
+* **osd:** draw a device's battery before its percentage and thicken the level bar ([44c2099](https://github.com/MasRama/nokta/commit/44c209957edc5190166e65fb8224a5d0e779889f))
+* **panel:** give home a large date and a tinted icon chip on each row ([be9bf04](https://github.com/MasRama/nokta/commit/be9bf047fd4958d198324fac7ce47f7426fd9c63))
+* **panel:** paint home's toggles and tiles in their tones ([68acd98](https://github.com/MasRama/nokta/commit/68acd9842f9e85198a0e2142a170ea3add93aac4))
+* **settings:** give the settings window a look of its own ([174224c](https://github.com/MasRama/nokta/commit/174224cde781fd1cd8ef32546d9ea52ae4f6ff92))
+* **settings:** open a settings page of Nokta's own from home's Settings tile ([4d478c4](https://github.com/MasRama/nokta/commit/4d478c49d6ae69ff6a611546f306d790b9271d1d))
+* **themes:** give each kind of thing its own tone ([2a59abd](https://github.com/MasRama/nokta/commit/2a59abd6c20b43c7e390a78463ee87f442ba9f97))
+* **themes:** give the custom theme a gradient with a direction ([210c965](https://github.com/MasRama/nokta/commit/210c965a9824d45b1dfb7f8881caa145f734109f))
+
+
+### Bug Fixes
+
+* **extension:** dim the secondary text that CSS left at full strength ([83fd13f](https://github.com/MasRama/nokta/commit/83fd13f537f45350694608b042e6ee4918ab9a7a))
+
 ## [0.7.0](https://github.com/MasRama/nokta/compare/v0.6.0...v0.7.0) (2026-10-28)
 
 
