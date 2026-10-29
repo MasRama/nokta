@@ -16,6 +16,30 @@ const CARD = '#18181c';
 const RAISED = '#1f1f24';
 const LINE = 'rgba(255, 255, 255, 0.07)';
 
+/** Nokta's wordmark for a dark ground, in the extension's `icons/`. */
+export const BRAND_LOGO = 'nokta-wordmark-reverse.svg';
+/** The wordmark's height in the sidebar; its viewBox is 900.67 x 200. */
+const BRAND_HEIGHT = 16;
+const BRAND_WIDTH = Math.round((BRAND_HEIGHT * 900.67) / 200);
+
+/**
+ * The rule that draws the wordmark at `logoUri` in the sidebar's header. A
+ * background scales the SVG down from its own size, so it stays sharp at
+ * any display scale.
+ */
+export function brandCss(logoUri: string): string {
+    return `
+.${PREFS_CLASS} .nokta-brand {
+    min-width: ${BRAND_WIDTH}px;
+    min-height: ${BRAND_HEIGHT}px;
+    background-image: url("${logoUri}");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+`;
+}
+
 /**
  * The settings window's stylesheet: dark surfaces whatever the system style,
  * ember for what is on or chosen. It is added for the whole display, so each
@@ -38,18 +62,6 @@ export const PREFS_CSS = `
     background-color: ${SIDEBAR};
     color: ${TEXT};
     border-right: 1px solid ${LINE};
-}
-
-.${PREFS_CLASS} .nokta-brand {
-    font-size: 20px;
-    font-weight: 800;
-}
-
-.${PREFS_CLASS} .nokta-brand-dot {
-    min-width: 8px;
-    min-height: 8px;
-    border-radius: 4px;
-    background-color: ${EMBER};
 }
 
 .${PREFS_CLASS} .navigation-sidebar {
