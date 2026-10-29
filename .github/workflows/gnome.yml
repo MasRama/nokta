@@ -60,23 +60,10 @@ jobs:
           - { gnome: "50", image: "fedora:44", family: fedora }
           - { gnome: "51", image: "fedora:45", family: fedora }
     steps:
-      - name: Install GNOME Shell
-        if: matrix.family == 'debian'
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends gnome-shell gnome-shell-common \
-            dbus-daemon libglib2.0-bin gjs gir1.2-adw-1 gir1.2-gtk-4.0 \
-            libgl1-mesa-dri adwaita-icon-theme python3 python3-pil unzip \
-            pipewire pipewire-pulse pipewire-bin
-      - name: Install GNOME Shell
-        if: matrix.family == 'fedora'
-        run: |
-          dnf install -y --setopt=install_weak_deps=False gnome-shell dbus-daemon \
-            glib2 gjs libadwaita gtk4 mesa-dri-drivers adwaita-icon-theme \
-            python3 python3-pillow unzip pipewire pipewire-pulseaudio pipewire-utils
       - uses: actions/checkout@v7
+      # The same script tools/devshell/matrix.sh builds its images with.
+      - name: Install GNOME Shell
+        run: tools/devshell/deps.sh ${{ matrix.family }}
       - uses: actions/download-artifact@v8
         with:
           name: nokta
