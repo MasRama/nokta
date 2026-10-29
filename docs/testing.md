@@ -99,7 +99,12 @@ must curve inward, the notch must be centered, and no text may be clipped.
       without AM/PM.
 - [ ] **Collapsed, playing**: small cover on the left, equalizer bars moving
       on the right, `playing_width` wide.
-- [ ] **Collapsed, paused**: same, bars at rest.
+- [ ] **Collapsed, paused**: same, bars eased to rest, the cover dimmed and
+      a little smaller; playing again, it springs back.
+- [ ] **New song** (`Next` on the fake player): the closed notch widens to
+      `expanded_width` with the title and artist for 3 s, then closes back.
+      Not while the notch is open, not on enable, not with
+      `[behavior] track_peek = false`.
 - [ ] The smoke test turns `[media] real_equalizer` on and links a 100 Hz
       tone to `noktad`'s recording (`tone.sh`, no session manager here):
       the first bar stays full, the others low; no call view and no

@@ -50,6 +50,8 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   button at the player's top right switches the sound output, for example
   from the speakers to your headphones. With `[media] real_equalizer` on,
   the bars follow the music's bass, mids and highs instead of a pattern.
+  When the song changes, the closed notch widens for 3 s with its title and
+  artist; on pause the bars settle and the cover dims.
 - **Synced lyrics, karaoke style.** The line being sung lights up from left
   to right, with the next line under it. Click it to follow the lyrics
   around it. Lyrics come from [LRCLIB](https://lrclib.net), or from your
@@ -365,6 +367,7 @@ Every key, by table:
 | `open_shortcut` | `"<Super><Alt>n"` | Keys that open the notch for the keyboard (see [Keyboard](#keyboard)), written like GNOME's keyboard shortcuts; `""` means no shortcut |
 | `gestures` | `true` | Scroll for volume, swipe sideways for the next or previous song and middle click to play or pause (see [Gestures](#gestures)) |
 | `move_clock` | `true` | Move the GNOME clock to the right side of the top bar |
+| `track_peek` | `true` | When the song changes, the closed notch shows its title and artist for 3 s |
 | `show_lyrics` | `true` | Show the current lyric line in the open notch |
 | `replace_osd` | `true` | Show volume, brightness and other system popups in the notch instead of GNOME's popup |
 | `osd_duration_ms` | `1500` | How long the notch shows the volume or brightness after the last change |

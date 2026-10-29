@@ -238,6 +238,28 @@ fi
 "$HERE/hover.sh" off > /dev/null
 wait_for "the player closes" "$FIND shown('nokta-collapsed') && width() === 260" 5
 
+# A new song widens the closed notch with its title for 3 s; Previous brings
+# the first song back, with its own peek.
+media_player() {
+    gdbus call --session --dest org.mpris.MediaPlayer2.noktafake \
+        --object-path /org/mpris/MediaPlayer2 --method "org.mpris.MediaPlayer2.Player.$1" > /dev/null
+}
+media_player Next
+wait_for "a new song shows its title in a 420 px closed notch" \
+    "$FIND shown('nokta-peek') && one('nokta-peek-title').text.length > 0 && width() === 420" 5 \
+    "$FIND JSON.stringify([shown('nokta-peek'), width()])"
+"$HERE/shot.sh" smoke-peek > /dev/null
+wait_for "the peek goes after 3 s" "$FIND shown('nokta-collapsed') && !shown('nokta-peek') && width() === 260" 6
+media_player Previous
+wait_for "the first song peeks again" "$FIND shown('nokta-peek')" 5
+wait_for "and the notch closes back to the music" "$FIND shown('nokta-collapsed') && width() === 260" 6
+# Paused, the bars rest and the closed cover dims.
+"$HERE/player.sh" Paused
+wait_for "paused, the closed cover dims" "$FIND shown('nokta-collapsed') && one('nokta-collapsed').get_first_child().opacity < 255" 5
+"$HERE/shot.sh" smoke-paused > /dev/null
+"$HERE/player.sh" Playing
+wait_for "playing again, the cover is bright" "$FIND one('nokta-collapsed').get_first_child().opacity === 255" 5
+
 # With [media] real_equalizer on, noktad records what plays (pw-record) and
 # the bars follow it: a 100 Hz tone fills the first band and leaves the
 # others low, which the pattern never holds. The bars move only with GNOME's
