@@ -1,9 +1,8 @@
 # Nokta
 
-An open-source dynamic island for the desktop. A small black notch sits on
-the top edge of the screen. It shows the song that is playing with its
-lyrics, the volume, your earbuds' battery, a focus timer and your
-notifications. Hover over it to open it, or press
+A dynamic island for the desktop: one small notch at the top of your screen
+for what's happening now, out of the way until you need it. Open source.
+GNOME today, Windows and macOS next. Hover over it to open it, or press
 <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>.
 
 <p align="center">
@@ -11,7 +10,7 @@ notifications. Hover over it to open it, or press
   <img src="docs/images/lyrics.png" width="49%" alt="The lyrics view, the sung part of the line lit up">
 </p>
 <p align="center">
-  <img src="docs/images/home.png" width="49%" alt="Home: the date, the weather, the next event, files on the shelf, quick toggles and tiles">
+  <img src="docs/images/home.png" width="49%" alt="Home: the date, the weather, the next events, files on the shelf, quick toggles and tiles">
   <img src="docs/images/clipboard.png" width="49%" alt="The clipboard history opened from home">
 </p>
 <p align="center">
@@ -29,6 +28,13 @@ notifications. Hover over it to open it, or press
 <p align="center">
   <img src="docs/images/theme-glass.png" width="49%" alt="The glass theme">
   <img src="docs/images/theme-paper.png" width="49%" alt="The paper theme">
+</p>
+<p align="center">
+  <img src="docs/images/picture.png" width="49%" alt="The picture theme: a picture of your own behind the open player">
+  <img src="docs/images/backdrop.png" width="49%" alt="The song's cover, blurred, behind the open player">
+</p>
+<p align="center">
+  <img src="docs/images/fullscreen-lyrics.png" width="98%" alt="Full-screen lyrics over the song's blurred cover, Korean and Japanese lines with their pronunciation under them">
 </p>
 
 ## Features
@@ -57,7 +63,8 @@ notifications. Hover over it to open it, or press
   their battery), when the charger is plugged in or out, and when the
   battery is low or full.
 - **Home.** When nothing plays, hovering opens home: the date and the
-  weather (see [Settings](#settings)), the next events from GNOME's calendar, running
+  weather (see [Settings](#settings)), the next events from GNOME's calendar (a meeting gets a
+  *Join* button), running
   activities, timers, the files on the shelf, quick toggles for Do Not Disturb,
   Caffeine (the screen stays on) and the dark style, and tiles for the
   notification list, focus, timers, the clipboard and Settings. While a song plays,
@@ -103,7 +110,8 @@ notifications. Hover over it to open it, or press
   focus timer, a timer or alarm that is done and a calendar reminder.
   Choose all alerts or none with `fullscreen_alerts`.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
-  color) and paper, or your own colors.
+  color), paper, a picture of your own, or your own colors. The song's
+  cover, blurred, can sit behind the open player in any of them.
 - **[Keyboard](#keyboard).** <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>
   opens the notch on the monitor you are working on, ready for Tab, Enter
   and Escape. Or have it open on a click instead of on hover.
