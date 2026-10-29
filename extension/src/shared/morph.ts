@@ -53,13 +53,14 @@ export class MorphLayer {
     }
 
     /**
-     * Flies a clone of `big` from `from`, where it is drawn now, to where
-     * `to` rests (`toRect`, null while `to` is not laid out yet; then the
-     * flight waits for its first layout). Nothing flies when either place
-     * is missing.
+     * Flies a clone of `big` from `fromRect`, where `from` is drawn now (see
+     * `stageRect`), to where `to` rests (`toRect`, null while `to` is not
+     * laid out yet; then the flight waits for its first layout). Nothing
+     * flies when either place is missing.
      */
     fly(
         from: Clutter.Actor,
+        fromRect: Rect | null,
         to: Clutter.Actor,
         toRect: () => Rect | null,
         big: Clutter.Actor,
@@ -67,7 +68,6 @@ export class MorphLayer {
         speed: number,
     ): void {
         this.cancel();
-        const fromRect = stageRect(from);
         if (!fromRect) return;
         this.hide(from);
         this.hide(to);

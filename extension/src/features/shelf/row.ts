@@ -63,6 +63,11 @@ export class ShelfRow {
         });
     }
 
+    /** The first file's slot, where the closed notch's shelf lands when home opens. */
+    get firstSlot(): St.Widget | null {
+        return this.slots[0]?.actor ?? null;
+    }
+
     show(items: readonly ShelfItem[]): void {
         this.items = items;
         this.actor.visible = items.length > 0;

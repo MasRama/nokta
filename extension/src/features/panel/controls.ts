@@ -109,6 +109,11 @@ export class Tile {
     private active = false;
     private colors = DEFAULT_COLORS;
 
+    /** The rounded square, where the closed notch's focus timer lands when home opens. */
+    get circleActor(): St.Widget {
+        return this.circle;
+    }
+
     /** `icon` is a name for iconFor, or an icon. */
     constructor(
         icon: string | Gio.Icon,

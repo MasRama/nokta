@@ -6,6 +6,7 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { withAlpha } from '../../shared/logic/color.js';
 import { type ControlColors, IconChip, TogglePill, Tile } from './controls.js';
+import type { PanelRow } from './logic/height.js';
 import { notificationBadge } from './logic/labels.js';
 import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type QuickToggles } from './logic/layout.js';
 import { SECONDARY } from '../../shared/dim.js';
@@ -148,7 +149,7 @@ const TILES: Array<[HomeTile, string, string, string]> = [
 /** One live activity: icon chip in the accent, title, detail and elapsed time, and a thin bar. */
 class ActivityRow {
     readonly actor: St.BoxLayout;
-    private readonly chip = new IconChip('#ffffff');
+    readonly chip = new IconChip('#ffffff');
     private readonly title: St.Label;
     private readonly detail: St.Label;
     private readonly elapsed: St.Label;
@@ -573,6 +574,31 @@ export class HomePanel {
         for (const row of this.activities) row.setColors(colors);
         for (const row of this.clocks) row.chip.setLight(colors.light);
         for (const row of [this.recording, this.call]) row.chip.setLight(colors.light);
+    }
+
+    /**
+     * The icon in home that the closed notch's indicator flies to: the
+     * chip of its row, or the focus tile; null for a row without an icon,
+     * or one not shown.
+     */
+    anchorFor(anchor: PanelRow | 'focus-tile'): Clutter.Actor | null {
+        const shown = (actor: Clutter.Actor | undefined): Clutter.Actor | null => (actor?.visible ? actor : null);
+        switch (anchor) {
+            case 'recording':
+                return this.recording.actor.visible ? this.recording.chip.actor : null;
+            case 'call':
+                return this.call.actor.visible ? this.call.chip.actor : null;
+            case 'clock':
+                return shown(this.clocks.find((row) => row.actor.visible)?.chip.actor);
+            case 'activity':
+                return shown(this.activities.find((row) => row.actor.visible)?.chip.actor);
+            case 'focus-tile': {
+                const focus = this.tiles.get('focus');
+                return focus?.actor.visible ? focus.circleActor : null;
+            }
+            default:
+                return null;
+        }
     }
 
     destroy(): void {
