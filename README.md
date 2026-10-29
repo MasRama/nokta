@@ -338,7 +338,7 @@ Every key, by table:
 | `picture_darken` | `0.35` | How much darker the picture is drawn so text stays readable, `0.0` to `0.8` |
 | `picture_blur` | `0` | Blurs the picture by this many pixels, `0` to `40` |
 | `cover_backdrop` | `false` | Shows the song's cover, blurred and darkened, behind the open player, with white text |
-| `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme |
+| `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme; a very dark cover is lightened on a dark notch and a light one darkened on paper, so they still show |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |

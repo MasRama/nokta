@@ -1,4 +1,4 @@
-import { accentFor, darkenTo, luminance, mix, textOn } from './color.js';
+import { accentFor, darkenTo, lightenTo, luminance, mix, textOn } from './color.js';
 
 /** The values `[appearance] theme` takes; only `custom` uses the color settings. */
 export const THEMES = ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom', 'picture'] as const;
@@ -56,6 +56,12 @@ export interface PictureState {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
+/**
+ * The least luminance of a cover's color as the accent on a dark notch: 3:1
+ * against black, so the bars and the progress still show for a near-black cover.
+ */
+const ON_DARK = 0.1;
+
 /** The settings that choose a theme by the system's light or dark style. */
 export interface ThemeChoice {
     theme: string;
@@ -109,7 +115,7 @@ export function paletteFor(
     picture: PictureState | null = null,
 ): Palette {
     const covered = colors.useAlbumAccent && cover !== null && HEX.test(cover) ? cover : null;
-    const accent = (fallback: string) => covered ?? fallback;
+    const accent = (fallback: string) => (covered ? lightenTo(covered, ON_DARK) : fallback);
     switch (theme) {
         case 'custom': {
             const end = colors.gradient && colors.gradient !== 'none' && colors.backgroundEnd && HEX.test(colors.backgroundEnd)
@@ -197,7 +203,7 @@ function picturePalette(colors: ThemeColors, covered: string | null, picture: Pi
             backgroundOpacity: 1,
             gradient: null,
             foreground,
-            accent: vivid ? (light ? darkenTo(vivid, 0.25) : vivid) : foreground,
+            accent: vivid ? (light ? darkenTo(vivid, 0.25) : lightenTo(vivid, ON_DARK)) : foreground,
             border: light ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.14)',
             light,
         },
