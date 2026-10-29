@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { luminance, mix } from '../src/shared/logic/color.js';
+import { lightenTo, luminance, mix } from '../src/shared/logic/color.js';
 import {
     gradientDirection,
     paletteFor,
@@ -20,6 +20,7 @@ const COLORS: ThemeColors = {
     useAlbumAccent: true,
 };
 const COVER = '#3366cc';
+const DARK_PICTURE: PictureState = { path: '/cache/sea.png', color: '#3060c0', tone: '#203040', darken: 0.35 };
 
 test('colors mix and have a luminance', () => {
     assert.equal(mix('#000000', '#ffffff', 0.5), '#808080');
@@ -27,6 +28,27 @@ test('colors mix and have a luminance', () => {
     assert.equal(luminance('#000000'), 0);
     assert.equal(luminance('#ffffff'), 1);
     assert.ok(luminance('#ffff00') > luminance('#0000ff'));
+});
+
+test('a color lightens toward white, keeping its hue, until it reaches a luminance', () => {
+    const navy = lightenTo('#101040', 0.1);
+    assert.ok(luminance(navy) >= 0.1 && luminance(navy) < 0.2, navy);
+    const { r, b } = { r: parseInt(navy.slice(1, 3), 16), b: parseInt(navy.slice(5, 7), 16) };
+    assert.ok(b > r, `still blue: ${navy}`);
+    assert.ok(luminance(lightenTo('#000000', 0.1)) >= 0.1);
+    assert.equal(lightenTo(COVER, 0.1), COVER);
+});
+
+test('a near-black cover is lifted so the bars and progress read on the dark themes', () => {
+    const black = '#0a0a14';
+    for (const theme of ['midnight', 'graphite', 'glass']) {
+        const { accent } = paletteFor(theme, COLORS, black);
+        assert.ok(luminance(accent) >= 0.1, `${theme}: ${accent}`);
+    }
+    assert.ok(luminance(paletteFor('picture', COLORS, black, DARK_PICTURE).accent) >= 0.1);
+    // Paper darkens instead, and the custom theme keeps the cover as it is.
+    assert.equal(paletteFor('paper', COLORS, black).accent, black);
+    assert.equal(paletteFor('custom', COLORS, black).accent, black);
 });
 
 test('midnight is black with the cover accent, and the default', () => {
@@ -132,8 +154,6 @@ test('a theme picked from the notch goes to the key in use under the current sty
     assert.equal(themeKeyFor(on, true), 'theme');
     assert.equal(themeKeyFor(on, false), 'light_theme');
 });
-
-const DARK_PICTURE: PictureState = { path: '/cache/sea.png', color: '#3060c0', tone: '#203040', darken: 0.35 };
 
 test('a dark picture gets white text and its own color for the accent', () => {
     const p = paletteFor('picture', { ...COLORS, useAlbumAccent: false }, COVER, DARK_PICTURE);

@@ -73,5 +73,12 @@ export function darkenTo(color: string, max: number): string {
     return out;
 }
 
+/** Lightens `color` step by step toward white until its luminance is at least `min`. */
+export function lightenTo(color: string, min: number): string {
+    let out = color;
+    for (let i = 0; i < 20 && luminance(out) < min; i++) out = mix(out, '#ffffff', 0.15);
+    return out;
+}
+
 /** Black or white, whichever reads on a fill of `color`. */
 export const textOn = (color: string): string => (luminance(color) > 0.4 ? '#000000' : '#ffffff');

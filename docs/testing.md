@@ -171,7 +171,9 @@ must curve inward, the notch must be centered, and no text may be clipped.
 - [ ] Unknown length (`LengthUs` 0, e.g. a live stream) *(real session)*:
       no progress row.
 - [ ] Accent: progress fill and bars take the cover's color with
-      `use_album_accent = true`, the foreground color otherwise.
+      `use_album_accent = true`, the foreground color otherwise. A
+      near-black cover gives them a lighter shade of it on midnight,
+      graphite and glass, never bars lost on the black.
 
 ### OSD
 
