@@ -336,6 +336,16 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
 - [ ] A Firefox download and a Files copy in a real session: each shows
       while it runs and ends as done; closing Firefox mid-download ends it
       as stopped *(real session)*.
+- [ ] The smoke test's fake PackageKit (`device.sh update 25`, started only
+      then, after noktad) shows `Installing updates` at `25%`; the panel
+      row reads `Installing updates` / `Downloading`; `device.sh
+      update-done` ends it as `Done`. `update-failed` ends it as `Failed`.
+- [ ] `pkcon update` (or GNOME Software's Update) in a real session shows
+      `Installing updates` with its step and progress and ends as done;
+      `pkcon install --simulate` and GNOME Software's background downloads
+      show nothing; with PackageKit not running, `busctl --system status
+      org.freedesktop.PackageKit` still shows it absent after noktad starts
+      *(real session)*.
 - [ ] After `. tools/devshell/env.sh`, `target/release/nokta run -- sleep 5`:
       `sleep 5` while it runs, then `Done in 5 s`. Again in a real session
       *(real session)*.
