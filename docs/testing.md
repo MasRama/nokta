@@ -548,6 +548,10 @@ banner for a fake file.
       bottom, `"across"` red at the left to blue at the right, `"diagonal"`
       from the top left to the bottom right, ears in the top's color; the
       settings window's preview and Custom card run the same way.
+- [ ] `follow_system_style = true`: switching Settings → Appearance to Light
+      turns the notch to `light_theme` (Paper) at once, and Dark back to
+      `theme`; with the light style on, a swatch on the notch's settings page
+      changes `light_theme` and the notch shows it.
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
 - [ ] **Progress line**: a song playing, closed: a thin line in the accent

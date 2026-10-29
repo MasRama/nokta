@@ -283,6 +283,8 @@ Every key, by table:
 | Key | Default | What it does |
 |---|---|---|
 | `theme` | `"midnight"` | `"midnight"` (black), `"graphite"` (dark grey with a fine edge), `"glass"` (see-through), `"aurora"` (tinted with the cover's color), `"paper"` (light), or `"custom"` for the colors below |
+| `follow_system_style` | `false` | Use `theme` while the system's style is dark and `light_theme` while it is light, switching as it changes |
+| `light_theme` | `"paper"` | The theme for the light style, with `follow_system_style = true`; any value `theme` takes |
 | `height` | `32` | Height of the closed notch in pixels |
 | `idle_width` | `180` | Width of the closed notch when nothing plays |
 | `playing_width` | `260` | Width of the closed notch while music plays |
