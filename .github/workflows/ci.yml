@@ -30,7 +30,7 @@ jobs:
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
       - name: Lint shell scripts
-        run: shellcheck packaging/*.sh packaging/tests/*.sh tools/devshell/*.sh extension/scripts/*.sh
+        run: shellcheck packaging/*.sh packaging/tests/*.sh tools/*.sh tools/devshell/*.sh extension/scripts/*.sh
       - name: Dry-run the installer
         run: NOKTAD=target/debug/noktad packaging/tests/install-dry-run.sh
 

@@ -38,14 +38,18 @@ extension in a headless GNOME Shell that cannot touch your own session.
 - Write a test that fails without your change, then make it pass.
 - Keep the D-Bus contract in `contracts/` as the source of truth. If you
   change it, update both sides in the same pull request.
-- Run what CI runs before you push, one command at a time:
+- Run what CI runs before you push:
 
   ```sh
-  cargo fmt --check
-  cargo clippy --all-targets -- -D warnings
-  cargo test
-  (cd extension && npm run check && npm run lint && npm test)
+  tools/precheck.sh
   ```
+
+  It runs CI's steps one at a time and stops at the first failure: format,
+  lint and tests of the daemon and the extension, the shell scripts, the
+  installer, the smoke test here and, with [podman](https://podman.io)
+  installed, the smoke test in the containers of every GNOME version CI
+  tests. `--quick` skips those containers. The Rust version is pinned in
+  `rust-toolchain.toml`, so clippy here says what clippy in CI says.
 
 - For changes to what the notch shows or how it moves, go through the matching
   part of the checklist in [docs/testing.md](docs/testing.md) and add a
