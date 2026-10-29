@@ -263,7 +263,12 @@ test('home layout from table', () => {
 });
 
 test('calendar settings from table', () => {
-    assert.deepEqual(DEFAULT_CALENDAR, { enabled: true, reminderMinutes: 5 });
-    assert.deepEqual(calendarFrom({ enabled: false, reminder_minutes: 0 }), { enabled: false, reminderMinutes: 0 });
+    assert.deepEqual(DEFAULT_CALENDAR, { enabled: true, reminderMinutes: 5, agendaSize: 3, countdown: true });
+    assert.deepEqual(calendarFrom({ enabled: false, reminder_minutes: 0, agenda_size: 5, countdown: false }), {
+        enabled: false,
+        reminderMinutes: 0,
+        agendaSize: 5,
+        countdown: false,
+    });
     assert.deepEqual(calendarFrom({ reminder_minutes: 'soon' }), DEFAULT_CALENDAR);
 });

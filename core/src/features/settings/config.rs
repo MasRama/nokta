@@ -244,6 +244,10 @@ pub struct CalendarConfig {
     pub enabled: bool,
     /// Minutes before an event to show it; 0 for no reminder.
     pub reminder_minutes: u32,
+    /// How many events home lists, 1 to 5.
+    pub agenda_size: u32,
+    /// The closed notch counts down from the reminder to the start.
+    pub countdown: bool,
 }
 
 impl Default for CalendarConfig {
@@ -251,6 +255,8 @@ impl Default for CalendarConfig {
         CalendarConfig {
             enabled: true,
             reminder_minutes: 5,
+            agenda_size: 3,
+            countdown: true,
         }
     }
 }
@@ -492,6 +498,7 @@ impl Config {
             0,
             60,
         )?;
+        check_range("calendar.agenda_size", self.calendar.agenda_size, 1, 5)?;
         check_range("clipboard.max_items", self.clipboard.max_items, 5, 100)?;
         if !WEATHER_UNITS.contains(&self.weather.units.as_str()) {
             return Err(ConfigError::invalid(format!(
@@ -778,6 +785,8 @@ impl CalendarConfig {
         vec![
             ("enabled", self.enabled.into()),
             ("reminder_minutes", self.reminder_minutes.into()),
+            ("agenda_size", self.agenda_size.into()),
+            ("countdown", self.countdown.into()),
         ]
     }
 }

@@ -57,10 +57,10 @@ export interface PanelWeather {
     detail: string;
 }
 
-/** The next calendar event. */
+/** A calendar event in home's agenda. */
 export interface PanelEvent {
     title: string;
-    /** Like `10:30 · in 25 min`, shown dimmed. */
+    /** Like `10:30 · in 25 min` for the first, `Tomorrow 09:00` after; shown dimmed. */
     when: string;
 }
 
@@ -74,8 +74,8 @@ export interface PanelContent {
     date: string;
     /** Null hides the weather. */
     weather: PanelWeather | null;
-    /** Null hides the event row. */
-    event: PanelEvent | null;
+    /** The agenda, soonest first; the panel shows the first MAX_PANEL_EVENTS. */
+    events: readonly PanelEvent[];
     /** How long the screen has been recorded, like `1:05`; null hides the row. */
     recording: string | null;
     /** Null hides the call row. */
@@ -96,6 +96,7 @@ export interface PanelContent {
     layout: HomeLayout;
 }
 
+export const MAX_PANEL_EVENTS = 5;
 export const MAX_PANEL_ACTIVITIES = 3;
 export const MAX_PANEL_CLOCKS = 3;
 
@@ -367,7 +368,7 @@ class WeatherBox {
     }
 }
 
-/** The next event in one line: calendar chip, title, then when, dimmed. A click opens the calendar. */
+/** An event in one line: calendar chip, title, then when, dimmed. A click opens the calendar. */
 class EventRow {
     readonly actor: St.Button;
     readonly chip = new IconChip(TONES.calendar, iconFor('x-office-calendar-symbolic'));
@@ -385,12 +386,17 @@ class EventRow {
         this.when.opacity = SECONDARY;
         box.add_child(this.title);
         box.add_child(this.when);
-        this.actor = new St.Button({ style_class: 'nokta-panel-event', child: box, x_expand: true, visible: false });
+        this.actor = new St.Button({
+            style_class: 'nokta-panel-event nokta-panel-agenda-row',
+            child: box,
+            x_expand: true,
+            visible: false,
+        });
         this.clickId = this.actor.connect('clicked', onClick);
     }
 
-    show(event: PanelEvent | null): void {
-        this.actor.visible = event !== null;
+    show(event: PanelEvent | undefined): void {
+        this.actor.visible = event !== undefined;
         if (!event) return;
         this.title.text = event.title;
         this.when.text = event.when;
@@ -412,7 +418,9 @@ export class HomePanel {
     private readonly date: St.Label;
     private readonly weather = new WeatherBox();
     private readonly playerButton: St.Button;
-    private readonly event: EventRow;
+    /** Home's agenda: the events, one row each. */
+    private readonly agenda: St.BoxLayout;
+    private readonly events: EventRow[] = [];
     private readonly recording: RecordingRow;
     private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
@@ -446,7 +454,12 @@ export class HomePanel {
         heading.add_child(today);
         heading.add_child(this.weather.actor);
         heading.add_child(this.playerButton);
-        this.event = new EventRow(() => handlers.openCalendar());
+        this.agenda = setVertical(new St.BoxLayout({ style_class: 'nokta-panel-agenda', visible: false }));
+        for (let i = 0; i < MAX_PANEL_EVENTS; i++) {
+            const row = new EventRow(() => handlers.openCalendar());
+            this.events.push(row);
+            this.agenda.add_child(row.actor);
+        }
         this.recording = new RecordingRow(handlers);
         this.call = new CallRow(handlers);
 
@@ -475,7 +488,7 @@ export class HomePanel {
         this.controls.add_child(this.tileRow);
 
         this.actor.add_child(heading);
-        this.actor.add_child(this.event.actor);
+        this.actor.add_child(this.agenda);
         this.actor.add_child(this.recording.actor);
         this.actor.add_child(this.call.actor);
         for (let i = 0; i < MAX_PANEL_ACTIVITIES; i++) {
@@ -501,7 +514,8 @@ export class HomePanel {
         this.date.text = content.date;
         this.weather.show(content.weather);
         this.playerButton.visible = content.player;
-        this.event.show(content.event);
+        this.events.forEach((row, i) => row.show(content.events[i]));
+        this.agenda.visible = content.events.length > 0;
         this.recording.show(content.recording);
         this.call.show(content.call);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
@@ -518,11 +532,11 @@ export class HomePanel {
         for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setColors(colors);
         for (const row of this.clocks) row.chip.setLight(colors.light);
-        for (const row of [this.event, this.recording, this.call]) row.chip.setLight(colors.light);
+        for (const row of [...this.events, this.recording, this.call]) row.chip.setLight(colors.light);
     }
 
     destroy(): void {
-        this.event.destroy();
+        for (const row of this.events) row.destroy();
         this.actor.destroy();
     }
 

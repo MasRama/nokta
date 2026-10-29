@@ -636,23 +636,32 @@ wait_for "the end of the activity shows as an urgent alert" \
 "$HERE/shot.sh" smoke-activity-ended > /dev/null
 wait_for "the clock comes back when the activity ends" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
-# A fake event in the date menu's event source gets a row in the panel, and
-# its reminder (5 minutes before, by default) shows like a device alert.
+# Fake events in the date menu's event source fill the panel's agenda, the
+# first one's reminder (5 minutes before, by default) shows like a device
+# alert, and the closed notch then counts down to it.
 EVENTS="Main.panel.statusArea.dateMenu._eventSource"
-js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke', date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }]; $EVENTS.emit('changed'); true" > /dev/null
+js "const now = Date.now(); $EVENTS.getEvents = () => [{ id: 'smoke-review', date: new Date(now + 60 * 60000), end: new Date(now + 90 * 60000), summary: 'Smoke review' }, { id: 'smoke', date: new Date(now + 5 * 60000 + 8000), end: new Date(now + 35 * 60000), summary: 'Smoke standup' }, { id: 'smoke-retro', date: new Date(now + 120 * 60000), end: new Date(now + 150 * 60000), summary: 'Smoke retro' }]; $EVENTS.emit('changed'); true" > /dev/null
 "$HERE/hover.sh" on > /dev/null
-# 32 px closed, 128 px for the date, toggles and tiles, 28 px for the event.
-wait_for "the panel shows the next calendar event" \
-    "$FIND shown('nokta-panel-event') && one('nokta-panel-event-title').text === 'Smoke standup' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 219" 5 \
-    "$FIND JSON.stringify([shown('nokta-panel-event'), one('nokta-panel-event-title')?.text, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
+AGENDA="find(Main.layoutManager.uiGroup, 'nokta-panel-agenda-row').filter((a) => a.mapped)"
+AGENDA_TITLES="$AGENDA.map((a) => find(a, 'nokta-panel-event-title')[0].text).join()"
+# 32 px closed, 128 px for the date, toggles and tiles, 28 px for the next
+# event and 28 px more for each event after it.
+wait_for "the panel's agenda lists the events, soonest first" \
+    "$FIND $AGENDA_TITLES === 'Smoke standup,Smoke review,Smoke retro' && one('nokta-panel-event-when').text.includes(' · in ') && Math.round(one('nokta-body').height) === 275" 5 \
+    "$FIND JSON.stringify([$AGENDA_TITLES, one('nokta-panel-event-when')?.text, Math.round(one('nokta-body').height)])"
 "$HERE/shot.sh" smoke-calendar-panel > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the event's reminder shows in the notch" \
     "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke standup in 5 min'" 15 \
     "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text])"
 "$HERE/shot.sh" smoke-calendar-reminder > /dev/null
+COUNTDOWN="find(Main.layoutManager.uiGroup, 'nokta-countdown-label').find((a) => a.mapped)?.text"
+wait_for "after the reminder, the closed notch counts down to the event" \
+    "$FIND !shown('nokta-osd') && !shown('nokta-clock') && /^[45] min$/.test($COUNTDOWN ?? '')" 15 \
+    "$FIND JSON.stringify([shown('nokta-osd'), shown('nokta-clock'), $COUNTDOWN])"
+"$HERE/shot.sh" smoke-calendar-countdown > /dev/null
 js "delete $EVENTS.getEvents; $EVENTS.emit('changed'); true" > /dev/null
-wait_for "the clock comes back after the reminder" "$FIND shown('nokta-clock')" 10
+wait_for "the clock comes back without events" "$FIND shown('nokta-clock') && !any('nokta-countdown')" 10
 
 # A file dragged from an app onto the notch opens the drop area and stays on
 # the shelf. The shell's own Wayland client, a dock off every monitor, takes

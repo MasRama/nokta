@@ -1,11 +1,15 @@
 export { CalendarAlarms } from './alarms.js';
+export { CountdownBadge } from './badge.js';
 export { CalendarSource } from './source.js';
 export {
+    agendaEvents,
     alarmAlert,
+    countdownChangeMs,
+    countdownEvent,
+    countdownLabel,
     CALENDAR_ICON,
     eventAlert,
     eventTime,
-    nextEvent,
     soonLabel,
     type Alarm,
     type CalendarEvent,

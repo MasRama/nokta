@@ -68,6 +68,55 @@ export function nextEvent(events: readonly CalendarEvent[], nowMs: number): Cale
     return next;
 }
 
+/** Events that have not ended at `nowMs`, soonest first, at most `size`: today's, then tomorrow's. */
+export function agendaEvents(events: readonly CalendarEvent[], nowMs: number, size: number): CalendarEvent[] {
+    return events
+        .filter((event) => event.endMs > nowMs)
+        .sort((a, b) => a.startMs - b.startMs)
+        .slice(0, Math.max(0, size));
+}
+
+/** How long the countdown keeps saying `Now` after the start. */
+const COUNTDOWN_AFTER_MS = 5 * MINUTE_MS;
+
+/** `5 min` to `1 min` before the start, rounded up, then `Now`. */
+export function countdownLabel(startMs: number, nowMs: number): string {
+    if (nowMs >= startMs) return 'Now';
+    return `${Math.ceil((startMs - nowMs) / MINUTE_MS)} min`;
+}
+
+/**
+ * The closed notch counts down to `event` from its reminder until 5 minutes
+ * after it starts, or until it ends if that is sooner; never without a reminder.
+ */
+export function countdownWindow(event: CalendarEvent, nowMs: number, reminderMinutes: number): boolean {
+    if (reminderMinutes <= 0) return false;
+    const from = event.startMs - reminderMinutes * MINUTE_MS;
+    const until = Math.min(event.startMs + COUNTDOWN_AFTER_MS, event.endMs);
+    return nowMs >= from && nowMs < until;
+}
+
+/** Milliseconds until the countdown to `event` shows another minute, or `Now` ends. */
+export function countdownChangeMs(event: CalendarEvent, nowMs: number): number {
+    if (nowMs >= event.startMs) return Math.min(event.startMs + COUNTDOWN_AFTER_MS, event.endMs) - nowMs;
+    return ((event.startMs - nowMs - 1) % MINUTE_MS) + 1;
+}
+
+/** The soonest event in its countdown window, leaving out the ids in `dismissed`. */
+export function countdownEvent(
+    events: readonly CalendarEvent[],
+    nowMs: number,
+    reminderMinutes: number,
+    dismissed: ReadonlySet<string>,
+): CalendarEvent | null {
+    let shown: CalendarEvent | null = null;
+    for (const event of events) {
+        if (dismissed.has(event.id) || !countdownWindow(event, nowMs, reminderMinutes)) continue;
+        if (!shown || event.startMs < shown.startMs) shown = event;
+    }
+    return shown;
+}
+
 /** `10:30` today, `Tomorrow 09:00` after; `formatTime` follows the clock setting. */
 export function eventTime(startMs: number, nowMs: number, formatTime: (ms: number) => string): string {
     const time = formatTime(startMs);

@@ -247,10 +247,29 @@ fn calendar_defaults_and_reminder_range() {
     );
     let err = parse("[calendar]\nreminder_minutes = 61\n").unwrap_err();
     assert!(err.message.contains("calendar.reminder_minutes"), "{err}");
+    assert_eq!(Config::default().calendar.agenda_size, 3);
+    assert!(Config::default().calendar.countdown);
+    for bad in [0, 6] {
+        let err = parse(&format!("[calendar]\nagenda_size = {bad}\n")).unwrap_err();
+        assert!(err.message.contains("calendar.agenda_size"), "{err}");
+    }
+    assert_eq!(
+        parse("[calendar]\nagenda_size = 5\ncountdown = false\n")
+            .unwrap()
+            .calendar,
+        CalendarConfig {
+            agenda_size: 5,
+            countdown: false,
+            ..CalendarConfig::default()
+        }
+    );
     let map = entries(Config::default().calendar.entries());
     let mut keys: Vec<_> = map.keys().copied().collect();
     keys.sort();
-    assert_eq!(keys, ["enabled", "reminder_minutes"]);
+    assert_eq!(
+        keys,
+        ["agenda_size", "countdown", "enabled", "reminder_minutes"]
+    );
     assert_eq!(map["reminder_minutes"], SettingValue::Uint(5));
 }
 
