@@ -43,6 +43,20 @@ export interface Palette {
     picture: { path: string; darken: number } | null;
 }
 
+/** The shadow under the notch and the rim along its edge, from `[appearance] depth`. */
+export interface Depth {
+    /** A CSS color, or null for no rim. */
+    rim: string | null;
+    /** The shadow's alpha before the glow shader halves it; 0 for none. */
+    shadowAlpha: number;
+}
+
+/** A light rim and a strong shadow on a dark notch, a dark rim and a faint shadow on a light one. */
+export function depthFor(light: boolean, on: boolean): Depth {
+    if (!on) return { rim: null, shadowAlpha: 0 };
+    return light ? { rim: 'rgba(0, 0, 0, 0.06)', shadowAlpha: 0.24 } : { rim: 'rgba(255, 255, 255, 0.1)', shadowAlpha: 0.7 };
+}
+
 /** The picture theme's image as the daemon prepared it, and how dark to show it. */
 export interface PictureState {
     /** Empty while there is no picture. */

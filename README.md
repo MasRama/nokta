@@ -119,7 +119,9 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   Choose all alerts or none with `fullscreen_alerts`.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color), paper, a picture of your own, or your own colors. The song's
-  cover, blurred, can sit behind the open player in any of them.
+  cover, blurred, can sit behind the open player in any of them. A soft
+  shadow and a light rim along the edge lift the notch off the wallpaper,
+  and its buttons press in and spring back.
 - **[Keyboard](#keyboard).** <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>
   opens the notch on the monitor you are working on, ready for Tab, Enter
   and Escape. Or have it open on a click instead of on hover.
@@ -348,6 +350,7 @@ Every key, by table:
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
 | `alert_glow` | `true` | A glow under the notch in an alert's color; the bounce stays either way, unless GNOME's animations are off |
+| `depth` | `true` | A soft shadow under the notch and a light rim along its bottom edge |
 
 </details>
 

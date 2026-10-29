@@ -23,6 +23,9 @@ uniform float u_glow;
 uniform vec4 u_top;
 uniform vec4 u_bottom;
 uniform vec4 u_border;
+uniform vec4 u_rim;
+// x > 0.5: a shadow, cut out where the silhouette lies y px higher, so it never shows through a see-through body.
+uniform vec2 u_cut;
 uniform vec2 u_direction;
 uniform float u_picture;
 uniform float u_darken;
@@ -35,6 +38,18 @@ float nokta_body(vec2 p, float grow) {
     vec2 center = vec2(0.0, (u_half.y + grow - u_radius - 2.0) * 0.5);
     vec2 q = abs(p - center) - half_size + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// How much of the silhouette covers p: the body, and the ears, the corner
+// between the top edge and the body's side minus a quarter circle, so the
+// edge curves into the notch.
+float nokta_cover(vec2 p) {
+    float body = clamp(0.5 - nokta_body(p, 0.0), 0.0, 1.0);
+    float px = abs(p.x);
+    float ear = 0.0;
+    if (p.y <= u_ear && px <= u_half.x + u_ear)
+        ear = clamp(length(vec2(px, p.y) - vec2(u_half.x + u_ear, u_ear)) - u_ear + 0.5, 0.0, 1.0);
+    return max(body, ear);
 }
 
 float nokta_erf(float x) {
@@ -54,17 +69,12 @@ if (u_glow > 0.5) {
     // A box-shadow of 0 4px 24px 4px: offset, blurred, spread.
     float d = nokta_body(p - vec2(0.0, 4.0), 4.0);
     float a = u_top.a * 0.5 * (1.0 - nokta_erf(d / (12.0 * 1.41421356)));
+    if (u_cut.x > 0.5) a *= 1.0 - nokta_cover(p + vec2(0.0, u_cut.y));
     color = vec4(u_top.rgb * a, a);
 } else {
     float d = nokta_body(p, 0.0);
     float body = clamp(0.5 - d, 0.0, 1.0);
-    // The ears: the corner between the top edge and the body's side, minus a
-    // quarter circle, so the edge curves into the notch.
-    float px = abs(p.x);
-    float ear = 0.0;
-    if (p.y <= u_ear && px <= u_half.x + u_ear)
-        ear = clamp(length(vec2(px, p.y) - vec2(u_half.x + u_ear, u_ear)) - u_ear + 0.5, 0.0, 1.0);
-    float cover = max(body, ear);
+    float cover = nokta_cover(p);
     // 0 at the gradient's start and 1 at its end: the body's spot, 0..1 across
     // and down, along the direction.
     vec2 spot = vec2(p.x / max(2.0 * u_half.x, 1.0) + 0.5, p.y / max(u_half.y, 1.0));
@@ -78,6 +88,9 @@ if (u_glow > 0.5) {
         fill = mix(fill, vec4(picture, 1.0), u_picture * tex.a);
     }
     color = vec4(fill.rgb * fill.a, fill.a) * cover;
+    // The rim: a band just inside the body's edge, from below the ears to the bottom.
+    float rim = clamp(1.5 - abs(d + 1.0), 0.0, 1.0) * smoothstep(u_ear, u_ear + u_radius, p.y) * u_rim.a * body;
+    color = vec4(u_rim.rgb * rim, rim) + color * (1.0 - rim);
     float edge = (body - clamp(-0.5 - d, 0.0, 1.0)) * u_border.a;
     color = vec4(u_border.rgb, 1.0) * edge + color * (1.0 - edge);
 }
@@ -99,6 +112,8 @@ export interface ShapeGeometry {
 
 /** 0..1 red, green, blue and alpha. */
 export type Rgba = [number, number, number, number];
+
+const NO_RIM: Rgba = [0, 0, 0, 0];
 
 export interface ShapeColors {
     top: Rgba;
@@ -199,6 +214,8 @@ export class Shape {
         this.set = set;
         actor.add_effect(this.effect);
         this.uniform('u_glow', [glow ? 1 : 0]);
+        this.uniform('u_rim', NO_RIM);
+        this.uniform('u_cut', [0, 0]);
     }
 
     setGeometry(g: ShapeGeometry): void {
@@ -216,6 +233,18 @@ export class Shape {
         this.uniform('u_bottom', c.bottom);
         this.uniform('u_border', c.border);
         this.uniform('u_direction', c.direction ?? [0, 1]);
+        this.repaint();
+    }
+
+    /** A thin band inside the body's edge, fading out toward the ears; alpha 0 for none. */
+    setRim(rim: Rgba): void {
+        this.uniform('u_rim', rim);
+        this.repaint();
+    }
+
+    /** Makes a glow a shadow, cut out under the silhouette that lies `offset` px higher. */
+    setCutout(offset: number): void {
+        this.uniform('u_cut', [1, offset]);
         this.repaint();
     }
 
