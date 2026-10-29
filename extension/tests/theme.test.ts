@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { luminance, mix } from '../src/shared/logic/color.js';
-import { paletteFor, THEMES, type ThemeColors } from '../src/shared/logic/theme.js';
+import { gradientDirection, paletteFor, THEMES, type ThemeColors } from '../src/shared/logic/theme.js';
 
 const COLORS: ThemeColors = {
     background: '#102030',
@@ -44,6 +44,30 @@ test('custom uses the colors from the settings', () => {
     assert.equal(p.foreground, '#eeeeee');
     assert.equal(p.accent, '#ff8800');
     assert.equal(paletteFor('custom', COLORS, COVER).accent, COVER);
+});
+
+test('custom runs from its color to the second color in the chosen direction', () => {
+    const flat = paletteFor('custom', COLORS, null);
+    assert.equal(flat.gradient, null);
+    assert.deepEqual(flat.direction, [0, 1]);
+    const across = paletteFor('custom', { ...COLORS, gradient: 'across', backgroundEnd: '#405060' }, null);
+    assert.equal(across.gradient, '#405060');
+    assert.deepEqual(across.direction, [1, 0]);
+    const down = paletteFor('custom', { ...COLORS, gradient: 'down', backgroundEnd: '#405060' }, null);
+    assert.deepEqual([down.gradient, down.direction], ['#405060', [0, 1]]);
+});
+
+test('a gradient direction is a unit vector, down when unknown', () => {
+    assert.deepEqual(gradientDirection('down'), [0, 1]);
+    assert.deepEqual(gradientDirection('across'), [1, 0]);
+    assert.deepEqual(gradientDirection('diagonal'), [Math.SQRT1_2, Math.SQRT1_2]);
+    assert.deepEqual(gradientDirection('none'), [0, 1]);
+    assert.deepEqual(gradientDirection('up'), [0, 1]);
+});
+
+test('the other themes run their gradient downward, whatever the custom setting', () => {
+    for (const theme of ['midnight', 'graphite', 'glass', 'aurora', 'paper'])
+        assert.deepEqual(paletteFor(theme, { ...COLORS, gradient: 'across' }, COVER).direction, [0, 1], theme);
 });
 
 test('graphite and glass have a hairline edge, glass is see-through', () => {

@@ -23,6 +23,7 @@ uniform float u_glow;
 uniform vec4 u_top;
 uniform vec4 u_bottom;
 uniform vec4 u_border;
+uniform vec2 u_direction;
 
 float nokta_body(vec2 p, float grow) {
     float r = min(u_radius + grow, u_half.x + grow);
@@ -60,7 +61,11 @@ if (u_glow > 0.5) {
     if (p.y <= u_ear && px <= u_half.x + u_ear)
         ear = clamp(length(vec2(px, p.y) - vec2(u_half.x + u_ear, u_ear)) - u_ear + 0.5, 0.0, 1.0);
     float cover = max(body, ear);
-    vec4 fill = mix(u_top, u_bottom, clamp(p.y / max(u_half.y, 1.0), 0.0, 1.0));
+    // 0 at the gradient's start and 1 at its end: the body's spot, 0..1 across
+    // and down, along the direction.
+    vec2 spot = vec2(p.x / max(2.0 * u_half.x, 1.0) + 0.5, p.y / max(u_half.y, 1.0));
+    float t = dot(spot, u_direction) / max(u_direction.x + u_direction.y, 0.001);
+    vec4 fill = mix(u_top, u_bottom, clamp(t, 0.0, 1.0));
     color = vec4(fill.rgb * fill.a, fill.a) * cover;
     float edge = (body - clamp(-0.5 - d, 0.0, 1.0)) * u_border.a;
     color = vec4(u_border.rgb, 1.0) * edge + color * (1.0 - edge);
@@ -88,6 +93,8 @@ export interface ShapeColors {
     top: Rgba;
     bottom: Rgba;
     border: Rgba;
+    /** The way from `top` to `bottom`, a unit vector; down when missing. */
+    direction?: [number, number];
 }
 
 /** Sets a uniform on whichever effect class this shell has. */
@@ -187,6 +194,7 @@ export class Shape {
         this.uniform('u_top', c.top);
         this.uniform('u_bottom', c.bottom);
         this.uniform('u_border', c.border);
+        this.uniform('u_direction', c.direction ?? [0, 1]);
         this.repaint();
     }
 

@@ -1,5 +1,6 @@
 import { FULLSCREEN_ALERTS, type FullscreenAlerts } from '../../../shared/logic/fullscreen.js';
 import { OPEN_ON, type OpenOn } from '../../../shared/logic/machine.js';
+import { GRADIENTS } from '../../../shared/logic/theme.js';
 
 /** io.nokta.Settings1.Appearance in camelCase, with the defaults. */
 export interface Appearance {
@@ -23,6 +24,9 @@ export interface Appearance {
     progressLine: boolean;
     /** A glow under the notch in the colour of an alert. */
     alertGlow: boolean;
+    /** One of GRADIENTS in shared/logic/theme.ts: custom's fill toward `backgroundEnd`, or flat. */
+    gradient: string;
+    backgroundEnd: string;
 }
 
 export interface Behavior {
@@ -98,6 +102,8 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     theme: 'midnight',
     progressLine: true,
     alertGlow: true,
+    gradient: 'none',
+    backgroundEnd: '#1c1c1e',
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {
@@ -248,7 +254,11 @@ function fromTable<T extends object>(raw: unknown, defaults: Readonly<T>): T {
     return out as T;
 }
 
-export const appearanceFrom = (raw: unknown): Appearance => fromTable(raw, DEFAULT_APPEARANCE);
+export function appearanceFrom(raw: unknown): Appearance {
+    const appearance = fromTable(raw, DEFAULT_APPEARANCE);
+    if (!(GRADIENTS as readonly string[]).includes(appearance.gradient)) appearance.gradient = DEFAULT_APPEARANCE.gradient;
+    return appearance;
+}
 export function behaviorFrom(raw: unknown): Behavior {
     const behavior = fromTable(raw, DEFAULT_BEHAVIOR);
     if (!FULLSCREEN_ALERTS.includes(behavior.fullscreenAlerts)) behavior.fullscreenAlerts = DEFAULT_BEHAVIOR.fullscreenAlerts;

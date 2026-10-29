@@ -19,6 +19,8 @@ export interface ThemeSwatch {
     label: string;
     top: string;
     bottom: string;
+    /** The way from `top` to `bottom`, as the palette's direction. */
+    direction: [number, number];
     foreground: string;
     accent: string;
 }
@@ -35,6 +37,7 @@ export function themeSwatches(colors: ThemeColors, cover: string | null): ThemeS
             label: theme.charAt(0).toUpperCase() + theme.slice(1),
             top: palette.background,
             bottom: palette.gradient ?? palette.background,
+            direction: palette.direction,
             foreground: palette.foreground,
             accent: palette.accent,
         };

@@ -4,7 +4,7 @@ import Pango from 'gi://Pango';
 import PangoCairo from 'gi://PangoCairo';
 
 import { mix, parseCssColor, parseHexColor, withAlpha } from '../shared/logic/color.js';
-import { SAMPLE_SONG, type PreviewModel } from './logic/look.js';
+import { gradientEnds, SAMPLE_SONG, type PreviewModel } from './logic/look.js';
 
 type PaintContext = Cairo.Context & { $dispose(): void };
 
@@ -55,10 +55,20 @@ export function notchPath(cr: Cairo.Context, x: number, width: number, height: n
     cr.closePath();
 }
 
-/** Fills the current path with the palette's body: its gradient, at the theme's opacity. */
-export function fillBody(cr: Cairo.Context, model: Pick<PreviewModel, 'palette'>, height: number): void {
-    const { background, gradient, backgroundOpacity, border } = model.palette;
-    const fill = linear(0, 0, 0, height, [
+/**
+ * Fills the current path with the palette's body over `x`..`x + width` and
+ * 0..`height`: its gradient, the notch's way, at the theme's opacity.
+ */
+export function fillBody(
+    cr: Cairo.Context,
+    model: Pick<PreviewModel, 'palette'>,
+    x: number,
+    width: number,
+    height: number,
+): void {
+    const { background, gradient, direction, backgroundOpacity, border } = model.palette;
+    const [x0, y0, x1, y1] = gradientEnds(x, width, height, direction);
+    const fill = linear(x0, y0, x1, y1, [
         [0, background, backgroundOpacity],
         [1, gradient ?? background, backgroundOpacity],
     ]);
@@ -120,7 +130,7 @@ export class NotchPreview {
         const w = Math.min(NOTCH_WIDTH, width - 48);
         const x = (width - w) / 2;
         notchPath(cr, x, w, NOTCH_HEIGHT, model.cornerRadius, model.earRadius);
-        fillBody(cr, model, NOTCH_HEIGHT);
+        fillBody(cr, model, x, w, NOTCH_HEIGHT);
 
         // The cover, a gradient of the sample song's color.
         const coverX = x + 22;

@@ -4,8 +4,9 @@ import { test } from 'node:test';
 import { NOKTA_ICONS } from '../src/shared/logic/icon-names.js';
 import { SETTINGS_PAGES } from '../src/features/settings/logic/schema.js';
 import { EMBER, PREFS_CLASS, PREFS_CSS } from '../src/prefs/logic/style.js';
-import { pageIcon, previewModel, SAMPLE_SONG } from '../src/prefs/logic/look.js';
+import { gradientEnds, pageIcon, previewModel, SAMPLE_SONG } from '../src/prefs/logic/look.js';
 import { paletteFor } from '../src/shared/logic/theme.js';
+import { themeSwatches } from '../src/features/settings/logic/quick.js';
 
 /** Every selector of every rule, comments taken out. */
 function selectors(css: string): string[] {
@@ -78,4 +79,25 @@ test("the preview's corners follow the shape settings, kept to what its size can
     assert.deepEqual([big.cornerRadius, big.earRadius], [28, 16]);
     const none = previewModel({ ...appearance, cornerRadius: 0, earRadius: 0 });
     assert.deepEqual([none.cornerRadius, none.earRadius], [0, 0]);
+});
+
+test("the preview's gradient runs the way the notch's shader runs it", () => {
+    assert.deepEqual(gradientEnds(10, 200, 100, [0, 1]), [10, 0, 10, 100]);
+    assert.deepEqual(gradientEnds(10, 200, 100, [1, 0]), [10, 0, 210, 0]);
+    // Corner to corner on a square body; the lines of one color are the
+    // anti-diagonals of the body whatever its shape.
+    const [x0, y0, x1, y1] = gradientEnds(0, 100, 100, [Math.SQRT1_2, Math.SQRT1_2]);
+    assert.deepEqual([x0, y0], [0, 0]);
+    assert.ok(Math.abs(x1 - 100) < 1e-9 && Math.abs(y1 - 100) < 1e-9);
+    const [, , wx, wy] = gradientEnds(0, 400, 100, [Math.SQRT1_2, Math.SQRT1_2]);
+    // At (400, 0) and (0, 100) the shader is halfway: both project to t = 0.5.
+    const t = (px: number, py: number) => (px * wx + py * wy) / (wx * wx + wy * wy);
+    assert.ok(Math.abs(t(400, 0) - 0.5) < 1e-9 && Math.abs(t(0, 100) - 0.5) < 1e-9);
+});
+
+test('the swatches carry the direction of the custom gradient', () => {
+    const swatch = themeSwatches({ ...appearance, gradient: 'across', backgroundEnd: '#ff0000' }, null).find(
+        (s) => s.theme === 'custom',
+    );
+    assert.deepEqual([swatch?.bottom, swatch?.direction], ['#ff0000', [1, 0]]);
 });

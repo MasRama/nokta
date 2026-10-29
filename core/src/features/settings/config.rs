@@ -46,6 +46,10 @@ pub struct Appearance {
     pub progress_line: bool,
     /// A glow under the notch in the colour of an alert.
     pub alert_glow: bool,
+    /// One of GRADIENTS: the custom theme's fill from `background` to
+    /// `background_end`, or flat.
+    pub gradient: String,
+    pub background_end: String,
 }
 
 impl Default for Appearance {
@@ -68,6 +72,8 @@ impl Default for Appearance {
             theme: "midnight".into(),
             progress_line: true,
             alert_glow: true,
+            gradient: "none".into(),
+            background_end: "#1c1c1e".into(),
         }
     }
 }
@@ -370,6 +376,7 @@ impl Config {
         check_color("appearance.background", &a.background)?;
         check_color("appearance.foreground", &a.foreground)?;
         check_color("appearance.accent", &a.accent)?;
+        check_color("appearance.background_end", &a.background_end)?;
         check_float("appearance.animation_speed", a.animation_speed, 0.1, 5.0)?;
         check_float(
             "appearance.background_opacity",
@@ -382,6 +389,13 @@ impl Config {
                 "appearance.theme must be one of {}, got {:?}",
                 THEMES.map(|t| format!("{t:?}")).join(", "),
                 a.theme
+            )));
+        }
+        if !GRADIENTS.contains(&a.gradient.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "appearance.gradient must be one of {}, got {:?}",
+                GRADIENTS.map(|g| format!("{g:?}")).join(", "),
+                a.gradient
             )));
         }
         if !CLOCK_FORMATS.contains(&b.clock_format.as_str()) {
@@ -518,6 +532,9 @@ pub const WEATHER_UNITS: [&str; 2] = ["celsius", "fahrenheit"];
 /// The values `appearance.theme` accepts.
 pub const THEMES: [&str; 6] = ["midnight", "graphite", "glass", "aurora", "paper", "custom"];
 
+/// The values `appearance.gradient` accepts.
+pub const GRADIENTS: [&str; 4] = ["none", "down", "across", "diagonal"];
+
 /// The values `behavior.clock_format` accepts.
 pub const CLOCK_FORMATS: [&str; 3] = ["system", "24h", "12h"];
 
@@ -650,6 +667,8 @@ impl Appearance {
             ("theme", (&self.theme).into()),
             ("progress_line", self.progress_line.into()),
             ("alert_glow", self.alert_glow.into()),
+            ("gradient", (&self.gradient).into()),
+            ("background_end", (&self.background_end).into()),
         ]
     }
 }
