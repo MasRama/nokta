@@ -15,6 +15,8 @@ const number = System.programArgs[1] ?? '';
 const suffix = number ? `-${number}` : '';
 const LENGTH_US = 200_000_000;
 const TRACK_ID = '/io/nokta/devshell/track/1';
+/** Next and Previous switch between two songs, so the notch sees a new one. */
+let track = 0;
 
 const ROOT_XML = `<node>
   <interface name="org.mpris.MediaPlayer2">
@@ -112,7 +114,7 @@ const player = {
     get Metadata() {
         return {
             'mpris:trackid': new GLib.Variant('o', TRACK_ID),
-            'xesam:title': new GLib.Variant('s', number ? `Second Wind ${number}` : 'Midnight Static'),
+            'xesam:title': new GLib.Variant('s', title()),
             'xesam:artist': new GLib.Variant('as', ['The Paper Lanterns']),
             'xesam:album': new GLib.Variant('s', 'Night Drive'),
             'mpris:length': new GLib.Variant('x', LENGTH_US),
@@ -159,10 +161,11 @@ const player = {
         setStatus('Stopped');
     },
     Next() {
-        seekTo(0);
+        setTrack(1 - track);
     },
     Previous() {
-        seekTo(0);
+        if (track) setTrack(0);
+        else seekTo(0);
     },
     Seek(offset) {
         seekTo(positionUs() + offset);
@@ -183,6 +186,19 @@ function setStatus(next) {
     exported.emit_property_changed('PlaybackStatus', new GLib.Variant('s', status));
     exported.flush();
     print(`status ${status}`);
+}
+
+function title() {
+    if (track) return 'Neon Harbor';
+    return number ? `Second Wind ${number}` : 'Midnight Static';
+}
+
+function setTrack(next) {
+    track = next;
+    seekTo(0);
+    exported.emit_property_changed('Metadata', new GLib.Variant('a{sv}', player.Metadata));
+    exported.flush();
+    print(`track ${title()}`);
 }
 
 function seekTo(us) {
