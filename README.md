@@ -1,4 +1,9 @@
-# Nokta
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/nokta-logo-reverse.svg">
+    <img src="docs/brand/nokta-logo.svg" width="240" alt="Nokta">
+  </picture>
+</h1>
 
 A dynamic island for the desktop: one small notch at the top of your screen
 for what's happening now, out of the way until you need it. Open source.
