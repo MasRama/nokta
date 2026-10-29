@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.9.0](https://github.com/MasRama/nokta/compare/v0.8.0...v0.9.0) (2026-10-29)
+
+
+### Features
+
+* **activities:** show progress apps report to the dock ([ce9b5fc](https://github.com/MasRama/nokta/commit/ce9b5fcaad9fb2bd5629f1afa19b73c2f4faffbe))
+* **activities:** show system updates from PackageKit ([765f6a0](https://github.com/MasRama/nokta/commit/765f6a04d03370e74164e9a7787d38e49b3b04f3))
+* **calendar:** an agenda in home and a countdown on the notch ([909a4d6](https://github.com/MasRama/nokta/commit/909a4d669d9e07ca4ffcbaf50c7e4e436972642a))
+* **calendar:** join a meeting from the notch ([b4d4be3](https://github.com/MasRama/nokta/commit/b4d4be3c9da0d900627a7e13cf2385bde43357ed))
+* **calendar:** read meeting links from Evolution Data Server ([868d7e4](https://github.com/MasRama/nokta/commit/868d7e41788e139c8469e4754872f0f6ff3fd67b))
+* **core:** read the color of an event's calendar from EDS ([d4549f3](https://github.com/MasRama/nokta/commit/d4549f3f99f4874fd0a8d91128072df99e7e2fc6))
+* **extension:** mark each agenda event with its calendar's color and put its time first ([6d68ed0](https://github.com/MasRama/nokta/commit/6d68ed031d44f32bab45e9bad6235b293f49a09a))
+* **gestures:** scroll, swipe and middle-click on the notch ([d7b16ba](https://github.com/MasRama/nokta/commit/d7b16bae33e861e4d032538a5096ab7c85db5123))
+* **lyrics:** full-screen lyrics ([291b971](https://github.com/MasRama/nokta/commit/291b97146fcc769ef87135e02770313f35a8cd23))
+* **lyrics:** full-screen lyrics as a full-screen player ([d201bba](https://github.com/MasRama/nokta/commit/d201bba09f294cc46fcc219c571870174ce5c62f))
+* **lyrics:** romanize Korean and Japanese lines ([2c93b88](https://github.com/MasRama/nokta/commit/2c93b88a88b8b213920f50342eab81b1b6153923))
+* **media:** bars that follow the music ([c626236](https://github.com/MasRama/nokta/commit/c6262369d997dfc564c8ddeebc88871d6e146523))
+* **media:** publish a small blurred copy of the cover ([5fecf73](https://github.com/MasRama/nokta/commit/5fecf7394cb6794ee12fba27cc77a72568e2f51f))
+* **media:** show the song's blurred cover behind the open player ([a08d649](https://github.com/MasRama/nokta/commit/a08d649f1bb5db0509cf79b04593ad763d9d3cfa))
+* **settings:** prepare a picture for the notch and publish it ([3697da2](https://github.com/MasRama/nokta/commit/3697da2cbd88dc9e8a0d7048f73a6588bff6ee78))
+* **themes:** add a picture theme ([39286cc](https://github.com/MasRama/nokta/commit/39286cce865b49091897b158e9e757e08b1ec8b5))
+* **themes:** follow the system's light and dark style ([ca7910b](https://github.com/MasRama/nokta/commit/ca7910b5e5d90ae30ce70ba5e2f5a2d29874f854))
+
+
+### Bug Fixes
+
+* **extension:** lighten a near-black cover color before it becomes the accent on a dark notch ([1d3139f](https://github.com/MasRama/nokta/commit/1d3139fa82036014c0ed8f7780563c749c340f3a))
+
 ## [0.8.0](https://github.com/MasRama/nokta/compare/v0.7.0...v0.8.0) (2026-10-29)
 
 
