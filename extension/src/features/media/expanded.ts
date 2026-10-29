@@ -84,6 +84,11 @@ export class ExpandedMediaView {
     private activeOutput: number | null = null;
 
     /** `openHome` goes to the open notch's other page; `outputs` switches the sound output. */
+    /** The cover, for the flight between the closed notch and the player. */
+    get coverActor(): St.Bin {
+        return this.cover.actor;
+    }
+
     constructor(controls: MediaControls, openHome: () => void, outputs: OutputMenuHandlers) {
         this.equalizer = new Equalizer(() => controls.levels());
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));

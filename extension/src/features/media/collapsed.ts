@@ -18,6 +18,11 @@ export class CollapsedMediaView {
     /** Whether the cover shows as playing; null before the first update. */
     private playing: boolean | null = null;
 
+    /** The cover, for the flight between the closed notch and the player. */
+    get coverActor(): St.Bin {
+        return this.cover.actor;
+    }
+
     constructor(levels: LevelSource) {
         this.equalizer = new Equalizer(levels);
         this.actor = new St.BoxLayout({ style_class: 'nokta-collapsed', y_align: Clutter.ActorAlign.START });
