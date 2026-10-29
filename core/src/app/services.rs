@@ -23,6 +23,8 @@ use crate::shared::paths::Paths;
 pub struct Services {
     pub config: watch::Receiver<Config>,
     pub config_file: PathBuf,
+    /// The picture theme's image, prepared from the config.
+    pub picture: watch::Receiver<settings::picture::Prepared>,
     pub lyrics: lyrics::service::Handle,
     pub timer: Timer,
     pub activities: activities::service::Handle,
@@ -59,6 +61,11 @@ impl Services {
             }
         };
         let config = settings::service::spawn(store, changes);
+        let picture = settings::picture::spawn(
+            config.clone(),
+            paths.cache_dir.join("picture"),
+            std::env::var_os("HOME").map(PathBuf::from),
+        );
 
         let lyrics = lyrics::service::spawn(
             media,
@@ -95,6 +102,7 @@ impl Services {
         Services {
             config,
             config_file: paths.config_file.clone(),
+            picture,
             lyrics,
             timer: Timer {
                 commands,

@@ -10,6 +10,7 @@ use zbus::zvariant::{OwnedValue, Str, Value};
 use zbus::Connection;
 
 use super::edit::set_key;
+use super::picture::Prepared;
 use super::{Config, Entries, SettingValue, DEFAULT_CONFIG_TOML};
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
 use crate::shared::fs::write_atomically;
@@ -22,6 +23,7 @@ pub const INTERFACE: &str = "io.nokta.Settings1";
 pub async fn serve(
     conn: &Connection,
     config: watch::Receiver<Config>,
+    picture: watch::Receiver<Prepared>,
     path: PathBuf,
 ) -> zbus::Result<()> {
     conn.object_server()
@@ -29,13 +31,23 @@ pub async fn serve(
             PATH,
             SettingsInterface {
                 config: config.clone(),
+                picture: picture.clone(),
                 path,
                 writing: Mutex::new(()),
             },
         )
         .await?;
     spawn_change_forwarder(conn.clone(), PATH, INTERFACE, config, properties);
+    spawn_change_forwarder(conn.clone(), PATH, INTERFACE, picture, picture_properties);
     Ok(())
+}
+
+fn picture_properties(p: &Prepared) -> PropertyList {
+    vec![
+        ("PicturePath", owned(p.path.as_str())),
+        ("PictureColor", owned(p.color.as_str())),
+        ("PictureTone", owned(p.tone.as_str())),
+    ]
 }
 
 fn properties(c: &Config) -> PropertyList {
@@ -99,6 +111,7 @@ fn setting_value(value: &Value<'_>) -> Option<SettingValue> {
 
 struct SettingsInterface {
     config: watch::Receiver<Config>,
+    picture: watch::Receiver<Prepared>,
     path: PathBuf,
     /// One read-change-write at a time, so quick changes never lose one.
     writing: Mutex<()>,
@@ -154,6 +167,21 @@ impl SettingsInterface {
     #[zbus(property)]
     fn home(&self) -> HashMap<String, OwnedValue> {
         dbus_map(self.config.borrow().home.entries())
+    }
+
+    #[zbus(property)]
+    fn picture_path(&self) -> String {
+        self.picture.borrow().path.clone()
+    }
+
+    #[zbus(property)]
+    fn picture_color(&self) -> String {
+        self.picture.borrow().color.clone()
+    }
+
+    #[zbus(property)]
+    fn picture_tone(&self) -> String {
+        self.picture.borrow().tone.clone()
     }
 
     async fn set(&self, table: String, key: String, value: OwnedValue) -> fdo::Result<()> {

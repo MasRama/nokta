@@ -56,7 +56,13 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         .await?;
     media::dbus::serve(&conn, media_state, control).await?;
     lyrics::dbus::serve(&conn, services.lyrics).await?;
-    settings::dbus::serve(&conn, services.config.clone(), services.config_file.clone()).await?;
+    settings::dbus::serve(
+        &conn,
+        services.config.clone(),
+        services.picture.clone(),
+        services.config_file.clone(),
+    )
+    .await?;
     devices::dbus::serve(&conn, alerts).await?;
     activities::dbus::serve(&conn, services.activities).await?;
     weather::dbus::serve(&conn, services.weather).await?;

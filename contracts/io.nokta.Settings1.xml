@@ -44,6 +44,22 @@
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
     <!--
+      The picture theme's image ([appearance] picture), scaled down and
+      blurred into the cache as a PNG; empty when no picture is set or it
+      cannot be read.
+    -->
+    <property name="PicturePath" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- The picture's vivid color as "#rrggbb", or empty when it has none. -->
+    <property name="PictureColor" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- The mean color of the picture's top half as "#rrggbb", or empty. -->
+    <property name="PictureTone" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
       Changes one key of config.toml and saves it, keeping its comments. table
       is "appearance", "behavior", "lyrics", "timer", "notifications",
       "activities", "weather", "calendar", "clipboard" or "home"; a list such

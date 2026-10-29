@@ -4,6 +4,7 @@ mod config;
 #[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod edit;
+pub mod picture;
 pub mod service;
 mod store;
 mod watch;

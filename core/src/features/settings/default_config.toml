@@ -2,7 +2,7 @@
 # Delete a line to go back to its default value.
 
 [appearance]
-theme = "midnight"       # "midnight", "graphite", "glass", "aurora", "paper", or "custom" to use the colors below
+theme = "midnight"       # "midnight", "graphite", "glass", "aurora", "paper", "custom" to use the colors below, or "picture"
 height = 32              # collapsed notch height in px, slightly above the 28 px top bar
 idle_width = 180         # collapsed width when nothing plays
 playing_width = 260      # collapsed width while music plays
@@ -23,6 +23,9 @@ progress_line = true     # a thin line along the closed notch for the focus time
 alert_glow = true        # a glow under the notch in the alert's color: red when urgent, green when done or charging
 follow_system_style = false # use theme under a dark system style and light_theme under a light one
 light_theme = "paper"
+picture = ""             # the image the picture theme shows, like "~/Pictures/sea.jpg"
+picture_darken = 0.35    # 0.0 to 0.8: darkens the picture under the notch's text
+picture_blur = 0         # 0 to 40 px
 
 [behavior]
 open_delay_ms = 120      # hover time before the notch opens
