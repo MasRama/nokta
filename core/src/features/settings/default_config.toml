@@ -26,6 +26,7 @@ light_theme = "paper"
 picture = ""             # the image the picture theme shows, like "~/Pictures/sea.jpg"
 picture_darken = 0.35    # 0.0 to 0.8: darkens the picture under the notch's text
 picture_blur = 0         # 0 to 40 px
+cover_backdrop = false   # the song's blurred cover behind the open player
 
 [behavior]
 open_delay_ms = 120      # hover time before the notch opens

@@ -59,6 +59,8 @@ pub struct Appearance {
     pub picture_darken: f64,
     /// Blur of the picture in px, 0 to 40.
     pub picture_blur: u32,
+    /// Shows the song's blurred cover behind the open player.
+    pub cover_backdrop: bool,
 }
 
 impl Default for Appearance {
@@ -88,6 +90,7 @@ impl Default for Appearance {
             picture: String::new(),
             picture_darken: 0.35,
             picture_blur: 0,
+            cover_backdrop: false,
         }
     }
 }
@@ -699,6 +702,7 @@ impl Appearance {
             ("picture", (&self.picture).into()),
             ("picture_darken", self.picture_darken.into()),
             ("picture_blur", self.picture_blur.into()),
+            ("cover_backdrop", self.cover_backdrop.into()),
         ]
     }
 }

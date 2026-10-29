@@ -50,6 +50,7 @@ test('appearance_from_full_table', () => {
         picture: '~/Pictures/sea.jpg',
         picture_darken: 0.5,
         picture_blur: 12,
+        cover_backdrop: true,
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -76,6 +77,7 @@ test('appearance_from_full_table', () => {
         picture: '~/Pictures/sea.jpg',
         pictureDarken: 0.5,
         pictureBlur: 12,
+        coverBackdrop: true,
     });
 });
 

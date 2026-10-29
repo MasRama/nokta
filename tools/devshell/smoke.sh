@@ -137,6 +137,25 @@ wait_for "the grid button opens home over the player" \
 "$HERE/shot.sh" smoke-home > /dev/null
 js "$FIND one('nokta-panel-player').emit('clicked', 1); true" > /dev/null
 wait_for "the music button goes back to the player" "$FIND shown('nokta-expanded') && !shown('nokta-panel')" 5
+# With the cover behind the player, the open player shows the song's cover,
+# blurred and darkened under white text; home over the player shows the
+# theme again, and the player brings the cover back.
+BACKDROP_PALETTE="Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.notches?.[0]?.notch?.palette"
+BACKDROP_SHOWN="$BACKDROP_PALETTE?.picture?.darken === 0.45 && ($BACKDROP_PALETTE?.picture?.path ?? '').endsWith('.backdrop.png') && $BACKDROP_PALETTE?.foreground === '#ffffff' && shown('nokta-picture') && one('nokta-picture').opacity === 255"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set appearance cover_backdrop "<true>" > /dev/null
+wait_for "the cover shows behind the open player" "$FIND $BACKDROP_SHOWN" 5 \
+    "$FIND JSON.stringify([$BACKDROP_PALETTE?.picture, shown('nokta-picture'), one('nokta-picture')?.opacity])"
+"$HERE/shot.sh" smoke-backdrop > /dev/null
+js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null
+wait_for "home over the player fades the cover out" \
+    "$FIND shown('nokta-panel') && $BACKDROP_PALETTE?.picture === null && !shown('nokta-picture')" 5
+js "$FIND one('nokta-panel-player').emit('clicked', 1); true" > /dev/null
+wait_for "the player brings the cover back" "$FIND shown('nokta-expanded') && $BACKDROP_SHOWN" 5
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set appearance cover_backdrop "<false>" > /dev/null
+wait_for "with the switch off, the player shows the theme" \
+    "$FIND $BACKDROP_PALETTE?.picture === null && !shown('nokta-picture')" 5
 # With the devshell's own PipeWire and its two silent outputs, the speaker
 # button lists both; the menu holds the notch open after the pointer leaves,
 # and picking the headphones switches the output and lets the notch close.

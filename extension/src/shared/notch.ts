@@ -32,6 +32,8 @@ export interface NotchStyle extends NotchWidths {
 /** How long the glow takes to come and to go, before animation_speed. */
 const GLOW_IN_MS = 150;
 const GLOW_OUT_MS = 250;
+/** The picture fades in and out over the notch's fill. */
+const PICTURE_FADE_MS = 250;
 /** The glow's colour is this strong at its brightest. */
 const GLOW_ALPHA = 0.9;
 /** Room around the body for the glow's blur, in px. */
@@ -314,16 +316,39 @@ export class Notch {
         this.picture.set_size(r.width, r.height);
     }
 
+    /**
+     * Shows the palette's picture: a new one replaces the old at once, and
+     * the picture fades in over the fill and out of it. The shader mixes by
+     * the picture's alpha, so its opacity is the fade.
+     */
     private applyPicture(): void {
-        const path = this.palette.picture?.path ?? '';
-        if (path !== this.picturePath) {
-            this.picturePath = path;
-            // The daemon names each prepared picture by its hash: no quotes or brackets to escape.
-            this.picture.style = path ? `background-image: url("file://${path}"); background-size: cover;` : '';
-            this.picture.visible = path !== '';
-            this.placePicture();
+        const wanted = this.palette.picture?.path ? this.palette.picture : null;
+        const duration = PICTURE_FADE_MS * this.style.animationSpeed;
+        this.picture.remove_all_transitions();
+        if (wanted) {
+            if (wanted.path !== this.picturePath) {
+                this.picturePath = wanted.path;
+                // The daemon names its pictures by their hash: no quotes or brackets to escape.
+                this.picture.style = `background-image: url("file://${wanted.path}"); background-size: cover;`;
+                if (!this.picture.visible) this.picture.opacity = 0;
+                this.picture.visible = true;
+                this.placePicture();
+            }
+            this.shape.setPicture({ amount: 1, darken: wanted.darken });
+            this.picture.ease({ opacity: 255, duration, mode: Clutter.AnimationMode.EASE_OUT_QUAD });
+        } else if (this.picture.visible) {
+            this.picture.ease({
+                opacity: 0,
+                duration,
+                mode: Clutter.AnimationMode.EASE_IN_QUAD,
+                onComplete: () => {
+                    this.picture.visible = false;
+                    this.picture.style = '';
+                    this.picturePath = '';
+                    this.shape.setPicture({ amount: 0, darken: 0 });
+                },
+            });
         }
-        this.shape.setPicture({ amount: path ? 1 : 0, darken: this.palette.picture?.darken ?? 0 });
     }
 
     private applyPalette(): void {
