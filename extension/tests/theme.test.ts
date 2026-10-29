@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { luminance, mix } from '../src/shared/logic/color.js';
-import { gradientDirection, paletteFor, THEMES, type ThemeColors } from '../src/shared/logic/theme.js';
+import { gradientDirection, paletteFor, themeFor, themeKeyFor, THEMES, type ThemeColors } from '../src/shared/logic/theme.js';
 
 const COLORS: ThemeColors = {
     background: '#102030',
@@ -106,4 +106,21 @@ test('text on the accent stays readable', () => {
 test('every theme the daemon accepts has a palette', () => {
     assert.deepEqual([...THEMES], ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom']);
     for (const theme of THEMES) assert.ok(paletteFor(theme, COLORS, COVER).background.startsWith('#'));
+});
+
+test('the theme follows the system style only while that is on', () => {
+    const off = { theme: 'midnight', followSystemStyle: false, lightTheme: 'paper' };
+    assert.equal(themeFor(off, false), 'midnight');
+    assert.equal(themeFor(off, true), 'midnight');
+    const on = { ...off, followSystemStyle: true };
+    assert.equal(themeFor(on, true), 'midnight');
+    assert.equal(themeFor(on, false), 'paper');
+});
+
+test('a theme picked from the notch goes to the key in use under the current style', () => {
+    const off = { theme: 'midnight', followSystemStyle: false, lightTheme: 'paper' };
+    assert.equal(themeKeyFor(off, false), 'theme');
+    const on = { ...off, followSystemStyle: true };
+    assert.equal(themeKeyFor(on, true), 'theme');
+    assert.equal(themeKeyFor(on, false), 'light_theme');
 });

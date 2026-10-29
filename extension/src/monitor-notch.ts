@@ -93,7 +93,7 @@ import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
 import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
-import { paletteFor, type Palette } from './shared/logic/theme.js';
+import { paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
 import { glibSchedule } from './shared/schedule.js';
@@ -197,6 +197,8 @@ export interface NotchSources {
     panel: PanelSource;
     shelf: ShelfSource;
     clipboard: ClipboardSource;
+    /** Whether the system's style is dark, for themes that follow it. */
+    systemStyle: { dark(): boolean };
 }
 
 /**
@@ -567,6 +569,12 @@ export class MonitorNotch implements ShelfNotch {
         this.applyProgress();
         this.tick();
         this.updateTimers();
+    }
+
+    /** The system switched between its light and dark style. */
+    onSystemStyle(): void {
+        this.applyPalette();
+        if (this.page === 'settings') this.showSettingsPage();
     }
 
     /** The sound outputs or the one in use changed. */
@@ -1222,7 +1230,8 @@ export class MonitorNotch implements ShelfNotch {
     /** The settings page as the daemon has them, with the cover's color for aurora's swatch. */
     private showSettingsPage(): void {
         if (this.destroyed) return;
-        this.settingsPage.show(this.sources.settings.appearance, this.sources.media.snapshot().accentColor);
+        const { settings, media, systemStyle } = this.sources;
+        this.settingsPage.show(settings.appearance, media.snapshot().accentColor, systemStyle.dark());
     }
 
     private setHomeOpen(open: boolean): void {
@@ -1327,7 +1336,8 @@ export class MonitorNotch implements ShelfNotch {
     /** The theme's colors with the cover's worked in. */
     private palette(): Palette {
         const appearance = this.sources.settings.appearance;
-        return paletteFor(appearance.theme, appearance, this.sources.media.snapshot().accentColor);
+        const theme = themeFor(appearance, this.sources.systemStyle.dark());
+        return paletteFor(theme, appearance, this.sources.media.snapshot().accentColor);
     }
 
     /** Recolors the notch and its views when the theme or the cover's color changes. */

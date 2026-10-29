@@ -45,6 +45,8 @@ test('appearance_from_full_table', () => {
         alert_glow: false,
         gradient: 'across',
         background_end: '#203040',
+        follow_system_style: true,
+        light_theme: 'glass',
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -66,6 +68,8 @@ test('appearance_from_full_table', () => {
         alertGlow: false,
         gradient: 'across',
         backgroundEnd: '#203040',
+        followSystemStyle: true,
+        lightTheme: 'glass',
     });
 });
 

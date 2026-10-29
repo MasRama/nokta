@@ -254,7 +254,13 @@ class Session {
         const refreshPanel = () => this.notches.forEach((n) => n.onPanelContent());
         this.togglesIds = [
             [this.notificationSettings, this.notificationSettings.connect('changed::show-banners', refreshPanel)],
-            [this.interfaceSettings, this.interfaceSettings.connect('changed::color-scheme', refreshPanel)],
+            [
+                this.interfaceSettings,
+                this.interfaceSettings.connect('changed::color-scheme', () => {
+                    refreshPanel();
+                    this.notches.forEach((n) => n.onSystemStyle());
+                }),
+            ],
         ];
         if (this.nightLightSettings) {
             const id = this.nightLightSettings.connect(`changed::${NIGHT_LIGHT_KEY}`, refreshPanel);
@@ -559,6 +565,7 @@ class Session {
             panel: this.panel,
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
+            systemStyle: { dark: () => this.interfaceSettings.get_string('color-scheme') === 'prefer-dark' },
         };
         monitors.forEach((monitor, index) => {
             if (!this.allMonitors && index !== primaryIndex) return;

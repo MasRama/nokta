@@ -886,6 +886,22 @@ set_appearance gradient "<'none'>"
 set_appearance background "<'#000000'>"
 set_appearance theme "<'$(printf %s "$THEME" | tr -d '"')'>"
 wait_for "and back to flat" "$APPEARANCE.gradient === 'none' && $APPEARANCE.theme === $THEME" 5
+# Following the system style, a light style shows light_theme and a dark one
+# the theme; a swatch picked under the light style sets light_theme.
+SCHEME="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.interface' })"
+SCHEME_WAS=$(js "$SCHEME.get_string('color-scheme')")
+set_appearance follow_system_style "<true>"
+js "$SCHEME.set_string('color-scheme', 'default'); true" > /dev/null
+wait_for "a light system style shows the light theme" "$PALETTE?.theme === 'paper'" 5 "$PALETTE?.theme"
+js "$FIND one('nokta-settings-theme-glass').emit('clicked', 1); true" > /dev/null
+wait_for "a swatch under the light style sets the light theme" \
+    "$APPEARANCE.lightTheme === 'glass' && $APPEARANCE.theme === $THEME && $PALETTE?.theme === 'glass'" 5
+js "$SCHEME.set_string('color-scheme', 'prefer-dark'); true" > /dev/null
+wait_for "a dark system style shows the theme" "$PALETTE?.theme === $THEME" 5 "$PALETTE?.theme"
+set_appearance light_theme "<'paper'>"
+set_appearance follow_system_style "<false>"
+js "$SCHEME.set_string('color-scheme', $SCHEME_WAS); true" > /dev/null
+wait_for "and back to one theme" "$APPEARANCE.followSystemStyle === false && $APPEARANCE.lightTheme === 'paper'" 5
 # All settings closes the notch and asks the extension for its window; the
 # window itself opens through prefs.sh below.
 js "const e = Main.extensionManager.lookup('nokta@nokta.io').stateObj; global._noktaPrefs = 0; e.openPreferences = () => global._noktaPrefs++; true" > /dev/null

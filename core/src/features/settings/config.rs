@@ -50,6 +50,9 @@ pub struct Appearance {
     /// `background_end`, or flat.
     pub gradient: String,
     pub background_end: String,
+    /// `theme` under a dark system style, `light_theme` under a light one.
+    pub follow_system_style: bool,
+    pub light_theme: String,
 }
 
 impl Default for Appearance {
@@ -74,6 +77,8 @@ impl Default for Appearance {
             alert_glow: true,
             gradient: "none".into(),
             background_end: "#1c1c1e".into(),
+            follow_system_style: false,
+            light_theme: "paper".into(),
         }
     }
 }
@@ -391,6 +396,13 @@ impl Config {
                 a.theme
             )));
         }
+        if !THEMES.contains(&a.light_theme.as_str()) {
+            return Err(ConfigError::invalid(format!(
+                "appearance.light_theme must be one of {}, got {:?}",
+                THEMES.map(|t| format!("{t:?}")).join(", "),
+                a.light_theme
+            )));
+        }
         if !GRADIENTS.contains(&a.gradient.as_str()) {
             return Err(ConfigError::invalid(format!(
                 "appearance.gradient must be one of {}, got {:?}",
@@ -669,6 +681,8 @@ impl Appearance {
             ("alert_glow", self.alert_glow.into()),
             ("gradient", (&self.gradient).into()),
             ("background_end", (&self.background_end).into()),
+            ("follow_system_style", self.follow_system_style.into()),
+            ("light_theme", (&self.light_theme).into()),
         ]
     }
 }

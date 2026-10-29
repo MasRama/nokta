@@ -126,6 +126,18 @@ const notifications = (key: string, title: string, kind: RowKind, subtitle?: str
     subtitle,
 });
 
+const THEME_CHOICE: RowKind = {
+    type: 'choice',
+    options: [
+        { value: 'midnight', label: 'Midnight' },
+        { value: 'graphite', label: 'Graphite' },
+        { value: 'glass', label: 'Glass' },
+        { value: 'aurora', label: 'Aurora' },
+        { value: 'paper', label: 'Paper' },
+        { value: 'custom', label: 'Custom' },
+    ],
+};
+
 /** Widths and the expanded height may not be below the height; the daemon says so. */
 const SIZE = int(16, 2000);
 
@@ -138,17 +150,14 @@ export const SETTINGS_PAGES: readonly Page[] = [
             {
                 title: 'Theme',
                 rows: [
-                    appearance('theme', 'Theme', {
-                        type: 'choice',
-                        options: [
-                            { value: 'midnight', label: 'Midnight' },
-                            { value: 'graphite', label: 'Graphite' },
-                            { value: 'glass', label: 'Glass' },
-                            { value: 'aurora', label: 'Aurora' },
-                            { value: 'paper', label: 'Paper' },
-                            { value: 'custom', label: 'Custom' },
-                        ],
-                    }),
+                    appearance('theme', 'Theme', THEME_CHOICE),
+                    appearance(
+                        'follow_system_style',
+                        'Follow the system style',
+                        bool(),
+                        'The theme above in dark style, the one below in light style',
+                    ),
+                    appearance('light_theme', 'Theme in light style', THEME_CHOICE),
                     appearance(
                         'use_album_accent',
                         "Use the cover's color",

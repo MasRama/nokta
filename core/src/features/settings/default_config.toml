@@ -21,6 +21,8 @@ animation_speed = 1.0    # 0.5 = twice as fast, 2.0 = twice as slow
 osd_width = 300          # width while the notch shows volume, brightness or Caps Lock
 progress_line = true     # a thin line along the closed notch for the focus timer, a countdown, an activity or the song
 alert_glow = true        # a glow under the notch in the alert's color: red when urgent, green when done or charging
+follow_system_style = false # use theme under a dark system style and light_theme under a light one
+light_theme = "paper"
 
 [behavior]
 open_delay_ms = 120      # hover time before the notch opens
