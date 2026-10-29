@@ -247,6 +247,56 @@ async fn settings_reload_emits_change() {
     assert!(!changed.contains_key("Behavior"));
 }
 
+#[tokio::test]
+async fn a_picture_is_prepared_and_published() {
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Settings").await;
+    assert_eq!(
+        String::try_from(get(&p, "io.nokta.Settings1", "PicturePath").await).unwrap(),
+        ""
+    );
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let source = daemon.config_home.path().join("sea.png");
+    image::RgbImage::from_pixel(40, 20, image::Rgb([30, 90, 200]))
+        .save(&source)
+        .unwrap();
+    let settings = settings_proxy(&conn).await;
+    let value = zbus::zvariant::Value::from(source.to_str().unwrap());
+    let _: () = settings
+        .call("Set", &("appearance", "picture", value))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "PicturePath").await;
+    let path = String::try_from(changed["PicturePath"].try_clone().unwrap()).unwrap();
+    assert!(
+        path.starts_with(daemon.cache_home.path().to_str().unwrap()),
+        "{path}"
+    );
+    assert!(std::path::Path::new(&path).is_file());
+    assert_eq!(
+        String::try_from(get(&p, "io.nokta.Settings1", "PictureTone").await).unwrap(),
+        "#1e5ac8"
+    );
+    assert!(
+        !String::try_from(get(&p, "io.nokta.Settings1", "PictureColor").await)
+            .unwrap()
+            .is_empty()
+    );
+
+    let value = zbus::zvariant::Value::from("");
+    let _: () = settings
+        .call("Set", &("appearance", "picture", value))
+        .await
+        .unwrap();
+    let changed = next_change_with(&mut changes, "PicturePath").await;
+    assert_eq!(
+        String::try_from(changed["PicturePath"].try_clone().unwrap()).unwrap(),
+        ""
+    );
+}
+
 async fn settings_proxy(conn: &zbus::Connection) -> zbus::Proxy<'static> {
     zbus::Proxy::new(conn, NAME, "/io/nokta/Settings", "io.nokta.Settings1")
         .await

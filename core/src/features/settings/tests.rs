@@ -395,6 +395,9 @@ fn appearance_entries_have_all_keys() {
             "idle_width",
             "light_theme",
             "osd_width",
+            "picture",
+            "picture_blur",
+            "picture_darken",
             "playing_width",
             "progress_line",
             "theme",
@@ -723,6 +726,28 @@ fn the_light_style_theme_is_a_known_one() {
     assert_eq!(c.appearance.light_theme, "glass");
     let err = parse("[appearance]\nlight_theme = \"neon\"\n").unwrap_err();
     assert!(err.message.contains("appearance.light_theme"), "{err}");
+}
+
+#[test]
+fn picture_theme_defaults_and_ranges() {
+    assert!(THEMES.contains(&"picture"));
+    let a = Config::default().appearance;
+    assert_eq!(a.picture, "");
+    assert_eq!(a.picture_darken, 0.35);
+    assert_eq!(a.picture_blur, 0);
+    let c = parse(
+        "[appearance]\ntheme = \"picture\"\npicture = \"~/Pictures/sea.jpg\"\npicture_darken = 0.8\npicture_blur = 40\n",
+    )
+    .unwrap();
+    assert_eq!(c.appearance.picture, "~/Pictures/sea.jpg");
+    assert_eq!(c.appearance.picture_darken, 0.8);
+    assert_eq!(c.appearance.picture_blur, 40);
+    // A picture on a drive that is not mounted is still a valid setting.
+    assert!(parse("[appearance]\npicture = \"/media/gone/x.png\"\n").is_ok());
+    let err = parse("[appearance]\npicture_darken = 0.9\n").unwrap_err();
+    assert!(err.message.contains("appearance.picture_darken"), "{err}");
+    let err = parse("[appearance]\npicture_blur = 41\n").unwrap_err();
+    assert!(err.message.contains("appearance.picture_blur"), "{err}");
 }
 
 #[test]

@@ -100,6 +100,9 @@ export interface SettingsProps {
     Calendar: Record<string, unknown>;
     Clipboard: Record<string, unknown>;
     Home: Record<string, unknown>;
+    PicturePath: string;
+    PictureColor: string;
+    PictureTone: string;
 }
 
 /** io.nokta.Settings1 methods and the D-Bus signature of their arguments. */

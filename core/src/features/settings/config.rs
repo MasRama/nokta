@@ -53,6 +53,12 @@ pub struct Appearance {
     /// `theme` under a dark system style, `light_theme` under a light one.
     pub follow_system_style: bool,
     pub light_theme: String,
+    /// The image the picture theme shows; `~/` is the home folder, empty is none.
+    pub picture: String,
+    /// How much the picture is darkened under the notch's text, 0 to 0.8.
+    pub picture_darken: f64,
+    /// Blur of the picture in px, 0 to 40.
+    pub picture_blur: u32,
 }
 
 impl Default for Appearance {
@@ -79,6 +85,9 @@ impl Default for Appearance {
             background_end: "#1c1c1e".into(),
             follow_system_style: false,
             light_theme: "paper".into(),
+            picture: String::new(),
+            picture_darken: 0.35,
+            picture_blur: 0,
         }
     }
 }
@@ -383,6 +392,8 @@ impl Config {
         check_color("appearance.accent", &a.accent)?;
         check_color("appearance.background_end", &a.background_end)?;
         check_float("appearance.animation_speed", a.animation_speed, 0.1, 5.0)?;
+        check_float("appearance.picture_darken", a.picture_darken, 0.0, 0.8)?;
+        check_range("appearance.picture_blur", a.picture_blur, 0, 40)?;
         check_float(
             "appearance.background_opacity",
             a.background_opacity,
@@ -542,7 +553,9 @@ fn check_names(key: &str, names: &[String], known: &[&str], max: usize) -> Resul
 pub const WEATHER_UNITS: [&str; 2] = ["celsius", "fahrenheit"];
 
 /// The values `appearance.theme` accepts.
-pub const THEMES: [&str; 6] = ["midnight", "graphite", "glass", "aurora", "paper", "custom"];
+pub const THEMES: [&str; 7] = [
+    "midnight", "graphite", "glass", "aurora", "paper", "custom", "picture",
+];
 
 /// The values `appearance.gradient` accepts.
 pub const GRADIENTS: [&str; 4] = ["none", "down", "across", "diagonal"];
@@ -683,6 +696,9 @@ impl Appearance {
             ("background_end", (&self.background_end).into()),
             ("follow_system_style", self.follow_system_style.into()),
             ("light_theme", (&self.light_theme).into()),
+            ("picture", (&self.picture).into()),
+            ("picture_darken", self.picture_darken.into()),
+            ("picture_blur", self.picture_blur.into()),
         ]
     }
 }
