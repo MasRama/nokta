@@ -104,6 +104,7 @@ import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
 import { paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
+import { PressFeedback } from './shared/press.js';
 import { glibSchedule } from './shared/schedule.js';
 
 const TICK_MS = 250;
@@ -307,6 +308,7 @@ export class MonitorNotch implements ShelfNotch {
     private readonly pages = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly menu: NotchMenu;
     private readonly gestures: NotchGestures;
+    private readonly press: PressFeedback;
     private readonly pressId: number;
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
@@ -500,6 +502,7 @@ export class MonitorNotch implements ShelfNotch {
             next: () => sources.media.next(),
             previous: () => sources.media.previous(),
         });
+        this.press = new PressFeedback(this.notch.actor, () => sources.settings.appearance.animationSpeed);
         // GNOME 50 and later destroy the notch themselves when the shell
         // shuts down, while the clients may still report changes.
         this.destroyId = this.notch.actor.connect('destroy', () => this.destroy());
@@ -542,6 +545,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.actor.disconnect(this.motionId);
         this.notch.actor.disconnect(this.pressId);
         this.gestures.destroy();
+        this.press.destroy();
         this.notch.actor.disconnect(this.destroyId);
         global.display.disconnect(this.fullscreenId);
         global.window_group.disconnect(this.windowsShownId);
@@ -1296,6 +1300,7 @@ export class MonitorNotch implements ShelfNotch {
         const previous = this.drawn;
         if (mode === previous) return;
         this.drawn = mode;
+        this.press.release();
         // The open player may show the blurred cover.
         this.applyPalette();
         if (mode !== 'expanded') {
