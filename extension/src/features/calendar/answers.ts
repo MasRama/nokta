@@ -5,18 +5,23 @@ import { CALENDAR1_XML } from '../../generated/contracts.js';
 import { PATHS } from '../../shared/contracts.js';
 import { makeProxy } from '../../shared/dbus.js';
 import { Listeners } from '../../shared/listeners.js';
-import { linksToAsk } from './logic/links.js';
+import { idsToAsk } from './logic/answers.js';
 
-/** io.nokta.Calendar1: the meeting links of the shell's events, read by the daemon. */
-export class MeetingLinks {
+/** An io.nokta.Calendar1 method that answers a string for an event id. */
+export type EventQuestion = 'MeetingLink' | 'EventColor';
+
+/** io.nokta.Calendar1: one thing about each of the shell's events, read by the daemon. */
+export class EventAnswers {
     private proxy: Gio.DBusProxy | null = null;
-    private readonly links = new Map<string, string>();
+    private readonly answers = new Map<string, string>();
     private readonly askedAt = new Map<string, number>();
     private readonly listeners = new Listeners();
 
-    /** The event's meeting link; null when it has none or it is not known yet. */
-    link(id: string): string | null {
-        return this.links.get(id) || null;
+    constructor(private readonly method: EventQuestion) {}
+
+    /** The daemon's answer for the event; null when it has none or it is not known yet. */
+    get(id: string): string | null {
+        return this.answers.get(id) || null;
     }
 
     onChanged(callback: () => void): number {
@@ -33,34 +38,34 @@ export class MeetingLinks {
         this.proxy = proxy;
     }
 
-    /** Asks for the links of `ids` not asked about lately; a change comes when one differs. */
+    /** Asks about the `ids` not asked about lately; a change comes when an answer differs. */
     want(ids: readonly string[]): void {
         const proxy = this.proxy;
         if (!proxy) return;
         const now = Date.now();
-        for (const id of linksToAsk(ids, this.askedAt, now)) {
+        for (const id of idsToAsk(ids, this.askedAt, now)) {
             this.askedAt.set(id, now);
             const params = new GLib.Variant('(s)', [id]);
-            proxy.call('MeetingLink', params, Gio.DBusCallFlags.NONE, -1, null, (source, result) => {
-                let link = '';
+            proxy.call(this.method, params, Gio.DBusCallFlags.NONE, -1, null, (source, result) => {
+                let answer = '';
                 try {
-                    link = (source?.call_finish(result).get_child_value(0).unpack() as string) ?? '';
+                    answer = (source?.call_finish(result).get_child_value(0).unpack() as string) ?? '';
                 } catch (error) {
-                    console.warn('Nokta: MeetingLink failed', error);
+                    console.warn(`Nokta: ${this.method} failed`, error);
                 }
-                if (this.proxy !== proxy || (this.links.get(id) ?? '') === link) return;
-                this.links.set(id, link);
+                if (this.proxy !== proxy || (this.answers.get(id) ?? '') === answer) return;
+                this.answers.set(id, answer);
                 this.listeners.emit();
             });
         }
     }
 
-    /** Forgets the daemon and every link. */
+    /** Forgets the daemon and every answer. */
     detach(): void {
         this.proxy = null;
         this.askedAt.clear();
-        if (this.links.size === 0) return;
-        this.links.clear();
+        if (this.answers.size === 0) return;
+        this.answers.clear();
         this.listeners.emit();
     }
 
