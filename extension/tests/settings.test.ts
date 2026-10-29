@@ -43,6 +43,8 @@ test('appearance_from_full_table', () => {
         theme: 'paper',
         progress_line: false,
         alert_glow: false,
+        gradient: 'across',
+        background_end: '#203040',
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -62,7 +64,16 @@ test('appearance_from_full_table', () => {
         theme: 'paper',
         progressLine: false,
         alertGlow: false,
+        gradient: 'across',
+        backgroundEnd: '#203040',
     });
+});
+
+test('the custom gradient is flat by default, and an unknown one is flat', () => {
+    assert.equal(DEFAULT_APPEARANCE.gradient, 'none');
+    assert.equal(DEFAULT_APPEARANCE.backgroundEnd, '#1c1c1e');
+    assert.equal(appearanceFrom({ gradient: 'up' }).gradient, 'none');
+    assert.equal(appearanceFrom({ background_end: 'blue' }).backgroundEnd, '#1c1c1e');
 });
 
 test('missing_or_wrong_keys_keep_defaults', () => {

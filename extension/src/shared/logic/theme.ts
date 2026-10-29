@@ -4,6 +4,9 @@ import { accentFor, darkenTo, luminance, mix, textOn } from './color.js';
 export const THEMES = ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom'] as const;
 export type ThemeName = (typeof THEMES)[number];
 
+/** The values `[appearance] gradient` takes; custom's fill runs that way, or is flat. */
+export const GRADIENTS = ['none', 'down', 'across', 'diagonal'] as const;
+
 /** The color settings, which the custom theme uses. */
 export interface ThemeColors {
     background: string;
@@ -11,6 +14,10 @@ export interface ThemeColors {
     foreground: string;
     accent: string;
     useAlbumAccent: boolean;
+    /** One of GRADIENTS; flat when missing. */
+    gradient?: string;
+    /** Where the gradient ends. */
+    backgroundEnd?: string;
 }
 
 /** How the notch looks right now, with the cover's color worked in. */
@@ -19,8 +26,10 @@ export interface Palette {
     /** The body's top color and the ears' color. */
     background: string;
     backgroundOpacity: number;
-    /** The body's bottom color, or null for a flat body. */
+    /** The color the body runs to along `direction`, or null for a flat body. */
     gradient: string | null;
+    /** The gradient's way across the body, a unit vector: [0, 1] runs down, [1, 0] left to right. */
+    direction: [number, number];
     foreground: string;
     /** Progress, equalizer, the OSD bar and the play button. */
     accent: string;
@@ -34,8 +43,26 @@ export interface Palette {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
-function palette(theme: ThemeName, base: Omit<Palette, 'theme' | 'onAccent'>): Palette {
-    return { theme, ...base, onAccent: textOn(base.accent) };
+const DOWN: [number, number] = [0, 1];
+
+/** The unit vector a gradient runs along; down for anything unknown. */
+export function gradientDirection(name: string): [number, number] {
+    switch (name) {
+        case 'across':
+            return [1, 0];
+        case 'diagonal':
+            return [Math.SQRT1_2, Math.SQRT1_2];
+        default:
+            return [...DOWN];
+    }
+}
+
+function palette(
+    theme: ThemeName,
+    base: Omit<Palette, 'theme' | 'onAccent' | 'direction'>,
+    direction: [number, number] = DOWN,
+): Palette {
+    return { theme, ...base, direction: [...direction], onAccent: textOn(base.accent) };
 }
 
 /**
@@ -47,16 +74,20 @@ export function paletteFor(theme: string, colors: ThemeColors, cover: string | n
     const covered = colors.useAlbumAccent && cover !== null && HEX.test(cover) ? cover : null;
     const accent = (fallback: string) => covered ?? fallback;
     switch (theme) {
-        case 'custom':
+        case 'custom': {
+            const end = colors.gradient && colors.gradient !== 'none' && colors.backgroundEnd && HEX.test(colors.backgroundEnd)
+                ? colors.backgroundEnd
+                : null;
             return palette('custom', {
                 background: colors.background,
                 backgroundOpacity: colors.backgroundOpacity,
-                gradient: null,
+                gradient: end,
                 foreground: colors.foreground,
                 accent: accentFor(colors.useAlbumAccent, cover ?? '', colors.accent),
                 border: null,
-                light: luminance(colors.background) > 0.5,
-            });
+                light: luminance(end ? mix(colors.background, end, 0.5) : colors.background) > 0.5,
+            }, end ? gradientDirection(colors.gradient ?? 'none') : DOWN);
+        }
         case 'graphite':
             return palette('graphite', {
                 background: '#1c1c1e',

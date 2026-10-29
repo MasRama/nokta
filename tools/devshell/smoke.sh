@@ -867,6 +867,25 @@ js "$FIND find(one('nokta-settings'), 'nokta-settings-row')[2].emit('clicked', 1
 wait_for "a switch flips its setting" "$GLOW === !$GLOW_WAS" 5
 js "$FIND find(one('nokta-settings'), 'nokta-settings-row')[2].emit('clicked', 1); one('nokta-settings-theme-$(printf %s "$THEME" | tr -d '"')').emit('clicked', 1); true" > /dev/null
 wait_for "and both go back" "$APPEARANCE.theme === $THEME && $GLOW === $GLOW_WAS" 5
+# Custom's gradient runs the way it is set: red to blue, left to right.
+set_appearance() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+        --method io.nokta.Settings1.Set appearance "$1" "$2" > /dev/null
+}
+PALETTE="Main.extensionManager.lookup('nokta@nokta.io').stateObj?.session?.notches?.[0]?.notch?.palette"
+set_appearance background "<'#ff0000'>"
+set_appearance background_end "<'#0000ff'>"
+set_appearance gradient "<'across'>"
+set_appearance theme "<'custom'>"
+wait_for "custom runs its gradient across" \
+    "JSON.stringify([$PALETTE?.theme, $PALETTE?.gradient, $PALETTE?.direction]) === JSON.stringify(['custom', '#0000ff', [1, 0]])" 5 \
+    "JSON.stringify([$PALETTE?.theme, $PALETTE?.gradient, $PALETTE?.direction])"
+sleep 0.4
+"$HERE/shot.sh" smoke-gradient > /dev/null
+set_appearance gradient "<'none'>"
+set_appearance background "<'#000000'>"
+set_appearance theme "<'$(printf %s "$THEME" | tr -d '"')'>"
+wait_for "and back to flat" "$APPEARANCE.gradient === 'none' && $APPEARANCE.theme === $THEME" 5
 # All settings closes the notch and asks the extension for its window; the
 # window itself opens through prefs.sh below.
 js "const e = Main.extensionManager.lookup('nokta@nokta.io').stateObj; global._noktaPrefs = 0; e.openPreferences = () => global._noktaPrefs++; true" > /dev/null

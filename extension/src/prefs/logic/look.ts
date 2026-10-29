@@ -53,3 +53,26 @@ export function previewModel(appearance: PreviewAppearance): PreviewModel {
         earRadius: Math.min(Math.max(appearance.earRadius, 0), MAX_EAR),
     };
 }
+
+/**
+ * A cairo linear gradient's ends that match the notch's shader over a body at
+ * `x`, 0 sized `width` × `height`: the shader runs along `direction` in the
+ * body's own 0..1 space, so the ends are worked out in pixels from there.
+ */
+export function gradientEnds(
+    x: number,
+    width: number,
+    height: number,
+    direction: [number, number],
+): [number, number, number, number] {
+    const [dx, dy] = direction;
+    const scale = Math.max(dx, dy, 1e-9);
+    // The shader's t in pixels: (px / width) * vx + (py / height) * vy over |v|².
+    const vx = dx / scale;
+    const vy = dy / scale;
+    const length = vx * vx + vy * vy;
+    const ax = vx / width / length;
+    const ay = vy / height / length;
+    const a = ax * ax + ay * ay;
+    return [x, 0, x + ax / a, ay / a];
+}

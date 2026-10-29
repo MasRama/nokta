@@ -197,7 +197,8 @@ export class SettingsPage {
             const chosen = swatch.theme === a.theme;
             // A hairline keeps a dark theme's swatch visible on a dark notch.
             notch.style =
-                'background-gradient-direction: vertical;' +
+                // St has no diagonal gradient: across and diagonal run sideways.
+                `background-gradient-direction: ${swatch.direction[0] > 0 ? 'horizontal' : 'vertical'};` +
                 ` background-gradient-start: ${swatch.top}; background-gradient-end: ${swatch.bottom};` +
                 ` border: 1px solid ${withAlpha(this.colors.foreground, 0.18)};`;
             dot.style = `background-color: ${swatch.accent};`;

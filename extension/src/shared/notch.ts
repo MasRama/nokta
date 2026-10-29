@@ -300,7 +300,7 @@ export class Notch {
     }
 
     private applyPalette(): void {
-        const { background, backgroundOpacity, gradient, foreground, border, theme, light } = this.palette;
+        const { background, backgroundOpacity, gradient, direction, foreground, border, theme, light } = this.palette;
         for (const name of THEMES) this.actor.remove_style_class_name(`nokta-theme-${name}`);
         this.actor.add_style_class_name(`nokta-theme-${theme}`);
         // Paper, or a light custom theme: the focus ring is dark.
@@ -316,6 +316,6 @@ export class Notch {
             const [gr, gg, gb] = parseCssColor(gradient) ?? [r, g, b];
             bottom = [gr, gg, gb, alpha];
         }
-        this.shape.setColors({ top, bottom, border: (border && parseCssColor(border)) || NO_COLOR });
+        this.shape.setColors({ top, bottom, border: (border && parseCssColor(border)) || NO_COLOR, direction });
     }
 }

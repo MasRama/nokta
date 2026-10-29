@@ -179,6 +179,21 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         { type: 'float', min: 0, max: 1, step: 0.05, percent: true },
                         'Text and icons stay solid',
                     ),
+                    appearance(
+                        'gradient',
+                        'Gradient',
+                        {
+                            type: 'choice',
+                            options: [
+                                { value: 'none', label: 'None' },
+                                { value: 'down', label: 'Downward' },
+                                { value: 'across', label: 'Across' },
+                                { value: 'diagonal', label: 'Diagonal' },
+                            ],
+                        },
+                        'From the background to the second color',
+                    ),
+                    appearance('background_end', 'Second color', color()),
                     appearance('foreground', 'Text and icons', color()),
                     appearance('accent', 'Accent', color(), 'Progress bar, equalizer and the volume bar'),
                 ],

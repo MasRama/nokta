@@ -3,7 +3,7 @@ import Gtk from 'gi://Gtk';
 
 import { themeSwatches, type Appearance } from '../features/settings/index.js';
 import type { ThemeName } from '../shared/logic/theme.js';
-import { SAMPLE_SONG } from './logic/look.js';
+import { gradientEnds, SAMPLE_SONG } from './logic/look.js';
 import { linear, notchPath, setColor } from './preview.js';
 
 type PaintContext = Cairo.Context & { $dispose(): void };
@@ -90,7 +90,8 @@ export class ThemeGallery {
         const height = 24;
         const x = (CARD_WIDTH - width) / 2;
         notchPath(cr, x, width, height, 9, 5);
-        cr.setSource(linear(0, 0, 0, height, [
+        const [x0, y0, x1, y1] = gradientEnds(x, width, height, swatch.direction);
+        cr.setSource(linear(x0, y0, x1, y1, [
             [0, swatch.top, 1],
             [1, swatch.bottom, 1],
         ]));

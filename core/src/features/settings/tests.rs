@@ -382,12 +382,14 @@ fn appearance_entries_have_all_keys() {
             "alert_glow",
             "animation_speed",
             "background",
+            "background_end",
             "background_opacity",
             "corner_radius",
             "ear_radius",
             "expanded_height",
             "expanded_width",
             "foreground",
+            "gradient",
             "height",
             "idle_width",
             "osd_width",
@@ -652,6 +654,25 @@ mod edit {
         let text = set_key(text, "appearance", "height", &Value::Uint(44)).unwrap();
         assert_eq!(text, "[appearance]\nheight = 44 # mine\n");
     }
+
+    #[test]
+    fn the_gradient_is_set_and_checked() {
+        let text = set_key("", "appearance", "gradient", &Value::Text("across".into())).unwrap();
+        let text = set_key(
+            &text,
+            "appearance",
+            "background_end",
+            &Value::Text("#ff0000".into()),
+        )
+        .unwrap();
+        let a = parse(&text).unwrap().appearance;
+        assert_eq!(
+            (a.gradient.as_str(), a.background_end.as_str()),
+            ("across", "#ff0000")
+        );
+        let err = set_key("", "appearance", "gradient", &Value::Text("up".into())).unwrap_err();
+        assert!(err.message.contains("appearance.gradient"), "{err}");
+    }
 }
 
 #[test]
@@ -670,6 +691,24 @@ fn shortcut_is_an_accelerator_or_empty() {
         let err = parse(&format!("[timer]\nshortcut = {bad:?}\n")).unwrap_err();
         assert!(err.message.contains("timer.shortcut"), "{err}");
     }
+}
+
+#[test]
+fn custom_gradient_defaults_and_values() {
+    let a = Config::default().appearance;
+    assert_eq!(
+        (a.gradient.as_str(), a.background_end.as_str()),
+        ("none", "#1c1c1e")
+    );
+    for gradient in GRADIENTS {
+        let c = parse(&format!("[appearance]\ngradient = \"{gradient}\"\n")).unwrap();
+        assert_eq!(c.appearance.gradient, gradient);
+    }
+    let err = parse("[appearance]\ngradient = \"up\"\n").unwrap_err();
+    assert!(err.message.contains("appearance.gradient"), "{err}");
+    assert!(err.message.contains("\"diagonal\""), "{err}");
+    let err = parse("[appearance]\nbackground_end = \"blue\"\n").unwrap_err();
+    assert!(err.message.contains("appearance.background_end"), "{err}");
 }
 
 #[test]

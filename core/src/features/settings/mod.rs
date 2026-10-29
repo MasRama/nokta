@@ -11,7 +11,7 @@ mod watch;
 pub use config::{
     parse, ActivitiesConfig, Appearance, Behavior, CalendarConfig, ClipboardConfig, Config,
     ConfigError, Entries, HomeConfig, LyricsConfig, SettingValue, TimerConfig, WeatherConfig,
-    DEFAULT_CONFIG_TOML, THEMES,
+    DEFAULT_CONFIG_TOML, GRADIENTS, THEMES,
 };
 pub use store::Store;
 pub use watch::watch;
