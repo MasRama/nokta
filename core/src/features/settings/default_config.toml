@@ -81,6 +81,8 @@ units = "celsius"        # "celsius" or "fahrenheit"
 [calendar]
 enabled = true           # show the next event from GNOME's calendar when the notch opens
 reminder_minutes = 5     # show an event this many minutes before it starts, 0 to 60; 0 = no reminder
+agenda_size = 3          # how many events home lists, 1 to 5
+countdown = true         # from the reminder, the closed notch counts the minutes to the start
 
 [clipboard]
 enabled = true           # keep what you copy, text and pictures, in the open notch; in memory only

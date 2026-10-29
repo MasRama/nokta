@@ -2,6 +2,8 @@
 export type PanelRow =
     | 'date'
     | 'event'
+    /** One more event of the agenda, inside the event row. */
+    | 'agenda'
     | 'recording'
     | 'call'
     | 'activity'
@@ -19,7 +21,9 @@ const BASE_EXTRA = 38;
 const SPACING = 10;
 /** Between the toggles and the tiles, as `.nokta-panel-controls` spacing. */
 const CONTROLS_SPACING = 12;
-const ROW_HEIGHT: Record<Exclude<PanelRow, 'date'>, number> = {
+/** Each more event of the agenda: a row as tall as the first, 2 below it, as `.nokta-panel-agenda` spacing. */
+const AGENDA_ROW = 28;
+const ROW_HEIGHT: Record<Exclude<PanelRow, 'date' | 'agenda'>, number> = {
     event: 26,
     recording: 26,
     call: 26,
@@ -34,7 +38,8 @@ const ROW_HEIGHT: Record<Exclude<PanelRow, 'date'>, number> = {
 export function panelHeight(closedHeight: number, rows: readonly PanelRow[]): number {
     let height = closedHeight + BASE_EXTRA;
     for (const row of rows) {
-        if (row !== 'date' && row !== 'tiles') height += ROW_HEIGHT[row] + SPACING;
+        if (row === 'agenda') height += AGENDA_ROW;
+        else if (row !== 'date' && row !== 'tiles') height += ROW_HEIGHT[row] + SPACING;
     }
     // The toggles and the tiles share one row of home.
     if (rows.includes('tiles')) height += ROW_HEIGHT.tiles + (rows.includes('toggles') ? CONTROLS_SPACING : SPACING);

@@ -13,11 +13,14 @@ import {
     type EndedSignal,
 } from './features/activities/index.js';
 import {
+    agendaEvents,
     alarmAlert,
     CalendarAlarms,
     CalendarSource,
+    countdownChangeMs,
+    countdownEvent,
+    countdownLabel,
     eventTime,
-    nextEvent,
     soonLabel,
     type Alarm,
     type CalendarEvent,
@@ -184,6 +187,10 @@ class Session {
     private readonly recordingId: number;
     private timerTickId = 0;
     private liveTickId = 0;
+    private countdownTickId = 0;
+    private countdownText: string | null = null;
+    /** Events whose countdown was closed with Join; it does not come back for them. */
+    private readonly dismissedCountdowns = new Set<string>();
     private readonly watchId: number;
     private notches: MonitorNotch[] = [];
     private allMonitors: boolean;
@@ -312,6 +319,7 @@ class Session {
         this.onTimer();
         this.onLive();
         this.calendarAlarms.reschedule();
+        this.onCountdown();
         this.shelfCoordinator.setEnabled(this.settings.behavior.fileShelf);
         this.watchId = watchDaemon(
             (connection) => this.onDaemonAppeared(connection),
@@ -337,6 +345,7 @@ class Session {
         this.clipboardWatcher.destroy();
         this.calendarAlarms.destroy();
         this.calendar.destroy();
+        this.stopCountdownTick();
         this.stopTimerTick();
         this.media.destroy();
         this.lyrics.destroy();
@@ -565,6 +574,7 @@ class Session {
             panel: this.panel,
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
+            countdown: { text: () => this.countdownText },
             systemStyle: { dark: () => this.interfaceSettings.get_string('color-scheme') === 'prefer-dark' },
         };
         monitors.forEach((monitor, index) => {
@@ -720,6 +730,31 @@ class Session {
     private onCalendar(): void {
         this.notches.forEach((n) => n.onPanelContent());
         this.calendarAlarms.reschedule();
+        this.onCountdown();
+    }
+
+    /** Redraws the closed notch's countdown, and again when its minute changes or it ends. */
+    private onCountdown(): void {
+        this.stopCountdownTick();
+        const now = Date.now();
+        const { countdown, reminderMinutes } = this.settings.calendar;
+        const event = countdown
+            ? countdownEvent(this.calendarEvents(now), now, reminderMinutes, this.dismissedCountdowns)
+            : null;
+        const text = event ? countdownLabel(event.startMs, now) : null;
+        this.countdownText = text;
+        this.notches.forEach((n) => n.onCountdown());
+        if (!event) return;
+        this.countdownTickId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, countdownChangeMs(event, now), () => {
+            this.countdownTickId = 0;
+            this.onCountdown();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    private stopCountdownTick(): void {
+        if (this.countdownTickId) GLib.source_remove(this.countdownTickId);
+        this.countdownTickId = 0;
     }
 
     /** Timed events from now to the end of tomorrow; none while the calendar is off. */
@@ -728,6 +763,7 @@ class Session {
     }
 
     private onCalendarAlarm(alarm: Alarm, nowMs: number): void {
+        this.onCountdown();
         const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
         if (!alert) return;
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
@@ -757,12 +793,14 @@ class Session {
         else app.launch([], context);
     }
 
-    private panelEvent(): PanelContent['event'] {
+    /** The agenda: the first event says how soon it is, the others only their time. */
+    private panelEvents(): PanelContent['events'] {
         const now = Date.now();
-        const event = nextEvent(this.calendarEvents(now), now);
-        if (!event) return null;
-        const time = eventTime(event.startMs, now, (ms) => this.formatTime(ms));
-        return { title: event.title, when: `${time} · ${soonLabel(event.startMs, now)}` };
+        const events = agendaEvents(this.calendarEvents(now), now, this.settings.calendar.agendaSize);
+        return events.map((event, i) => {
+            const time = eventTime(event.startMs, now, (ms) => this.formatTime(ms));
+            return { title: event.title, when: i === 0 ? `${time} · ${soonLabel(event.startMs, now)}` : time };
+        });
     }
 
     // The idle panel
@@ -773,7 +811,7 @@ class Session {
             weekday: now.format('%A') ?? '',
             date: now.format('%-d %B') ?? '',
             weather: this.weather.line(),
-            event: this.panelEvent(),
+            events: this.panelEvents(),
             recording: this.panelRecording(),
             call: this.panelCall(),
             activities: this.panelActivities(),

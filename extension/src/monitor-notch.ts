@@ -6,6 +6,7 @@ import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
+import { CountdownBadge } from './features/calendar/index.js';
 import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
 import { NotchGestures } from './features/gestures/index.js';
 import {
@@ -37,6 +38,7 @@ import {
     HomePanel,
     MAX_PANEL_ACTIVITIES,
     MAX_PANEL_CLOCKS,
+    MAX_PANEL_EVENTS,
     NotchMenu,
     panelHeight,
     shownControls,
@@ -199,6 +201,8 @@ export interface NotchSources {
     panel: PanelSource;
     shelf: ShelfSource;
     clipboard: ClipboardSource;
+    /** The closed notch's countdown to a meeting, `5 min` ... `Now`; null when none is near. */
+    countdown: { text(): string | null };
     /** Whether the system's style is dark, for themes that follow it. */
     systemStyle: { dark(): boolean };
 }
@@ -222,6 +226,8 @@ export class MonitorNotch implements ShelfNotch {
     private readonly collapsedBadge = new ActivityBadge();
     private readonly idleShelf = new ShelfBadge();
     private readonly collapsedShelf = new ShelfBadge();
+    private readonly idleCountdown = new CountdownBadge();
+    private readonly collapsedCountdown = new CountdownBadge();
     private readonly panelShelf = new ShelfRow();
     private readonly expandedShelf = new ShelfRow();
     private readonly dropView = new DropView();
@@ -400,11 +406,13 @@ export class MonitorNotch implements ShelfNotch {
         this.idle.add_child(this.idleTimer.actor);
         this.idle.add_child(this.idleBadge.actor);
         this.idle.add_child(this.idleShelf.actor);
+        this.idle.add_child(this.idleCountdown.actor);
         this.idleRecording.actor.hide();
         this.idleCall.actor.hide();
         this.idleTimer.actor.hide();
         this.idleBadge.actor.hide();
         this.idleShelf.actor.hide();
+        this.idleCountdown.actor.hide();
         this.views = {
             idle: this.idle,
             collapsed: this.collapsed.actor,
@@ -550,6 +558,8 @@ export class MonitorNotch implements ShelfNotch {
         this.collapsedBadge.destroy();
         this.idleShelf.destroy();
         this.collapsedShelf.destroy();
+        this.idleCountdown.destroy();
+        this.collapsedCountdown.destroy();
         this.panelShelf.destroy();
         this.expandedShelf.destroy();
         this.dropView.destroy();
@@ -655,7 +665,18 @@ export class MonitorNotch implements ShelfNotch {
         this.applyIndicator();
     }
 
-    /** The weather beside the date or the next event changed. */
+    /** The countdown to a meeting changed, started or ended. */
+    onCountdown(): void {
+        if (this.destroyed) return;
+        const text = this.sources.countdown.text();
+        if (text !== null) {
+            this.idleCountdown.update(text);
+            this.collapsedCountdown.update(text);
+        }
+        this.applyIndicator();
+    }
+
+    /** The weather beside the date or the next events changed. */
     onPanelContent(): void {
         if (this.destroyed) return;
         if (this.drawn === 'panel') this.refreshPanel();
@@ -1054,6 +1075,7 @@ export class MonitorNotch implements ShelfNotch {
             timer: this.sources.timer.snapshot().state !== 'idle',
             clock: indicatorClock(this.sources.timer.clocks(), GLib.get_monotonic_time()) !== null,
             activity: this.liveActivities().length > 0,
+            meeting: this.sources.countdown.text() !== null,
             shelf: this.sources.shelf.items().length > 0,
         });
         if (indicator !== this.indicator) {
@@ -1064,12 +1086,14 @@ export class MonitorNotch implements ShelfNotch {
             this.idleTimer.actor.visible = indicator === 'timer' || indicator === 'clock';
             this.idleBadge.actor.visible = indicator === 'activity';
             this.idleShelf.actor.visible = indicator === 'shelf';
+            this.idleCountdown.actor.visible = indicator === 'meeting';
             const aside = {
                 recording: this.collapsedRecording.actor,
                 call: this.collapsedCall.actor,
                 timer: this.collapsedTimer.actor,
                 clock: this.collapsedTimer.actor,
                 activity: this.collapsedBadge.actor,
+                meeting: this.collapsedCountdown.actor,
                 shelf: this.collapsedShelf.actor,
             };
             this.collapsed.setAside(indicator ? aside[indicator] : null);
@@ -1527,7 +1551,8 @@ function trackKey(snapshot: { playerId: string; title: string; artists: readonly
 function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const clocks = Math.min(content.clocks.length, MAX_PANEL_CLOCKS);
-    const event: PanelRow[] = content.event ? ['event'] : [];
+    const events = Math.min(content.events.length, MAX_PANEL_EVENTS);
+    const event: PanelRow[] = events > 0 ? ['event', ...Array<PanelRow>(events - 1).fill('agenda')] : [];
     const recording: PanelRow[] = content.recording !== null ? ['recording'] : [];
     const call: PanelRow[] = content.call ? ['call'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];

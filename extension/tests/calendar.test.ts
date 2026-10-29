@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+    agendaEvents,
     alarmAlert,
+    countdownEvent,
+    countdownLabel,
+    countdownWindow,
+    countdownChangeMs,
     eventAlert,
     eventsFrom,
     eventTime,
@@ -105,4 +110,66 @@ test('a late alarm says what is true when it fires', () => {
     assert.equal(alarmAlert(reminder, at(10, 2), hhmm)?.title, 'Standup is starting');
     assert.equal(alarmAlert(reminder, at(10, 15), hhmm), null);
     assert.equal(alarmAlert({ ...reminder, kind: 'start', atMs: at(10) }, at(10), hhmm)?.title, 'Standup is starting');
+});
+
+test('the agenda lists events that have not ended, soonest first, up to its size', () => {
+    const now = at(10);
+    const events = [
+        event('Tomorrow', at(9, 0, 29), at(10, 0, 29)),
+        event('Lunch', at(12), at(13)),
+        event('Done', at(8), at(9)),
+        event('Running', at(9, 30), at(10, 30)),
+        event('Review', at(15), at(16)),
+    ];
+    assert.deepEqual(
+        agendaEvents(events, now, 3).map((e) => e.title),
+        ['Running', 'Lunch', 'Review'],
+    );
+    // Tomorrow fills in when today has fewer.
+    assert.deepEqual(
+        agendaEvents(events, now, 5).map((e) => e.title),
+        ['Running', 'Lunch', 'Review', 'Tomorrow'],
+    );
+    assert.deepEqual(agendaEvents(events, now, 1).map((e) => e.title), ['Running']);
+    assert.deepEqual(agendaEvents([], now, 3), []);
+});
+
+test('the countdown says the minutes left, then Now', () => {
+    const start = at(10);
+    assert.equal(countdownLabel(start, start - 5 * 60_000), '5 min');
+    assert.equal(countdownLabel(start, start - 4.5 * 60_000), '5 min');
+    assert.equal(countdownLabel(start, start - 30_000), '1 min');
+    assert.equal(countdownLabel(start, start), 'Now');
+    assert.equal(countdownLabel(start, start + 3 * 60_000), 'Now');
+});
+
+test('the countdown runs from the reminder until 5 minutes after the start', () => {
+    const standup = event('Standup', at(10), at(10, 30));
+    assert.equal(countdownWindow(standup, at(9, 54), 5), false);
+    assert.equal(countdownWindow(standup, at(9, 55), 5), true);
+    assert.equal(countdownWindow(standup, at(10, 4), 5), true);
+    assert.equal(countdownWindow(standup, at(10, 5), 5), false);
+    // Without a reminder there is no countdown.
+    assert.equal(countdownWindow(standup, at(9, 59), 0), false);
+    // A short event ends its countdown when it ends.
+    const short = event('Ping', at(10), at(10, 2));
+    assert.equal(countdownWindow(short, at(10, 3), 5), false);
+});
+
+test('the countdown shows the soonest event in its window, except dismissed ones', () => {
+    const a = event('A', at(10), at(11));
+    const b = event('B', at(10, 2), at(11));
+    assert.equal(countdownEvent([b, a], at(9, 58), 5, new Set())?.title, 'A');
+    assert.equal(countdownEvent([b, a], at(9, 58), 5, new Set(['A']))?.title, 'B');
+    assert.equal(countdownEvent([b, a], at(9, 50), 5, new Set()), null);
+});
+
+test('the countdown redraws when its minute changes, then when it ends', () => {
+    const standup = event('Standup', at(10), at(10, 30));
+    assert.equal(countdownChangeMs(standup, at(9, 55)), 60_000);
+    assert.equal(countdownChangeMs(standup, at(9, 55) + 20_000), 40_000);
+    assert.equal(countdownChangeMs(standup, at(9, 59) + 30_000), 30_000);
+    // Now holds until 5 minutes after the start, or the end if sooner.
+    assert.equal(countdownChangeMs(standup, at(10, 1)), 4 * 60_000);
+    assert.equal(countdownChangeMs(event('Ping', at(10), at(10, 2)), at(10)), 2 * 60_000);
 });

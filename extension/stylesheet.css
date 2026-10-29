@@ -399,6 +399,10 @@
     height: 26px;
 }
 
+.nokta-panel-agenda {
+    spacing: 2px;
+}
+
 .nokta-panel-event-box {
     spacing: 10px;
 }
@@ -508,6 +512,20 @@
 
 .nokta-home-icon {
     icon-size: 16px;
+}
+
+.nokta-countdown {
+    spacing: 5px;
+}
+
+.nokta-countdown-icon {
+    icon-size: 14px;
+}
+
+.nokta-countdown-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-feature-settings: "tnum";
 }
 
 .nokta-activity-badge {

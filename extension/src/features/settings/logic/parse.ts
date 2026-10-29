@@ -190,11 +190,17 @@ export interface CalendarSettings {
     enabled: boolean;
     /** Minutes before an event to show it; 0 for no reminder. */
     reminderMinutes: number;
+    /** How many events home lists. */
+    agendaSize: number;
+    /** From the reminder, the closed notch counts the minutes to the start. */
+    countdown: boolean;
 }
 
 export const DEFAULT_CALENDAR: Readonly<CalendarSettings> = {
     enabled: true,
     reminderMinutes: 5,
+    agendaSize: 3,
+    countdown: true,
 };
 
 /** io.nokta.Settings1.Clipboard in camelCase. */

@@ -66,6 +66,14 @@ test('ended alerts say how it went', () => {
     assert.equal(endedAlert('Backup', false, '', 3_000_000).detail, 'Failed after 3 s');
 });
 
+test('a meeting countdown comes after a live activity and before the shelf', () => {
+    const none = { recording: false, call: false, timer: false, clock: false, activity: false, shelf: false };
+    assert.equal(chooseIndicator({ ...none, meeting: true, shelf: true }), 'meeting');
+    assert.equal(chooseIndicator({ ...none, meeting: true, activity: true }), 'activity');
+    assert.equal(chooseIndicator({ ...none, meeting: true, call: true }), 'call');
+    assert.equal(chooseIndicator({ ...none, meeting: true }), 'meeting');
+});
+
 test('the closed notch shows a recording, else a call, else the timer, else an activity, else the shelf', () => {
     assert.equal(chooseIndicator({ recording: true, call: true, timer: true, clock: true, activity: true, shelf: true }), 'recording');
     assert.equal(chooseIndicator({ recording: false, call: true, timer: true, clock: true, activity: true, shelf: true }), 'call');
@@ -87,6 +95,8 @@ test('home grows with its rows', () => {
     assert.equal(panelHeight(32, ['date', 'recording', 'call', ...controls]), 183 + 2 * 36);
     // The event row holds an icon chip, as tall as the other one-line rows.
     assert.equal(panelHeight(32, ['date', 'event', ...controls]), 183 + 36);
+    // Each more event of the agenda adds a row 26 high, 2 below the one above.
+    assert.equal(panelHeight(32, ['date', 'event', 'agenda', 'agenda', ...controls]), 183 + 36 + 2 * 28);
 });
 
 test('home loses the toggles or the tiles when none are chosen', () => {

@@ -352,8 +352,15 @@ export const SETTINGS_PAGES: readonly Page[] = [
             {
                 title: 'Calendar',
                 rows: [
-                    calendar('enabled', 'Show the next event', bool(), "From GNOME's calendar, when the notch opens"),
+                    calendar('enabled', 'Show events', bool(), "From GNOME's calendar, when the notch opens"),
                     calendar('reminder_minutes', 'Remind before', int(0, 60), 'Minutes before it starts; 0 for no reminder'),
+                    calendar('agenda_size', 'Events in home', int(1, 5), 'Today first, then tomorrow'),
+                    calendar(
+                        'countdown',
+                        'Count down to the start',
+                        bool(),
+                        'From the reminder, the closed notch shows the minutes left',
+                    ),
                 ],
             },
             {
