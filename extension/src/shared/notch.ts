@@ -280,6 +280,11 @@ export class Notch {
         this.actor.destroy();
     }
 
+    /** Where the body's top left corner is laid out now, in stage coordinates. */
+    bodyOrigin(): [number, number] {
+        return [notchX(this.monitor, this.laidWidth, this.style.earRadius) + this.style.earRadius, this.monitor.y];
+    }
+
     /** Where the body is once it is `width` × `height`, in stage coordinates. */
     bodyRect(width: number, height: number): { x: number; y: number; width: number; height: number } {
         const x = notchX(this.monitor, width, this.style.earRadius) + this.style.earRadius;

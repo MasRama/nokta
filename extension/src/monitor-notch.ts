@@ -96,6 +96,8 @@ import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
 import { motionKicks, type AlertMotion } from './shared/logic/alert-motion.js';
 import { withAlpha } from './shared/logic/color.js';
+import { flies, ROW_IN, staggerDelays, type Rect as Place } from './shared/logic/morph.js';
+import { centerOffset } from './shared/logic/motion.js';
 import { formatDuration } from './shared/logic/format.js';
 import { fullscreenView, UnredirectHold } from './shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from './shared/logic/glow.js';
@@ -108,6 +110,7 @@ import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
 import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
 import { depthFor, paletteFor, themeFor, type Palette } from './shared/logic/theme.js';
+import { MorphLayer } from './shared/morph.js';
 import { type MonitorArea, Notch } from './shared/notch.js';
 import { ProgressLine } from './shared/progress-line.js';
 import { PressFeedback } from './shared/press.js';
@@ -286,6 +289,10 @@ export class MonitorNotch implements ShelfNotch {
     private notificationKind: 'notification' | 'screenshot' = 'notification';
     private readonly privacyDots = new PrivacyDots();
     private readonly progress = new ProgressLine();
+    /** Where the cover flies between the closed notch and the player. */
+    private readonly morph: MorphLayer;
+    /** Rows coming in after an opening view, faded from 0 back to full. */
+    private readonly staggering = new Set<Clutter.Actor>();
     private privacyCount = 0;
     private readonly idlePanel: HomePanel;
     /** Home is open over the player, until the notch closes or its music button goes back. */
@@ -462,6 +469,9 @@ export class MonitorNotch implements ShelfNotch {
             actor.visible = mode === 'idle';
             this.notch.body.add_child(actor);
         }
+        // Over the views, under the line and the dots.
+        this.morph = new MorphLayer(() => this.notch.bodyOrigin());
+        this.notch.body.add_child(this.morph.actor);
         // Last, so the line and the dots stay above every view.
         this.notch.body.add_child(this.progress.actor);
         this.notch.body.add_child(this.privacyDots.actor);
@@ -569,6 +579,7 @@ export class MonitorNotch implements ShelfNotch {
         this.menu.destroy();
         this.forgetStaleHover();
         this.setSearchField(null);
+        this.morph.destroy();
         this.osdView.destroy();
         this.notificationView.destroy();
         this.screenshotView.destroy();
@@ -1363,6 +1374,7 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === previous) return;
         this.drawn = mode;
         this.press.release();
+        this.morph.cancel();
         // The open player may show the blurred cover.
         this.applyPalette();
         if (mode !== 'expanded') {
@@ -1387,7 +1399,8 @@ export class MonitorNotch implements ShelfNotch {
         this.notch.resizeTo(width, height, kind);
         // The glow goes with the alert.
         if (mode !== 'osd' && mode !== 'notification' && mode !== 'screenshot') this.notch.setGlow(null);
-        this.showView(mode);
+        this.showView(mode, kind === 'open');
+        this.flyBetween(previous, mode);
         // The open notch's buttons take the focus; held open, the new view's first one has it.
         if (tall(mode)) focusButtons(this.views[mode]);
         this.focusView();
@@ -1506,8 +1519,9 @@ export class MonitorNotch implements ShelfNotch {
      * The old content fades out as it shrinks a little, the new one fades
      * in growing from the top centre, while the body springs to its size.
      */
-    private showView(mode: Drawn): void {
-        const speed = this.sources.settings.appearance.animationSpeed;
+    private showView(mode: Drawn, opening: boolean): void {
+        const { animationSpeed: speed, morph } = this.sources.settings.appearance;
+        const stagger = opening && morph && St.Settings.get().enable_animations;
         for (const [name, actor] of Object.entries(this.views)) {
             actor.remove_all_transitions();
             actor.set_pivot_point(0.5, 0);
@@ -1525,6 +1539,7 @@ export class MonitorNotch implements ShelfNotch {
                     duration: Math.round(200 * speed),
                     mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
                 });
+                if (stagger) this.staggerRows(actor, speed);
             } else if (actor.visible) {
                 actor.ease({
                     opacity: 0,
@@ -1538,6 +1553,79 @@ export class MonitorNotch implements ShelfNotch {
                 });
             }
         }
+    }
+
+    /**
+     * An opening view's rows come in from the top, one after the other,
+     * each rising a little as it fades in. Only views that stack rows;
+     * a row resting dimmer than full is left alone.
+     */
+    private staggerRows(view: St.Widget, speed: number): void {
+        const layout = view.layout_manager;
+        if (!(layout instanceof Clutter.BoxLayout) || layout.orientation !== Clutter.Orientation.VERTICAL) return;
+        const rows = view
+            .get_children()
+            .filter((row) => row.visible && (row.opacity === 255 || this.staggering.has(row)));
+        if (rows.length < 2) return;
+        staggerDelays(rows.length).forEach((delay, i) => {
+            const row = rows[i];
+            row.remove_transition('opacity');
+            row.remove_transition('translation-y');
+            this.staggering.add(row);
+            row.opacity = 0;
+            row.translation_y = ROW_IN.rise;
+            row.ease({
+                opacity: 255,
+                translation_y: 0,
+                delay: Math.round(delay * speed),
+                duration: Math.round(ROW_IN.ms * speed),
+                mode: Clutter.AnimationMode.EASE_OUT_CUBIC,
+                onStopped: () => {
+                    row.opacity = 255;
+                    row.translation_y = 0;
+                    this.staggering.delete(row);
+                },
+            });
+        });
+    }
+
+    /** The cover flies between the closed notch and the player, with `[appearance] morph`. */
+    private flyBetween(previous: Drawn, mode: Drawn): void {
+        const { morph, animationSpeed } = this.sources.settings.appearance;
+        const flight = flies(previous, mode, {
+            morph,
+            animations: St.Settings.get().enable_animations,
+            indicator: false,
+        });
+        if (flight !== 'cover') return;
+        const opening = mode === 'expanded';
+        const small = this.collapsed.coverActor;
+        const big = this.expanded.coverActor;
+        const [from, to] = opening ? [small, big] : [big, small];
+        this.morph.fly(from, to, () => this.restRect(to, mode), big, opening, animationSpeed);
+    }
+
+    /**
+     * Where `actor`, inside the view drawn for `mode`, rests on the stage
+     * once the body has its size for `mode`; null while it is not laid out.
+     */
+    private restRect(actor: Clutter.Actor, mode: Drawn): Place | null {
+        const view = this.views[mode];
+        let x = 0;
+        let y = 0;
+        let at: Clutter.Actor | null = actor;
+        while (at && at !== view) {
+            const box = at.get_allocation_box();
+            x += box.x1;
+            y += box.y1;
+            at = at.get_parent();
+        }
+        const own = actor.get_allocation_box();
+        if (at !== view || own.get_width() <= 0 || view.get_allocation_box().get_width() <= 0) return null;
+        const [width, height] = this.sizeFor(mode);
+        const body = this.notch.bodyRect(width, height);
+        const viewX = body.x + centerOffset(width, view.get_allocation_box().get_width());
+        return { x: viewX + x, y: body.y + y, width: own.get_width(), height: own.get_height() };
     }
 
     // Timers: only while expanded and playing.
