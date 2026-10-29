@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, UNIX_EPOCH};
 
 use futures_util::StreamExt;
-use image::ImageReader;
+use image::{imageops::FilterType, DynamicImage, ImageFormat, ImageReader};
 use tokio::io::AsyncWriteExt;
 
 use crate::shared::hash::sha256_hex;
@@ -13,11 +13,16 @@ use crate::shared::picture::accent_color;
 
 pub const MAX_DOWNLOAD_BYTES: usize = 5 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(10);
+/// The backdrop fits in a square this size: the notch stretches it anyway.
+pub const BACKDROP_SIZE: u32 = 160;
+const BACKDROP_SIGMA: f32 = 12.0;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ArtInfo {
     pub path: PathBuf,
     pub accent: Option<String>,
+    /// The cover downsized and blurred, to show behind the player.
+    pub backdrop: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug)]
@@ -59,10 +64,18 @@ impl ArtCache {
             .ok()?
             .as_nanos();
         let key = sha256_hex(&format!("{url}\n{}\n{mtime}", meta.len()));
-        let accent = self
-            .accent_for(&path, &self.dir.join(format!("{key}.accent")))
+        let (accent, backdrop) = self
+            .derive(
+                &path,
+                &self.dir.join(format!("{key}.accent")),
+                &self.dir.join(format!("{key}.backdrop.png")),
+            )
             .await;
-        Some(ArtInfo { path, accent })
+        Some(ArtInfo {
+            path,
+            accent,
+            backdrop,
+        })
     }
 
     async fn resolve_http(&self, url: &str) -> Option<ArtInfo> {
@@ -73,8 +86,18 @@ impl ArtCache {
                 return None;
             }
         }
-        let accent = self.accent_for(&path, &path.with_extension("accent")).await;
-        Some(ArtInfo { path, accent })
+        let (accent, backdrop) = self
+            .derive(
+                &path,
+                &path.with_extension("accent"),
+                &path.with_extension("backdrop.png"),
+            )
+            .await;
+        Some(ArtInfo {
+            path,
+            accent,
+            backdrop,
+        })
     }
 
     async fn download(&self, url: &str, dest: &Path) -> anyhow::Result<()> {
@@ -116,31 +139,71 @@ impl ArtCache {
         result
     }
 
-    /// Reads the cached accent, or computes and stores it. An empty cache file
-    /// means "no accent", so gray covers are not decoded again.
-    async fn accent_for(&self, image_path: &Path, accent_path: &Path) -> Option<String> {
-        if let Ok(cached) = tokio::fs::read_to_string(accent_path).await {
-            let cached = cached.trim();
-            return (!cached.is_empty()).then(|| cached.to_owned());
+    /// Reads the cached accent and backdrop, or decodes the cover once to
+    /// make and store what is missing. An empty accent file means "no
+    /// accent", so gray covers are not decoded again for it.
+    async fn derive(
+        &self,
+        image_path: &Path,
+        accent_path: &Path,
+        backdrop_path: &Path,
+    ) -> (Option<String>, Option<PathBuf>) {
+        let cached = tokio::fs::read_to_string(accent_path)
+            .await
+            .ok()
+            .map(|a| a.trim().to_owned());
+        let has_backdrop = tokio::fs::metadata(backdrop_path)
+            .await
+            .is_ok_and(|m| m.is_file());
+        if let (Some(accent), true) = (&cached, has_backdrop) {
+            return (
+                (!accent.is_empty()).then(|| accent.clone()),
+                Some(backdrop_path.to_owned()),
+            );
+        }
+        if tokio::fs::create_dir_all(&self.dir).await.is_err() {
+            return (cached.filter(|a| !a.is_empty()), None);
         }
         let image_path = image_path.to_owned();
-        let accent = tokio::task::spawn_blocking(move || {
-            let img = ImageReader::open(&image_path)
-                .ok()?
-                .with_guessed_format()
-                .ok()?
-                .decode()
-                .ok()?;
-            accent_color(&img)
+        let backdrop_path = backdrop_path.to_owned();
+        let accent_path = accent_path.to_owned();
+        tokio::task::spawn_blocking(move || {
+            let decoded = ImageReader::open(&image_path)
+                .ok()
+                .and_then(|r| r.with_guessed_format().ok())
+                .and_then(|r| r.decode().ok());
+            let accent = match cached {
+                Some(accent) => (!accent.is_empty()).then_some(accent),
+                None => {
+                    let accent = decoded.as_ref().and_then(accent_color);
+                    let _ = std::fs::write(&accent_path, accent.as_deref().unwrap_or(""));
+                    accent
+                }
+            };
+            let backdrop = if has_backdrop {
+                Some(backdrop_path)
+            } else {
+                decoded.and_then(|img| write_backdrop(&img, &backdrop_path).ok())
+            };
+            (accent, backdrop)
         })
         .await
-        .ok()
-        .flatten();
-        if tokio::fs::create_dir_all(&self.dir).await.is_ok() {
-            let _ = tokio::fs::write(accent_path, accent.as_deref().unwrap_or("")).await;
-        }
-        accent
+        .unwrap_or((None, None))
     }
+}
+
+/// Writes `img` downsized and blurred to `dest`, through a partial file so
+/// the extension never reads half of it.
+fn write_backdrop(img: &DynamicImage, dest: &Path) -> anyhow::Result<PathBuf> {
+    let small = img
+        .resize(BACKDROP_SIZE, BACKDROP_SIZE, FilterType::Triangle)
+        .fast_blur(BACKDROP_SIGMA);
+    let partial = dest.with_extension("partial");
+    small
+        .to_rgb8()
+        .save_with_format(&partial, ImageFormat::Png)?;
+    std::fs::rename(&partial, dest)?;
+    Ok(dest.to_owned())
 }
 
 #[cfg(test)]
@@ -183,6 +246,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_cover_gets_a_small_blurred_backdrop() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("cover.png");
+        DynamicImage::ImageRgb8(RgbImage::from_fn(600, 400, |x, _| {
+            if x < 300 {
+                Rgb([220, 30, 40])
+            } else {
+                Rgb([30, 40, 220])
+            }
+        }))
+        .save(&file)
+        .unwrap();
+        let url = url::Url::from_file_path(&file).unwrap();
+        let art = cache(&dir);
+        let info = art.resolve(url.as_str()).await.unwrap();
+        let backdrop = info.backdrop.clone().unwrap();
+        assert!(backdrop.starts_with(dir.path().join("cache").join("art")));
+        assert!(backdrop.to_string_lossy().ends_with(".backdrop.png"));
+        let img = image::open(&backdrop).unwrap().to_rgb8();
+        assert_eq!((img.width(), img.height()), (BACKDROP_SIZE, 107));
+        // Blurred: the middle mixes the two halves.
+        let mid = img.get_pixel(BACKDROP_SIZE / 2, 53).0;
+        assert!(mid[0] > 60 && mid[2] > 60, "{mid:?}");
+
+        let written = std::fs::metadata(&backdrop).unwrap().modified().unwrap();
+        let again = art.resolve(url.as_str()).await.unwrap();
+        assert_eq!(again, info);
+        assert_eq!(
+            std::fs::metadata(&backdrop).unwrap().modified().unwrap(),
+            written
+        );
+    }
+
+    #[tokio::test]
+    async fn a_broken_cover_has_no_backdrop() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("cover.png");
+        std::fs::write(&file, "not a picture").unwrap();
+        let url = url::Url::from_file_path(&file).unwrap();
+        let info = cache(&dir).resolve(url.as_str()).await.unwrap();
+        assert_eq!(info.backdrop, None);
+        assert_eq!(info.accent, None);
+    }
+
+    #[tokio::test]
     async fn missing_file_is_none() {
         let dir = tempfile::tempdir().unwrap();
         assert!(cache(&dir)
@@ -217,6 +325,7 @@ mod tests {
         assert_eq!(first, second);
         assert!(first.path.starts_with(dir.path().join("cache").join("art")));
         assert!(first.accent.is_some());
+        assert!(first.backdrop.is_some_and(|b| b.is_file()));
     }
 
     #[tokio::test]

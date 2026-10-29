@@ -116,6 +116,7 @@ struct Player {
     position_generation: u64,
     art_path: String,
     accent_color: String,
+    backdrop_path: String,
 }
 
 #[derive(Default)]
@@ -146,6 +147,7 @@ impl Player {
             position_generation: 0,
             art_path: String::new(),
             accent_color: String::new(),
+            backdrop_path: String::new(),
         }
     }
 
@@ -195,6 +197,7 @@ impl Player {
                     if track.art_url != self.track.art_url {
                         self.art_path.clear();
                         self.accent_color.clear();
+                        self.backdrop_path.clear();
                         changes.resolve_art = track.art_url.is_some();
                     }
                     self.track = track;
@@ -227,6 +230,7 @@ impl Player {
             track: self.track.clone(),
             art_path: self.art_path.clone(),
             accent_color: self.accent_color.clone(),
+            backdrop_path: self.backdrop_path.clone(),
             position_us: self.position_us,
             position_timestamp_us: self.position_timestamp_us,
             rate: self.rate,
@@ -381,6 +385,10 @@ impl Actor {
                 if let Some(info) = info {
                     player.art_path = info.path.to_string_lossy().into_owned();
                     player.accent_color = info.accent.unwrap_or_default();
+                    player.backdrop_path = info
+                        .backdrop
+                        .map(|b| b.to_string_lossy().into_owned())
+                        .unwrap_or_default();
                 }
             }
             Event::Refresh => {
