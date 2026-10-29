@@ -59,9 +59,13 @@ export interface PanelWeather {
 
 /** A calendar event in home's agenda. */
 export interface PanelEvent {
+    /** The shell's event id. */
+    id: string;
     title: string;
     /** Like `10:30 · in 25 min` for the first, `Tomorrow 09:00` after; shown dimmed. */
     when: string;
+    /** Whether it has a meeting link, for its Join button. */
+    joinable: boolean;
 }
 
 export type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from './logic/layout.js';
@@ -102,6 +106,8 @@ export const MAX_PANEL_CLOCKS = 3;
 
 export interface PanelHandlers {
     openCalendar(): void;
+    /** Opens the event's meeting link. */
+    joinMeeting(id: string): void;
     openNotifications(): void;
     toggleFocus(): void;
     openSettings(): void;
@@ -374,9 +380,11 @@ class EventRow {
     readonly chip = new IconChip(TONES.calendar, iconFor('x-office-calendar-symbolic'));
     private readonly title: St.Label;
     private readonly when: St.Label;
+    private readonly join: St.Button;
     private readonly clickId: number;
+    private id = '';
 
-    constructor(onClick: () => void) {
+    constructor(onClick: () => void, onJoin: (id: string) => void) {
         const box = new St.BoxLayout({ style_class: 'nokta-panel-event-box', x_expand: true });
         box.add_child(this.chip.actor);
         this.title = new St.Label({ style_class: 'nokta-panel-event-title', y_align: Clutter.ActorAlign.CENTER });
@@ -386,6 +394,18 @@ class EventRow {
         this.when.opacity = SECONDARY;
         box.add_child(this.title);
         box.add_child(this.when);
+        this.join = new St.Button({
+            style_class: 'nokta-panel-join',
+            label: 'Join',
+            style: `background-color: ${withAlpha(TONES.calendar, 0.22)}; color: ${TONES.calendar};`,
+            x_expand: true,
+            x_align: Clutter.ActorAlign.END,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            visible: false,
+        });
+        this.join.connect('clicked', () => onJoin(this.id));
+        box.add_child(this.join);
         this.actor = new St.Button({
             style_class: 'nokta-panel-event nokta-panel-agenda-row',
             child: box,
@@ -398,8 +418,10 @@ class EventRow {
     show(event: PanelEvent | undefined): void {
         this.actor.visible = event !== undefined;
         if (!event) return;
+        this.id = event.id;
         this.title.text = event.title;
         this.when.text = event.when;
+        this.join.visible = event.joinable;
     }
 
     destroy(): void {
@@ -456,7 +478,10 @@ export class HomePanel {
         heading.add_child(this.playerButton);
         this.agenda = setVertical(new St.BoxLayout({ style_class: 'nokta-panel-agenda', visible: false }));
         for (let i = 0; i < MAX_PANEL_EVENTS; i++) {
-            const row = new EventRow(() => handlers.openCalendar());
+            const row = new EventRow(
+                () => handlers.openCalendar(),
+                (id) => handlers.joinMeeting(id),
+            );
             this.events.push(row);
             this.agenda.add_child(row.actor);
         }

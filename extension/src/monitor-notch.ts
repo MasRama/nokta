@@ -152,6 +152,8 @@ export interface PanelSource {
     /** Home just opened. */
     opened(): void;
     openCalendar(): void;
+    /** Opens the event's meeting link and ends its countdown. */
+    joinMeeting(id: string): void;
     openNotifications(): void;
     toggleFocus(): void;
     openSettings(): void;
@@ -336,6 +338,7 @@ export class MonitorNotch implements ShelfNotch {
         this.idlePanel = new HomePanel(
             {
                 openCalendar: () => this.onPanelClick(() => panel.openCalendar()),
+                joinMeeting: (id) => this.onPanelClick(() => panel.joinMeeting(id)),
                 openNotifications: () => this.onPanelClick(() => panel.openNotifications()),
                 toggleFocus: () => this.onPanelClick(() => panel.toggleFocus()),
                 openSettings: () => this.setPage('settings'),

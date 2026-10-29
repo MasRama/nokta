@@ -21,6 +21,7 @@ import {
     countdownEvent,
     countdownLabel,
     eventTime,
+    MeetingLinks,
     soonLabel,
     type Alarm,
     type CalendarEvent,
@@ -59,6 +60,7 @@ import {
 import {
     Caffeine,
     MAX_PANEL_ACTIVITIES,
+    MAX_PANEL_EVENTS,
     type PanelContent,
     type QuickToggle,
     sessionInhibitor,
@@ -152,6 +154,7 @@ class Session {
     private readonly clipboard = new ClipboardClient();
     private readonly clipboardWatcher: ClipboardWatcher;
     private readonly calendar = new CalendarSource();
+    private readonly meetingLinks = new MeetingLinks();
     private readonly calendarAlarms = new CalendarAlarms(
         (nowMs) => this.calendarEvents(nowMs),
         () => this.settings.calendar.reminderMinutes,
@@ -181,6 +184,7 @@ class Session {
     private readonly activitiesId: number;
     private readonly weatherId: number;
     private readonly calendarId: number;
+    private readonly meetingLinksId: number;
     private readonly shelfId: number;
     private readonly clipboardId: number;
     private readonly callId: number;
@@ -206,6 +210,7 @@ class Session {
         content: () => this.panelContent(),
         opened: () => this.weather.refresh(),
         openCalendar: () => this.openCalendar(),
+        joinMeeting: (id) => this.joinMeeting(id),
         openNotifications: () => {
             this.restoreMessageList?.();
             this.restoreMessageList = openMessageList();
@@ -284,6 +289,7 @@ class Session {
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
+        this.meetingLinksId = this.meetingLinks.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
         this.callId = this.call.onChanged(() => this.onLive());
@@ -340,6 +346,8 @@ class Session {
         this.activities.disconnect(this.activitiesId);
         this.weather.disconnect(this.weatherId);
         this.calendar.disconnect(this.calendarId);
+        this.meetingLinks.disconnect(this.meetingLinksId);
+        this.meetingLinks.destroy();
         this.shelf.disconnect(this.shelfId);
         this.clipboard.disconnect(this.clipboardId);
         this.clipboardWatcher.destroy();
@@ -415,8 +423,11 @@ class Session {
             this.weather.attach(connection, cancellable),
             this.shelf.attach(connection, cancellable),
             this.clipboard.attach(connection, cancellable),
+            this.meetingLinks.attach(connection, cancellable),
         ]);
-        if (!cancellable.is_cancelled()) this.devices.attach(connection);
+        if (cancellable.is_cancelled()) return;
+        this.devices.attach(connection);
+        this.askMeetingLinks();
     }
 
     private onDaemonVanished(): void {
@@ -430,6 +441,7 @@ class Session {
         this.weather.detach();
         this.shelf.detach();
         this.clipboard.detach();
+        this.meetingLinks.detach();
         this.devices.detach();
     }
 
@@ -731,6 +743,27 @@ class Session {
         this.notches.forEach((n) => n.onPanelContent());
         this.calendarAlarms.reschedule();
         this.onCountdown();
+        this.askMeetingLinks();
+    }
+
+    /** Asks the daemon for the meeting links of the events home lists. */
+    private askMeetingLinks(): void {
+        const now = Date.now();
+        const events = agendaEvents(this.calendarEvents(now), now, MAX_PANEL_EVENTS);
+        this.meetingLinks.want(events.map((event) => event.id));
+    }
+
+    /** Opens the event's meeting link with its default app; its countdown ends. */
+    private joinMeeting(id: string): void {
+        const link = this.meetingLinks.link(id);
+        if (!link) return;
+        this.dismissedCountdowns.add(id);
+        this.onCountdown();
+        try {
+            Gio.AppInfo.launch_default_for_uri(link, global.create_app_launch_context(0, -1));
+        } catch (error) {
+            console.warn('Nokta: could not open the meeting link', error);
+        }
     }
 
     /** Redraws the closed notch's countdown, and again when its minute changes or it ends. */
@@ -766,10 +799,32 @@ class Session {
         this.onCountdown();
         const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
         if (!alert) return;
+        const { alertDurationMs } = this.settings.behavior;
+        // With a meeting link it shows like a notification, for its Join
+        // button; over a fullscreen app it stays an alert.
+        const { notch } = this.routeMessage(-1);
+        const id = alarm.event.id;
+        if (notch && this.meetingLinks.link(id)) {
+            if (this.shownNotification) {
+                this.shownNotification.notch.hideNotification();
+                this.releaseNotification();
+            }
+            const reminder = {
+                title: alert.title,
+                detail: alert.detail,
+                icon: iconFor(alert.icon),
+                buttons: ['Join'],
+                badge: null,
+                onClick: () => this.openCalendar(),
+                onButton: () => this.joinMeeting(id),
+            };
+            notch.showNotification(reminder, alertDurationMs);
+            return;
+        }
         const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent };
         const tone: AlertTone = alert.urgent ? 'urgent' : { color: TONES.calendar };
         const icon = iconFor(alert.icon);
-        this.showOsd(-1, 'calendar', content, icon, this.settings.behavior.alertDurationMs, tone);
+        this.showOsd(-1, 'calendar', content, icon, alertDurationMs, tone);
     }
 
     /** A time like the notch's clock shows it. */
@@ -799,7 +854,12 @@ class Session {
         const events = agendaEvents(this.calendarEvents(now), now, this.settings.calendar.agendaSize);
         return events.map((event, i) => {
             const time = eventTime(event.startMs, now, (ms) => this.formatTime(ms));
-            return { title: event.title, when: i === 0 ? `${time} · ${soonLabel(event.startMs, now)}` : time };
+            return {
+                id: event.id,
+                title: event.title,
+                when: i === 0 ? `${time} · ${soonLabel(event.startMs, now)}` : time,
+                joinable: this.meetingLinks.link(event.id) !== null,
+            };
         });
     }
 

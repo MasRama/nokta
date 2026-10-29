@@ -16,6 +16,7 @@ import {
     soonLabel,
     type CalendarEvent,
 } from '../src/features/calendar/logic/events.js';
+import { linksToAsk } from '../src/features/calendar/logic/links.js';
 
 /** Local time today (28 October 2026) or on a later day. */
 const at = (hour: number, minute = 0, day = 28): number => new Date(2026, 9, day, hour, minute).getTime();
@@ -172,4 +173,13 @@ test('the countdown redraws when its minute changes, then when it ends', () => {
     // Now holds until 5 minutes after the start, or the end if sooner.
     assert.equal(countdownChangeMs(standup, at(10, 1)), 4 * 60_000);
     assert.equal(countdownChangeMs(event('Ping', at(10), at(10, 2)), at(10)), 2 * 60_000);
+});
+
+test('links are asked for new events, and again after 10 minutes', () => {
+    const asked = new Map([
+        ['old', at(9)],
+        ['recent', at(9, 55)],
+    ]);
+    assert.deepEqual(linksToAsk(['new', 'old', 'recent', 'new'], asked, at(10)), ['new', 'old']);
+    assert.deepEqual(linksToAsk([], asked, at(10)), []);
 });
