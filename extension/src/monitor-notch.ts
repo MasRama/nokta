@@ -30,6 +30,10 @@ import {
     CollapsedMediaView,
     ExpandedMediaView,
     type MediaClient,
+    PEEK_MS,
+    PeekView,
+    shouldPeek,
+    type PeekTrack,
 } from './features/media/index.js';
 import {
     NotificationTimer,
@@ -131,7 +135,7 @@ const ALERT_KICK = 0.06;
  * What the notch draws: the state machine's mode (the idle panel when it
  * opens without a player), or the OSD or a notification over it.
  */
-type Drawn = NotchMode | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
+type Drawn = NotchMode | 'peek' | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
 
 /** The pages that home's tiles open. */
 type PageName = 'clipboard' | 'timer' | 'settings';
@@ -312,6 +316,11 @@ export class MonitorNotch implements ShelfNotch {
     private readonly pressId: number;
     private readonly machine: NotchMachine;
     private readonly osdTimer: OsdTimer;
+    /** The closed notch widened with a new song's title. */
+    private readonly peekView: PeekView;
+    private readonly peekTimer: OsdTimer;
+    /** The song as last seen, to tell when a new one starts; null before the first snapshot. */
+    private peekTrack: PeekTrack | null = null;
     private readonly notificationTimer: NotificationTimer;
     private readonly views: Record<Drawn, St.Widget>;
     private readonly hoverId: number;
@@ -340,6 +349,8 @@ export class MonitorNotch implements ShelfNotch {
     ) {
         const { settings, media, panel } = sources;
         this.collapsed = new CollapsedMediaView(() => media.levels());
+        this.peekView = new PeekView(() => media.levels());
+        this.peekTimer = new OsdTimer(glibSchedule, () => PEEK_MS, () => this.draw(this.overlay()));
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
         this.applyDepth();
@@ -434,6 +445,7 @@ export class MonitorNotch implements ShelfNotch {
         this.views = {
             idle: this.idle,
             collapsed: this.collapsed.actor,
+            peek: this.peekView.actor,
             expanded: this.expanded.actor,
             panel: this.idlePanel.actor,
             page: this.pages,
@@ -484,7 +496,7 @@ export class MonitorNotch implements ShelfNotch {
         this.pressId = this.notch.actor.connect('button-press-event', (_actor, event: Clutter.Event) => {
             // With open_on "click", a click on the closed notch opens it; its buttons take their own clicks first.
             if (event.get_button() === Clutter.BUTTON_PRIMARY) {
-                const closed = this.drawn === 'idle' || this.drawn === 'collapsed';
+                const closed = this.drawn === 'idle' || this.drawn === 'collapsed' || this.drawn === 'peek';
                 return closed && this.pointerInside() && this.machine.click() ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
             }
             if (event.get_button() !== Clutter.BUTTON_SECONDARY) return Clutter.EVENT_PROPAGATE;
@@ -537,6 +549,7 @@ export class MonitorNotch implements ShelfNotch {
         this.destroyed = true;
         this.machine.destroy();
         this.osdTimer.destroy();
+        this.peekTimer.destroy();
         this.notificationTimer.destroy();
         this.notificationClick = null;
         this.notificationButton = null;
@@ -589,6 +602,7 @@ export class MonitorNotch implements ShelfNotch {
         this.lyricsSheet.destroy();
         this.lyricsFullscreen.destroy();
         this.collapsed.destroy();
+        this.peekView.destroy();
         this.expanded.destroy();
         Main.layoutManager.removeChrome(this.notch.actor);
         this.notch.destroy();
@@ -602,10 +616,13 @@ export class MonitorNotch implements ShelfNotch {
         if (this.page === 'settings') this.showSettingsPage();
         this.collapsed.update(snapshot, this.shownPalette.accent);
         this.collapsed.setActive(this.drawn === 'collapsed', snapshot);
+        this.peekView.update(snapshot, this.shownPalette.accent);
+        this.peekView.setActive(this.drawn === 'peek');
         this.expanded.update(snapshot);
         this.expanded.setActive(this.drawn === 'expanded');
         this.machine.setAvailable(snapshot.available);
         if (trackKey(snapshot) !== this.lyricsTrack) this.setLyricsOpen(false);
+        this.peekOnNewTrack(snapshot);
         // Open, a player coming or going swaps the media view and the idle panel.
         this.draw(this.overlay());
         this.applyProgress();
@@ -992,7 +1009,9 @@ export class MonitorNotch implements ShelfNotch {
         const { height, cornerRadius } = settings.appearance;
         const dots = dotsFor(privacy.state(), settings.behavior.privacyDots);
         this.privacyCount = dots.length;
-        this.collapsed.setInset(this.privacyDots.update(dots, height, cornerRadius));
+        const inset = this.privacyDots.update(dots, height, cornerRadius);
+        this.collapsed.setInset(inset);
+        this.peekView.setInset(inset);
         this.showPrivacyDots();
     }
 
@@ -1007,6 +1026,7 @@ export class MonitorNotch implements ShelfNotch {
             this.alertOverFullscreen = true;
             this.applyFullscreen();
         }
+        this.peekTimer.hide();
         this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
         this.osdTimer.show(durationMs);
         if (tone) this.alert(tone);
@@ -1031,6 +1051,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationButton = (index) => notification.onButton(index);
         this.screenshotPress = null;
         this.notificationKind = 'notification';
+        this.peekTimer.hide();
         this.setNotificationButtons(buttons.length > 0);
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
@@ -1056,6 +1077,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationClick = null;
         this.notificationButton = null;
         this.notificationKind = 'screenshot';
+        this.peekTimer.hide();
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
         this.alert('accent');
@@ -1073,6 +1095,18 @@ export class MonitorNotch implements ShelfNotch {
     }
 
     // State
+
+    /** A new song while the notch is closed on the music widens it with the title for a moment. */
+    private peekOnNewTrack(snapshot: ReturnType<MediaClient['snapshot']>): void {
+        const track = { key: trackKey(snapshot), title: snapshot.title, playing: snapshot.playbackStatus === 'Playing' };
+        const state = {
+            enabled: this.sources.settings.behavior.trackPeek,
+            drawn: this.drawn,
+            fullscreen: this.inFullscreen,
+        };
+        if (shouldPeek(this.peekTrack, track, state)) this.peekTimer.show();
+        this.peekTrack = track;
+    }
 
     /** The width overshoots and springs back, and the glow comes in the alert's colour. */
     private alert(tone: AlertTone): void {
@@ -1198,7 +1232,8 @@ export class MonitorNotch implements ShelfNotch {
 
     /** The dots belong to the closed notch; open, GNOME's own indicators still show. */
     private showPrivacyDots(): void {
-        this.privacyDots.actor.visible = this.privacyCount > 0 && (this.drawn === 'idle' || this.drawn === 'collapsed');
+        const closed = this.drawn === 'idle' || this.drawn === 'collapsed' || this.drawn === 'peek';
+        this.privacyDots.actor.visible = this.privacyCount > 0 && closed;
     }
 
     private onScreenshotPress(button: ScreenshotButton): void {
@@ -1256,12 +1291,15 @@ export class MonitorNotch implements ShelfNotch {
         if (this.osdTimer.active) return 'osd';
         if (this.notificationTimer.active) return this.notificationKind;
         const { mode } = this.machine;
+        if (mode === 'collapsed' && this.peekTimer.active) return 'peek';
         if (mode !== 'expanded') return mode;
         if (this.page) return 'page';
         return this.homeOpen || !this.sources.media.snapshot().available ? 'panel' : mode;
     }
 
     private onMode(): void {
+        // Opened, the player shows the song: no peek after it closes again.
+        if (this.machine.mode === 'expanded') this.peekTimer.hide();
         // Closing the notch goes back to its first page, and lets go of the keyboard.
         if (this.machine.mode !== 'expanded') {
             this.homeOpen = false;
@@ -1335,6 +1373,7 @@ export class MonitorNotch implements ShelfNotch {
         if (mode === 'idle') this.clock.start();
         else this.clock.stop();
         this.collapsed.setActive(mode === 'collapsed', this.sources.media.snapshot());
+        this.peekView.setActive(mode === 'peek');
         this.expanded.setActive(mode === 'expanded');
         this.applyIndicator();
         this.updatePanelTick();
@@ -1371,6 +1410,7 @@ export class MonitorNotch implements ShelfNotch {
             const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
             return [a.expandedWidth, a.expandedHeight + lyrics + shelf];
         }
+        if (mode === 'peek') return [a.expandedWidth, a.height];
         return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
     }
 

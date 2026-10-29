@@ -18,6 +18,25 @@
     padding: 0 12px 0 10px;
 }
 
+/* The closed notch, widened for a moment when the song changes. */
+.nokta-peek {
+    padding: 0 12px 0 10px;
+}
+
+.nokta-peek-text {
+    spacing: 6px;
+    padding: 0 10px;
+}
+
+.nokta-peek-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-peek-artist {
+    font-size: 13px;
+}
+
 .nokta-equalizer {
     spacing: 2px;
     height: 14px;
