@@ -57,6 +57,7 @@ test('row_kinds_match_their_defaults', () => {
                 assert.ok(row.kind.options.some((o) => o.value === value), name);
                 break;
             case 'text':
+            case 'file':
                 assert.equal(typeof value, 'string', name);
                 break;
             case 'order': {
@@ -67,6 +68,13 @@ test('row_kinds_match_their_defaults', () => {
             }
         }
     }
+});
+
+test('the picture is chosen as an image file, and every theme can be picked', () => {
+    const rows = allRows();
+    assert.equal(rows.find((r) => r.key === 'picture')!.kind.type, 'file');
+    const theme = rows.find((r) => r.key === 'theme')!.kind;
+    assert.ok(theme.type === 'choice' && theme.options.some((o) => o.value === 'picture'));
 });
 
 test('pages_have_titles_and_groups', () => {

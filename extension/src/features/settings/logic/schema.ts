@@ -27,6 +27,8 @@ export type RowKind =
     | { type: 'color' }
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
     | { type: 'text' }
+    /** A path chosen in a file dialog, here always an image. */
+    | { type: 'file' }
     /** A list of names from `options`, at most `max`, in the order shown. */
     | { type: 'order'; options: readonly OrderOption[]; max: number };
 
@@ -135,6 +137,7 @@ const THEME_CHOICE: RowKind = {
         { value: 'aurora', label: 'Aurora' },
         { value: 'paper', label: 'Paper' },
         { value: 'custom', label: 'Custom' },
+        { value: 'picture', label: 'Picture' },
     ],
 };
 
@@ -176,6 +179,19 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         'Under the notch: red when urgent, green when done or charging',
                     ),
+                ],
+            },
+            {
+                title: 'Picture',
+                rows: [
+                    appearance('picture', 'Picture', { type: 'file' }, 'The image the picture theme shows'),
+                    appearance(
+                        'picture_darken',
+                        'Darken',
+                        { type: 'float', min: 0, max: 0.8, step: 0.05, percent: true },
+                        'Keeps the text readable on a bright picture',
+                    ),
+                    appearance('picture_blur', 'Blur', int(0, 40), 'Pixels'),
                 ],
             },
             {
@@ -525,6 +541,7 @@ export function variantType(kind: RowKind): 'b' | 'u' | 'd' | 's' | 'as' {
         case 'color':
         case 'choice':
         case 'text':
+        case 'file':
             return 's';
         case 'order':
             return 'as';

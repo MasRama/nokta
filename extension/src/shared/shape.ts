@@ -24,6 +24,10 @@ uniform vec4 u_top;
 uniform vec4 u_bottom;
 uniform vec4 u_border;
 uniform vec2 u_direction;
+uniform float u_picture;
+uniform float u_darken;
+// Never set, so texture unit 0: the offscreen paint of the actor's children.
+uniform sampler2D u_children;
 
 float nokta_body(vec2 p, float grow) {
     float r = min(u_radius + grow, u_half.x + grow);
@@ -66,6 +70,13 @@ if (u_glow > 0.5) {
     vec2 spot = vec2(p.x / max(2.0 * u_half.x, 1.0) + 0.5, p.y / max(u_half.y, 1.0));
     float t = dot(spot, u_direction) / max(u_direction.x + u_direction.y, 0.001);
     vec4 fill = mix(u_top, u_bottom, clamp(t, 0.0, 1.0));
+    if (u_picture > 0.0) {
+        // The picture, a child of the actor, painted into the texture; mixed
+        // over the fill where it lies, darkened under the text.
+        vec4 tex = texture2D(u_children, cogl_tex_coord_in[0].xy);
+        vec3 picture = tex.rgb / max(tex.a, 0.001) * (1.0 - u_darken);
+        fill = mix(fill, vec4(picture, 1.0), u_picture * tex.a);
+    }
     color = vec4(fill.rgb * fill.a, fill.a) * cover;
     float edge = (body - clamp(-0.5 - d, 0.0, 1.0)) * u_border.a;
     color = vec4(u_border.rgb, 1.0) * edge + color * (1.0 - edge);
@@ -95,6 +106,13 @@ export interface ShapeColors {
     border: Rgba;
     /** The way from `top` to `bottom`, a unit vector; down when missing. */
     direction?: [number, number];
+}
+
+/** How much of the actor's children (the picture) shows over the fill, and how darkened. */
+export interface ShapePicture {
+    /** 0 shows only the fill, 1 the picture where it lies. */
+    amount: number;
+    darken: number;
 }
 
 /** Sets a uniform on whichever effect class this shell has. */
@@ -164,7 +182,10 @@ function shader(): ShaderClass {
     return shaderClass;
 }
 
-/** The silhouette or the glow on `actor`, which it fills; the actor paints nothing else. */
+/**
+ * The silhouette or the glow on `actor`, which it fills. The actor's
+ * children paint only through `setPicture`, inside the silhouette.
+ */
 export class Shape {
     private readonly effect: Clutter.Effect;
     private readonly set: SetUniform;
@@ -195,6 +216,12 @@ export class Shape {
         this.uniform('u_bottom', c.bottom);
         this.uniform('u_border', c.border);
         this.uniform('u_direction', c.direction ?? [0, 1]);
+        this.repaint();
+    }
+
+    setPicture(p: ShapePicture): void {
+        this.uniform('u_picture', [p.amount]);
+        this.uniform('u_darken', [p.darken]);
         this.repaint();
     }
 

@@ -6,7 +6,7 @@ import { setVertical } from '../../shared/compat.js';
 import { SECONDARY } from '../../shared/dim.js';
 import { iconFor } from '../../shared/icons.js';
 import { withAlpha } from '../../shared/logic/color.js';
-import { THEMES, themeFor, themeKeyFor } from '../../shared/logic/theme.js';
+import { THEMES, themeFor, themeKeyFor, type PictureState } from '../../shared/logic/theme.js';
 import type { Appearance } from './logic/parse.js';
 import { MOTION_PRESETS, motionPreset, themeSwatches } from './logic/quick.js';
 
@@ -75,6 +75,7 @@ export class SettingsPage {
     private appearance: Appearance | null = null;
     private cover: string | null = null;
     private dark = true;
+    private picture: PictureState | null = null;
     private colors: SettingsPageColors = { foreground: '#ffffff', accent: '#ffffff', onAccent: '#000000' };
 
     constructor(private readonly handlers: SettingsPageHandlers) {
@@ -119,12 +120,16 @@ export class SettingsPage {
         this.actor.add_child(all);
     }
 
-    /** The settings as they are now; `cover` is the playing cover's color, for aurora's swatch. */
-    /** `dark` is the system's style: following it, the swatches pick the theme for that style. */
-    show(appearance: Appearance, cover: string | null, dark: boolean): void {
+    /**
+     * The settings as they are now; `cover` is the playing cover's color, for
+     * aurora's swatch, and `picture` the picture theme's image. `dark` is the
+     * system's style: following it, the swatches pick the theme for that style.
+     */
+    show(appearance: Appearance, cover: string | null, dark: boolean, picture: PictureState | null = null): void {
         this.appearance = appearance;
         this.cover = cover;
         this.dark = dark;
+        this.picture = picture;
         this.paint();
     }
 
@@ -164,7 +169,7 @@ export class SettingsPage {
         });
     }
 
-    /** Six small notches, built once; their colors follow the theme settings and the cover. */
+    /** Seven small notches, built once; their colors follow the theme settings and the cover. */
     private buildThemes(): void {
         for (const theme of THEMES) {
             const dot = new St.Widget({
@@ -199,15 +204,16 @@ export class SettingsPage {
     }
 
     private paintThemes(a: Appearance): void {
-        themeSwatches(a, this.cover).forEach((swatch, i) => {
+        themeSwatches(a, this.cover, this.picture).forEach((swatch, i) => {
             const { notch, dot, ring, label } = this.swatches[i];
             const chosen = swatch.theme === themeFor(a, this.dark);
+            const fill = swatch.picture
+                ? `background-image: url("file://${swatch.picture}"); background-size: cover;`
+                : // St has no diagonal gradient: across and diagonal run sideways.
+                  `background-gradient-direction: ${swatch.direction[0] > 0 ? 'horizontal' : 'vertical'};` +
+                  ` background-gradient-start: ${swatch.top}; background-gradient-end: ${swatch.bottom};`;
             // A hairline keeps a dark theme's swatch visible on a dark notch.
-            notch.style =
-                // St has no diagonal gradient: across and diagonal run sideways.
-                `background-gradient-direction: ${swatch.direction[0] > 0 ? 'horizontal' : 'vertical'};` +
-                ` background-gradient-start: ${swatch.top}; background-gradient-end: ${swatch.bottom};` +
-                ` border: 1px solid ${withAlpha(this.colors.foreground, 0.18)};`;
+            notch.style = `${fill} border: 1px solid ${withAlpha(this.colors.foreground, 0.18)};`;
             dot.style = `background-color: ${swatch.accent};`;
             ring.style = `border-color: ${chosen ? this.colors.accent : 'transparent'};`;
             label.text = swatch.label;

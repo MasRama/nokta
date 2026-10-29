@@ -1231,7 +1231,8 @@ export class MonitorNotch implements ShelfNotch {
     private showSettingsPage(): void {
         if (this.destroyed) return;
         const { settings, media, systemStyle } = this.sources;
-        this.settingsPage.show(settings.appearance, media.snapshot().accentColor, systemStyle.dark());
+        const picture = { ...settings.picture, darken: settings.appearance.pictureDarken };
+        this.settingsPage.show(settings.appearance, media.snapshot().accentColor, systemStyle.dark(), picture);
     }
 
     private setHomeOpen(open: boolean): void {
@@ -1337,7 +1338,8 @@ export class MonitorNotch implements ShelfNotch {
     private palette(): Palette {
         const appearance = this.sources.settings.appearance;
         const theme = themeFor(appearance, this.sources.systemStyle.dark());
-        return paletteFor(theme, appearance, this.sources.media.snapshot().accentColor);
+        const picture = { ...this.sources.settings.picture, darken: appearance.pictureDarken };
+        return paletteFor(theme, appearance, this.sources.media.snapshot().accentColor, picture);
     }
 
     /** Recolors the notch and its views when the theme or the cover's color changes. */

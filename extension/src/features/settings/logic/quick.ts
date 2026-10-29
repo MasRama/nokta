@@ -1,4 +1,4 @@
-import { paletteFor, THEMES, type ThemeColors, type ThemeName } from '../../../shared/logic/theme.js';
+import { paletteFor, THEMES, type PictureState, type ThemeColors, type ThemeName } from '../../../shared/logic/theme.js';
 
 /** The motion choices on the settings page, as `[appearance] animation_speed`. */
 export const MOTION_PRESETS: readonly { label: string; speed: number }[] = [
@@ -23,15 +23,20 @@ export interface ThemeSwatch {
     direction: [number, number];
     foreground: string;
     accent: string;
+    /** The picture theme's image, drawn over the colors; null for the others. */
+    picture: string | null;
 }
 
 /** Aurora takes its tint from the cover; with none playing its swatch still shows one. */
 const SAMPLE_COVER = '#c2477f';
 
-/** One swatch per theme, in THEMES order; `cover` is the playing cover's color, if any. */
-export function themeSwatches(colors: ThemeColors, cover: string | null): ThemeSwatch[] {
+/**
+ * One swatch per theme, in THEMES order; `cover` is the playing cover's
+ * color, if any, and `picture` the picture theme's image.
+ */
+export function themeSwatches(colors: ThemeColors, cover: string | null, picture: PictureState | null = null): ThemeSwatch[] {
     return THEMES.map((theme) => {
-        const palette = paletteFor(theme, colors, cover ?? SAMPLE_COVER);
+        const palette = paletteFor(theme, colors, cover ?? SAMPLE_COVER, picture);
         return {
             theme,
             label: theme.charAt(0).toUpperCase() + theme.slice(1),
@@ -40,6 +45,7 @@ export function themeSwatches(colors: ThemeColors, cover: string | null): ThemeS
             direction: palette.direction,
             foreground: palette.foreground,
             accent: palette.accent,
+            picture: palette.picture?.path ?? null,
         };
     });
 }

@@ -27,6 +27,13 @@ import {
     type TimerSettings,
 } from './logic/parse.js';
 
+/** Settings1's PicturePath, PictureColor and PictureTone. */
+export interface PreparedPicture {
+    path: string;
+    color: string;
+    tone: string;
+}
+
 /**
  * The notch's appearance, behavior, timer, notification, calendar, clipboard and home settings from io.nokta.Settings1. Until the
  * daemon answers it holds the defaults; when the daemon goes away it
@@ -40,6 +47,8 @@ export class SettingsClient {
     calendar: CalendarSettings = { ...DEFAULT_CALENDAR };
     clipboard: ClipboardSettings = { ...DEFAULT_CLIPBOARD };
     home: HomeSettings = homeFrom(undefined);
+    /** The picture theme's image as the daemon prepared it; empty strings while there is none. */
+    picture: PreparedPicture = { path: '', color: '', tone: '' };
     private proxy: Gio.DBusProxy | null = null;
     private changedId = 0;
 
@@ -89,6 +98,11 @@ export class SettingsClient {
         this.calendar = calendarFrom(cached(this.proxy, 'Calendar'));
         this.clipboard = clipboardFrom(cached(this.proxy, 'Clipboard'));
         this.home = homeFrom(cached(this.proxy, 'Home'));
+        const text = (name: string): string => {
+            const value = cached(this.proxy!, name);
+            return typeof value === 'string' ? value : '';
+        };
+        this.picture = { path: text('PicturePath'), color: text('PictureColor'), tone: text('PictureTone') };
         this.onChanged();
     }
 }

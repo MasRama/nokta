@@ -2,7 +2,15 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { luminance, mix } from '../src/shared/logic/color.js';
-import { gradientDirection, paletteFor, themeFor, themeKeyFor, THEMES, type ThemeColors } from '../src/shared/logic/theme.js';
+import {
+    gradientDirection,
+    paletteFor,
+    themeFor,
+    themeKeyFor,
+    THEMES,
+    type PictureState,
+    type ThemeColors,
+} from '../src/shared/logic/theme.js';
 
 const COLORS: ThemeColors = {
     background: '#102030',
@@ -104,7 +112,7 @@ test('text on the accent stays readable', () => {
 });
 
 test('every theme the daemon accepts has a palette', () => {
-    assert.deepEqual([...THEMES], ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom']);
+    assert.deepEqual([...THEMES], ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom', 'picture']);
     for (const theme of THEMES) assert.ok(paletteFor(theme, COLORS, COVER).background.startsWith('#'));
 });
 
@@ -123,4 +131,53 @@ test('a theme picked from the notch goes to the key in use under the current sty
     const on = { ...off, followSystemStyle: true };
     assert.equal(themeKeyFor(on, true), 'theme');
     assert.equal(themeKeyFor(on, false), 'light_theme');
+});
+
+const DARK_PICTURE: PictureState = { path: '/cache/sea.png', color: '#3060c0', tone: '#203040', darken: 0.35 };
+
+test('a dark picture gets white text and its own color for the accent', () => {
+    const p = paletteFor('picture', { ...COLORS, useAlbumAccent: false }, COVER, DARK_PICTURE);
+    assert.equal(p.theme, 'picture');
+    assert.deepEqual(p.picture, { path: '/cache/sea.png', darken: 0.35 });
+    assert.equal(p.background, mix('#203040', '#000000', 0.35));
+    assert.equal(p.backgroundOpacity, 1);
+    assert.equal(p.gradient, null);
+    assert.equal(p.foreground, '#ffffff');
+    assert.equal(p.accent, '#3060c0');
+    assert.equal(p.light, false);
+    assert.ok(p.border);
+});
+
+test('the cover color still wins the accent on a picture when that is on', () => {
+    assert.equal(paletteFor('picture', COLORS, COVER, DARK_PICTURE).accent, COVER);
+});
+
+test('a light picture gets dark text', () => {
+    const light = { path: '/cache/snow.png', color: '#e0a020', tone: '#f0f0e8', darken: 0 };
+    const p = paletteFor('picture', { ...COLORS, useAlbumAccent: false }, null, light);
+    assert.equal(p.light, true);
+    assert.equal(p.foreground, '#1d1d1f');
+    assert.ok(luminance(p.accent) <= 0.25, p.accent);
+    // Darkened enough, the same picture reads with white text.
+    assert.equal(paletteFor('picture', COLORS, null, { ...light, darken: 0.8 }).light, false);
+});
+
+test('a picture without its own color takes the text color for the accent', () => {
+    const p = paletteFor('picture', { ...COLORS, useAlbumAccent: false }, null, { ...DARK_PICTURE, color: '' });
+    assert.equal(p.accent, '#ffffff');
+});
+
+test('without a picture, the picture theme draws like midnight', () => {
+    const midnight = paletteFor('midnight', COLORS, COVER);
+    for (const picture of [undefined, null, { ...DARK_PICTURE, path: '' }]) {
+        const p = paletteFor('picture', COLORS, COVER, picture);
+        assert.deepEqual({ ...p, theme: 'midnight' }, midnight);
+        assert.equal(p.theme, 'picture');
+        assert.equal(p.picture, null);
+    }
+});
+
+test('only the picture theme shows the picture', () => {
+    for (const theme of THEMES.filter((t) => t !== 'picture'))
+        assert.equal(paletteFor(theme, COLORS, COVER, DARK_PICTURE).picture, null, theme);
 });

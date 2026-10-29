@@ -37,6 +37,8 @@ export function errorMessage(error: unknown): string {
  */
 export class SettingsService {
     tables: Tables = {};
+    /** The picture theme's image as the daemon prepared it; empty strings while there is none. */
+    picture = { path: '', color: '', tone: '' };
     available = false;
     private proxy: Gio.DBusProxy | null = null;
     private readonly ids: number[] = [];
@@ -85,6 +87,11 @@ export class SettingsService {
         for (const [table, property] of Object.entries(PROPERTIES) as [Table, string][])
             tables[table] = proxy.get_cached_property(property)?.recursiveUnpack();
         this.tables = tables;
+        const text = (name: string): string => {
+            const value = proxy.get_cached_property(name)?.recursiveUnpack();
+            return typeof value === 'string' ? value : '';
+        };
+        this.picture = { path: text('PicturePath'), color: text('PictureColor'), tone: text('PictureTone') };
         // The cache empties when the daemon leaves the bus.
         this.available = proxy.g_name_owner !== null && tables.appearance !== undefined;
         this.onChanged();

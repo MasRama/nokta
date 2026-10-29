@@ -2,9 +2,9 @@ import type Cairo from 'cairo';
 import Gtk from 'gi://Gtk';
 
 import { themeSwatches, type Appearance } from '../features/settings/index.js';
-import type { ThemeName } from '../shared/logic/theme.js';
+import type { PictureState, ThemeName } from '../shared/logic/theme.js';
 import { gradientEnds, SAMPLE_SONG } from './logic/look.js';
-import { linear, notchPath, setColor } from './preview.js';
+import { fillPicture, linear, notchPath, setColor } from './preview.js';
 
 type PaintContext = Cairo.Context & { $dispose(): void };
 
@@ -36,13 +36,14 @@ export class ThemeGallery {
     readonly widget: Gtk.FlowBox;
     private readonly cards: Card[] = [];
     private swatches: ReturnType<typeof themeSwatches> = [];
+    private darken = 0;
 
     constructor(onPick: (theme: ThemeName) => void) {
         this.widget = new Gtk.FlowBox({
             selection_mode: Gtk.SelectionMode.NONE,
             homogeneous: true,
             min_children_per_line: 3,
-            max_children_per_line: 6,
+            max_children_per_line: 7,
             column_spacing: 6,
             row_spacing: 6,
         });
@@ -64,8 +65,10 @@ export class ThemeGallery {
         }
     }
 
-    update(appearance: Appearance): void {
-        this.swatches = themeSwatches(appearance, SAMPLE_SONG.cover);
+    /** `picture` is the picture theme's image, for its card. */
+    update(appearance: Appearance, picture: PictureState | null = null): void {
+        this.swatches = themeSwatches(appearance, SAMPLE_SONG.cover, picture);
+        this.darken = picture?.darken ?? 0;
         for (const card of this.cards) {
             const chosen = card.theme === appearance.theme;
             if (chosen) card.button.add_css_class('chosen');
@@ -96,6 +99,7 @@ export class ThemeGallery {
             [1, swatch.bottom, 1],
         ]));
         cr.fillPreserve();
+        if (swatch.picture) fillPicture(cr, swatch.picture, this.darken, x, width, height);
         setColor(cr, '#ffffff', 0.14);
         cr.setLineWidth(1);
         cr.stroke();

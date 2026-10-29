@@ -1,7 +1,7 @@
 import { accentFor, darkenTo, luminance, mix, textOn } from './color.js';
 
 /** The values `[appearance] theme` takes; only `custom` uses the color settings. */
-export const THEMES = ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom'] as const;
+export const THEMES = ['midnight', 'graphite', 'glass', 'aurora', 'paper', 'custom', 'picture'] as const;
 export type ThemeName = (typeof THEMES)[number];
 
 /** The values `[appearance] gradient` takes; custom's fill runs that way, or is flat. */
@@ -39,6 +39,19 @@ export interface Palette {
     border: string | null;
     /** Dark text on a light notch. */
     light: boolean;
+    /** The image the body shows over its fill, darkened by `darken`, or null. */
+    picture: { path: string; darken: number } | null;
+}
+
+/** The picture theme's image as the daemon prepared it, and how dark to show it. */
+export interface PictureState {
+    /** Empty while there is no picture. */
+    path: string;
+    /** Its vivid color, `#rrggbb` or empty. */
+    color: string;
+    /** The mean color of its top half, `#rrggbb` or empty. */
+    tone: string;
+    darken: number;
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -76,18 +89,25 @@ export function gradientDirection(name: string): [number, number] {
 
 function palette(
     theme: ThemeName,
-    base: Omit<Palette, 'theme' | 'onAccent' | 'direction'>,
+    base: Omit<Palette, 'theme' | 'onAccent' | 'direction' | 'picture'>,
     direction: [number, number] = DOWN,
+    picture: Palette['picture'] = null,
 ): Palette {
-    return { theme, ...base, direction: [...direction], onAccent: textOn(base.accent) };
+    return { theme, ...base, direction: [...direction], onAccent: textOn(base.accent), picture };
 }
 
 /**
  * The palette for `theme`; an unknown theme is midnight. `cover` is the
  * cover's color from the daemon, used for the accent when the cover accent
- * setting is on, and for aurora's tint.
+ * setting is on, and for aurora's tint. `picture` is the picture theme's
+ * image; without one that theme draws like midnight.
  */
-export function paletteFor(theme: string, colors: ThemeColors, cover: string | null): Palette {
+export function paletteFor(
+    theme: string,
+    colors: ThemeColors,
+    cover: string | null,
+    picture: PictureState | null = null,
+): Palette {
     const covered = colors.useAlbumAccent && cover !== null && HEX.test(cover) ? cover : null;
     const accent = (fallback: string) => covered ?? fallback;
     switch (theme) {
@@ -149,6 +169,7 @@ export function paletteFor(theme: string, colors: ThemeColors, cover: string | n
                 light: true,
             });
     }
+    if (theme === 'picture') return picturePalette(colors, covered, picture);
     return palette('midnight', {
         background: '#000000',
         backgroundOpacity: 1,
@@ -158,4 +179,29 @@ export function paletteFor(theme: string, colors: ThemeColors, cover: string | n
         border: null,
         light: false,
     });
+}
+
+/** The body shows the picture; its darkened tone colors the ears and decides the text. */
+function picturePalette(colors: ThemeColors, covered: string | null, picture: PictureState | null): Palette {
+    if (!picture?.path) return { ...paletteFor('midnight', colors, covered), theme: 'picture' };
+    const darken = Math.min(0.8, Math.max(0, picture.darken));
+    const background = mix(HEX.test(picture.tone) ? picture.tone : '#000000', '#000000', darken);
+    const light = textOn(background) === '#000000';
+    const foreground = light ? '#1d1d1f' : '#ffffff';
+    const own = HEX.test(picture.color) ? picture.color : null;
+    const vivid = covered ?? own;
+    return palette(
+        'picture',
+        {
+            background,
+            backgroundOpacity: 1,
+            gradient: null,
+            foreground,
+            accent: vivid ? (light ? darkenTo(vivid, 0.25) : vivid) : foreground,
+            border: light ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.14)',
+            light,
+        },
+        DOWN,
+        { path: picture.path, darken },
+    );
 }
