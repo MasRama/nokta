@@ -46,7 +46,9 @@ notifications. Hover over it to open it, or press
   earlier; Nokta remembers that for the song, and a click on the label
   between them puts it back. A Korean or Japanese line gets its
   pronunciation in Latin letters under it (사랑해 → saranghae, きって →
-  kitte), worked out on your computer; kanji stay as they are.
+  kitte), worked out on your computer; kanji stay as they are. The
+  button in the corner of the lyrics view puts them full screen, karaoke
+  style, over the song's blurred cover; Escape or a click closes it.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
   Lock and the keyboard layout show in the notch instead of GNOME's popup.
   A muted speaker or microphone says so.

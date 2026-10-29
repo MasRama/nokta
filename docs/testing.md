@@ -300,6 +300,15 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       shows `Turn it up, 사랑해` with `Turn it up, saranghae` under it, in
       italics, at the same 194 px; the lyrics view has it in the row under
       the current line. `romanize = false` brings the next line back.
+- [ ] The smoke test opens the lyrics view's corner button at the Korean
+      line: the full-screen view covers the monitor, the cover blurred
+      behind, `Turn it up, 사랑해` large and lighting up with
+      `saranghae` under it and `kimito` under the next line; Escape closes
+      it, gives the keyboard back, and the player opens again under the
+      pointer.
+- [ ] Full-screen lyrics in a real session *(real session)*: a click
+      closes them too; the next song without lyrics closes them; on two
+      monitors they cover only the one the notch is on.
 - [ ] A K-pop or J-pop song with synced lyrics *(real session)*: Hangul
       and kana lines read sensibly romanized, kanji stay, English lines
       show the next line as before.

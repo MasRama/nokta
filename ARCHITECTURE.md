@@ -196,7 +196,11 @@ docs/               manual test checklist, screenshots
   `SetOffset` stores the offset for the current track whatever its status,
   so it also applies to lyrics still loading, and fails with no track.
   Romanizing Korean and Japanese lines (`[lyrics] romanize`) is the
-  extension's own, offline: `features/lyrics/logic/romanize.ts`.
+  extension's own, offline: `features/lyrics/logic/romanize.ts`. So are
+  the full-screen lyrics (`features/lyrics/fullscreen.ts`): an actor over
+  one monitor on top of `Main.uiGroup`, modal through `Main.pushModal`,
+  reading the notch's lyrics and position every 100 ms and closing itself
+  when the song has no synced lyrics any more.
 - **devices** follows UPower and BlueZ on the system bus and emits an
   `Alert` signal when a Bluetooth audio device connects or disconnects, the
   charger is plugged or unplugged, the battery gets low (20 %) or critical
