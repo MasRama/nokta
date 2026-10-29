@@ -1,6 +1,7 @@
 import type Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { microphoneInUse, type RecordingStream } from './logic/call.js';
 import { NO_PRIVACY, type PrivacyState } from './logic/dots.js';
 
 type Kind = keyof PrivacyState;
@@ -20,14 +21,18 @@ interface QuickSettings {
  * Follows GNOME's own privacy indicators in the top bar: the camera, the
  * microphone, and screen sharing or recording. Each indicator is shown
  * while its device is in use, so this watches their `visible`. An
- * indicator a GNOME version lacks is skipped.
+ * indicator a GNOME version lacks is skipped. The microphone's ignores
+ * Nokta's own recording, which `recording` lists with the others.
  */
 export class PrivacyMonitor {
     private watched: Array<{ kind: Kind; actor: Clutter.Actor; ids: number[] }> = [];
     private waitId = 0;
     private readonly quickSettings: QuickSettings | undefined;
 
-    constructor(private readonly onChanged: () => void) {
+    constructor(
+        private readonly onChanged: () => void,
+        private readonly recording: () => readonly RecordingStream[] | null,
+    ) {
         const statusArea = Main.panel.statusArea as unknown as Record<string, unknown>;
         this.quickSettings = statusArea.quickSettings as QuickSettings | undefined;
         this.watch('screen', statusArea.screenSharing as Clutter.Actor | undefined);
@@ -48,6 +53,7 @@ export class PrivacyMonitor {
     state(): PrivacyState {
         const state = { ...NO_PRIVACY };
         for (const { kind, actor } of this.watched) if (actor.visible) state[kind] = true;
+        state.microphone = microphoneInUse(state.microphone, this.recording());
         return state;
     }
 

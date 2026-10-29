@@ -243,7 +243,7 @@ export class MonitorNotch implements ShelfNotch {
     /** Watches the next pointer motion while the notch may still think the pointer is on it. */
     private staleHoverId = 0;
     private indicator: Indicator | null = null;
-    private readonly collapsed = new CollapsedMediaView();
+    private readonly collapsed: CollapsedMediaView;
     private readonly expanded: ExpandedMediaView;
     /** The colors the views were last drawn with. */
     private shownPalette: Palette;
@@ -332,6 +332,7 @@ export class MonitorNotch implements ShelfNotch {
         private readonly sources: NotchSources,
     ) {
         const { settings, media, panel } = sources;
+        this.collapsed = new CollapsedMediaView(() => media.levels());
         this.shownPalette = this.palette();
         this.notch = new Notch(settings.appearance, this.shownPalette);
         this.expanded = new ExpandedMediaView(media, () => this.setHomeOpen(true), {

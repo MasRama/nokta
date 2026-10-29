@@ -7,6 +7,7 @@ export type {
     HomeSettings,
     HomeTile,
     HomeToggle,
+    MediaSettings,
     NotificationSettings,
     TimerSettings,
 } from './logic/parse.js';

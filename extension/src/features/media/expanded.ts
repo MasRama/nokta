@@ -25,6 +25,8 @@ export interface MediaControls {
     selectPlayer(id: string): void;
     setShuffle(on: boolean): void;
     setLoopStatus(status: LoopStatus): void;
+    /** The music's band levels, for the equalizer; null without them. */
+    levels(): readonly number[] | null;
 }
 
 /** The play button's scale under the pointer and while pressed. */
@@ -53,7 +55,7 @@ export class ExpandedMediaView {
     readonly actor: St.BoxLayout;
     readonly progress: ProgressBar;
     private readonly cover = new Cover(64, 14);
-    private readonly equalizer = new Equalizer();
+    private readonly equalizer: Equalizer;
     private readonly title = ellipsized('nokta-title');
     private readonly artists = ellipsized('nokta-artists');
     private readonly info: St.BoxLayout;
@@ -83,6 +85,7 @@ export class ExpandedMediaView {
 
     /** `openHome` goes to the open notch's other page; `outputs` switches the sound output. */
     constructor(controls: MediaControls, openHome: () => void, outputs: OutputMenuHandlers) {
+        this.equalizer = new Equalizer(() => controls.levels());
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-expanded', y_align: Clutter.ActorAlign.START }));
 
         const top = new St.BoxLayout({ style_class: 'nokta-expanded-top' });

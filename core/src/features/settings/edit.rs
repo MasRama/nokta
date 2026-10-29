@@ -54,6 +54,7 @@ fn expected_type(table: &str, key: &str) -> Result<SettingValue, ConfigError> {
     let entries = match table {
         "appearance" => defaults.appearance.entries(),
         "behavior" => defaults.behavior.entries(),
+        "media" => defaults.media.entries(),
         "lyrics" => defaults.lyrics.entries(),
         "timer" => defaults.timer.entries(),
         "notifications" => defaults.notifications.entries(),

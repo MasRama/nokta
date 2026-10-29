@@ -2,7 +2,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 
 import { Cover } from './cover.js';
-import { Equalizer } from './equalizer.js';
+import { Equalizer, type LevelSource } from './equalizer.js';
 import type { MediaSnapshot } from './logic/snapshot.js';
 
 /**
@@ -12,10 +12,11 @@ import type { MediaSnapshot } from './logic/snapshot.js';
 export class CollapsedMediaView {
     readonly actor: St.BoxLayout;
     private readonly cover = new Cover(22, 6);
-    private readonly equalizer = new Equalizer();
+    private readonly equalizer: Equalizer;
     private aside: Clutter.Actor | null = null;
 
-    constructor() {
+    constructor(levels: LevelSource) {
+        this.equalizer = new Equalizer(levels);
         this.actor = new St.BoxLayout({ style_class: 'nokta-collapsed', y_align: Clutter.ActorAlign.START });
         const spacer = new St.Widget({ x_expand: true });
         this.actor.add_child(this.cover.actor);

@@ -56,7 +56,7 @@ export class CallMonitor {
     /** Null while the microphone is off or the user hid the call. */
     call(): Call | null {
         if (this.startedUs === null || this.hidden) return null;
-        const stream = callingStream(this.recording());
+        const stream = callingStream(this.recording() ?? []);
         const app = stream ? lookupApp(stream.appId) : null;
         const iconName = stream?.iconName || MICROPHONE_ICON;
         return {
@@ -94,8 +94,9 @@ export class CallMonitor {
         this.listeners.clear();
     }
 
-    private recording(): RecordingStream[] {
-        if (this.control.get_state() !== Gvc.MixerControlState.READY) return [];
+    /** What records from GNOME's mixer, or null until the mixer is ready. */
+    recording(): RecordingStream[] | null {
+        if (this.control.get_state() !== Gvc.MixerControlState.READY) return null;
         return this.control.get_source_outputs().map((output) => ({
             appId: output.get_application_id() ?? '',
             name: output.get_name() ?? '',

@@ -66,6 +66,11 @@ export const MEDIA_METHODS = {
     SetLoopStatus: 's',
 } as const;
 
+/** io.nokta.Media1 signals and the D-Bus signature of their arguments. */
+export const MEDIA_SIGNALS = {
+    Levels: 'ad',
+} as const;
+
 export interface LyricsProps {
     Status: string;
     Lines: Array<[number, string]>;
@@ -94,6 +99,7 @@ export const DEVICES_SIGNALS = {
 export interface SettingsProps {
     Appearance: Record<string, unknown>;
     Behavior: Record<string, unknown>;
+    Media: Record<string, unknown>;
     Lyrics: Record<string, unknown>;
     Timer: Record<string, unknown>;
     Notifications: Record<string, unknown>;

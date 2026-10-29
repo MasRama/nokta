@@ -246,6 +246,20 @@ fn clipboard_defaults_and_size_range() {
 }
 
 #[test]
+fn media_defaults_to_the_pattern_bars() {
+    assert!(!Config::default().media.real_equalizer);
+    assert!(
+        parse("[media]\nreal_equalizer = true\n")
+            .unwrap()
+            .media
+            .real_equalizer
+    );
+    let map = entries(Config::default().media.entries());
+    assert_eq!(map.keys().copied().collect::<Vec<_>>(), ["real_equalizer"]);
+    assert_eq!(map["real_equalizer"], SettingValue::Bool(false));
+}
+
+#[test]
 fn calendar_defaults_and_reminder_range() {
     let c = Config::default().calendar;
     assert!(c.enabled);
@@ -611,6 +625,8 @@ mod edit {
         assert_eq!(parse(&text).unwrap().calendar.reminder_minutes, 10);
         let text = set_key("", "clipboard", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().clipboard.enabled);
+        let text = set_key("", "media", "real_equalizer", &Value::Bool(true)).unwrap();
+        assert!(parse(&text).unwrap().media.real_equalizer);
 
         let tiles = Value::List(vec!["screenshot".into(), "focus".into()]);
         let text = set_key("", "home", "tiles", &tiles).unwrap();

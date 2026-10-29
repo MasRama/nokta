@@ -6,6 +6,7 @@ import {
     behaviorFrom,
     homeFrom,
     lyricsFrom,
+    mediaFrom,
     notificationsFrom,
     timerFrom,
     weatherFrom,
@@ -35,6 +36,7 @@ export type RowKind =
 export type Table =
     | 'appearance'
     | 'behavior'
+    | 'media'
     | 'lyrics'
     | 'timer'
     | 'notifications'
@@ -388,6 +390,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         subtitle: 'A line in Latin letters under Korean and Japanese lines',
                         kind: bool(),
                     },
+                    {
+                        table: 'media',
+                        key: 'real_equalizer',
+                        title: 'Bars that follow the music',
+                        subtitle: 'Records what plays to measure it; GNOME may show its microphone indicator meanwhile',
+                        kind: bool(),
+                    },
                 ],
             },
             {
@@ -539,6 +548,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
 const READERS: Record<Table, (raw: unknown) => object> = {
     appearance: appearanceFrom,
     behavior: behaviorFrom,
+    media: mediaFrom,
     lyrics: lyricsFrom,
     timer: timerFrom,
     notifications: notificationsFrom,
