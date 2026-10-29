@@ -71,6 +71,7 @@ tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
 tools/devshell/keys.sh KEY...         # press keys together, e.g. Super_L Alt_L f
 tools/devshell/smoke.sh               # start, check, stop (what CI runs per GNOME version)
+tools/devshell/matrix.sh [46 48 49 50 51]  # smoke.sh in CI's container of each GNOME version (podman)
 tools/devshell/stop.sh
 ```
 
