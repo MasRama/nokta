@@ -44,7 +44,9 @@ notifications. Hover over it to open it, or press
   own `.lrc` files. When they run ahead of the song or behind it, the `−`
   and `+` under the lyrics view move them a quarter second later or
   earlier; Nokta remembers that for the song, and a click on the label
-  between them puts it back.
+  between them puts it back. A Korean or Japanese line gets its
+  pronunciation in Latin letters under it (사랑해 → saranghae, きって →
+  kitte), worked out on your computer; kanji stay as they are.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
   Lock and the keyboard layout show in the notch instead of GNOME's popup.
   A muted speaker or microphone says so.
@@ -367,6 +369,7 @@ Every key, by table:
 | Key | Default | What it does |
 |---|---|---|
 | `enabled` | `true` | Look up lyrics on lrclib.net |
+| `romanize` | `true` | Show Korean and Japanese lines in Latin letters under them, offline |
 
 </details>
 

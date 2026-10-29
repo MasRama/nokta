@@ -296,6 +296,13 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       line jumps ahead. `−` three times: `0.25 s later`. `OffsetMs` on
       `/io/nokta/Lyrics` follows, and
       `build/devshell/data/nokta/lyrics-offsets.toml` has one line.
+- [ ] The smoke test seeks to 1:01, the fixture's Korean line: the row
+      shows `Turn it up, 사랑해` with `Turn it up, saranghae` under it, in
+      italics, at the same 194 px; the lyrics view has it in the row under
+      the current line. `romanize = false` brings the next line back.
+- [ ] A K-pop or J-pop song with synced lyrics *(real session)*: Hangul
+      and kana lines read sensibly romanized, kanji stay, English lines
+      show the next line as before.
 - [ ] Next track and back: the new one is `On time`, the first one keeps
       its timing. A click on the label puts it back to `On time` and takes
       its line out of the file. (`run.sh` starts with an empty data folder,
