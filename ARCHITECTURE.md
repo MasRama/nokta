@@ -195,6 +195,8 @@ docs/               manual test checklist, screenshots
   of a file's own `[offset:]`, so the extension never shifts anything.
   `SetOffset` stores the offset for the current track whatever its status,
   so it also applies to lyrics still loading, and fails with no track.
+  Romanizing Korean and Japanese lines (`[lyrics] romanize`) is the
+  extension's own, offline: `features/lyrics/logic/romanize.ts`.
 - **devices** follows UPower and BlueZ on the system bus and emits an
   `Alert` signal when a Bluetooth audio device connects or disconnects, the
   charger is plugged or unplugged, the battery gets low (20 %) or critical
