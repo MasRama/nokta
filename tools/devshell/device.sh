@@ -1,10 +1,12 @@
 #!/bin/sh
-# Drives the fake UPower and BlueZ in the devshell (fake-devices.js).
+# Drives the fake UPower, BlueZ and PackageKit in the devshell (fake-devices.js).
 # Usage: tools/devshell/device.sh plug|unplug
 #        tools/devshell/device.sh percent N
 #        tools/devshell/device.sh full
 #        tools/devshell/device.sh connect [NAME] [BATTERY]
 #        tools/devshell/device.sh disconnect
+#        tools/devshell/device.sh update PERCENT
+#        tools/devshell/device.sh update-done|update-failed
 set -eu
 # shellcheck source=tools/devshell/env.sh
 . "$(dirname "$0")/env.sh"
@@ -26,8 +28,15 @@ case "${1:-}" in
     full) fake SetFull true ;;
     connect) fake Connect "string '${2:-}'" "int32 ${3:--1}" ;;
     disconnect) fake Disconnect ;;
+    update)
+        [ $# -eq 2 ] || { echo "usage: $0 update PERCENT" >&2; exit 2; }
+        fake Update "uint32 $2"
+        ;;
+    # PackageKit's exit codes: 1 success, 2 failed.
+    update-done) fake FinishUpdate "uint32 1" ;;
+    update-failed) fake FinishUpdate "uint32 2" ;;
     *)
-        echo "usage: $0 plug | unplug | percent N | full | connect [NAME] [BATTERY] | disconnect" >&2
+        echo "usage: $0 plug | unplug | percent N | full | connect [NAME] [BATTERY] | disconnect | update PERCENT | update-done | update-failed" >&2
         exit 2
         ;;
 esac

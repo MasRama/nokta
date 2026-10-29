@@ -1,6 +1,8 @@
-// A fake UPower and BlueZ for the devshell. run.sh gives noktad the devshell
-// bus as its system bus, so these stand in for the laptop battery and one
-// pair of Bluetooth earbuds. device.sh drives them through
+// A fake UPower, BlueZ and PackageKit for the devshell. run.sh gives noktad
+// the devshell bus as its system bus, so these stand in for the laptop
+// battery, one pair of Bluetooth earbuds and a system update. PackageKit
+// starts with the first update, as it does when something asks for one.
+// device.sh drives them through
 // io.nokta.devshell.FakeDevices at /io/nokta/devshell/FakeDevices.
 // Usage: gjs -m fake-devices.js
 import Gio from 'gi://Gio';
@@ -31,13 +33,31 @@ const DEVICE_XML = `<node><interface name="org.bluez.Device1">
 const BATTERY_XML = `<node><interface name="org.bluez.Battery1">
   <property name="Percentage" type="y" access="read"/>
 </interface></node>`;
+const PACKAGEKIT_XML = `<node><interface name="org.freedesktop.PackageKit">
+  <method name="GetTransactionList"><arg type="ao" direction="out"/></method>
+  <signal name="TransactionListChanged"><arg type="as"/></signal>
+</interface></node>`;
+const TRANSACTION_XML = `<node><interface name="org.freedesktop.PackageKit.Transaction">
+  <property name="Role" type="u" access="read"/>
+  <property name="Status" type="u" access="read"/>
+  <property name="Percentage" type="u" access="read"/>
+  <property name="TransactionFlags" type="t" access="read"/>
+  <signal name="Finished"><arg type="u"/><arg type="u"/></signal>
+</interface></node>`;
 const CONTROL_XML = `<node><interface name="io.nokta.devshell.FakeDevices">
   <method name="SetCharger"><arg type="b" direction="in"/></method>
   <method name="SetPercentage"><arg type="d" direction="in"/></method>
   <method name="SetFull"><arg type="b" direction="in"/></method>
   <method name="Connect"><arg type="s" direction="in"/><arg type="i" direction="in"/></method>
   <method name="Disconnect"/>
+  <method name="Update"><arg type="u" direction="in"/></method>
+  <method name="FinishUpdate"><arg type="u" direction="in"/></method>
 </interface></node>`;
+
+// PackageKit's UPDATE_PACKAGES role and DOWNLOAD status.
+const UPDATE_PACKAGES = 22;
+const DOWNLOADING = 8;
+const UPDATE = '/1_smoke';
 
 const CHARGING = 1;
 const DISCHARGING = 2;
@@ -75,6 +95,30 @@ function set(object, target, name, type, value) {
     target[name] = value;
     object.emit_property_changed(name, new GLib.Variant(type, value));
     object.flush();
+}
+
+let packagekit = null;
+let transaction = null;
+let transactionObject = null;
+
+function listTransactions() {
+    packagekit.emit_signal('TransactionListChanged', new GLib.Variant('(as)', [transaction ? [UPDATE] : []]));
+}
+
+function beginUpdate() {
+    if (!packagekit) {
+        packagekit = Gio.DBusExportedObject.wrapJSObject(PACKAGEKIT_XML, {
+            GetTransactionList: () => (transaction ? [UPDATE] : []),
+        });
+        packagekit.export(bus, '/org/freedesktop/PackageKit');
+        Gio.bus_own_name_on_connection(bus, 'org.freedesktop.PackageKit', Gio.BusNameOwnerFlags.NONE, null, null);
+    }
+    // A new transaction has no role until its method is called.
+    transaction = { Role: 0, Status: 1, Percentage: 101, TransactionFlags: 0 };
+    transactionObject = Gio.DBusExportedObject.wrapJSObject(TRANSACTION_XML, transaction);
+    transactionObject.export(bus, UPDATE);
+    listTransactions();
+    set(transactionObject, transaction, 'Role', 'u', UPDATE_PACKAGES);
 }
 
 function setState() {
@@ -124,6 +168,18 @@ const control = Gio.DBusExportedObject.wrapJSObject(CONTROL_XML, {
             batteryExported = false;
             manager.emit_signal('InterfacesRemoved', new GLib.Variant('(oas)', [BUDS, ['org.bluez.Battery1']]));
         }
+    },
+    Update(percentage) {
+        if (!transaction) beginUpdate();
+        set(transactionObject, transaction, 'Status', 'u', DOWNLOADING);
+        set(transactionObject, transaction, 'Percentage', 'u', percentage);
+    },
+    FinishUpdate(exit) {
+        if (!transaction) return;
+        transactionObject.emit_signal('Finished', new GLib.Variant('(uu)', [exit, 1000]));
+        transactionObject.unexport();
+        transaction = transactionObject = null;
+        listTransactions();
     },
 });
 
