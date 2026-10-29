@@ -388,10 +388,12 @@ fn appearance_entries_have_all_keys() {
             "ear_radius",
             "expanded_height",
             "expanded_width",
+            "follow_system_style",
             "foreground",
             "gradient",
             "height",
             "idle_width",
+            "light_theme",
             "osd_width",
             "playing_width",
             "progress_line",
@@ -709,6 +711,18 @@ fn custom_gradient_defaults_and_values() {
     assert!(err.message.contains("\"diagonal\""), "{err}");
     let err = parse("[appearance]\nbackground_end = \"blue\"\n").unwrap_err();
     assert!(err.message.contains("appearance.background_end"), "{err}");
+}
+
+#[test]
+fn the_light_style_theme_is_a_known_one() {
+    let a = Config::default().appearance;
+    assert!(!a.follow_system_style);
+    assert_eq!(a.light_theme, "paper");
+    let c = parse("[appearance]\nfollow_system_style = true\nlight_theme = \"glass\"\n").unwrap();
+    assert!(c.appearance.follow_system_style);
+    assert_eq!(c.appearance.light_theme, "glass");
+    let err = parse("[appearance]\nlight_theme = \"neon\"\n").unwrap_err();
+    assert!(err.message.contains("appearance.light_theme"), "{err}");
 }
 
 #[test]

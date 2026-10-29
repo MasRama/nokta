@@ -27,6 +27,9 @@ export interface Appearance {
     /** One of GRADIENTS in shared/logic/theme.ts: custom's fill toward `backgroundEnd`, or flat. */
     gradient: string;
     backgroundEnd: string;
+    /** `theme` under a dark system style, `lightTheme` under a light one. */
+    followSystemStyle: boolean;
+    lightTheme: string;
 }
 
 export interface Behavior {
@@ -104,6 +107,8 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     alertGlow: true,
     gradient: 'none',
     backgroundEnd: '#1c1c1e',
+    followSystemStyle: false,
+    lightTheme: 'paper',
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {

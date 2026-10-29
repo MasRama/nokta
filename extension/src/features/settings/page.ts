@@ -6,7 +6,7 @@ import { setVertical } from '../../shared/compat.js';
 import { SECONDARY } from '../../shared/dim.js';
 import { iconFor } from '../../shared/icons.js';
 import { withAlpha } from '../../shared/logic/color.js';
-import { THEMES } from '../../shared/logic/theme.js';
+import { THEMES, themeFor, themeKeyFor } from '../../shared/logic/theme.js';
 import type { Appearance } from './logic/parse.js';
 import { MOTION_PRESETS, motionPreset, themeSwatches } from './logic/quick.js';
 
@@ -74,6 +74,7 @@ export class SettingsPage {
     private readonly swatches: Array<{ notch: St.Widget; dot: St.Widget; ring: St.Bin; label: St.Label }> = [];
     private appearance: Appearance | null = null;
     private cover: string | null = null;
+    private dark = true;
     private colors: SettingsPageColors = { foreground: '#ffffff', accent: '#ffffff', onAccent: '#000000' };
 
     constructor(private readonly handlers: SettingsPageHandlers) {
@@ -119,9 +120,11 @@ export class SettingsPage {
     }
 
     /** The settings as they are now; `cover` is the playing cover's color, for aurora's swatch. */
-    show(appearance: Appearance, cover: string | null): void {
+    /** `dark` is the system's style: following it, the swatches pick the theme for that style. */
+    show(appearance: Appearance, cover: string | null, dark: boolean): void {
         this.appearance = appearance;
         this.cover = cover;
+        this.dark = dark;
         this.paint();
     }
 
@@ -185,7 +188,11 @@ export class SettingsPage {
                 x_expand: true,
                 can_focus: true,
             });
-            button.connect('clicked', () => this.apply('theme', new GLib.Variant('s', theme), { theme }));
+            button.connect('clicked', () => {
+                if (!this.appearance) return;
+                const key = themeKeyFor(this.appearance, this.dark);
+                this.apply(key, new GLib.Variant('s', theme), key === 'theme' ? { theme } : { lightTheme: theme });
+            });
             this.swatches.push({ notch, dot, ring, label });
             this.themeRow.add_child(button);
         }
@@ -194,7 +201,7 @@ export class SettingsPage {
     private paintThemes(a: Appearance): void {
         themeSwatches(a, this.cover).forEach((swatch, i) => {
             const { notch, dot, ring, label } = this.swatches[i];
-            const chosen = swatch.theme === a.theme;
+            const chosen = swatch.theme === themeFor(a, this.dark);
             // A hairline keeps a dark theme's swatch visible on a dark notch.
             notch.style =
                 // St has no diagonal gradient: across and diagonal run sideways.

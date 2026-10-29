@@ -43,6 +43,23 @@ export interface Palette {
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
+/** The settings that choose a theme by the system's light or dark style. */
+export interface ThemeChoice {
+    theme: string;
+    followSystemStyle: boolean;
+    lightTheme: string;
+}
+
+/** The theme in use: `lightTheme` under a light system style while following it, else `theme`. */
+export function themeFor(choice: ThemeChoice, dark: boolean): string {
+    return choice.followSystemStyle && !dark ? choice.lightTheme : choice.theme;
+}
+
+/** The key a theme picked now is saved to, so the notch shows it under the current style. */
+export function themeKeyFor(choice: ThemeChoice, dark: boolean): 'theme' | 'light_theme' {
+    return choice.followSystemStyle && !dark ? 'light_theme' : 'theme';
+}
+
 const DOWN: [number, number] = [0, 1];
 
 /** The unit vector a gradient runs along; down for anything unknown. */
