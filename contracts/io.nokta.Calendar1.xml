@@ -14,5 +14,15 @@
       <arg name="event_id" type="s" direction="in"/>
       <arg name="link" type="s" direction="out"/>
     </method>
+    <!--
+      The color of the calendar an event is in, as "#rrggbb", read from the
+      calendar's source in Evolution Data Server: the strip beside the event
+      in home's agenda. Empty when the source has none or cannot be read.
+      Answers are kept for 10 minutes.
+    -->
+    <method name="EventColor">
+      <arg name="event_id" type="s" direction="in"/>
+      <arg name="color" type="s" direction="out"/>
+    </method>
   </interface>
 </node>

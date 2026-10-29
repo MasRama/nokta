@@ -1,3 +1,4 @@
+use super::color::source_color;
 use super::link::{meeting_link, split_event_id};
 
 /// An event with `lines` between BEGIN and END, CRLF like EDS sends it.
@@ -138,4 +139,37 @@ fn an_answer_is_kept_for_ten_minutes() {
     assert_eq!(cache.get("b", later), Some(""));
     let stale = start + Duration::from_secs(10 * 60);
     assert_eq!(cache.get("a", stale), None);
+}
+
+#[test]
+fn the_calendar_color_comes_from_the_sources_calendar_group() {
+    let data = "[Data Source]\nDisplayName=Personal\nEnabled=true\n\n\
+                [Calendar]\nBackendName=local\nColor=#62A0EA\nSelected=true\n";
+    assert_eq!(source_color(data).as_deref(), Some("#62a0ea"));
+    assert_eq!(
+        source_color("[Calendar]\nColor = #62a0ea\n").as_deref(),
+        Some("#62a0ea")
+    );
+}
+
+#[test]
+fn a_color_elsewhere_in_the_source_is_not_the_calendars() {
+    let data = "[Task List]\nColor=#ff0000\n\n\
+                [Calendar]\n# Color=#00ff00\nColor[de]=#00ff00\nBackendName=local\n\n\
+                [Memo List]\nColor=#0000ff\n";
+    assert_eq!(source_color(data), None);
+    assert_eq!(source_color(""), None);
+}
+
+#[test]
+fn a_color_in_any_form_evolution_or_calendar_wrote_becomes_six_hex_digits() {
+    let color = |c: &str| source_color(&format!("[Calendar]\nColor={c}\n"));
+    assert_eq!(color("#6262a0a0eaea").as_deref(), Some("#62a0ea"));
+    assert_eq!(color("#fa0").as_deref(), Some("#ffaa00"));
+    assert_eq!(color("rgb(98,160,234)").as_deref(), Some("#62a0ea"));
+    assert_eq!(color("rgba(98, 160, 234, 0.5)").as_deref(), Some("#62a0ea"));
+    assert_eq!(color("rgb(300,0,0)"), None);
+    assert_eq!(color("#62a0eg"), None);
+    assert_eq!(color("blue"), None);
+    assert_eq!(color(""), None);
 }

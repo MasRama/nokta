@@ -1,8 +1,14 @@
-//! Reads an event's iCalendar text from Evolution Data Server.
+//! Reads an event's iCalendar text, and its calendar's source, from
+//! Evolution Data Server.
 
 use zbus::Connection;
 
+use super::color::source_color;
 use super::link::{meeting_link, split_event_id};
+
+const SOURCES_SERVICE: &str = "org.gnome.evolution.dataserver.Sources5";
+const SOURCES_PATH: &str = "/org/gnome/evolution/dataserver/SourceManager";
+const SOURCE_INTERFACE: &str = "org.gnome.evolution.dataserver.Source";
 
 #[zbus::proxy(
     interface = "org.gnome.evolution.dataserver.CalendarFactory",
@@ -40,4 +46,29 @@ pub async fn read_link(conn: &Connection, event_id: &str) -> zbus::Result<Option
     calendar.open().await?;
     let ics = calendar.get_object(&uid, &rid).await?;
     Ok(meeting_link(&ics))
+}
+
+/// The color of the calendar source `source_uid`; `None` when it has none.
+pub async fn read_color(conn: &Connection, source_uid: &str) -> zbus::Result<Option<String>> {
+    let manager = zbus::fdo::ObjectManagerProxy::builder(conn)
+        .destination(SOURCES_SERVICE)?
+        .path(SOURCES_PATH)?
+        .build()
+        .await?;
+    let objects = manager.get_managed_objects().await?;
+    let data = objects
+        .values()
+        .flat_map(|interfaces| interfaces.iter())
+        .filter(|(name, _)| name.as_str() == SOURCE_INTERFACE)
+        .map(|(_, properties)| properties)
+        .find(|properties| text(properties, "UID") == Some(source_uid))
+        .and_then(|properties| text(properties, "Data"));
+    Ok(data.and_then(source_color))
+}
+
+fn text<'a>(
+    properties: &'a std::collections::HashMap<String, zbus::zvariant::OwnedValue>,
+    name: &str,
+) -> Option<&'a str> {
+    properties.get(name)?.downcast_ref::<&str>().ok()
 }
