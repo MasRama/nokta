@@ -559,6 +559,11 @@ banner for a fake file.
       black. A missing file draws like midnight, and the settings window's
       Picture row says it can't read it. The settings window's preview,
       Picture card and the notch's Picture swatch show the picture.
+- [ ] `cover_backdrop = true` with a song that has a cover: opening the
+      player fades the cover in behind it, blurred and darkened, with white
+      text; the grid button (home) fades it out, and a song without a cover
+      shows the theme. The next song swaps to its own cover, never the old
+      one. With the picture theme, closing goes back to its own picture.
 - [ ] `use_album_accent = false`, `accent = "#ff8800"`: orange equalizer and
       progress bar while playing, orange OSD bar.
 - [ ] **Progress line**: a song playing, closed: a thin line in the accent

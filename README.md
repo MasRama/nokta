@@ -301,6 +301,7 @@ Every key, by table:
 | `picture` | `""` | The picture shown with `theme = "picture"`, a PNG, JPEG or WebP path; `~/` is your home. The closed notch shows the top middle of it and opening shows more |
 | `picture_darken` | `0.35` | How much darker the picture is drawn so text stays readable, `0.0` to `0.8` |
 | `picture_blur` | `0` | Blurs the picture by this many pixels, `0` to `40` |
+| `cover_backdrop` | `false` | Shows the song's cover, blurred and darkened, behind the open player, with white text |
 | `use_album_accent` | `true` | Color the seek bar, the play button and the equalizer with the cover's color, in every theme |
 | `animation_speed` | `1.0` | `0.5` is twice as fast, `2.0` twice as slow |
 | `osd_width` | `300` | Width of the notch while it shows volume, brightness or Caps Lock |
