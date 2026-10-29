@@ -30,6 +30,11 @@ export interface Appearance {
     /** `theme` under a dark system style, `lightTheme` under a light one. */
     followSystemStyle: boolean;
     lightTheme: string;
+    /** The picture theme's image file; the daemon publishes it prepared. */
+    picture: string;
+    /** 0 to 0.8: how much the picture is darkened under the text. */
+    pictureDarken: number;
+    pictureBlur: number;
 }
 
 export interface Behavior {
@@ -109,6 +114,9 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     backgroundEnd: '#1c1c1e',
     followSystemStyle: false,
     lightTheme: 'paper',
+    picture: '',
+    pictureDarken: 0.35,
+    pictureBlur: 0,
 };
 
 export const DEFAULT_BEHAVIOR: Readonly<Behavior> = {

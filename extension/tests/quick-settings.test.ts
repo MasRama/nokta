@@ -38,8 +38,16 @@ test('there is one swatch per theme, in the themes order, with its label', () =>
     );
     assert.deepEqual(
         swatches.map((s) => s.label),
-        ['Midnight', 'Graphite', 'Glass', 'Aurora', 'Paper', 'Custom'],
+        ['Midnight', 'Graphite', 'Glass', 'Aurora', 'Paper', 'Custom', 'Picture'],
     );
+});
+
+test('the picture swatch shows the picture, the others none', () => {
+    const picture = { path: '/cache/sea.png', color: '#3060c0', tone: '#203040', darken: 0.35 };
+    const swatches = themeSwatches(colors, null, picture);
+    assert.equal(swatches.find((s) => s.theme === 'picture')!.picture, '/cache/sea.png');
+    assert.ok(swatches.filter((s) => s.theme !== 'picture').every((s) => s.picture === null));
+    assert.equal(themeSwatches(colors, null).find((s) => s.theme === 'picture')!.picture, null);
 });
 
 test("a swatch is the theme's own top and bottom colors", () => {

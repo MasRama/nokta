@@ -47,6 +47,9 @@ test('appearance_from_full_table', () => {
         background_end: '#203040',
         follow_system_style: true,
         light_theme: 'glass',
+        picture: '~/Pictures/sea.jpg',
+        picture_darken: 0.5,
+        picture_blur: 12,
     });
     assert.deepEqual(appearance, {
         height: 30,
@@ -70,6 +73,9 @@ test('appearance_from_full_table', () => {
         backgroundEnd: '#203040',
         followSystemStyle: true,
         lightTheme: 'glass',
+        picture: '~/Pictures/sea.jpg',
+        pictureDarken: 0.5,
+        pictureBlur: 12,
     });
 });
 

@@ -1,4 +1,6 @@
 import Cairo from 'cairo';
+import Gdk from 'gi://Gdk';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Gtk from 'gi://Gtk';
 import Pango from 'gi://Pango';
 import PangoCairo from 'gi://PangoCairo';
@@ -55,6 +57,45 @@ export function notchPath(cr: Cairo.Context, x: number, width: number, height: n
     cr.closePath();
 }
 
+/** Pictures read once per path, at a size the preview and gallery need; null when unreadable. */
+const pixbufs = new Map<string, GdkPixbuf.Pixbuf | null>();
+
+function pixbufFor(path: string): GdkPixbuf.Pixbuf | null {
+    let pixbuf = pixbufs.get(path);
+    if (pixbuf === undefined) {
+        try {
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 640, -1, true);
+        } catch {
+            pixbuf = null;
+        }
+        // Only the newest few: each change of blur makes a new file.
+        if (pixbufs.size >= 4) pixbufs.clear();
+        pixbufs.set(path, pixbuf);
+    }
+    return pixbuf;
+}
+
+/**
+ * Paints the picture inside the current path, covering `x`..`x + width` and
+ * 0..`height` from its top centre like the notch does, darkened by
+ * `darken`; the path stays. False when it cannot be read.
+ */
+export function fillPicture(cr: Cairo.Context, path: string, darken: number, x: number, width: number, height: number): boolean {
+    const pixbuf = pixbufFor(path);
+    if (!pixbuf) return false;
+    const scale = Math.max(width / pixbuf.width, height / pixbuf.height);
+    cr.save();
+    cr.clipPreserve();
+    cr.translate(x + (width - pixbuf.width * scale) / 2, (height - pixbuf.height * scale) / 2);
+    cr.scale(scale, scale);
+    Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
+    cr.paint();
+    cr.restore();
+    cr.setSourceRGBA(0, 0, 0, darken);
+    cr.fillPreserve();
+    return true;
+}
+
 /**
  * Fills the current path with the palette's body over `x`..`x + width` and
  * 0..`height`: its gradient, the notch's way, at the theme's opacity.
@@ -74,6 +115,8 @@ export function fillBody(
     ]);
     cr.setSource(fill);
     cr.fillPreserve();
+    const { picture } = model.palette;
+    if (picture) fillPicture(cr, picture.path, picture.darken, x, width, height);
     if (border) {
         setColor(cr, border);
         cr.setLineWidth(1);

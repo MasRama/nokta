@@ -55,8 +55,9 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
         const raw = { ...((service.tables.appearance as Record<string, unknown> | undefined) ?? {}) };
         for (const [name, value] of local) if (name.startsWith('appearance.')) raw[name.slice(11)] = value;
         const appearance = appearanceFrom(raw);
-        preview.update(previewModel(appearance));
-        gallery.update(appearance);
+        const picture = { ...service.picture, darken: appearance.pictureDarken };
+        preview.update(previewModel(appearance, picture));
+        gallery.update(appearance, picture);
     };
 
     const service = new SettingsService(() => {
@@ -68,10 +69,19 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
             // A row the user is still changing keeps their value.
             if (!pending.has(nameOf(setting.row))) setting.show(rowValue(setting.row, service.tables));
         }
+        warnUnreadablePicture();
         gallery.widget.sensitive = service.available;
         resetRow.sensitive = service.available;
         showLook();
     });
+
+    /** A picture set but not published by the daemon could not be read: say so on its row. */
+    const warnUnreadablePicture = () => {
+        const setting = rows.find((r) => r.row.table === 'appearance' && r.row.key === 'picture');
+        const chosen = rowValue({ table: 'appearance', key: 'picture', title: '', kind: { type: 'file' } }, service.tables);
+        if (setting?.widget instanceof Adw.ActionRow && service.available && chosen && !service.picture.path)
+            setting.widget.subtitle = "Can't read this picture";
+    };
 
     /** Sends `value` once the user stops changing it; `refused` shows the daemon's value again. */
     const queue = (row: Pick<Row, 'table' | 'key'>, value: GLib.Variant, refused: () => void) => {

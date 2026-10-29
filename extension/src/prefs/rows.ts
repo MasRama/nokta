@@ -1,5 +1,6 @@
 import Adw from 'gi://Adw';
 import Gdk from 'gi://Gdk';
+import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
@@ -101,6 +102,50 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             const widget = new Adw.EntryRow({ title, show_apply_button: true, tooltip_text: subtitle });
             widget.connect('apply', () => send(widget.text.trim()));
             return { row, widget, show: (value) => quietly(() => (widget.text = String(value ?? ''))) };
+        }
+        case 'file': {
+            const widget = new Adw.ActionRow({ title, subtitle });
+            const choose = new Gtk.Button({ label: 'Choose…', valign: Gtk.Align.CENTER });
+            const remove = new Gtk.Button({
+                icon_name: 'edit-clear-symbolic',
+                tooltip_text: 'Remove',
+                valign: Gtk.Align.CENTER,
+                css_classes: ['flat'],
+            });
+            widget.add_suffix(choose);
+            widget.add_suffix(remove);
+            widget.activatable_widget = choose;
+            const images = new Gtk.FileFilter({ name: 'Images' });
+            images.add_mime_type('image/png');
+            images.add_mime_type('image/jpeg');
+            images.add_mime_type('image/webp');
+            const filters = new Gio.ListStore({ item_type: Gtk.FileFilter.$gtype });
+            filters.append(images);
+            choose.connect('clicked', () => {
+                const dialog = new Gtk.FileDialog({ title, filters, default_filter: images, modal: true });
+                const window = widget.get_root() as Gtk.Window | null;
+                // The typings lack the callback form, which GJS has.
+                const open = dialog.open.bind(dialog) as unknown as (
+                    parent: Gtk.Window | null,
+                    cancellable: null,
+                    callback: (source: Gtk.FileDialog | null, result: Gio.AsyncResult) => void,
+                ) => void;
+                open(window, null, (_source, result) => {
+                    try {
+                        const path = dialog.open_finish(result)?.get_path();
+                        if (path) send(path);
+                    } catch {
+                        // Cancelled.
+                    }
+                });
+            });
+            remove.connect('clicked', () => send(''));
+            const show = (value: unknown) => {
+                const path = String(value ?? '');
+                widget.subtitle = path ? GLib.path_get_basename(path) : subtitle;
+                remove.sensitive = path !== '';
+            };
+            return { row, widget, show };
         }
         case 'order': {
             const widget = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.NONE, css_classes: ['boxed-list'] });

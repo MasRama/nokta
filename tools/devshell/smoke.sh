@@ -855,7 +855,7 @@ THEME=$(js "$APPEARANCE.theme")
 js "$FIND $SETTINGS_TILE.emit('clicked', 1); true" > /dev/null
 # The header and the 240 px page: 14 + 28 + 10 + 240 + 14.
 wait_for "the settings tile opens the settings page" \
-    "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 6 && Math.round(one('nokta-body').height) === 306" 5 \
+    "$FIND any('nokta-subpage') && find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length === 7 && Math.round(one('nokta-body').height) === 306" 5 \
     "$FIND JSON.stringify([any('nokta-subpage'), find(Main.layoutManager.uiGroup, 'nokta-settings-theme').filter((b) => b.mapped).length, Math.round(one('nokta-body').height)])"
 sleep 0.4
 "$HERE/shot.sh" smoke-settings-page > /dev/null
@@ -910,6 +910,30 @@ wait_for "All settings opens the settings window" "$FIND global._noktaPrefs === 
 js "delete Main.extensionManager.lookup('nokta@nokta.io').stateObj.openPreferences; true" > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the panel closes" "$FIND shown('nokta-clock') && width() === 180" 5
+# The picture theme shows an image inside the silhouette, an orange band over
+# blue; the closed notch is a window onto its top middle, and the notch keeps
+# its sizes.
+PICTURE_FILE=/tmp/nokta-smoke-picture.png
+js "const P = imports.gi.GdkPixbuf; const p = P.Pixbuf.new(P.Colorspace.RGB, false, 8, 640, 360); p.fill(0x2060c0ff); p.new_subpixbuf(0, 0, 640, 120).fill(0xe08030ff); p.savev('$PICTURE_FILE', 'png', [], []); true" > /dev/null
+WIDTH_BEFORE=$(js "$FIND width()")
+set_appearance picture "<'$PICTURE_FILE'>"
+set_appearance theme "<'picture'>"
+wait_for "the picture theme shows the prepared picture" \
+    "$FIND $PALETTE?.theme === 'picture' && ($PALETTE?.picture?.path ?? '').endsWith('.png') && shown('nokta-picture') && width() === $WIDTH_BEFORE" 10 \
+    "$FIND JSON.stringify([$PALETTE?.theme, $PALETTE?.picture, shown('nokta-picture'), width()])"
+"$HERE/shot.sh" smoke-picture > /dev/null
+"$HERE/hover.sh" on > /dev/null
+wait_for "the open notch shows more of the same picture" \
+    "$FIND width() === 420 && shown('nokta-picture') && Math.round(one('nokta-picture').width) === 436" 5 \
+    "$FIND JSON.stringify([width(), one('nokta-picture')?.width])"
+"$HERE/shot.sh" smoke-picture-open > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the notch closes over the picture" "$FIND width() === $WIDTH_BEFORE" 5
+set_appearance picture "<''>"
+wait_for "without a picture, the picture theme draws like midnight" \
+    "$FIND $PALETTE?.theme === 'picture' && $PALETTE?.picture === null && !shown('nokta-picture') && $PALETTE?.background === '#000000'" 5
+set_appearance theme "<'$(printf %s "$THEME" | tr -d '"')'>"
+wait_for "and back to the theme" "$APPEARANCE.theme === $THEME" 5
 # The middle of the closed notch: NOTCH_AT was taken on the open panel.
 js "$FIND const Clutter = imports.gi.Clutter;
 const now = () => global.get_current_time() * 1000;

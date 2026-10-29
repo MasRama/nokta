@@ -1,5 +1,5 @@
 import type { NoktaIcon } from '../../shared/logic/icon-names.js';
-import { paletteFor, type Palette, type ThemeColors } from '../../shared/logic/theme.js';
+import { paletteFor, type Palette, type PictureState, type ThemeColors } from '../../shared/logic/theme.js';
 
 /** The sidebar's icon for each page of SETTINGS_PAGES, from Nokta's own set. */
 const PAGE_ICONS: Record<string, NoktaIcon> = {
@@ -43,9 +43,10 @@ export interface PreviewModel {
     earRadius: number;
 }
 
-export function previewModel(appearance: PreviewAppearance): PreviewModel {
+/** `picture` is the picture theme's image, as the daemon prepared it. */
+export function previewModel(appearance: PreviewAppearance, picture: PictureState | null = null): PreviewModel {
     return {
-        palette: paletteFor(appearance.theme, appearance, SAMPLE_SONG.cover),
+        palette: paletteFor(appearance.theme, appearance, SAMPLE_SONG.cover, picture),
         title: SAMPLE_SONG.title,
         artist: SAMPLE_SONG.artist,
         progress: appearance.progressLine ? SAMPLE_SONG.position : null,

@@ -5,7 +5,7 @@ import St from 'gi://St';
 import { OverlayLayout } from './layout.js';
 import { clampAlpha, parseCssColor } from './logic/color.js';
 import { envelope, frameMs, notchX } from './logic/motion.js';
-import { radiusAt } from './logic/shape.js';
+import { pictureRect, radiusAt, type NotchWidths } from './logic/shape.js';
 import { THEMES, type Palette } from './logic/theme.js';
 import {
     kickVelocity,
@@ -21,7 +21,7 @@ import { Shape, type Rgba, type ShapeGeometry } from './shape.js';
 export type { ResizeKind } from './logic/spring.js';
 
 /** The parts of the appearance config the notch shape uses. */
-export interface NotchStyle {
+export interface NotchStyle extends NotchWidths {
     /** The closed notch's height, where the corners are `cornerRadius`. */
     height: number;
     cornerRadius: number;
@@ -69,6 +69,9 @@ export class Notch {
     readonly glow: St.Widget;
     private readonly shapeActor: St.Widget;
     private readonly shape: Shape;
+    /** The picture theme's image, a child of the shape actor that the shader draws inside the silhouette. */
+    private readonly picture: St.Widget;
+    private picturePath = '';
     private readonly glowShape: Shape;
     private glowColor: string | null = null;
     /** The shell destroys its chrome at shutdown, the glow with it. */
@@ -104,8 +107,11 @@ export class Notch {
         this.glow = new St.Widget({ style_class: 'nokta-glow', opacity: 0, visible: false });
         this.glow.connect('destroy', () => (this.glowGone = true));
         this.glowShape = new Shape(this.glow, true);
-        this.shapeActor = new St.Widget({ style_class: 'nokta-shape' });
+        // Clipped, so the offscreen paint is the actor's size even with the picture past its edges.
+        this.shapeActor = new St.Widget({ style_class: 'nokta-shape', clip_to_allocation: true });
         this.shape = new Shape(this.shapeActor, false);
+        this.picture = new St.Widget({ style_class: 'nokta-picture', visible: false });
+        this.shapeActor.add_child(this.picture);
         this.body = new St.Widget({
             style_class: 'nokta-body',
             layout_manager: new OverlayLayout(),
@@ -261,6 +267,7 @@ export class Notch {
         this.actor.set_position(notchX(this.monitor, width, ear), this.monitor.y);
         this.actor.set_size(total, tall);
         this.shapeActor.set_size(total, tall);
+        this.placePicture();
         this.body.set_position(ear, 0);
         this.body.set_size(width, height);
         if (!this.glowGone) {
@@ -299,7 +306,28 @@ export class Notch {
         else this.body.set_clip(center - ear - width / 2, 0, width, height);
     }
 
+    /** Pins the picture to the same spot on screen for the current layout. */
+    private placePicture(): void {
+        if (!this.picture.visible || this.laidWidth < 0) return;
+        const r = pictureRect(this.monitor, this.laidWidth, this.style.earRadius, this.style);
+        this.picture.set_position(r.x, r.y);
+        this.picture.set_size(r.width, r.height);
+    }
+
+    private applyPicture(): void {
+        const path = this.palette.picture?.path ?? '';
+        if (path !== this.picturePath) {
+            this.picturePath = path;
+            // The daemon names each prepared picture by its hash: no quotes or brackets to escape.
+            this.picture.style = path ? `background-image: url("file://${path}"); background-size: cover;` : '';
+            this.picture.visible = path !== '';
+            this.placePicture();
+        }
+        this.shape.setPicture({ amount: path ? 1 : 0, darken: this.palette.picture?.darken ?? 0 });
+    }
+
     private applyPalette(): void {
+        this.applyPicture();
         const { background, backgroundOpacity, gradient, direction, foreground, border, theme, light } = this.palette;
         for (const name of THEMES) this.actor.remove_style_class_name(`nokta-theme-${name}`);
         this.actor.add_style_class_name(`nokta-theme-${theme}`);
