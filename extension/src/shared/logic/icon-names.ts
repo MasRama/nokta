@@ -50,6 +50,7 @@ export const NOKTA_ICONS = [
     'volume-3',
     'brightness',
     'keyboard',
+    'fullscreen',
 ] as const;
 export type NoktaIcon = (typeof NOKTA_ICONS)[number];
 
@@ -73,6 +74,7 @@ const FROM_GNOME: Record<string, NoktaIcon> = {
     'go-down': 'chevron-down',
     'list-add': 'plus',
     'list-remove': 'minus',
+    'view-fullscreen': 'fullscreen',
     'view-app-grid': 'home',
     'view-pin': 'pin',
     'edit-find': 'search',
