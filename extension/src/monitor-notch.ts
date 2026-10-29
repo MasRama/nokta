@@ -94,10 +94,12 @@ import {
 import { IdleClock } from './shared/clock.js';
 import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
+import { motionKicks, type AlertMotion } from './shared/logic/alert-motion.js';
 import { withAlpha } from './shared/logic/color.js';
 import { formatDuration } from './shared/logic/format.js';
 import { fullscreenView, UnredirectHold } from './shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from './shared/logic/glow.js';
+import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from './shared/logic/keyframes.js';
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { keyAction } from './shared/logic/keyboard.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
@@ -1018,8 +1020,15 @@ export class MonitorNotch implements ShelfNotch {
     /**
      * `durationMs` replaces osd_duration_ms, for device alerts. An alert
      * (`tone` set) kicks the notch and glows; a volume or a key does not.
+     * `motion` is how the alert moves (`shared/logic/alert-motion.ts`).
      */
-    showOsd(content: OsdContent, icon: Gio.Icon | null, durationMs?: number, tone?: AlertTone): void {
+    showOsd(
+        content: OsdContent,
+        icon: Gio.Icon | null,
+        durationMs?: number,
+        tone?: AlertTone,
+        motion: AlertMotion = 'kick',
+    ): void {
         if (this.destroyed) return;
         // The session sends one here over a fullscreen app only when it is let through.
         if (this.inFullscreen) {
@@ -1027,10 +1036,16 @@ export class MonitorNotch implements ShelfNotch {
             this.applyFullscreen();
         }
         this.peekTimer.hide();
-        this.osdView.show(content, icon, this.osdTimer.active, this.sources.settings.appearance.animationSpeed);
+        const speed = this.sources.settings.appearance.animationSpeed;
+        this.osdView.show(content, icon, this.osdTimer.active, speed);
         this.osdTimer.show(durationMs);
-        if (tone) this.alert(tone);
-        else this.notch.setGlow(null);
+        if (tone) {
+            this.osdView.playMotion(motion, speed);
+            this.alert(tone, motion);
+        } else {
+            this.notch.stopMotion();
+            this.notch.setGlow(null);
+        }
     }
 
     hideOsd(): void {
@@ -1108,11 +1123,18 @@ export class MonitorNotch implements ShelfNotch {
         this.peekTrack = track;
     }
 
-    /** The width overshoots and springs back, and the glow comes in the alert's colour. */
-    private alert(tone: AlertTone): void {
-        this.notch.kick(ALERT_KICK);
-        const { alertGlow } = this.sources.settings.appearance;
+    /**
+     * The width overshoots and springs back, and the glow comes in the
+     * alert's colour. A low battery's glow beats instead of the kick, and a
+     * failed activity shakes the notch.
+     */
+    private alert(tone: AlertTone, motion: AlertMotion = 'kick'): void {
+        this.notch.stopMotion();
+        if (motionKicks(motion)) this.notch.kick(ALERT_KICK);
+        const { alertGlow, animationSpeed } = this.sources.settings.appearance;
         this.notch.setGlow(alertGlow ? glowColor(tone, this.shownPalette.accent) : null);
+        if (motion === 'pulse') this.notch.pulseGlow(PULSE.beats, PULSE.beatMs);
+        if (motion === 'shake') this.notch.shake(keyframeSteps(SHAKE, SHAKE_STEP_MS, animationSpeed));
     }
 
     private shownCall(): ReturnType<CallMonitor['call']> {

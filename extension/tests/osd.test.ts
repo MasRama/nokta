@@ -4,6 +4,16 @@ import { test } from 'node:test';
 import { inputSourceShown, lockKeyContent, osdContent } from '../src/features/osd/logic/content.js';
 import { routeOsd } from '../src/features/osd/logic/route.js';
 import { OsdTimer } from '../src/features/osd/logic/timer.js';
+import {
+    FILL_MS,
+    keyframeSteps,
+    POP,
+    PULSE,
+    RING,
+    SHAKE,
+    SLIDE,
+    SWEEP,
+} from '../src/shared/logic/keyframes.js';
 
 test('level_shows_bar_and_percent', () => {
     assert.deepEqual(osdContent(0.5, 1, null), { fraction: 0.5, text: '50%' });
@@ -186,4 +196,33 @@ test('route_invalid_focus_uses_primary', () => {
 
 test('route_without_notches_draws_nothing', () => {
     assert.deepEqual(routeOsd({ requested: -1, focused: 0, primary: 0, notches: [] }), { monitor: 0, notch: null });
+});
+
+test('keyframe steps keep their values and scale their time by the animation speed', () => {
+    assert.deepEqual(keyframeSteps([14, -12, 0], 120, 1), [
+        { value: 14, ms: 120 },
+        { value: -12, ms: 120 },
+        { value: 0, ms: 120 },
+    ]);
+    assert.deepEqual(keyframeSteps([6, 0], 72, 2), [
+        { value: 6, ms: 144 },
+        { value: 0, ms: 144 },
+    ]);
+    assert.deepEqual(keyframeSteps([], 100, 1), []);
+});
+
+test('every motion ends where the view rests', () => {
+    assert.deepEqual(RING, [14, -12, 9, -6, 0]);
+    assert.deepEqual(SHAKE, [6, -6, 4, -4, 0]);
+    assert.deepEqual(POP, [0.6, 1.12, 1]);
+    assert.equal(RING.at(-1), 0);
+    assert.equal(SHAKE.at(-1), 0);
+    assert.equal(POP.at(-1), 1);
+});
+
+test('the motions keep the spec timing', () => {
+    assert.deepEqual(SLIDE, { from: -24, ms: 300 });
+    assert.equal(FILL_MS, 500);
+    assert.deepEqual(SWEEP, { to: 128, ms: 250 });
+    assert.deepEqual(PULSE, { beats: 3, beatMs: 700 });
 });
