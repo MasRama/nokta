@@ -50,3 +50,15 @@ export function easeBars(shown: readonly number[], target: readonly number[]): n
         return from + (to - from) * (to > from ? RISE : FALL);
     });
 }
+
+/** The bars rise from rest to the music over this long after it starts. */
+export const RAMP_MS = 250;
+
+/** `levels` mixed with `rest`, from all rest at 0 ms to all `levels` at `rampMs`. */
+export function rampLevels(levels: readonly number[], sinceMs: number, rampMs: number, rest: readonly number[]): number[] {
+    const t = Math.min(1, Math.max(0, sinceMs / rampMs));
+    return levels.map((level, i) => {
+        const from = rest[i] ?? level;
+        return t >= 1 ? level : from + (level - from) * t;
+    });
+}

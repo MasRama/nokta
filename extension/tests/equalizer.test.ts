@@ -10,6 +10,7 @@ import {
     LEVEL_MAX,
     LEVEL_MIN,
     LEVELS_STALE_MS,
+    rampLevels,
 } from '../src/features/media/logic/equalizer.js';
 
 test('levels_stay_in_range_for_every_bar', () => {
@@ -64,4 +65,14 @@ test('levels_count_only_while_they_keep_coming', () => {
     assert.equal(freshLevels(levels, 1000, 1000 + LEVELS_STALE_MS), null);
     assert.equal(freshLevels(null, 1000, 1000), null);
     assert.equal(freshLevels([0.5], 1000, 1000), null, 'not one level per bar');
+});
+
+test('the bars rise from rest over a quarter second when the music starts', () => {
+    const rest = [0.45, 0.75, 0.55, 0.35];
+    const levels = [1, 0.25, 0.75, 0.55];
+    assert.deepEqual(rampLevels(levels, 0, 250, rest), rest);
+    const half = rampLevels(levels, 125, 250, rest);
+    half.forEach((level, i) => assert.ok(Math.abs(level - (rest[i] + levels[i]) / 2) < 1e-9));
+    assert.deepEqual(rampLevels(levels, 250, 250, rest), levels);
+    assert.deepEqual(rampLevels(levels, 900, 250, rest), levels);
 });
