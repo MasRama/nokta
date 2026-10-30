@@ -3,6 +3,7 @@ import Gio from 'gi://Gio';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { orGnome } from '../../shared/logic/guard.js';
 import { replaceMethod } from '../../shared/patch.js';
 import type { Restore } from '../../shared/topbar.js';
 import type { BannerShape } from './logic/screenshot.js';
@@ -46,7 +47,9 @@ export function takeOverBanners(show: (notification: TrayNotification) => boolea
     const original = tray._showNotification;
     return replaceMethod(tray, 'messageTray', '_showNotification', () => {
         const next = tray._notificationQueue[0];
-        if (!next || !show(next)) {
+        // A Nokta bug leaves the banner to GNOME rather than stall its queue.
+        const taken = next ? orGnome(() => show(next), () => false, reportHookError) : false;
+        if (!taken) {
             original.call(tray);
             return;
         }
@@ -56,6 +59,10 @@ export function takeOverBanners(show: (notification: TrayNotification) => boolea
         next.acknowledged = true;
         next.playSound?.();
     });
+}
+
+function reportHookError(error: unknown): void {
+    console.error('Nokta: cannot show a banner in the notch, GNOME shows it instead', error);
 }
 
 /** How many notifications wait in GNOME's message list; null when this GNOME does not say. */
