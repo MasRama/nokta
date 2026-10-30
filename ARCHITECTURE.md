@@ -52,6 +52,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/extension.ts  composition: shared clients and hooks, one notch per monitor
   src/monitor-notch.ts  composition: one monitor's notch, its views and timers
   src/indicator-widgets.ts  the closed notch's indicator widgets, a set in idle and one beside the cover
+  src/logic/        the composition's decisions: which view shows and its size
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf,

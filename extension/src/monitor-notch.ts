@@ -88,6 +88,7 @@ import {
     type TimerClient,
 } from './features/timer/index.js';
 import { IndicatorWidgets } from './indicator-widgets.js';
+import { drawnView, type Drawn, resizeKind, showsAlert, viewSize } from './logic/views.js';
 import { IdleClock } from './shared/clock.js';
 import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
@@ -102,7 +103,7 @@ import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from './shared/logic/keyfr
 import { chooseIndicator, type Indicator } from './shared/logic/indicator.js';
 import { keyAction } from './shared/logic/keyboard.js';
 import { msUntilLine, nextLineStartUs } from './shared/logic/lyrics.js';
-import { NotchMachine, type NotchMode } from './shared/logic/machine.js';
+import { NotchMachine } from './shared/logic/machine.js';
 import { extrapolatePosition } from './shared/logic/position.js';
 import { progressLine, type Span } from './shared/logic/progress-line.js';
 import { backdropFor, backdropPalette } from './shared/logic/backdrop.js';
@@ -116,14 +117,6 @@ import { glibSchedule } from './shared/schedule.js';
 const TICK_MS = 250;
 /** The elapsed times in the open panel change once a second. */
 const PANEL_TICK_MS = 1000;
-/** A notification is two lines tall: this much taller than the closed notch. */
-const NOTIFICATION_EXTRA_HEIGHT = 28;
-/** Its row of buttons, with the spacing above it. */
-const NOTIFICATION_BUTTONS_EXTRA = 32;
-/** A screenshot preview: the thumbnail and two rows of buttons. */
-const SCREENSHOT_EXTRA_HEIGHT = 84;
-/** The drop area: this much taller than the closed notch. */
-const DROP_EXTRA_HEIGHT = 76;
 /** Files dragged this close to the closed notch open the drop area. */
 const DROP_MARGIN = 24;
 /** The shelf row under the player, with the open player's spacing. */
@@ -132,12 +125,6 @@ const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
 const VIEW_SCALE_FROM = 0.96;
 /** An alert pushes the notch this much wider before it springs back. */
 const ALERT_KICK = 0.06;
-
-/**
- * What the notch draws: the state machine's mode (the idle panel when it
- * opens without a player), or the OSD or a notification over it.
- */
-type Drawn = NotchMode | 'peek' | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
 
 /** The pages that home's tiles open. */
 type PageName = 'clipboard' | 'timer' | 'settings';
@@ -1261,16 +1248,18 @@ export class MonitorNotch implements ShelfNotch {
         if (pointIn(rect, x, y)) this.sources.shelf.overRow(this, rect);
     }
 
-    /** The drop area over the OSD over a notification over the state machine's mode, which keeps running underneath. */
+    /** What to draw now; the state machine's mode keeps running underneath. */
     private overlay(): Drawn {
-        if (this.dropping) return 'drop';
-        if (this.osdTimer.active) return 'osd';
-        if (this.notificationTimer.active) return this.notificationKind;
-        const { mode } = this.machine;
-        if (mode === 'collapsed' && this.peekTimer.active) return 'peek';
-        if (mode !== 'expanded') return mode;
-        if (this.page) return 'page';
-        return this.homeOpen || !this.sources.media.snapshot().available ? 'panel' : mode;
+        return drawnView({
+            dropping: this.dropping,
+            osd: this.osdTimer.active,
+            notification: this.notificationTimer.active ? this.notificationKind : null,
+            mode: this.machine.mode,
+            peek: this.peekTimer.active,
+            page: this.page !== null,
+            homeOpen: this.homeOpen,
+            player: this.sources.media.snapshot().available,
+        });
     }
 
     private onMode(): void {
@@ -1331,21 +1320,14 @@ export class MonitorNotch implements ShelfNotch {
         }
         const [width, height] = this.sizeFor(mode);
         if (previous === 'panel' || previous === 'expanded') this.sources.shelf.rowGone(this);
-        const tall = (drawn: Drawn) =>
-            drawn === 'expanded' ||
-            drawn === 'panel' ||
-            drawn === 'page' ||
-            drawn === 'notification' ||
-            drawn === 'screenshot' ||
-            drawn === 'drop';
-        const kind = tall(mode) ? 'open' : tall(previous) ? 'close' : 'width';
+        const kind = resizeKind(previous, mode);
         this.notch.resizeTo(width, height, kind);
         // The glow goes with the alert.
-        if (mode !== 'osd' && mode !== 'notification' && mode !== 'screenshot') this.notch.setGlow(null);
+        if (!showsAlert(mode)) this.notch.setGlow(null);
         this.showView(mode, kind === 'open');
         this.flyBetween(previous, mode);
         // The open notch's buttons take the focus; held open, the new view's first one has it.
-        if (tall(mode)) focusButtons(this.views[mode]);
+        if (kind === 'open') focusButtons(this.views[mode]);
         this.focusView();
         this.showPrivacyDots();
         if (mode === 'idle') this.clock.start();
@@ -1365,31 +1347,22 @@ export class MonitorNotch implements ShelfNotch {
     // Views
 
     private sizeFor(mode: Drawn): [number, number] {
-        const a = this.sources.settings.appearance;
-        if (mode === 'osd') return [a.osdWidth, a.height];
-        if (mode === 'notification') {
-            const buttons = this.notificationButtons ? NOTIFICATION_BUTTONS_EXTRA : 0;
-            return [a.expandedWidth, a.height + NOTIFICATION_EXTRA_HEIGHT + buttons];
-        }
-        if (mode === 'screenshot') return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
-        if (mode === 'drop') return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
-        if (mode === 'panel') return [a.expandedWidth, panelHeight(a.height, this.panelRows)];
-        if (mode === 'page') {
-            const body =
-                this.page === 'timer'
-                    ? this.timerPage.height
-                    : this.page === 'settings'
-                      ? this.settingsPage.height
-                      : this.clipboardPage.height;
-            return [a.expandedWidth, subPageHeight(body)];
-        }
-        if (mode === 'expanded') {
-            const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
-            const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
-            return [a.expandedWidth, a.expandedHeight + lyrics + shelf];
-        }
-        if (mode === 'peek') return [a.expandedWidth, a.height];
-        return [mode === 'collapsed' ? a.playingWidth : a.idleWidth, a.height];
+        const appearance = this.sources.settings.appearance;
+        const page =
+            this.page === 'timer'
+                ? this.timerPage.height
+                : this.page === 'settings'
+                  ? this.settingsPage.height
+                  : this.clipboardPage.height;
+        const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
+        const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
+        return viewSize(mode, {
+            appearance,
+            notificationButtons: this.notificationButtons,
+            panelHeight: panelHeight(appearance.height, this.panelRows),
+            pageHeight: subPageHeight(page),
+            expandedExtra: lyrics + shelf,
+        });
     }
 
     /** Each view keeps its final size, so text never reflows while resizing. */
