@@ -35,3 +35,21 @@ export function chooseIndicator({ recording, call, timer, clock, activity, meeti
     if (shelf) return 'shelf';
     return null;
 }
+
+/** The widgets that draw an indicator, in the order they sit over the clock. */
+export const INDICATOR_SLOTS = ['recording', 'call', 'timer', 'badge', 'shelf', 'countdown'] as const;
+export type IndicatorSlot = (typeof INDICATOR_SLOTS)[number];
+
+/** The widget that draws `indicator`: the focus timer and the clocks share one label. */
+export function slotFor(indicator: Indicator): IndicatorSlot {
+    switch (indicator) {
+        case 'clock':
+            return 'timer';
+        case 'activity':
+            return 'badge';
+        case 'meeting':
+            return 'countdown';
+        default:
+            return indicator;
+    }
+}
