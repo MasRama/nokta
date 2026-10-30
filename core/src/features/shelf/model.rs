@@ -1,8 +1,10 @@
 //! The shelf's items. Pure: the service checks the file system.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use url::Url;
+
+use crate::shared::fs::icon_for;
 
 /// The shelf drops its oldest item to make room past this many.
 pub const MAX_ITEMS: usize = 30;
@@ -51,32 +53,6 @@ pub fn path_of(uri: &str) -> Option<PathBuf> {
         return None;
     }
     url.to_file_path().ok()
-}
-
-/// The icon for a file from its extension; folders get "folder".
-pub fn icon_for(path: &Path, is_dir: bool) -> &'static str {
-    if is_dir {
-        return "folder";
-    }
-    let ext = path
-        .extension()
-        .map(|e| e.to_string_lossy().to_ascii_lowercase())
-        .unwrap_or_default();
-    match ext.as_str() {
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "svg" | "bmp" | "tif" | "tiff" | "heic"
-        | "avif" | "ico" => "image-x-generic",
-        "mp4" | "mkv" | "webm" | "mov" | "avi" | "m4v" | "mpg" | "mpeg" => "video-x-generic",
-        "mp3" | "flac" | "ogg" | "opus" | "wav" | "m4a" | "aac" => "audio-x-generic",
-        "pdf" | "doc" | "docx" | "odt" | "rtf" | "epub" => "x-office-document",
-        "xls" | "xlsx" | "ods" | "csv" => "x-office-spreadsheet",
-        "ppt" | "pptx" | "odp" => "x-office-presentation",
-        "zip" | "tar" | "gz" | "tgz" | "xz" | "bz2" | "zst" | "7z" | "rar" | "deb" | "rpm" => {
-            "package-x-generic"
-        }
-        "txt" | "md" | "log" | "json" | "toml" | "yaml" | "yml" | "xml" | "html" | "css" | "js"
-        | "ts" | "rs" | "py" | "sh" | "c" | "h" | "cpp" | "go" | "java" => "text-x-generic",
-        _ => "application-x-generic",
-    }
 }
 
 /// The parked items, oldest first.
