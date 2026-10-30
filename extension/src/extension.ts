@@ -99,6 +99,7 @@ import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { Keybinding } from './shared/keybinding.js';
 import { alertMotion, type AlertMotion } from './shared/logic/alert-motion.js';
+import { attachAll } from './shared/logic/attach.js';
 import type { AlertTone } from './shared/logic/glow.js';
 import { formatClock, formatDuration, uses24h } from './shared/logic/format.js';
 import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.js';
@@ -427,19 +428,21 @@ class Session {
             }
             return;
         }
-        await Promise.all([
-            this.settings.attach(connection, cancellable),
-            this.media.attach(connection, cancellable),
-            this.lyrics.attach(connection, cancellable),
-            this.timer.attach(connection, cancellable),
-            this.activities.attach(connection, cancellable),
-            this.weather.attach(connection, cancellable),
-            this.shelf.attach(connection, cancellable),
-            this.clipboard.attach(connection, cancellable),
-            this.meetingLinks.attach(connection, cancellable),
-            this.eventColors.attach(connection, cancellable),
-        ]);
+        // One interface failing leaves the others working.
+        const failures = await attachAll({
+            settings: () => this.settings.attach(connection, cancellable),
+            media: () => this.media.attach(connection, cancellable),
+            lyrics: () => this.lyrics.attach(connection, cancellable),
+            timer: () => this.timer.attach(connection, cancellable),
+            activities: () => this.activities.attach(connection, cancellable),
+            weather: () => this.weather.attach(connection, cancellable),
+            shelf: () => this.shelf.attach(connection, cancellable),
+            clipboard: () => this.clipboard.attach(connection, cancellable),
+            'meeting links': () => this.meetingLinks.attach(connection, cancellable),
+            'event colors': () => this.eventColors.attach(connection, cancellable),
+        });
         if (cancellable.is_cancelled()) return;
+        for (const { name, error } of failures) console.error(`Nokta: cannot follow noktad's ${name}`, error);
         this.devices.attach(connection);
         this.askEventAnswers();
     }
