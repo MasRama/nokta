@@ -47,10 +47,11 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: extension/package-lock.json
-      - name: Install gnome-extensions
+      # gnome-extensions packs the translations with gettext's msgfmt.
+      - name: Install gnome-extensions and gettext
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gnome-shell
+          sudo apt-get install -y --no-install-recommends gnome-shell gettext
       - name: Build noktad and nokta
         run: cargo build --release --locked
       - name: Pack the extension

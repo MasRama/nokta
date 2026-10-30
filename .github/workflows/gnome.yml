@@ -30,10 +30,11 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: extension/package-lock.json
-      - name: Install gnome-extensions
+      # gnome-extensions packs the translations with gettext's msgfmt.
+      - name: Install gnome-extensions and gettext
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gnome-shell
+          sudo apt-get install -y --no-install-recommends gnome-shell gettext
       - run: cargo build --release --locked
       - name: Pack the extension
         working-directory: extension
@@ -73,6 +74,8 @@ jobs:
         run: |
           chmod +x target/release/noktad
           tools/devshell/smoke.sh
+      - name: Check the Indonesian translation
+        run: tools/devshell/i18n-shots.sh
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -81,3 +84,4 @@ jobs:
             build/shots/
             build/devshell/*.log
             build/smoke-run.log
+            build/i18n-run.log
