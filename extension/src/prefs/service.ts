@@ -21,6 +21,7 @@ const PROPERTIES: Record<Table, string> = {
     clipboard: 'Clipboard',
     downloads: 'Downloads',
     system: 'System',
+    updates: 'Updates',
     home: 'Home',
 };
 

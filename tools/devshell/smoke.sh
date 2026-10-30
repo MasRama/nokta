@@ -1191,6 +1191,27 @@ until system_usage | grep -q "uint64 0, uint64 0"; do
     sleep 0.2
 done
 ok "the daemon stops sampling when the page closes"
+# A newer release puts a row in home with an Update button, and an older
+# one takes it away. The daemon asks the devshell's stand-in for GitHub.
+# Update itself is not pressed: it would start a unit in the real session.
+RELEASES="$STATE/lrclib/repos/MasRama/nokta/releases"
+mkdir -p "$RELEASES"
+release() {
+    printf '{"tag_name": "%s", "html_url": "https://github.com/MasRama/nokta/releases/tag/%s", "assets": []}\n' \
+        "$1" "$1" > "$RELEASES/latest"
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Updates \
+        --method io.nokta.Updates1.Check > /dev/null
+}
+UPDATE_ROW="$FIND JSON.stringify([shown('nokta-panel-update'), any('nokta-panel-update') && one('nokta-panel-update-title').text, Math.round(one('nokta-body').height)])"
+release v99.0.0
+wait_for "a newer release shows in home with an Update button" \
+    "$FIND shown('nokta-panel-update') && one('nokta-panel-update-title').text === 'Nokta 99.0.0 is available' && find(one('nokta-panel-update'), 'nokta-panel-join')[0].visible && Math.round(one('nokta-body').height) === $HOME_HEIGHT + 36" 5 \
+    "$UPDATE_ROW"
+sleep 0.4
+"$HERE/shot.sh" smoke-nokta-update > /dev/null
+release v0.0.1
+wait_for "an older release takes the row away" \
+    "$FIND !shown('nokta-panel-update') && Math.round(one('nokta-body').height) === $HOME_HEIGHT" 5 "$UPDATE_ROW"
 # The settings tile opens Nokta's own page: six theme swatches, three
 # switches, motion and a row for the settings window. A swatch and a switch
 # change the setting through the daemon at once.

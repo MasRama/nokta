@@ -14,6 +14,7 @@ export {
     type PanelContent,
     type PanelEvent,
     type PanelHandlers,
+    type PanelUpdate,
     type PanelWeather,
     type QuickToggle,
     type QuickToggles,

@@ -972,3 +972,27 @@ msgstr "Mengolah berkas"
 
 msgid "In progress"
 msgstr "Sedang berjalan"
+
+msgid "Updating Nokta"
+msgstr "Memperbarui Nokta"
+
+msgid "Nokta %s is available"
+msgstr "Nokta %s sudah tersedia"
+
+msgid "Log out and back in to finish updating Nokta"
+msgstr "Keluar lalu masuk lagi untuk menyelesaikan pembaruan Nokta"
+
+msgid "Update"
+msgstr "Perbarui"
+
+msgid "Cannot update Nokta"
+msgstr "Nokta gagal diperbarui"
+
+msgid "Updates"
+msgstr "Pembaruan"
+
+msgid "Tell me when a new Nokta is out"
+msgstr "Beri tahu saat ada Nokta versi baru"
+
+msgid "Asks github.com once a day and sends nothing else"
+msgstr "Bertanya ke github.com sekali sehari, tanpa mengirim apa pun lagi"

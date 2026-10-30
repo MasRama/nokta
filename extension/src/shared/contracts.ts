@@ -23,6 +23,7 @@ export const PATHS = {
     Clipboard1: '/io/nokta/Clipboard',
     Downloads1: '/io/nokta/Downloads',
     System1: '/io/nokta/System',
+    Updates1: '/io/nokta/Updates',
 } as const;
 
 export interface NoktaProps {
@@ -116,6 +117,7 @@ export interface SettingsProps {
     Clipboard: Record<string, unknown>;
     Downloads: Record<string, unknown>;
     System: Record<string, unknown>;
+    Updates: Record<string, unknown>;
     Home: Record<string, unknown>;
     PicturePath: string;
     PictureColor: string;
@@ -246,4 +248,17 @@ export const SYSTEM_METHODS = {
 /** io.nokta.System1 signals and the D-Bus signature of their arguments. */
 export const SYSTEM_SIGNALS = {
     MemoryLow: 'tts',
+} as const;
+
+export interface UpdatesProps {
+    /** The newer release's version, like `0.12.0`; empty when there is none. */
+    Latest: string;
+    /** That release's web page. */
+    ReleaseUrl: string;
+}
+
+/** io.nokta.Updates1 methods and the D-Bus signature of their arguments. */
+export const UPDATES_METHODS = {
+    Check: '',
+    Install: '',
 } as const;

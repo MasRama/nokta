@@ -4,6 +4,7 @@ use std::io::IsTerminal;
 use std::process::ExitCode;
 
 use nokta_core::app::{self, OpenMeteoUrls, RunOptions, DEFAULT_LRCLIB_URL};
+use nokta_core::features::updates::github::DEFAULT_API_URL;
 use nokta_core::shared::paths::Paths;
 use tracing_subscriber::EnvFilter;
 
@@ -19,7 +20,9 @@ Environment:
   NOKTA_OPEN_METEO_URL            Open-Meteo forecast base URL
                                   (default: https://api.open-meteo.com)
   NOKTA_OPEN_METEO_GEOCODING_URL  Open-Meteo geocoding base URL
-                                  (default: https://geocoding-api.open-meteo.com)";
+                                  (default: https://geocoding-api.open-meteo.com)
+  NOKTA_GITHUB_API_URL            GitHub API base URL, for Nokta's releases
+                                  (default: https://api.github.com)";
 
 fn main() -> ExitCode {
     match std::env::args().nth(1).as_deref() {
@@ -64,6 +67,7 @@ fn run() -> anyhow::Result<()> {
             forecast: url_from_env("NOKTA_OPEN_METEO_URL", &defaults.forecast),
             geocoding: url_from_env("NOKTA_OPEN_METEO_GEOCODING_URL", &defaults.geocoding),
         },
+        github_api_url: url_from_env("NOKTA_GITHUB_API_URL", DEFAULT_API_URL),
         recorder: "pw-record".to_owned(),
     };
     tokio::runtime::Builder::new_current_thread()

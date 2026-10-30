@@ -29,6 +29,7 @@ import {
 import { batteryLevel, deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
 import { downloadButtons, DownloadsClient, type Download, type DownloadButton } from './features/downloads/index.js';
 import { memoryAlert, SystemClient } from './features/system/index.js';
+import { UpdatesClient, updateRow } from './features/updates/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
@@ -205,6 +206,12 @@ class Session {
     private readonly shelfId: number;
     private readonly clipboardId: number;
     private readonly systemId: number;
+    private readonly updates = new UpdatesClient();
+    private readonly updatesId: number;
+    /** The running noktad's version; empty while there is none. */
+    private daemonVersion = '';
+    /** Update was pressed; the button stays away until the daemon restarts or fails to start it. */
+    private updateStarted = false;
     private readonly callId: number;
     private readonly recordingId: number;
     private timerTickId = 0;
@@ -238,6 +245,8 @@ class Session {
         openScreenshot: () => this.openScreenshot(),
         toggle: (which) => this.toggle(which),
         setDoNotDisturb: (on) => this.quietBanners.setDoNotDisturb(on),
+        installUpdate: () => this.installUpdate(),
+        openRelease: () => this.openUri(this.updates.releaseUrl()),
     };
     private readonly shelfSource: ShelfSource = {
         items: () => (this.settings.behavior.fileShelf ? this.shelf.items() : []),
@@ -278,6 +287,8 @@ class Session {
     constructor(
         extensionSettings: Gio.Settings,
         extensionPath: string,
+        /** This extension's version, like `0.11.0`. */
+        private readonly extensionVersion: string,
         private readonly openPreferences: () => void,
     ) {
         setIconsDir(`${extensionPath}/icons`);
@@ -312,6 +323,7 @@ class Session {
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
         this.systemId = this.system.onChanged(() => this.notches.forEach((n) => n.onSystem()));
+        this.updatesId = this.updates.onChanged(refreshPanel);
         // An app starting or stopping to record can leave GNOME's indicator as it is.
         this.callId = this.call.onChanged(() => {
             this.onPrivacy();
@@ -377,6 +389,7 @@ class Session {
         this.shelf.disconnect(this.shelfId);
         this.clipboard.disconnect(this.clipboardId);
         this.system.disconnect(this.systemId);
+        this.updates.disconnect(this.updatesId);
         this.clipboardWatcher.destroy();
         this.calendarAlarms.destroy();
         this.calendar.destroy();
@@ -390,6 +403,7 @@ class Session {
         this.shelf.destroy();
         this.clipboard.destroy();
         this.system.destroy();
+        this.updates.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.caffeine.release();
@@ -432,7 +446,8 @@ class Session {
     }
 
     private async connect(connection: Gio.DBusConnection, cancellable: Gio.Cancellable): Promise<void> {
-        const { apiVersion: version } = await readDaemon(connection, cancellable);
+        const { apiVersion: version, daemonVersion } = await readDaemon(connection, cancellable);
+        this.daemonVersion = daemonVersion;
         if (version !== API_VERSION) {
             if (!warnedApiVersion) {
                 console.warn(
@@ -454,6 +469,7 @@ class Session {
             shelf: () => this.shelf.attach(connection, cancellable),
             clipboard: () => this.clipboard.attach(connection, cancellable),
             system: () => this.system.attach(connection, cancellable),
+            updates: () => this.updates.attach(connection, cancellable),
             'meeting links': () => this.meetingLinks.attach(connection, cancellable),
             'event colors': () => this.eventColors.attach(connection, cancellable),
         });
@@ -476,6 +492,9 @@ class Session {
         this.shelf.detach();
         this.clipboard.detach();
         this.system.detach();
+        this.daemonVersion = '';
+        this.updateStarted = false;
+        this.updates.detach();
         this.meetingLinks.detach();
         this.eventColors.detach();
         this.devices.detach();
@@ -988,8 +1007,33 @@ class Session {
             },
             player: this.media.snapshot().available,
             clipboard: this.clipboardSource.enabled(),
+            update: updateRow(this.updates.latest(), this.daemonVersion, this.extensionVersion, this.updateStarted),
             layout: this.settings.home,
         };
+    }
+
+    /** Update in home: noktad starts `nokta update`, which shows itself as an activity. */
+    private installUpdate(): void {
+        this.updateStarted = true;
+        this.notches.forEach((n) => n.onPanelContent());
+        this.updates.install((message) => {
+            console.warn(`Nokta: cannot update: ${message}`);
+            this.updateStarted = false;
+            this.notches.forEach((n) => n.onPanelContent());
+            const content = { fraction: null, text: _('Cannot update Nokta'), detail: '', urgent: true };
+            const icon = iconFor('software-update-available-symbolic');
+            const { alertDurationMs } = this.settings.behavior;
+            this.showOsd(-1, 'activity', content, icon, alertDurationMs, 'urgent', this.motion('activity-failed'));
+        });
+    }
+
+    private openUri(uri: string): void {
+        if (!uri) return;
+        try {
+            Gio.AppInfo.launch_default_for_uri(uri, global.create_app_launch_context(0, -1));
+        } catch (error) {
+            console.warn(`Nokta: could not open ${uri}`, error);
+        }
     }
 
     /** A quick toggle in home was clicked. */
@@ -1180,7 +1224,8 @@ export default class NoktaExtension extends Extension {
 
     override enable(): void {
         setTranslator({ gettext: (s) => this.gettext(s), ngettext: (s, p, n) => this.ngettext(s, p, n) });
-        this.session = new Session(this.getSettings(), this.path, () => this.openPreferences());
+        const version = this.metadata['version-name'] ?? '';
+        this.session = new Session(this.getSettings(), this.path, version, () => this.openPreferences());
     }
 
     override disable(): void {

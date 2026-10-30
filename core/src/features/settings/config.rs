@@ -22,6 +22,7 @@ pub struct Config {
     pub clipboard: ClipboardConfig,
     pub downloads: DownloadsConfig,
     pub system: SystemConfig,
+    pub updates: UpdatesConfig,
     pub home: HomeConfig,
 }
 
@@ -340,6 +341,19 @@ pub struct SystemConfig {
 impl Default for SystemConfig {
     fn default() -> Self {
         SystemConfig { memory_alert: true }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct UpdatesConfig {
+    /// Ask GitHub once a day whether a newer Nokta is out.
+    pub check: bool,
+}
+
+impl Default for UpdatesConfig {
+    fn default() -> Self {
+        UpdatesConfig { check: true }
     }
 }
 
@@ -891,6 +905,12 @@ impl DownloadsConfig {
 impl SystemConfig {
     pub fn entries(&self) -> Entries {
         vec![("memory_alert", self.memory_alert.into())]
+    }
+}
+
+impl UpdatesConfig {
+    pub fn entries(&self) -> Entries {
+        vec![("check", self.check.into())]
     }
 }
 

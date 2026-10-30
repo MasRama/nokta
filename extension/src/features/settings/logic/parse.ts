@@ -262,6 +262,16 @@ export const DEFAULT_SYSTEM: Readonly<SystemSettings> = {
     memoryAlert: true,
 };
 
+/** io.nokta.Settings1.Updates in camelCase. */
+export interface UpdatesSettings {
+    /** Ask GitHub once a day whether a newer Nokta is out. */
+    check: boolean;
+}
+
+export const DEFAULT_UPDATES: Readonly<UpdatesSettings> = {
+    check: true,
+};
+
 /** The names home.toggles takes, as the daemon checks them. */
 export const HOME_TOGGLES = ['do_not_disturb', 'caffeine', 'dark_style', 'night_light'] as const;
 /** The names home.tiles takes. */
@@ -351,6 +361,7 @@ export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, D
 export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);
 export const downloadsFrom = (raw: unknown): DownloadsSettings => fromTable(raw, DEFAULT_DOWNLOADS);
 export const systemFrom = (raw: unknown): SystemSettings => fromTable(raw, DEFAULT_SYSTEM);
+export const updatesFrom = (raw: unknown): UpdatesSettings => fromTable(raw, DEFAULT_UPDATES);
 
 /** Known names, each once, at most `max`; anything but a list gives `fallback`. */
 function namesFrom<T extends string>(raw: unknown, known: readonly T[], max: number, fallback: readonly T[]): T[] {

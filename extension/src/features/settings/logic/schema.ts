@@ -5,6 +5,7 @@ import {
     clipboardFrom,
     downloadsFrom,
     systemFrom,
+    updatesFrom,
     behaviorFrom,
     homeFrom,
     lyricsFrom,
@@ -50,6 +51,7 @@ export type Table =
     | 'clipboard'
     | 'downloads'
     | 'system'
+    | 'updates'
     | 'home';
 
 export interface Row {
@@ -547,6 +549,18 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('Updates'),
+                rows: [
+                    {
+                        table: 'updates',
+                        key: 'check',
+                        title: N_('Tell me when a new Nokta is out'),
+                        subtitle: N_('Asks github.com once a day and sends nothing else'),
+                        kind: bool(),
+                    },
+                ],
+            },
+            {
                 title: N_('Focus timer'),
                 rows: [
                     timer('focus_minutes', N_('Focus length'), int(1, 180), N_('Minutes; start it from Quick Settings')),
@@ -622,6 +636,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     clipboard: clipboardFrom,
     downloads: downloadsFrom,
     system: systemFrom,
+    updates: updatesFrom,
     home: homeFrom,
 };
 

@@ -11,6 +11,7 @@ import {
     DEFAULT_CLIPBOARD,
     DEFAULT_DOWNLOADS,
     DEFAULT_SYSTEM,
+    DEFAULT_UPDATES,
     DEFAULT_HOME,
     DEFAULT_LYRICS,
     DEFAULT_MEDIA,
@@ -70,6 +71,7 @@ const EXTENSION_DEFAULTS: Record<string, object> = {
     clipboard: DEFAULT_CLIPBOARD,
     downloads: DEFAULT_DOWNLOADS,
     system: DEFAULT_SYSTEM,
+    updates: DEFAULT_UPDATES,
     home: DEFAULT_HOME,
 };
 

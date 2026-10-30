@@ -27,6 +27,8 @@ pub struct RunOptions {
     pub system_bus_address: Option<String>,
     pub lrclib_base_url: String,
     pub open_meteo: OpenMeteoUrls,
+    /// Where noktad asks for Nokta's latest release.
+    pub github_api_url: String,
     /// What records the music for the bars that follow it: `pw-record`.
     pub recorder: String,
 }

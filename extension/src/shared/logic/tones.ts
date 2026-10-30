@@ -20,6 +20,7 @@ export const TONES = {
     screenshot: '#ff6482',
     downloads: '#30d5a0',
     system: '#ffd60a',
+    update: '#64d2ff',
     calendar: '#ff453a',
     device: '#0a84ff',
     call: '#ff9500',

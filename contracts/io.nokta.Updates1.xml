@@ -1,0 +1,29 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Updates. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Updates1">
+    <!--
+      The newest release's version ("0.12.0") when it is newer than the
+      running noktad; empty when this one is the newest, nothing is known
+      yet, or [updates] check is false. noktad asks GitHub 30 s after it
+      starts and then once a day; a failed request keeps what it knew.
+    -->
+    <property name="Latest" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- The web page of that release; empty with Latest. -->
+    <property name="ReleaseUrl" type="s" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Asks GitHub now (even with [updates] check false). Returns at once. -->
+    <method name="Check"/>
+    <!--
+      Starts `nokta update --yes` (from the folder noktad runs from) outside
+      noktad's own unit, so its installer can restart noktad. Fails when
+      nokta is not there or the update cannot start; the update reports
+      itself as the activity "update:nokta".
+    -->
+    <method name="Install"/>
+  </interface>
+</node>

@@ -93,6 +93,7 @@ test('home grows with its rows', () => {
     assert.equal(panelHeight(40, ['date', ...controls]), 191);
     assert.equal(panelHeight(32, ['date', 'clock', 'clock', ...controls]), 183 + 2 * 36);
     assert.equal(panelHeight(32, ['date', 'call', ...controls]), 183 + 36);
+    assert.equal(panelHeight(32, ['date', 'update', ...controls]), 183 + 36);
     assert.equal(panelHeight(32, ['date', 'recording', 'call', ...controls]), 183 + 2 * 36);
     // The event row holds an icon chip, as tall as the other one-line rows.
     assert.equal(panelHeight(32, ['date', 'event', ...controls]), 183 + 36);
