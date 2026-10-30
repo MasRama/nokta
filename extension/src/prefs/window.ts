@@ -4,7 +4,7 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 
-import { appearanceFrom, rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
+import { appearanceFrom, rowMin, rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
 import { pageIcon, previewModel } from './logic/look.js';
 import { BRAND_LOGO, brandCss, PREFS_CLASS, PREFS_CSS } from './logic/style.js';
 import { NotchPreview } from './preview.js';
@@ -66,6 +66,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
         for (const banner of banners) banner.visible = !service.available;
         for (const setting of rows) {
             setting.widget.sensitive = service.available;
+            setting.setMin?.(rowMin(setting.row, service.tables));
             // A row the user is still changing keeps their value.
             if (!pending.has(nameOf(setting.row))) setting.show(rowValue(setting.row, service.tables));
         }
