@@ -44,7 +44,7 @@ core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
   src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
   src/features/     media, lyrics, settings, devices, timer, activities, weather,
-                    calendar, shelf, clipboard, downloads, system
+                    calendar, shelf, clipboard, downloads, system, updates
   src/shared/       paths, monotonic clock, hashing, atomic file writes, picture
                     thumbnails, D-Bus helpers
   tests/            integration tests on a private bus, contract test
@@ -56,7 +56,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf,
-                    clipboard, downloads, system
+                    clipboard, downloads, system, updates
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
                     keyboard focus, D-Bus helpers, icons, dim levels
