@@ -45,6 +45,14 @@ run "$archive/uninstall.sh"
 run "$archive/uninstall.sh" --purge
 [[ ! -e "$home/.config/nokta" && ! -e "$home/.cache/nokta" ]] || fail "--purge kept config or cache"
 
+# A prefix with characters that mean something to sed lands in the units as it is.
+odd="$work/odd&dir|x"
+run "$archive/install.sh" --prefix-dir "$odd"
+grep -qxF "ExecStart=$odd/.local/bin/noktad" "$odd/.config/systemd/user/nokta.service" \
+  || fail "unit ExecStart lost the prefix $odd: $(grep ExecStart "$odd/.config/systemd/user/nokta.service")"
+grep -qxF "Exec=$odd/.local/bin/noktad" "$odd/.local/share/dbus-1/services/io.nokta.Nokta.service" \
+  || fail "D-Bus Exec lost the prefix $odd"
+
 if [[ $(id -u) -ne 0 ]]; then
   ! "$archive/install.sh" --bogus 2>/dev/null || fail "unknown argument accepted"
 fi
