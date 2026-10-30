@@ -1,6 +1,7 @@
 import type Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import { orGnome } from '../../shared/logic/guard.js';
 import { replaceMethod as replace } from '../../shared/patch.js';
 import type { Restore } from '../../shared/topbar.js';
 import { fromLevels, type LevelRequest, type OsdLevel } from './logic/levels.js';
@@ -43,8 +44,25 @@ interface OsdWindowManager {
     hideAll: () => void;
 }
 
-const replaceMethod = (target: object, name: string, replacement: unknown): Restore =>
-    replace(target, 'osdWindowManager', name, replacement);
+/**
+ * Replaces the manager's `name` with Nokta's `ours`. When that throws,
+ * GNOME's own method runs with the same arguments, so a Nokta bug never
+ * leaves the volume or brightness change without a popup.
+ */
+function replaceMethod<A extends unknown[]>(
+    manager: OsdWindowManager,
+    name: keyof OsdWindowManager,
+    ours: (...args: A) => void,
+): Restore {
+    const theirs = manager[name] as unknown as (...args: A) => void;
+    return replace(manager, 'osdWindowManager', name, (...args: A) =>
+        orGnome(
+            () => ours(...args),
+            () => theirs.call(manager, ...args),
+            (error) => console.error(`Nokta: cannot show osdWindowManager.${name} in the notch`, error),
+        ),
+    );
+}
 
 /** Sends GNOME's OSD requests to `handlers` until the returned function runs. */
 export function takeOverOsd(handlers: OsdHandlers): Restore {
