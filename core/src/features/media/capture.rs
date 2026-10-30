@@ -13,8 +13,6 @@ use tokio::task::JoinHandle;
 use super::levels::{Bands, Lifecycle, Step, BANDS, FRAME};
 use super::{MediaState, PlaybackStatus};
 
-/// How often noktad checks whether to record.
-const TICK: Duration = Duration::from_millis(250);
 /// While it is silent, the zero levels go out this often instead of 25 times a second.
 const SILENT_EVERY: Duration = Duration::from_millis(500);
 /// How long `pw-record --help` may take.
@@ -33,15 +31,16 @@ const ARGS: [&str; 8] = [
      stream.capture.sink = true }",
 ];
 
-/// Records with `program` while `enabled()` and a player plays, and sends
-/// the levels it hears. Runs until the receiver is dropped.
-pub fn spawn(
+/// Records with `program` while `enabled(settings)` and a player plays,
+/// and sends the levels it hears. Runs until the receiver is dropped.
+pub fn spawn<T: Send + Sync + 'static>(
     program: String,
     media: watch::Receiver<MediaState>,
-    enabled: impl Fn() -> bool + Send + 'static,
+    settings: watch::Receiver<T>,
+    enabled: fn(&T) -> bool,
 ) -> mpsc::Receiver<[f64; BANDS]> {
     let (tx, rx) = mpsc::channel(8);
-    tokio::spawn(run(program, media, enabled, tx));
+    tokio::spawn(run(program, media, settings, enabled, tx));
     rx
 }
 
@@ -58,26 +57,30 @@ impl Recorder {
     }
 }
 
-async fn run(
+/// Wakes only when something can change the answer: the player, the
+/// setting, the recorder quitting, or the end of a linger or backoff.
+async fn run<T>(
     program: String,
-    media: watch::Receiver<MediaState>,
-    enabled: impl Fn() -> bool,
+    mut media: watch::Receiver<MediaState>,
+    mut settings: watch::Receiver<T>,
+    enabled: fn(&T) -> bool,
     tx: mpsc::Sender<[f64; BANDS]>,
 ) {
     let mut life = Lifecycle::default();
     let mut recorder: Option<Recorder> = None;
     let mut told_missing = false;
     let mut raw: Option<bool> = None;
-    let mut tick = tokio::time::interval(TICK);
-    while !tx.is_closed() {
-        tick.tick().await;
+    loop {
         let now = Instant::now();
         if recorder.as_ref().is_some_and(|r| r.reader.is_finished()) {
-            recorder.take().unwrap().stop().await;
+            if let Some(r) = recorder.take() {
+                r.stop().await;
+            }
             tracing::warn!("{program} stopped; the bars try again in 30 s");
             life.failed(now);
         }
-        let wanted = enabled() && media.borrow().status == PlaybackStatus::Playing;
+        let wanted = enabled(&settings.borrow_and_update())
+            && media.borrow_and_update().status == PlaybackStatus::Playing;
         match life.step(wanted, recorder.is_some(), now) {
             Step::Start => match start(&program, takes_raw(&program, &mut raw).await, tx.clone()) {
                 Ok(started) => recorder = Some(started),
@@ -98,9 +101,34 @@ async fn run(
             }
             Step::Keep => {}
         }
+        let wake = life.wake_at(Instant::now());
+        tokio::select! {
+            () = tx.closed() => break,
+            changed = media.changed() => if changed.is_err() { break },
+            changed = settings.changed() => if changed.is_err() { break },
+            () = quits(recorder.as_mut()) => {}
+            () = sleep_until(wake) => {}
+        }
     }
     if let Some(r) = recorder {
         r.stop().await;
+    }
+}
+
+/// Resolves when the recorder's reader ends; never without a recorder.
+async fn quits(recorder: Option<&mut Recorder>) {
+    match recorder {
+        Some(r) => {
+            let _ = (&mut r.reader).await;
+        }
+        None => std::future::pending().await,
+    }
+}
+
+async fn sleep_until(at: Option<Instant>) {
+    match at {
+        Some(at) => tokio::time::sleep_until(at.into()).await,
+        None => std::future::pending().await,
     }
 }
 

@@ -106,3 +106,41 @@ fn a_failed_capture_waits_30_s() {
     );
     assert_eq!(life.step(true, false, now + BACKOFF), Step::Start);
 }
+
+#[test]
+fn nothing_to_wake_for_while_capturing_or_idle() {
+    let mut life = Lifecycle::default();
+    let now = Instant::now();
+    life.step(false, false, now);
+    assert_eq!(life.wake_at(now), None);
+    life.step(true, false, now);
+    assert_eq!(life.wake_at(now), None);
+    life.step(true, true, now);
+    assert_eq!(life.wake_at(now), None);
+}
+
+#[test]
+fn a_pause_wakes_the_capture_when_it_should_stop() {
+    let mut life = Lifecycle::default();
+    let now = Instant::now();
+    life.step(false, true, now);
+    let later = now + Duration::from_millis(500);
+    assert_eq!(life.wake_at(later), Some(now + LINGER));
+}
+
+#[test]
+fn a_failure_wakes_the_capture_when_it_may_try_again() {
+    let mut life = Lifecycle::default();
+    let now = Instant::now();
+    life.failed(now);
+    life.step(true, false, now);
+    assert_eq!(life.wake_at(now), Some(now + BACKOFF));
+}
+
+#[test]
+fn a_backoff_that_passed_while_unwanted_wakes_nothing() {
+    let mut life = Lifecycle::default();
+    let now = Instant::now();
+    life.failed(now);
+    assert_eq!(life.wake_at(now + BACKOFF + Duration::from_secs(1)), None);
+}
