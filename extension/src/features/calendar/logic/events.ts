@@ -1,3 +1,5 @@
+import { _, format } from '../../../shared/logic/i18n.js';
+
 /** One timed event from GNOME Shell's calendar event source. */
 export interface CalendarEvent {
     id: string;
@@ -50,7 +52,7 @@ export function eventsFrom(raw: unknown): CalendarEvent[] {
         if (endMs > startMs && isMidnight(startMs) && isMidnight(endMs)) continue;
         out.push({
             id: String(id ?? ''),
-            title: typeof summary === 'string' && summary.trim() ? summary.trim() : 'Untitled event',
+            title: typeof summary === 'string' && summary.trim() ? summary.trim() : _('Untitled event'),
             startMs,
             endMs,
         });
@@ -81,8 +83,8 @@ const COUNTDOWN_AFTER_MS = 5 * MINUTE_MS;
 
 /** `5 min` to `1 min` before the start, rounded up, then `Now`. */
 export function countdownLabel(startMs: number, nowMs: number): string {
-    if (nowMs >= startMs) return 'Now';
-    return `${Math.ceil((startMs - nowMs) / MINUTE_MS)} min`;
+    if (nowMs >= startMs) return _('Now');
+    return format(_('%d min'), Math.ceil((startMs - nowMs) / MINUTE_MS));
 }
 
 /**
@@ -132,7 +134,7 @@ export function agendaWhen(
     formatTime: (ms: number) => string,
 ): AgendaWhen {
     const parts = [];
-    if (daysFrom(nowMs, startMs) >= 1) parts.push('Tomorrow');
+    if (daysFrom(nowMs, startMs) >= 1) parts.push(_('Tomorrow'));
     if (first) parts.push(soonLabel(startMs, nowMs));
     return { time: formatTime(startMs), detail: parts.join(' · ') };
 }
@@ -144,12 +146,12 @@ export function eventColor(color: string | null): string | null {
 
 /** `in 25 min`, `in 2 h 5 min`, or `now` once it has started. */
 export function soonLabel(startMs: number, nowMs: number): string {
-    if (startMs <= nowMs) return 'now';
+    if (startMs <= nowMs) return _('now');
     const minutes = Math.ceil((startMs - nowMs) / MINUTE_MS);
-    if (minutes < 60) return `in ${minutes} min`;
+    if (minutes < 60) return format(_('in %d min'), minutes);
     const hours = Math.floor(minutes / 60);
     const rest = minutes % 60;
-    return rest ? `in ${hours} h ${rest} min` : `in ${hours} h`;
+    return rest ? format(_('in %d h %d min'), hours, rest) : format(_('in %d h'), hours);
 }
 
 /**
@@ -180,7 +182,7 @@ export function eventAlert(
         ? { icon: CALENDAR_ICON, title: `${event.title} ${soonLabel(event.startMs, nowMs)}`, detail: start, urgent: false }
         : {
               icon: CALENDAR_ICON,
-              title: `${event.title} is starting`,
+              title: format(_('%s is starting'), event.title),
               detail: `${start} – ${formatTime(event.endMs)}`,
               urgent: false,
           };

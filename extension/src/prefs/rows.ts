@@ -6,6 +6,7 @@ import Gtk from 'gi://Gtk';
 
 import { moveItem, orderItems, switchItem, variantType, type Row } from '../features/settings/index.js';
 import { parseHexColor, toHexColor } from '../shared/logic/color.js';
+import { _ } from '../shared/logic/i18n.js';
 
 /** One row of the window, bound to one key of config.toml. */
 export interface SettingRow {
@@ -22,7 +23,9 @@ const decimals = (step: number): number => Math.max(0, Math.ceil(-Math.log10(ste
 
 /** Builds the widget for `row`; `onChange` gets each value the user picks. */
 export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): SettingRow {
-    const { title, subtitle = '', kind } = row;
+    const { kind } = row;
+    const title = _(row.title); // i18n: runtime
+    const subtitle = _(row.subtitle ?? ''); // i18n: runtime
     let showing = false;
     const send = (value: unknown) => {
         if (!showing) onChange(new GLib.Variant(variantType(kind), value));
@@ -95,7 +98,7 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             const widget = new Adw.ComboRow({
                 title,
                 subtitle,
-                model: Gtk.StringList.new(options.map((option) => option.label)),
+                model: Gtk.StringList.new(options.map((option) => _(option.label))), // i18n: runtime
             });
             widget.connect('notify::selected', () => send(options[widget.selected]?.value ?? options[0].value));
             const show = (value: unknown) => {
@@ -112,17 +115,17 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
         }
         case 'file': {
             const widget = new Adw.ActionRow({ title, subtitle });
-            const choose = new Gtk.Button({ label: 'Choose…', valign: Gtk.Align.CENTER });
+            const choose = new Gtk.Button({ label: _('Choose…'), valign: Gtk.Align.CENTER });
             const remove = new Gtk.Button({
                 icon_name: 'edit-clear-symbolic',
-                tooltip_text: 'Remove',
+                tooltip_text: _('Remove'),
                 valign: Gtk.Align.CENTER,
                 css_classes: ['flat'],
             });
             widget.add_suffix(choose);
             widget.add_suffix(remove);
             widget.activatable_widget = choose;
-            const images = new Gtk.FileFilter({ name: 'Images' });
+            const images = new Gtk.FileFilter({ name: _('Images') });
             images.add_mime_type('image/png');
             images.add_mime_type('image/jpeg');
             images.add_mime_type('image/webp');
@@ -166,7 +169,7 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             const render = () => {
                 widget.remove_all();
                 for (const item of orderItems(chosen, kind.options, kind.max)) {
-                    const entry = new Adw.ActionRow({ title: item.label });
+                    const entry = new Adw.ActionRow({ title: _(item.label) }); // i18n: runtime
                     const button = (icon: string, tooltip: string, sensitive: boolean, by: -1 | 1) => {
                         const b = new Gtk.Button({
                             icon_name: icon,
@@ -178,8 +181,8 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
                         b.connect('clicked', () => change(moveItem(chosen, item.value, by)));
                         entry.add_suffix(b);
                     };
-                    button('go-up-symbolic', 'Move up', item.canUp, -1);
-                    button('go-down-symbolic', 'Move down', item.canDown, 1);
+                    button('go-up-symbolic', _('Move up'), item.canUp, -1);
+                    button('go-down-symbolic', _('Move down'), item.canDown, 1);
                     const toggle = new Gtk.Switch({ active: item.on, sensitive: item.canSwitch, valign: Gtk.Align.CENTER });
                     toggle.connect('notify::active', () =>
                         change(switchItem(chosen, item.value, toggle.active, kind.max)),

@@ -4,6 +4,7 @@ import { QuickMenuToggle, SystemIndicator } from 'resource:///org/gnome/shell/ui
 
 import type { TimerSettings } from '../settings/logic/parse.js';
 import { nextBreak, toggleSubtitle, type TimerSnapshot } from './logic/timer.js';
+import { _, format } from '../../shared/logic/i18n.js';
 
 const ICON = 'alarm-symbolic';
 
@@ -25,16 +26,16 @@ export class FocusToggle {
     private readonly toggle: QuickMenuToggle;
     private readonly startFocus = new PopupMenu.PopupMenuItem('');
     private readonly startBreak = new PopupMenu.PopupMenuItem('');
-    private readonly pause = new PopupMenu.PopupMenuItem('Pause');
-    private readonly resume = new PopupMenu.PopupMenuItem('Resume');
-    private readonly stop = new PopupMenu.PopupMenuItem('Stop');
+    private readonly pause = new PopupMenu.PopupMenuItem(_('Pause'));
+    private readonly resume = new PopupMenu.PopupMenuItem(_('Resume'));
+    private readonly stop = new PopupMenu.PopupMenuItem(_('Stop'));
     private idle = true;
     private destroyed = false;
 
     constructor(controls: TimerControls) {
-        this.toggle = new QuickMenuToggle({ title: 'Focus', iconName: ICON, toggleMode: false });
+        this.toggle = new QuickMenuToggle({ title: _('Focus'), iconName: ICON, toggleMode: false });
         this.toggle.connect('clicked', () => (this.idle ? controls.start('focus') : controls.stop()));
-        this.toggle.menu.setHeader(ICON, 'Focus timer');
+        this.toggle.menu.setHeader(ICON, _('Focus timer'));
         this.startFocus.connect('activate', () => controls.start('focus'));
         this.startBreak.connect('activate', () => controls.start('break'));
         this.pause.connect('activate', () => controls.pause());
@@ -52,9 +53,9 @@ export class FocusToggle {
         this.idle = timer.state === 'idle';
         this.toggle.checked = !this.idle;
         this.toggle.subtitle = toggleSubtitle(timer, nowUs, settings.focusMinutes);
-        this.startFocus.label.text = `Start focus, ${settings.focusMinutes} min`;
+        this.startFocus.label.text = format(_('Start focus, %d min'), settings.focusMinutes);
         const next = nextBreak(timer, settings);
-        this.startBreak.label.text = `Start ${next.long ? 'long break' : 'break'}, ${next.minutes} min`;
+        this.startBreak.label.text = format(next.long ? _('Start long break, %d min') : _('Start break, %d min'), next.minutes);
         this.startBreak.visible = next.minutes > 0;
         this.pause.visible = timer.state === 'running';
         this.resume.visible = timer.state === 'paused';

@@ -1,0 +1,934 @@
+# Indonesian translation of Nokta.
+msgid ""
+msgstr ""
+"Project-Id-Version: nokta\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Join"
+msgstr "Gabung"
+
+#, c-format
+msgid "%d h %d min"
+msgstr "%d j %d mnt"
+
+#, c-format
+msgid "%d h"
+msgstr "%d j"
+
+#, c-format
+msgid "%d min %d s"
+msgstr "%d mnt %d dtk"
+
+#, c-format
+msgid "%d min"
+msgstr "%d mnt"
+
+#, c-format
+msgid "%d s"
+msgstr "%d dtk"
+
+#, c-format
+msgid "Done in %s"
+msgstr "Selesai dalam %s"
+
+#, c-format
+msgid "Failed after %s"
+msgstr "Gagal setelah %s"
+
+msgid "Untitled event"
+msgstr "Acara tanpa judul"
+
+msgid "Now"
+msgstr "Sekarang"
+
+msgid "Tomorrow"
+msgstr "Besok"
+
+msgid "now"
+msgstr "sekarang"
+
+#, c-format
+msgid "in %d min"
+msgstr "%d mnt lagi"
+
+#, c-format
+msgid "in %d h %d min"
+msgstr "%d j %d mnt lagi"
+
+#, c-format
+msgid "in %d h"
+msgstr "%d j lagi"
+
+#, c-format
+msgid "%s is starting"
+msgstr "%s dimulai"
+
+#, c-format
+msgid "%d d"
+msgstr "%d hr"
+
+#, c-format
+msgid "Picture · %s"
+msgstr "Gambar · %s"
+
+msgid "Search copies"
+msgstr "Cari salinan"
+
+msgid "Paused: copies are not kept"
+msgstr "Dijeda: salinan tidak disimpan"
+
+msgid "Nothing copied yet"
+msgstr "Belum ada yang disalin"
+
+msgid "No match"
+msgstr "Tidak ada yang cocok"
+
+msgid "Bluetooth device"
+msgstr "Perangkat Bluetooth"
+
+msgid "Connected"
+msgstr "Tersambung"
+
+msgid "Disconnected"
+msgstr "Terputus"
+
+msgid "Charging"
+msgstr "Mengisi daya"
+
+msgid "On battery"
+msgstr "Pakai baterai"
+
+msgid "Battery low"
+msgstr "Baterai lemah"
+
+msgid "Battery critical"
+msgstr "Baterai kritis"
+
+msgid "Fully charged"
+msgstr "Terisi penuh"
+
+msgid "On time"
+msgstr "Pas"
+
+#, c-format
+msgid "%s s earlier"
+msgstr "%s dtk lebih awal"
+
+#, c-format
+msgid "%s s later"
+msgstr "%s dtk lebih lambat"
+
+msgid "Show the lyrics later"
+msgstr "Tampilkan lirik lebih lambat"
+
+msgid "Reset the lyric timing"
+msgstr "Atur ulang waktu lirik"
+
+msgid "Show the lyrics earlier"
+msgstr "Tampilkan lirik lebih awal"
+
+msgid "Full-screen lyrics"
+msgstr "Lirik layar penuh"
+
+msgid "Player"
+msgstr "Pemutar"
+
+msgid "Open"
+msgstr "Buka"
+
+msgid "Show in Files"
+msgstr "Tampilkan di Berkas"
+
+msgid "Keep on shelf"
+msgstr "Simpan di rak"
+
+msgid "Microphone off"
+msgstr "Mikrofon mati"
+
+msgid "Muted"
+msgstr "Dibisukan"
+
+msgid "Caps Lock on"
+msgstr "Caps Lock nyala"
+
+msgid "Caps Lock off"
+msgstr "Caps Lock mati"
+
+msgid "Num Lock on"
+msgstr "Num Lock nyala"
+
+msgid "Num Lock off"
+msgstr "Num Lock mati"
+
+msgid "on"
+msgstr "nyala"
+
+msgid "off"
+msgstr "mati"
+
+msgid "Caffeine is on in Nokta"
+msgstr "Kafein menyala di Nokta"
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "Do Not Disturb"
+msgstr "Jangan Ganggu"
+
+msgid "Clear shelf"
+msgstr "Kosongkan rak"
+
+msgid "Pause clipboard"
+msgstr "Jeda papan klip"
+
+msgid "Caffeine"
+msgstr "Kafein"
+
+msgid "Dark Style"
+msgstr "Gaya Gelap"
+
+msgid "Night Light"
+msgstr "Lampu Malam"
+
+msgid "Notifications"
+msgstr "Notifikasi"
+
+msgid "Focus"
+msgstr "Fokus"
+
+msgid "Timer"
+msgstr "Timer"
+
+msgid "Clipboard"
+msgstr "Papan klip"
+
+msgid "Screenshot"
+msgstr "Tangkapan layar"
+
+msgid "Screen recording"
+msgstr "Merekam layar"
+
+msgid "Microphone"
+msgstr "Mikrofon"
+
+msgid "Midnight"
+msgstr "Midnight"
+
+msgid "Graphite"
+msgstr "Grafit"
+
+msgid "Glass"
+msgstr "Kaca"
+
+msgid "Aurora"
+msgstr "Aurora"
+
+msgid "Paper"
+msgstr "Kertas"
+
+msgid "Custom"
+msgstr "Kustom"
+
+msgid "Picture"
+msgstr "Gambar"
+
+msgid "Fast"
+msgstr "Cepat"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Slow"
+msgstr "Lambat"
+
+msgid "Appearance"
+msgstr "Tampilan"
+
+msgid "Theme"
+msgstr "Tema"
+
+msgid "Follow the system style"
+msgstr "Ikuti gaya sistem"
+
+msgid "The theme above in dark style, the one below in light style"
+msgstr "Tema di atas untuk gaya gelap, yang di bawah untuk gaya terang"
+
+msgid "Theme in light style"
+msgstr "Tema di gaya terang"
+
+msgid "Use the cover's color"
+msgstr "Pakai warna sampul"
+
+msgid "Tint the progress bar, equalizer and play button with the album cover"
+msgstr "Warnai bilah progres, equalizer dan tombol putar sesuai sampul album"
+
+msgid "Cover behind the player"
+msgstr "Sampul di belakang pemutar"
+
+msgid "The song's cover, blurred, fills the open player"
+msgstr "Sampul lagu, diburamkan, mengisi pemutar yang terbuka"
+
+msgid "Progress line"
+msgstr "Garis progres"
+
+msgid "Along the closed notch: the focus timer, a countdown, an activity or the song"
+msgstr "Di sepanjang notch tertutup: timer fokus, hitung mundur, aktivitas atau lagu"
+
+msgid "Glow on alerts"
+msgstr "Cahaya saat peringatan"
+
+msgid "Under the notch: red when urgent, green when done or charging"
+msgstr "Di bawah notch: merah saat mendesak, hijau saat selesai atau mengisi daya"
+
+msgid "Alert motion"
+msgstr "Gerakan peringatan"
+
+msgid "A timer rings, a failed activity shakes, a charger fills the battery"
+msgstr "Timer berdering, aktivitas gagal bergetar, pengisi daya mengisi baterai"
+
+msgid "Depth"
+msgstr "Kedalaman"
+
+msgid "A soft shadow under the notch and a light rim along its edge"
+msgstr "Bayangan halus di bawah notch dan garis terang di tepinya"
+
+msgid "The image the picture theme shows"
+msgstr "Gambar yang ditampilkan tema gambar"
+
+msgid "Darken"
+msgstr "Gelapkan"
+
+msgid "Keeps the text readable on a bright picture"
+msgstr "Agar teks tetap terbaca di atas gambar yang terang"
+
+msgid "Blur"
+msgstr "Buram"
+
+msgid "Pixels"
+msgstr "Piksel"
+
+msgid "Custom theme colors"
+msgstr "Warna tema kustom"
+
+msgid "Background"
+msgstr "Latar"
+
+msgid "Background opacity"
+msgstr "Opasitas latar"
+
+msgid "Text and icons stay solid"
+msgstr "Teks dan ikon tetap pekat"
+
+msgid "Gradient"
+msgstr "Gradien"
+
+msgid "None"
+msgstr "Tidak ada"
+
+msgid "Downward"
+msgstr "Ke bawah"
+
+msgid "Across"
+msgstr "Melintang"
+
+msgid "Diagonal"
+msgstr "Diagonal"
+
+msgid "From the background to the second color"
+msgstr "Dari latar ke warna kedua"
+
+msgid "Second color"
+msgstr "Warna kedua"
+
+msgid "Text and icons"
+msgstr "Teks dan ikon"
+
+msgid "Accent"
+msgstr "Aksen"
+
+msgid "Progress bar, equalizer and the volume bar"
+msgstr "Bilah progres, equalizer dan bilah volume"
+
+msgid "Size"
+msgstr "Ukuran"
+
+msgid "Height"
+msgstr "Tinggi"
+
+msgid "Pixels; the top bar is 28"
+msgstr "Piksel; bilah atas setinggi 28"
+
+msgid "Width when idle"
+msgstr "Lebar saat diam"
+
+msgid "Width while playing"
+msgstr "Lebar saat memutar"
+
+msgid "Expanded width"
+msgstr "Lebar saat terbuka"
+
+msgid "Expanded height"
+msgstr "Tinggi saat terbuka"
+
+msgid "Width for volume and brightness"
+msgstr "Lebar untuk volume dan kecerahan"
+
+msgid "Shape"
+msgstr "Bentuk"
+
+msgid "Corner radius"
+msgstr "Radius sudut"
+
+msgid "Ear radius"
+msgstr "Radius telinga"
+
+msgid "The curves where the notch meets the top edge"
+msgstr "Lengkungan tempat notch bertemu tepi atas"
+
+msgid "Motion"
+msgstr "Gerakan"
+
+msgid "Animation duration"
+msgstr "Durasi animasi"
+
+msgid "0.5 is twice as fast, 2.0 twice as slow"
+msgstr "0.5 dua kali lebih cepat, 2.0 dua kali lebih lambat"
+
+msgid "Morph between views"
+msgstr "Transisi antar tampilan"
+
+msgid "The cover flies into the player and rows come in one by one"
+msgstr "Sampul melayang ke pemutar dan baris muncul satu per satu"
+
+msgid "Behavior"
+msgstr "Perilaku"
+
+msgid "Notch"
+msgstr "Notch"
+
+msgid "On every monitor"
+msgstr "Di setiap monitor"
+
+msgid "Off shows it on the primary monitor only"
+msgstr "Kalau mati, hanya tampil di monitor utama"
+
+msgid "Over fullscreen apps"
+msgstr "Di atas aplikasi layar penuh"
+
+msgid "Important alerts"
+msgstr "Peringatan penting"
+
+msgid "All alerts"
+msgstr "Semua peringatan"
+
+msgid "Nothing"
+msgstr "Tidak ada"
+
+msgid "Important: low battery, the focus timer, timers, alarms and reminders"
+msgstr "Penting: baterai lemah, timer fokus, timer, alarm dan pengingat"
+
+msgid "Open on"
+msgstr "Buka dengan"
+
+msgid "Hover"
+msgstr "Arahkan kursor"
+
+msgid "Click"
+msgstr "Klik"
+
+msgid "Click: resting the pointer on the notch does not open it"
+msgstr "Klik: kursor yang diam di notch tidak membukanya"
+
+msgid "Open delay"
+msgstr "Jeda buka"
+
+msgid "Milliseconds of hover before it opens"
+msgstr "Milidetik kursor diam sebelum terbuka"
+
+msgid "Close delay"
+msgstr "Jeda tutup"
+
+msgid "Milliseconds after the pointer leaves"
+msgstr "Milidetik setelah kursor pergi"
+
+msgid "Shortcut"
+msgstr "Pintasan"
+
+msgid "Opens the notch for the keyboard, like <Super><Alt>n; empty for none"
+msgstr "Membuka notch untuk papan ketik, misalnya <Super><Alt>n; kosongkan jika tidak perlu"
+
+msgid "Gestures"
+msgstr "Gestur"
+
+msgid "Scroll for volume, swipe sideways for the next song, middle click to play or pause"
+msgstr "Gulir untuk volume, usap ke samping untuk lagu berikutnya, klik tengah untuk putar atau jeda"
+
+msgid "Show a new song"
+msgstr "Tampilkan lagu baru"
+
+msgid "The closed notch shows its title and artist for a moment"
+msgstr "Notch tertutup menampilkan judul dan artisnya sebentar"
+
+msgid "Clock"
+msgstr "Jam"
+
+msgid "Show the clock"
+msgstr "Tampilkan jam"
+
+msgid "The time in the notch while nothing plays"
+msgstr "Waktu di notch saat tidak ada yang diputar"
+
+msgid "Format"
+msgstr "Format"
+
+msgid "Follow GNOME"
+msgstr "Ikuti GNOME"
+
+msgid "24-hour"
+msgstr "24 jam"
+
+msgid "12-hour"
+msgstr "12 jam"
+
+msgid "Move GNOME's clock to the right"
+msgstr "Pindahkan jam GNOME ke kanan"
+
+msgid "Weather"
+msgstr "Cuaca"
+
+msgid "Show the weather"
+msgstr "Tampilkan cuaca"
+
+msgid "Next to the date when the notch opens"
+msgstr "Di samping tanggal saat notch terbuka"
+
+msgid "Location"
+msgstr "Lokasi"
+
+msgid "A city like Jakarta, or coordinates like -6.2,106.8; asks open-meteo.com"
+msgstr "Kota seperti Jakarta, atau koordinat seperti -6.2,106.8; bertanya ke open-meteo.com"
+
+msgid "Units"
+msgstr "Satuan"
+
+msgid "Celsius"
+msgstr "Celsius"
+
+msgid "Fahrenheit"
+msgstr "Fahrenheit"
+
+msgid "Calendar"
+msgstr "Kalender"
+
+msgid "Show events"
+msgstr "Tampilkan acara"
+
+msgid "From GNOME's calendar, when the notch opens"
+msgstr "Dari kalender GNOME, saat notch terbuka"
+
+msgid "Remind before"
+msgstr "Ingatkan sebelum"
+
+msgid "Minutes before it starts; 0 for no reminder"
+msgstr "Menit sebelum dimulai; 0 untuk tanpa pengingat"
+
+msgid "Events in home"
+msgstr "Acara di beranda"
+
+msgid "Today first, then tomorrow"
+msgstr "Hari ini dulu, lalu besok"
+
+msgid "Count down to the start"
+msgstr "Hitung mundur ke awal acara"
+
+msgid "From the reminder, the closed notch shows the minutes left"
+msgstr "Sejak pengingat, notch tertutup menampilkan sisa menit"
+
+msgid "Keep a clipboard history"
+msgstr "Simpan riwayat papan klip"
+
+msgid "Text and pictures you copy, in memory only"
+msgstr "Teks dan gambar yang kamu salin, hanya di memori"
+
+msgid "Entries to keep"
+msgstr "Jumlah yang disimpan"
+
+msgid "Besides the pinned ones"
+msgstr "Selain yang disematkan"
+
+msgid "Music"
+msgstr "Musik"
+
+msgid "Show lyrics"
+msgstr "Tampilkan lirik"
+
+msgid "Look up lyrics online"
+msgstr "Cari lirik online"
+
+msgid "Sends artist, title, album and duration to lrclib.net"
+msgstr "Mengirim artis, judul, album dan durasi ke lrclib.net"
+
+msgid "Romanize lyrics"
+msgstr "Romanisasi lirik"
+
+msgid "A line in Latin letters under Korean and Japanese lines"
+msgstr "Baris berhuruf Latin di bawah baris Korea dan Jepang"
+
+msgid "Bars that follow the music"
+msgstr "Bilah yang mengikuti musik"
+
+msgid "Records what plays to measure it; GNOME may show its microphone indicator meanwhile"
+msgstr "Merekam yang diputar untuk mengukurnya; GNOME mungkin menampilkan indikator mikrofon selama itu"
+
+msgid "System popups"
+msgstr "Popup sistem"
+
+msgid "Volume and brightness in the notch"
+msgstr "Volume dan kecerahan di notch"
+
+msgid "Instead of GNOME's popup"
+msgstr "Menggantikan popup GNOME"
+
+msgid "How long"
+msgstr "Berapa lama"
+
+msgid "Milliseconds after the last change"
+msgstr "Milidetik setelah perubahan terakhir"
+
+msgid "Caps Lock"
+msgstr "Caps Lock"
+
+msgid "Num Lock"
+msgstr "Num Lock"
+
+msgid "Keyboard layout"
+msgstr "Tata letak papan ketik"
+
+msgid "The new layout when you switch"
+msgstr "Tata letak baru saat kamu menggantinya"
+
+msgid "Notifications in the notch"
+msgstr "Notifikasi di notch"
+
+msgid "Instead of GNOME's banner"
+msgstr "Menggantikan banner GNOME"
+
+msgid "Milliseconds; hovering keeps it open"
+msgstr "Milidetik; tetap terbuka selama kursor di atasnya"
+
+msgid "Show the message"
+msgstr "Tampilkan pesannya"
+
+msgid "Off shows only who sent it and the app"
+msgstr "Kalau mati, hanya tampil pengirim dan aplikasinya"
+
+msgid "Screenshot previews"
+msgstr "Pratinjau tangkapan layar"
+
+msgid "Open a new screenshot, show it in Files or keep it on the shelf"
+msgstr "Buka tangkapan layar baru, tampilkan di Berkas atau simpan di rak"
+
+msgid "Live activities"
+msgstr "Aktivitas langsung"
+
+msgid "Show live activities"
+msgstr "Tampilkan aktivitas langsung"
+
+msgid "Builds, downloads and anything run with the nokta command"
+msgstr "Build, unduhan dan apa pun yang dijalankan dengan perintah nokta"
+
+msgid "End after no update for"
+msgstr "Akhiri jika tidak ada kabar selama"
+
+msgid "Minutes"
+msgstr "Menit"
+
+msgid "Downloads and updates"
+msgstr "Unduhan dan pembaruan"
+
+msgid "Progress that apps show on the dock, and system updates"
+msgstr "Progres yang ditampilkan aplikasi di dock, dan pembaruan sistem"
+
+msgid "File shelf"
+msgstr "Rak berkas"
+
+msgid "Keep files on the notch"
+msgstr "Simpan berkas di notch"
+
+msgid "Drop files on the notch, then drag them out again into any app"
+msgstr "Jatuhkan berkas ke notch, lalu seret keluar lagi ke aplikasi mana pun"
+
+msgid "Device alerts"
+msgstr "Peringatan perangkat"
+
+msgid "Show device alerts"
+msgstr "Tampilkan peringatan perangkat"
+
+msgid "Bluetooth audio, charger and battery"
+msgstr "Audio Bluetooth, pengisi daya dan baterai"
+
+msgid "Milliseconds"
+msgstr "Milidetik"
+
+msgid "Privacy"
+msgstr "Privasi"
+
+msgid "Privacy dots"
+msgstr "Titik privasi"
+
+msgid "Green while the camera is on, orange while the microphone or screen is used"
+msgstr "Hijau saat kamera menyala, oranye saat mikrofon atau layar dipakai"
+
+msgid "Calls"
+msgstr "Panggilan"
+
+msgid "While the microphone is on: the app and how long, with a mute button in home"
+msgstr "Selama mikrofon menyala: aplikasinya dan berapa lama, dengan tombol bisu di beranda"
+
+msgid "Focus timer"
+msgstr "Timer fokus"
+
+msgid "Focus length"
+msgstr "Lama fokus"
+
+msgid "Minutes; start it from Quick Settings"
+msgstr "Menit; mulai dari Pengaturan Cepat"
+
+msgid "Break length"
+msgstr "Lama istirahat"
+
+msgid "Minutes after each focus session; 0 for none"
+msgstr "Menit setelah tiap sesi fokus; 0 untuk tanpa istirahat"
+
+msgid "Long break length"
+msgstr "Lama istirahat panjang"
+
+msgid "Sessions before a long break"
+msgstr "Sesi sebelum istirahat panjang"
+
+msgid "Focus sessions; 0 for no long breaks"
+msgstr "Sesi fokus; 0 untuk tanpa istirahat panjang"
+
+msgid "Play a sound"
+msgstr "Putar suara"
+
+msgid "When a focus session, a break, a countdown or an alarm ends"
+msgstr "Saat sesi fokus, istirahat, hitung mundur atau alarm berakhir"
+
+msgid "Quiet notifications"
+msgstr "Senyapkan notifikasi"
+
+msgid "No banners while you focus"
+msgstr "Tanpa banner selama kamu fokus"
+
+msgid "Starts focus or stops the timer, like <Super><Alt>f; empty for none"
+msgstr "Memulai fokus atau menghentikan timer, misalnya <Super><Alt>f; kosongkan jika tidak perlu"
+
+msgid "Home"
+msgstr "Beranda"
+
+msgid "Quick toggles"
+msgstr "Sakelar cepat"
+
+msgid "Up to 3, in this order"
+msgstr "Maksimal 3, sesuai urutan ini"
+
+msgid "Tiles"
+msgstr "Ubin"
+
+msgid "Up to 5, in this order"
+msgstr "Maksimal 5, sesuai urutan ini"
+
+msgid "Cover's color"
+msgstr "Warna sampul"
+
+msgid "Alert glow"
+msgstr "Cahaya peringatan"
+
+msgid "All settings"
+msgstr "Semua pengaturan"
+
+msgid "Drop to keep here"
+msgstr "Jatuhkan untuk disimpan di sini"
+
+msgid "Stopwatch"
+msgstr "Stopwatch"
+
+msgid "Alarm"
+msgstr "Alarm"
+
+msgid "Paused"
+msgstr "Dijeda"
+
+msgid "Timer done"
+msgstr "Timer selesai"
+
+#, c-format
+msgid "Alarm · %s"
+msgstr "Alarm · %s"
+
+#, c-format
+msgid "%d min left"
+msgstr "sisa %d mnt"
+
+#, c-format
+msgid "Paused, %s"
+msgstr "Dijeda, %s"
+
+#, c-format
+msgid "Long break, %s"
+msgstr "Istirahat panjang, %s"
+
+#, c-format
+msgid "Break, %s"
+msgstr "Istirahat, %s"
+
+#, c-format
+msgid "%d min long break"
+msgstr "Istirahat panjang %d mnt"
+
+#, c-format
+msgid "%d min break"
+msgstr "Istirahat %d mnt"
+
+msgid "Focus done"
+msgstr "Fokus selesai"
+
+msgid "Time for a break"
+msgstr "Waktunya istirahat"
+
+msgid "Break over"
+msgstr "Istirahat selesai"
+
+msgid "Ready to focus"
+msgstr "Siap fokus"
+
+msgid "Pause"
+msgstr "Jeda"
+
+msgid "Resume"
+msgstr "Lanjutkan"
+
+msgid "Stop"
+msgstr "Hentikan"
+
+#, c-format
+msgid "Start focus, %d min"
+msgstr "Mulai fokus, %d mnt"
+
+#, c-format
+msgid "Start long break, %d min"
+msgstr "Mulai istirahat panjang, %d mnt"
+
+#, c-format
+msgid "Start break, %d min"
+msgstr "Mulai istirahat, %d mnt"
+
+msgid "Choose…"
+msgstr "Pilih…"
+
+msgid "Remove"
+msgstr "Hapus"
+
+msgid "Images"
+msgstr "Gambar"
+
+msgid "Move up"
+msgstr "Naikkan"
+
+msgid "Move down"
+msgstr "Turunkan"
+
+msgid "Can't read this picture"
+msgstr "Gambar ini tidak bisa dibaca"
+
+msgid "Nokta's service is not running, so changes can't be saved"
+msgstr "Layanan Nokta tidak berjalan, jadi perubahan tidak bisa disimpan"
+
+msgid "How to Install"
+msgstr "Cara Memasang"
+
+msgid "Config file"
+msgstr "Berkas konfigurasi"
+
+msgid "Open config.toml"
+msgstr "Buka config.toml"
+
+msgid "Reset"
+msgstr "Atur ulang"
+
+msgid "Reset all settings"
+msgstr "Atur ulang semua pengaturan"
+
+msgid "Replace config.toml with the default one"
+msgstr "Ganti config.toml dengan yang bawaan"
+
+msgid "Reset all settings?"
+msgstr "Atur ulang semua pengaturan?"
+
+msgid "Every setting goes back to its default. config.toml is replaced, including any comments you added."
+msgstr "Semua pengaturan kembali ke bawaan. config.toml diganti, termasuk komentar yang kamu tambahkan."
+
+msgid "Cancel"
+msgstr "Batal"
+
+msgid "Installing software"
+msgstr "Memasang perangkat lunak"
+
+msgid "Removing software"
+msgstr "Menghapus perangkat lunak"
+
+msgid "Installing updates"
+msgstr "Memasang pembaruan"
+
+msgid "Upgrading the system"
+msgstr "Meningkatkan sistem"
+
+msgid "Downloading"
+msgstr "Mengunduh"
+
+msgid "Installing"
+msgstr "Memasang"
+
+msgid "Updating"
+msgstr "Memperbarui"
+
+msgid "Removing"
+msgstr "Menghapus"
+
+msgid "Cleaning up"
+msgstr "Membersihkan"
+
+msgid "Resolving dependencies"
+msgstr "Menyelesaikan dependensi"
+
+msgid "Checking signatures"
+msgstr "Memeriksa tanda tangan"
+
+msgid "Testing changes"
+msgstr "Menguji perubahan"
+
+msgid "Applying changes"
+msgstr "Menerapkan perubahan"
+
+msgid "Cancelling"
+msgstr "Membatalkan"
+
+msgid "Waiting"
+msgstr "Menunggu"
+
+msgid "Waiting for authorization"
+msgstr "Menunggu otorisasi"
+
+msgid "Preparing"
+msgstr "Menyiapkan"
+
+msgid "Working on files"
+msgstr "Mengolah berkas"
+
+msgid "In progress"
+msgstr "Sedang berjalan"

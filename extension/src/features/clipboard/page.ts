@@ -19,6 +19,7 @@ import {
 } from './logic/entries.js';
 import { iconFor } from '../../shared/icons.js';
 import { SECONDARY, TERTIARY } from '../../shared/dim.js';
+import { _ } from '../../shared/logic/i18n.js';
 
 export interface ClipboardPageHandlers {
     copy(id: string): void;
@@ -60,7 +61,7 @@ export class ClipboardPage {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-clip-page' }));
         this.search = new St.Entry({
             style_class: 'nokta-clip-search',
-            hint_text: 'Search copies',
+            hint_text: _('Search copies'),
             can_focus: true,
             height: SEARCH_HEIGHT,
             visible: false,
@@ -166,10 +167,10 @@ export class ClipboardPage {
         this.pauseButton.opacity = this.paused ? 255 : 150;
         const shown = this.shown();
         if (shown.length === 0) {
-            const empty = this.paused ? 'Paused: copies are not kept' : 'Nothing copied yet';
+            const empty = this.paused ? _('Paused: copies are not kept') : _('Nothing copied yet');
             const note = new St.Label({
                 style_class: 'nokta-clip-empty',
-                text: this.entries.length > 0 ? 'No match' : empty,
+                text: this.entries.length > 0 ? _('No match') : empty,
                 height: ROW_HEIGHT,
                 y_align: Clutter.ActorAlign.CENTER,
                 style: `color: ${withAlpha(this.foreground, 0.6)};`,

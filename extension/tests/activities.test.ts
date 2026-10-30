@@ -8,6 +8,7 @@ import {
     formatElapsed,
     progressLabel,
 } from '../src/features/activities/logic/activities.js';
+import { setTranslator } from '../src/shared/logic/i18n.js';
 import { chooseIndicator, INDICATOR_SLOTS, slotFor } from '../src/shared/logic/indicator.js';
 import { panelHeight, subPageHeight, type PanelRow } from '../src/features/panel/logic/height.js';
 
@@ -121,4 +122,19 @@ test('each indicator has its widget, and the focus timer and the clocks share on
     assert.equal(slotFor('shelf'), 'shelf');
     // In the order they sit over the clock.
     assert.deepEqual(INDICATOR_SLOTS, ['recording', 'call', 'timer', 'badge', 'shelf', 'countdown']);
+});
+
+test('daemon_titles_are_translated_where_they_arrive', () => {
+    const words: Record<string, string> = { 'Installing updates': 'Memasang pembaruan', Downloading: 'Mengunduh' };
+    setTranslator({ gettext: (s) => words[s] ?? s, ngettext: (s) => s });
+    try {
+        const [row] = activitiesFrom([['pk', 'Installing updates', 'Downloading', '', 0.5, 1]]);
+        assert.equal(row.title, 'Memasang pembaruan');
+        assert.equal(row.detail, 'Mengunduh');
+        assert.equal(endedAlert('Installing updates', true, '', 0).title, 'Memasang pembaruan');
+        // Text a script sent stays as it is.
+        assert.equal(activitiesFrom([['b', 'cargo build', 'Compiling', '', -1, 1]])[0].title, 'cargo build');
+    } finally {
+        setTranslator(null);
+    }
 });

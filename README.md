@@ -520,6 +520,13 @@ countdown.
 
 </details>
 
+## Languages
+
+Nokta speaks English and Indonesian, and follows the language of your
+session: the notch, its alerts and the settings window all switch. Song
+titles, app names and what you type stay as they are. To add a language,
+see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
+
 ## Privacy
 
 - **Lyrics.** To find lyrics, `noktad` sends the artist, title, album and
@@ -631,7 +638,7 @@ daemon on macOS and Windows on every change.
 Bug reports and pull requests are welcome. Read
 [CONTRIBUTING.md](CONTRIBUTING.md) first, and
 [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.
-`tools/devshell/readme-shots.sh` takes the screenshots above again.
+`tools/devshell/readme-shots.sh` takes the screenshots above again, in English.
 
 ## License
 

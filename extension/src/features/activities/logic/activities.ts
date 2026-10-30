@@ -1,3 +1,5 @@
+import { _, format } from '../../../shared/logic/i18n.js';
+
 /** One running activity from io.nokta.Activities1. */
 export interface Activity {
     id: string;
@@ -28,13 +30,14 @@ const isRow = (row: unknown): row is [string, string, string, string, number, nu
     row.slice(0, 4).every((v) => typeof v === 'string') &&
     row.slice(4).every((v) => typeof v === 'number' && Number.isFinite(v));
 
-/** The `Activities` property, newest first; rows of the wrong shape are left out. */
+/** The `Activities` property, newest first, in the user's language; rows of the wrong shape are left out. */
 export function activitiesFrom(raw: unknown): Activity[] {
     if (!Array.isArray(raw)) return [];
     return raw.filter(isRow).map(([id, title, detail, icon, progress, startedUs]) => ({
         id,
-        title,
-        detail,
+        // Nokta's own titles are in daemon-strings.ts; anything else passes through.
+        title: _(title), // i18n: runtime
+        detail: _(detail), // i18n: runtime
         icon,
         progress,
         startedUs,
@@ -55,9 +58,9 @@ export function formatElapsed(us: number): string {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    if (h > 0) return m > 0 ? `${h} h ${m} min` : `${h} h`;
-    if (m > 0) return s > 0 ? `${m} min ${s} s` : `${m} min`;
-    return `${s} s`;
+    if (h > 0) return m > 0 ? format(_('%d h %d min'), h, m) : format(_('%d h'), h);
+    if (m > 0) return s > 0 ? format(_('%d min %d s'), m, s) : format(_('%d min'), m);
+    return format(_('%d s'), s);
 }
 
 /** The alert for an `Ended` signal: the message, or how long it took. */
@@ -65,8 +68,8 @@ export function endedAlert(title: string, success: boolean, message: string, ela
     const elapsed = formatElapsed(elapsedUs);
     return {
         icon: success ? 'object-select-symbolic' : 'dialog-error-symbolic',
-        title,
-        detail: message || (success ? `Done in ${elapsed}` : `Failed after ${elapsed}`),
+        title: _(title), // i18n: runtime
+        detail: message || format(success ? _('Done in %s') : _('Failed after %s'), elapsed),
         urgent: !success,
     };
 }

@@ -1,3 +1,5 @@
+import { _, format } from '../../../shared/logic/i18n.js';
+
 /** One click of the lyrics view's − or + button. */
 export const OFFSET_STEP_MS = 250;
 /** The daemon keeps the offset within this either way. */
@@ -11,6 +13,6 @@ export function stepOffset(offsetMs: number, direction: 1 | -1): number {
 /** `On time`, `0.5 s earlier` or `0.25 s later`, in hundredths of a second. */
 export function offsetLabel(offsetMs: number): string {
     const seconds = Math.round(Math.abs(offsetMs) / 10) / 100;
-    if (seconds === 0) return 'On time';
-    return `${seconds} s ${offsetMs > 0 ? 'earlier' : 'later'}`;
+    if (seconds === 0) return _('On time');
+    return format(offsetMs > 0 ? _('%s s earlier') : _('%s s later'), seconds);
 }

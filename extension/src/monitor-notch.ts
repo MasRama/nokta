@@ -94,6 +94,7 @@ import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
 import { motionKicks, type AlertMotion } from './shared/logic/alert-motion.js';
 import { withAlpha } from './shared/logic/color.js';
+import { _ } from './shared/logic/i18n.js';
 import { flies, ROW_IN, staggerDelays, type Rect as Place } from './shared/logic/morph.js';
 import { centerOffset } from './shared/logic/motion.js';
 import { formatDuration } from './shared/logic/format.js';
@@ -379,7 +380,7 @@ export class MonitorNotch implements ShelfNotch {
             searching: (entry) => this.setSearchField(entry),
             resized: () => this.resizePage(),
         });
-        this.clipboardSubPage = new SubPage('Clipboard', this.clipboardPage.actor, () => this.setPage(null));
+        this.clipboardSubPage = new SubPage(_('Clipboard'), this.clipboardPage.actor, () => this.setPage(null));
         for (const action of this.clipboardPage.actions) this.clipboardSubPage.addAction(action);
         // What a preset starts shows in home, so it goes back there.
         this.timerPage = new TimerPage({
@@ -392,7 +393,7 @@ export class MonitorNotch implements ShelfNotch {
                 this.setPage(null);
             },
         });
-        this.timerSubPage = new SubPage('Timer', this.timerPage.actor, () => this.setPage(null));
+        this.timerSubPage = new SubPage(_('Timer'), this.timerPage.actor, () => this.setPage(null));
         // A change shows at once; when the daemon refuses it, the page shows the old value again.
         this.settingsPage = new SettingsPage({
             set: (key, value) => {
@@ -400,7 +401,7 @@ export class MonitorNotch implements ShelfNotch {
             },
             openWindow: () => this.onPanelClick(() => panel.openSettings()),
         });
-        this.settingsSubPage = new SubPage('Settings', this.settingsPage.actor, () => this.setPage(null));
+        this.settingsSubPage = new SubPage(_('Settings'), this.settingsPage.actor, () => this.setPage(null));
         this.pages.add_child(this.clipboardSubPage.actor);
         this.pages.add_child(this.timerSubPage.actor);
         this.pages.add_child(this.settingsSubPage.actor);

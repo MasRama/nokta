@@ -12,6 +12,7 @@ import { shownControls, type HomeLayout, type HomeTile, type QuickToggle, type Q
 import { SECONDARY } from '../../shared/dim.js';
 import { TONES } from '../../shared/logic/tones.js';
 import { iconFor } from '../../shared/icons.js';
+import { _, N_ } from '../../shared/logic/i18n.js';
 
 /** A live activity, as one panel row shows it. */
 export interface PanelActivity {
@@ -130,20 +131,20 @@ export interface PanelHandlers {
 
 /** Each toggle's icon, name and tone. */
 const TOGGLES: Array<[QuickToggle, string, string, string]> = [
-    ['do_not_disturb', 'notifications-disabled-symbolic', 'Do Not Disturb', TONES.do_not_disturb],
-    ['caffeine', 'nokta-caffeine', 'Caffeine', TONES.caffeine],
-    ['dark_style', 'dark-mode-symbolic', 'Dark Style', TONES.dark_style],
-    ['night_light', 'night-light-symbolic', 'Night Light', TONES.night_light],
+    ['do_not_disturb', 'notifications-disabled-symbolic', N_('Do Not Disturb'), TONES.do_not_disturb],
+    ['caffeine', 'nokta-caffeine', N_('Caffeine'), TONES.caffeine],
+    ['dark_style', 'dark-mode-symbolic', N_('Dark Style'), TONES.dark_style],
+    ['night_light', 'night-light-symbolic', N_('Night Light'), TONES.night_light],
 ];
 
 /** Each tile's icon, name and tone. */
 const TILES: Array<[HomeTile, string, string, string]> = [
-    ['notifications', 'preferences-system-notifications-symbolic', 'Notifications', TONES.notifications],
-    ['focus', 'nokta-focus', 'Focus', TONES.focus],
-    ['timer', 'nokta-timer', 'Timer', TONES.countdown],
-    ['clipboard', 'edit-paste-symbolic', 'Clipboard', TONES.clipboard],
-    ['settings', 'emblem-system-symbolic', 'Settings', TONES.settings],
-    ['screenshot', 'camera-photo-symbolic', 'Screenshot', TONES.screenshot],
+    ['notifications', 'preferences-system-notifications-symbolic', N_('Notifications'), TONES.notifications],
+    ['focus', 'nokta-focus', N_('Focus'), TONES.focus],
+    ['timer', 'nokta-timer', N_('Timer'), TONES.countdown],
+    ['clipboard', 'edit-paste-symbolic', N_('Clipboard'), TONES.clipboard],
+    ['settings', 'emblem-system-symbolic', N_('Settings'), TONES.settings],
+    ['screenshot', 'camera-photo-symbolic', N_('Screenshot'), TONES.screenshot],
 ];
 
 /** One live activity: icon chip in the accent, title, detail and elapsed time, and a thin bar. */
@@ -270,7 +271,7 @@ class RecordingRow {
 
     constructor(handlers: Pick<PanelHandlers, 'stopRecording'>) {
         const title = new St.Label({
-            text: 'Screen recording',
+            text: _('Screen recording'),
             style_class: 'nokta-panel-recording-title',
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
@@ -406,7 +407,7 @@ class EventRow {
         for (const child of [this.strip, this.time, this.title, this.detail]) box.add_child(child);
         this.join = new St.Button({
             style_class: 'nokta-panel-join',
-            label: 'Join',
+            label: _('Join'),
             style: `background-color: ${withAlpha(TONES.calendar, 0.22)}; color: ${TONES.calendar};`,
             x_expand: true,
             x_align: Clutter.ActorAlign.END,
@@ -506,7 +507,7 @@ export class HomePanel {
 
         this.pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
         for (const [which, icon, label, tone] of TOGGLES) {
-            const pill = new TogglePill(iconFor(icon), label, tone, () => handlers.toggle(which));
+            const pill = new TogglePill(iconFor(icon), _(label), tone, () => handlers.toggle(which)); // i18n: runtime
             this.toggles.set(which, pill);
             this.pills.add_child(pill.actor);
         }
@@ -520,7 +521,7 @@ export class HomePanel {
         };
         this.tileRow = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
         for (const [which, icon, label, tone] of TILES) {
-            const tile = new Tile(iconFor(icon), label, tone, actions[which]);
+            const tile = new Tile(iconFor(icon), _(label), tone, actions[which]); // i18n: runtime
             this.tiles.set(which, tile);
             this.tileRow.add_child(tile.actor);
         }

@@ -9,6 +9,7 @@ import { withAlpha } from '../../shared/logic/color.js';
 import { THEMES, themeFor, themeKeyFor, type PictureState } from '../../shared/logic/theme.js';
 import type { Appearance } from './logic/parse.js';
 import { MOTION_PRESETS, motionPreset, themeSwatches } from './logic/quick.js';
+import { _, N_ } from '../../shared/logic/i18n.js';
 
 /**
  * The body's height: the themes row (50), three switches, motion and "All
@@ -31,9 +32,9 @@ export interface SettingsPageColors {
 
 /** The `[appearance]` switches the page shows, with their labels. */
 const SWITCHES: Array<[key: string, label: string, read: (a: Appearance) => boolean]> = [
-    ['use_album_accent', "Cover's color", (a) => a.useAlbumAccent],
-    ['progress_line', 'Progress line', (a) => a.progressLine],
-    ['alert_glow', 'Alert glow', (a) => a.alertGlow],
+    ['use_album_accent', N_("Cover's color"), (a) => a.useAlbumAccent],
+    ['progress_line', N_('Progress line'), (a) => a.progressLine],
+    ['alert_glow', N_('Alert glow'), (a) => a.alertGlow],
 ];
 
 /** A switch drawn like GNOME's: a pill and a knob that sits right while on. */
@@ -86,7 +87,7 @@ export class SettingsPage {
 
         for (const [key, label, read] of SWITCHES) {
             const view = new Switch();
-            const row = this.row(label, view.actor);
+            const row = this.row(_(label), view.actor); // i18n: runtime
             row.connect('clicked', () => {
                 const a = this.appearance;
                 if (!a) return;
@@ -101,7 +102,7 @@ export class SettingsPage {
         for (const { label, speed } of MOTION_PRESETS) {
             const button = new St.Button({
                 style_class: 'nokta-settings-motion-button',
-                label,
+                label: _(label), // i18n: runtime
                 can_focus: true,
             });
             button.connect('clicked', () =>
@@ -110,11 +111,11 @@ export class SettingsPage {
             this.motion.push(button);
             presets.add_child(button);
         }
-        this.actor.add_child(this.line('Motion', presets));
+        this.actor.add_child(this.line(_('Motion'), presets));
 
         const chevron = new St.Icon({ gicon: iconFor('pan-end-symbolic'), style_class: 'nokta-settings-chevron' });
         chevron.opacity = SECONDARY;
-        const all = this.row('All settings', chevron);
+        const all = this.row(_('All settings'), chevron);
         all.add_style_class_name('nokta-settings-all');
         all.connect('clicked', () => handlers.openWindow());
         this.actor.add_child(all);
