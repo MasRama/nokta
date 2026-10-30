@@ -71,10 +71,18 @@ jobs:
           tar -C build -czf "build/$name.tar.gz" "$name"
           "build/$name/noktad" --version | grep -qx "noktad $VERSION"
           "build/$name/nokta" --version | grep -qx "nokta $VERSION"
+      # `nokta update` refuses a tarball whose sum is not listed here.
+      - name: Write the checksums
+        working-directory: build
+        run: |
+          sha256sum "noktad-$VERSION-x86_64-linux.tar.gz" \
+            nokta@nokta.io.shell-extension.zip > SHA256SUMS
+          sha256sum -c SHA256SUMS
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$TAG" --clobber \
             "build/noktad-$VERSION-x86_64-linux.tar.gz" \
-            build/nokta@nokta.io.shell-extension.zip
+            build/nokta@nokta.io.shell-extension.zip \
+            build/SHA256SUMS
