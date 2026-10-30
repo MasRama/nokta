@@ -160,6 +160,8 @@ Then:
 
 1. Download `noktad-<version>-x86_64-linux.tar.gz` from the
    [latest release](https://github.com/MasRama/nokta/releases/latest).
+   From 0.11 on, the release also has `SHA256SUMS`; download it next to
+   the tarball and check it with `sha256sum -c --ignore-missing SHA256SUMS`.
 2. Unpack it and run the installer:
 
    ```sh

@@ -93,8 +93,8 @@ Releases are automated with
 [release-please](https://github.com/googleapis/release-please). It keeps a
 release pull request open that collects the changes on `main`. When a
 maintainer merges it, it tags the version, writes `CHANGELOG.md`, and CI
-builds and attaches the daemon archive and the extension zip to the GitHub
-release. Version numbers follow [SemVer](https://semver.org/); the daemon and
+builds and attaches the daemon archive, the extension zip and their
+`SHA256SUMS` to the GitHub release. Version numbers follow [SemVer](https://semver.org/); the daemon and
 the extension always share one version.
 
 ## Code of conduct
