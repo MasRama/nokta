@@ -3,7 +3,8 @@
   <!--
     GNOME binds keys only through GSettings. The extension copies
     [timer] shortcut and [behavior] open_shortcut from config.toml here;
-    config.toml is the place to change them.
+    config.toml is the place to change them. tour-shown is the extension's
+    own: the settings window's "Show the tour again" turns it off.
   -->
   <schema id="org.gnome.shell.extensions.nokta" path="/org/gnome/shell/extensions/nokta/">
     <key name="focus-shortcut" type="as">
@@ -13,6 +14,10 @@
     <key name="open-shortcut" type="as">
       <default>[]</default>
       <summary>Open the notch for the keyboard, or close it</summary>
+    </key>
+    <key name="tour-shown" type="b">
+      <default>false</default>
+      <summary>The first-run tour has ended</summary>
     </key>
   </schema>
 </schemalist>

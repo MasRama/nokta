@@ -56,7 +56,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf,
-                    clipboard, downloads, system, updates
+                    clipboard, downloads, system, updates, tour
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
                     keyboard focus, D-Bus helpers, icons, dim levels
@@ -492,6 +492,17 @@ How both sides stay honest:
   menu, the output menu) takes its own grab on top and gives the focus back
   when it closes. Focused buttons get an inset ring from the stylesheet,
   dark on a light palette (`nokta-light`).
+- **The first-run tour** (`features/tour`). Two seconds after `enable()`,
+  while the extension's GSettings key `tour-shown` is false, the session
+  opens the primary monitor's notch held on the `tour` view, with the
+  keyboard grab of the open shortcut and Next focused, so Enter goes on and
+  Escape skips. Its steps are pure (`tour/logic/steps.ts`); the second one
+  says how the notch opens (`open_on`, `open_shortcut`). The tour ends with
+  Done, Skip, Escape or the notch closing any other way, and the key turns
+  true. A fullscreen app that hides the notch makes it wait instead; it
+  opens once the monitor is no longer fullscreen. The settings window's
+  "Show the tour again" turns the key off, and the session, watching it,
+  shows the tour again.
 - The notch changes size on springs (`shared/logic/spring.ts`): width and
   height step on the same frames of one `Clutter.Timeline`, which runs only
   until both settle, so they move together and a new size mid-way bends the

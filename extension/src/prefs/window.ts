@@ -31,9 +31,10 @@ const COLLAPSE_BELOW = 'max-width: 640sp';
  * Fills the extension's preferences window with every setting of config.toml,
  * in a window of Nokta's own: a sidebar with Nokta's pages and icons, and
  * Appearance opening on a live preview and the theme gallery. `path` is the
- * extension's folder, for its icons.
+ * extension's folder, for its icons; `showTour` has the shell show the
+ * first-run tour again.
  */
-export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
+export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour: () => void): void {
     const rows: SettingRow[] = [];
     const banners: Adw.PreferencesGroup[] = [];
     const pending = new Map<string, Pending>();
@@ -148,6 +149,9 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
             page.add(group);
         }
         if (spec.name === 'behavior') {
+            const tour = new Adw.PreferencesGroup({ title: _('Getting started') });
+            tour.add(tourRow(showTour, toast));
+            page.add(tour);
             const group = new Adw.PreferencesGroup({ title: _('Config file') });
             group.add(openConfigRow(window, toast));
             group.add(resetRow);
@@ -280,6 +284,22 @@ function openUri(window: Gtk.Widget, uri: string, toast: (title: string) => void
             toast(errorMessage(error));
         }
     });
+}
+
+/** Works without noktad: the tour is the shell's own. */
+function tourRow(showTour: () => void, toast: (title: string) => void): Adw.ActionRow {
+    const button = new Gtk.Button({ label: _('Show'), valign: Gtk.Align.CENTER });
+    const row = new Adw.ActionRow({
+        title: _('Show the tour again'),
+        subtitle: _('The notch walks you through Nokta once more'),
+        activatable_widget: button,
+    });
+    row.add_suffix(button);
+    button.connect('clicked', () => {
+        showTour();
+        toast(_('The tour shows in the notch'));
+    });
+    return row;
 }
 
 function resetAllRow(window: Gtk.Widget, reset: () => Promise<void>, toast: (title: string) => void): Adw.ActionRow {

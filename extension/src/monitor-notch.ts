@@ -90,6 +90,7 @@ import {
     TimerPage,
     type TimerClient,
 } from './features/timer/index.js';
+import { tourAfter, tourStep, TourView } from './features/tour/index.js';
 import { IndicatorWidgets } from './indicator-widgets.js';
 import { drawnView, type Drawn, type Message, resizeKind, showsAlert, viewSize } from './logic/views.js';
 import { IdleClock } from './shared/clock.js';
@@ -167,6 +168,14 @@ export interface PanelSource {
     installUpdate(): void;
     /** The newer Nokta's release page, in the browser. */
     openRelease(): void;
+}
+
+/** How the first-run tour ends; owned by the session. */
+export interface TourEnds {
+    /** The tour ended: Done, Skip, Escape or a click outside the notch. */
+    done(): void;
+    /** Open settings ended it; called after done(). */
+    openSettings(): void;
 }
 
 /** The parked files and the helper window; owned by the session. */
@@ -277,6 +286,13 @@ export class MonitorNotch implements ShelfNotch {
     private screenshotPress: ((button: ScreenshotButton) => void) | null = null;
     private readonly downloadView = downloadPreview((button) => this.onDownloadPress(button));
     private downloadPress: ((button: DownloadButton) => void) | null = null;
+    private readonly tourView = new TourView({
+        next: () => this.onTourPress('next'),
+        skip: () => this.onTourPress('skip'),
+        openSettings: () => this.endTour(true),
+    });
+    /** The first-run tour from startTour() until it ends; it waits while a fullscreen app hides the notch. */
+    private tour: { step: number; ends: TourEnds } | null = null;
     /** Which message the notification timer is showing. */
     private notificationKind: Message = 'notification';
     private readonly privacyDots = new PrivacyDots();
@@ -454,6 +470,7 @@ export class MonitorNotch implements ShelfNotch {
             screenshot: this.screenshotView.actor,
             download: this.downloadView.actor,
             drop: this.dropView.actor,
+            tour: this.tourView.actor,
         };
         for (const [mode, actor] of Object.entries(this.views)) {
             actor.x_align = Clutter.ActorAlign.CENTER;
@@ -559,6 +576,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationButton = null;
         this.screenshotPress = null;
         this.downloadPress = null;
+        this.tour = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
@@ -577,6 +595,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationView.destroy();
         this.screenshotView.destroy();
         this.downloadView.destroy();
+        this.tourView.destroy();
         this.idlePanel.destroy();
         this.clipboardPage.destroy();
         this.clipboardSubPage.destroy();
@@ -782,6 +801,8 @@ export class MonitorNotch implements ShelfNotch {
         // An alert from before goes with the notch; one over the app is no longer over it.
         this.alertOverFullscreen = false;
         this.applyFullscreen();
+        // A tour that waited for the app shows now.
+        this.openTour();
     }
 
     private onNotificationTimer(): void {
@@ -914,7 +935,60 @@ export class MonitorNotch implements ShelfNotch {
         const view = this.views[this.drawn];
         const focus = keyFocus();
         if (focus && focus !== view && view.contains(focus)) return;
-        if (!focusFirst(view)) this.notch.actor.grab_key_focus();
+        // Enter goes on through the tour.
+        if (this.drawn === 'tour') this.tourView.focusNext();
+        else if (!focusFirst(view)) this.notch.actor.grab_key_focus();
+    }
+
+    // The first-run tour.
+
+    /** Starts the tour here, held open with the keyboard, or once no fullscreen app hides the notch. */
+    startTour(ends: TourEnds): void {
+        if (this.destroyed) return;
+        this.tour = { step: 0, ends };
+        this.showTourStep();
+        this.openTour();
+    }
+
+    /** Opens the notch held on the tour, unless a fullscreen app hides it. */
+    private openTour(): void {
+        if (!this.tour || this.destroyed || !this.canShow()) return;
+        if (!this.machine.held) {
+            this.machine.open(true);
+            this.updateGrab();
+        }
+        this.draw(this.overlay());
+        this.focusView();
+    }
+
+    /** The step as the settings say the notch opens. */
+    private showTourStep(): void {
+        if (!this.tour) return;
+        const { openOn, openShortcut } = this.sources.settings.behavior;
+        this.tourView.show(tourStep(this.tour.step, { openOn, shortcut: openShortcut }), this.tour.step);
+    }
+
+    private onTourPress(press: 'next' | 'skip'): void {
+        if (!this.tour) return;
+        const step = tourAfter(this.tour.step, press);
+        if (step === null) {
+            this.endTour(false);
+            return;
+        }
+        this.tour.step = step;
+        this.showTourStep();
+        this.tourView.focusNext();
+    }
+
+    /** Ends the tour and closes the notch; `openSettings` when its button ended it. */
+    private endTour(openSettings: boolean): void {
+        const ends = this.tour?.ends;
+        if (!ends) return;
+        this.tour = null;
+        if (this.machine.mode === 'expanded') this.machine.close();
+        else this.draw(this.overlay());
+        ends.done();
+        if (openSettings) ends.openSettings();
     }
 
     // The file shelf: what the helper window needs from this notch.
@@ -1000,6 +1074,8 @@ export class MonitorNotch implements ShelfNotch {
         this.applyOsdColors();
         this.showSettingsPage();
         this.applyClockOptions();
+        // How the notch opens may have changed.
+        this.showTourStep();
         this.onMedia();
         this.onActivities();
         this.onShelf();
@@ -1346,10 +1422,13 @@ export class MonitorNotch implements ShelfNotch {
             page: this.page !== null,
             homeOpen: this.homeOpen,
             player: this.sources.media.snapshot().available,
+            tour: this.tour !== null && this.machine.held,
         });
     }
 
     private onMode(): void {
+        // Closing ends the tour, unless a fullscreen app hid it: then it waits.
+        if (this.tour && this.machine.mode !== 'expanded' && !this.inFullscreen) this.endTour(false);
         // Opened, the player shows the song: no peek after it closes again.
         if (this.machine.mode === 'expanded') this.peekTimer.hide();
         // Closing the notch goes back to its first page, and lets go of the keyboard.
@@ -1526,6 +1605,7 @@ export class MonitorNotch implements ShelfNotch {
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
         this.downloadView.setForeground(foreground);
+        this.tourView.setColors({ foreground, accent, onAccent });
         this.notificationView.setColors(foreground, accent, onAccent);
     }
 

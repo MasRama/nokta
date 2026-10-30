@@ -754,6 +754,22 @@ banner for a fake file.
 - [ ] Stop the daemon: a banner says so and the rows are dimmed.
 - [ ] The Settings button in the Extensions app opens it *(real session)*.
 
+### First-run tour
+
+- [ ] `smoke.sh` turns `tour-shown` off: the notch opens held on the tour
+      with Next focused; Enter walks four steps (dots, title, text), the
+      last has Open settings and Done; Done or Escape closes the notch and
+      turns `tour-shown` on. The shots are `build/shots/smoke-tour-*.png`.
+- [ ] With `open_on = "click"` or an empty `open_shortcut`, the second step
+      says so.
+- [ ] Turned off while a fullscreen window covers the primary monitor: no
+      tour until the window leaves fullscreen.
+- [ ] Open settings ends the tour and opens the settings window.
+- [ ] Behavior page, Show the tour again: the tour opens in the notch.
+- [ ] A fresh install: the tour opens about two seconds after the
+      extension is turned on, and not again after the next login *(real
+      session)*.
+
 ### Language
 
 - [ ] `i18n-shots.sh`: home's tiles and toggles, the settings page and the

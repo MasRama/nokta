@@ -119,6 +119,8 @@ const CLOCK_ICON = 'nokta-timer';
 const CLOCK_ALERT_FACTOR = 2;
 /** The screenshot tile waits this long, before animation_speed, for the notch to close, so the shot does not catch it. */
 const SCREENSHOT_DELAY_MS = 400;
+/** The first-run tour opens this long after the extension starts, once the shell has settled. */
+const TOUR_DELAY_MS = 2000;
 const NIGHT_LIGHT_SCHEMA = 'org.gnome.settings-daemon.plugins.color';
 const NIGHT_LIGHT_KEY = 'night-light-enabled';
 
@@ -214,6 +216,10 @@ class Session {
     private updateStarted = false;
     private readonly callId: number;
     private readonly recordingId: number;
+    private readonly tourKeyId: number;
+    private tourDelayId = 0;
+    /** A notch shows the first-run tour, or waits to. */
+    private touring = false;
     private timerTickId = 0;
     private liveTickId = 0;
     private countdownTickId = 0;
@@ -285,7 +291,7 @@ class Session {
     private readonly unwatchScreenshots: Restore | null;
 
     constructor(
-        extensionSettings: Gio.Settings,
+        private readonly extensionSettings: Gio.Settings,
         extensionPath: string,
         /** This extension's version, like `0.11.0`. */
         private readonly extensionVersion: string,
@@ -367,10 +373,20 @@ class Session {
             (connection) => this.onDaemonAppeared(connection),
             () => this.onDaemonVanished(),
         );
+        // Read once, so GSettings reports the settings window turning it off.
+        this.tourKeyId = extensionSettings.connect('changed::tour-shown', () => this.maybeTour());
+        extensionSettings.get_boolean('tour-shown');
+        this.tourDelayId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, TOUR_DELAY_MS, () => {
+            this.tourDelayId = 0;
+            this.maybeTour();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     destroy(): void {
         unwatchDaemon(this.watchId);
+        this.extensionSettings.disconnect(this.tourKeyId);
+        if (this.tourDelayId) GLib.source_remove(this.tourDelayId);
         this.cancellable.cancel();
         this.shelfCoordinator.destroy();
         this.destroyNotches();
@@ -651,6 +667,27 @@ class Session {
             if (!this.allMonitors && index !== primaryIndex) return;
             const area = { x: monitor.x, y: monitor.y, width: monitor.width };
             this.notches.push(new MonitorNotch(index, area, sources));
+        });
+        // The tour starts over on the new primary notch.
+        if (this.touring) {
+            this.touring = false;
+            this.maybeTour();
+        }
+    }
+
+    /** Shows the first-run tour on the primary monitor's notch, until it has ended once. */
+    private maybeTour(): void {
+        if (this.tourDelayId || this.touring || this.extensionSettings.get_boolean('tour-shown')) return;
+        const { primaryIndex } = Main.layoutManager;
+        const notch = this.notches.find((n) => n.monitorIndex === primaryIndex) ?? this.notches[0];
+        if (!notch) return;
+        this.touring = true;
+        notch.startTour({
+            done: () => {
+                this.touring = false;
+                this.extensionSettings.set_boolean('tour-shown', true);
+            },
+            openSettings: () => this.openPreferences(),
         });
     }
 

@@ -183,8 +183,12 @@ Then:
    gnome-extensions enable nokta@nokta.io
    ```
 
-The daemon starts by itself the first time the extension needs it. To
-update, see [Updating](#updating).
+The daemon starts by itself the first time the extension needs it. A
+moment after you turn the extension on, the notch opens on a four-step
+tour: what Nokta is, how to open it, home, and where the settings are.
+Press **Next** or Enter to go on, **Skip** or Escape to close it. It shows
+once; **Show the tour again** on the settings window's Behavior page brings
+it back. To update, see [Updating](#updating).
 
 **Just Perfection users:** Nokta moves the GNOME clock to the right side of
 the top bar so the notch does not cover it. When Just Perfection is
