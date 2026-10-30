@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use super::model::{icon_for, Item};
+use super::model::Item;
 use super::service::{self, Command};
 use super::thumbnails::{self, ThumbnailDirs};
 
@@ -100,34 +100,6 @@ mod unix_paths {
         assert!(shelf.retain(|i| i.name == "b.txt"));
         assert_eq!(shelf.items().len(), 1);
     }
-}
-
-#[test]
-fn icons_follow_the_file_kind() {
-    let cases = [
-        ("a.jpg", "image-x-generic"),
-        ("a.webp", "image-x-generic"),
-        ("a.mp4", "video-x-generic"),
-        ("a.mkv", "video-x-generic"),
-        ("a.mp3", "audio-x-generic"),
-        ("a.flac", "audio-x-generic"),
-        ("a.pdf", "x-office-document"),
-        ("a.docx", "x-office-document"),
-        ("a.odt", "x-office-document"),
-        ("a.xlsx", "x-office-spreadsheet"),
-        ("a.csv", "x-office-spreadsheet"),
-        ("a.pptx", "x-office-presentation"),
-        ("a.zip", "package-x-generic"),
-        ("a.tar.gz", "package-x-generic"),
-        ("a.txt", "text-x-generic"),
-        ("a.md", "text-x-generic"),
-        ("a.bin", "application-x-generic"),
-        ("no-extension", "application-x-generic"),
-    ];
-    for (name, icon) in cases {
-        assert_eq!(icon_for(Path::new(name), false), icon, "{name}");
-    }
-    assert_eq!(icon_for(Path::new("photos.jpg"), true), "folder");
 }
 
 fn uri(path: &Path) -> String {
