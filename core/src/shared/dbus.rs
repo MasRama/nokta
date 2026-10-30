@@ -1,14 +1,17 @@
-//! Helpers for publishing feature state as D-Bus properties.
+//! Helpers for publishing feature state as D-Bus properties, and for
+//! hearing when the system resumes from suspend.
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use futures_util::StreamExt;
 use tokio::sync::watch;
 use zbus::fdo::Properties;
+use zbus::message::Type;
 use zbus::names::InterfaceName;
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedValue, Value};
-use zbus::Connection;
+use zbus::{Connection, MatchRule, MessageStream};
 
 /// Every property of an interface as (D-Bus name, current value).
 pub type PropertyList = Vec<(&'static str, OwnedValue)>;
@@ -57,4 +60,39 @@ pub fn spawn_change_forwarder<S: Send + Sync + 'static>(
             last = next;
         }
     });
+}
+
+/// Counts the system's resumes from suspend (logind's
+/// `PrepareForSleep(false)`), so what waits for a time of day can look at
+/// the clock again. Without a system bus the count never changes.
+pub fn resumes(system: Option<Connection>) -> watch::Receiver<u64> {
+    let (tx, rx) = watch::channel(0);
+    tokio::spawn(async move {
+        if let Some(system) = system {
+            if let Err(err) = count_resumes(&system, &tx).await {
+                tracing::warn!("resumes from suspend go unnoticed: {err}");
+            }
+        }
+        // Keeps the count alive, so watchers wait instead of ending.
+        std::future::pending::<()>().await;
+    });
+    rx
+}
+
+async fn count_resumes(system: &Connection, tx: &watch::Sender<u64>) -> zbus::Result<()> {
+    let rule = MatchRule::builder()
+        .msg_type(Type::Signal)
+        .sender("org.freedesktop.login1")?
+        .interface("org.freedesktop.login1.Manager")?
+        .member("PrepareForSleep")?
+        .build();
+    let mut stream = MessageStream::for_match_rule(rule, system, None).await?;
+    while let Some(message) = stream.next().await {
+        let Ok(message) = message else { continue };
+        // PrepareForSleep(false) comes after resuming.
+        if let Ok(false) = message.body().deserialize::<bool>() {
+            tx.send_modify(|count| *count += 1);
+        }
+    }
+    Ok(())
 }

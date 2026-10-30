@@ -1,10 +1,8 @@
 //! `io.nokta.Timer1` at `/io/nokta/Timer`.
 
-use futures_util::StreamExt;
 use tokio::sync::{mpsc, oneshot, watch};
-use zbus::message::Type;
 use zbus::object_server::SignalEmitter;
-use zbus::{fdo, Connection, MatchRule, MessageStream};
+use zbus::{fdo, Connection};
 
 use super::clocks::AddError;
 use super::logic::{Phase, Snapshot};
@@ -67,31 +65,6 @@ pub async fn serve(
             }
         }
     });
-    Ok(())
-}
-
-/// Tells the clocks when the system wakes from suspend, so an alarm that
-/// came due while asleep goes off now. Runs until the system bus goes away.
-pub async fn watch_resume(
-    system: Connection,
-    commands: mpsc::Sender<ClockCommand>,
-) -> zbus::Result<()> {
-    let rule = MatchRule::builder()
-        .msg_type(Type::Signal)
-        .sender("org.freedesktop.login1")?
-        .interface("org.freedesktop.login1.Manager")?
-        .member("PrepareForSleep")?
-        .build();
-    let mut stream = MessageStream::for_match_rule(rule, &system, None).await?;
-    while let Some(message) = stream.next().await {
-        let Ok(message) = message else { continue };
-        // PrepareForSleep(false) comes after resuming.
-        if let Ok(false) = message.body().deserialize::<bool>() {
-            if commands.send(ClockCommand::Wake).await.is_err() {
-                break;
-            }
-        }
-    }
     Ok(())
 }
 
