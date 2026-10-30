@@ -252,12 +252,22 @@ export const DEFAULT_DOWNLOADS: Readonly<DownloadsSettings> = {
     folder: '',
 };
 
+/** io.nokta.Settings1.System in camelCase. */
+export interface SystemSettings {
+    /** Warn when memory is almost full. */
+    memoryAlert: boolean;
+}
+
+export const DEFAULT_SYSTEM: Readonly<SystemSettings> = {
+    memoryAlert: true,
+};
+
 /** The names home.toggles takes, as the daemon checks them. */
 export const HOME_TOGGLES = ['do_not_disturb', 'caffeine', 'dark_style', 'night_light'] as const;
 /** The names home.tiles takes. */
-export const HOME_TILES = ['notifications', 'focus', 'timer', 'clipboard', 'settings', 'screenshot'] as const;
+export const HOME_TILES = ['notifications', 'focus', 'timer', 'clipboard', 'settings', 'screenshot', 'system'] as const;
 export const MAX_HOME_TOGGLES = 3;
-export const MAX_HOME_TILES = 5;
+export const MAX_HOME_TILES = 6;
 
 export type HomeToggle = (typeof HOME_TOGGLES)[number];
 export type HomeTile = (typeof HOME_TILES)[number];
@@ -270,7 +280,7 @@ export interface HomeSettings {
 
 export const DEFAULT_HOME: Readonly<HomeSettings> = {
     toggles: ['do_not_disturb', 'caffeine', 'dark_style'],
-    tiles: ['notifications', 'focus', 'timer', 'clipboard', 'settings'],
+    tiles: ['notifications', 'focus', 'timer', 'clipboard', 'system', 'settings'],
 };
 
 export const DEFAULT_MEDIA: Readonly<MediaSettings> = {
@@ -340,6 +350,7 @@ export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEF
 export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);
 export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);
 export const downloadsFrom = (raw: unknown): DownloadsSettings => fromTable(raw, DEFAULT_DOWNLOADS);
+export const systemFrom = (raw: unknown): SystemSettings => fromTable(raw, DEFAULT_SYSTEM);
 
 /** Known names, each once, at most `max`; anything but a list gives `fallback`. */
 function namesFrom<T extends string>(raw: unknown, known: readonly T[], max: number, fallback: readonly T[]): T[] {

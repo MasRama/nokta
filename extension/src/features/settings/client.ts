@@ -10,11 +10,15 @@ import {
     calendarFrom,
     clipboardFrom,
     downloadsFrom,
+    systemFrom,
+    weatherFrom,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
     DEFAULT_DOWNLOADS,
+    DEFAULT_SYSTEM,
+    DEFAULT_WEATHER,
     DEFAULT_LYRICS,
     DEFAULT_MEDIA,
     homeFrom,
@@ -29,6 +33,8 @@ import {
     type CalendarSettings,
     type ClipboardSettings,
     type DownloadsSettings,
+    type SystemSettings,
+    type WeatherSettings,
     type HomeSettings,
     type Lyrics,
     type MediaSettings,
@@ -44,7 +50,7 @@ export interface PreparedPicture {
 }
 
 /**
- * The notch's appearance, behavior, media, lyrics, timer, notification, calendar, clipboard, downloads and home settings from io.nokta.Settings1. Until the
+ * The notch's appearance, behavior, media, lyrics, timer, notification, calendar, clipboard, downloads, system, weather and home settings from io.nokta.Settings1. Until the
  * daemon answers it holds the defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
@@ -58,6 +64,8 @@ export class SettingsClient {
     calendar: CalendarSettings = { ...DEFAULT_CALENDAR };
     clipboard: ClipboardSettings = { ...DEFAULT_CLIPBOARD };
     downloads: DownloadsSettings = { ...DEFAULT_DOWNLOADS };
+    system: SystemSettings = { ...DEFAULT_SYSTEM };
+    weather: WeatherSettings = { ...DEFAULT_WEATHER };
     home: HomeSettings = homeFrom(undefined);
     /** The picture theme's image as the daemon prepared it; empty strings while there is none. */
     picture: PreparedPicture = { path: '', color: '', tone: '' };
@@ -112,6 +120,8 @@ export class SettingsClient {
         this.calendar = calendarFrom(cached(this.proxy, 'Calendar'));
         this.clipboard = clipboardFrom(cached(this.proxy, 'Clipboard'));
         this.downloads = downloadsFrom(cached(this.proxy, 'Downloads'));
+        this.system = systemFrom(cached(this.proxy, 'System'));
+        this.weather = weatherFrom(cached(this.proxy, 'Weather'));
         this.home = homeFrom(cached(this.proxy, 'Home'));
         const text = (name: string): string => {
             const value = cached(this.proxy!, name);

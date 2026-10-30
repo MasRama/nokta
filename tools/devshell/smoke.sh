@@ -521,7 +521,7 @@ wait_for "the screenshot tile closes the notch and opens GNOME's screenshot UI" 
     "$FIND Main.screenshotUI.visible && Math.round(one('nokta-body').height) === 32" 5
 js "Main.screenshotUI.close(true); true" > /dev/null
 set_home toggles "<['do_not_disturb', 'caffeine', 'dark_style']>"
-set_home tiles "<['notifications', 'focus', 'timer', 'clipboard', 'settings']>"
+set_home tiles "<['notifications', 'focus', 'timer', 'clipboard', 'system', 'settings']>"
 "$HERE/hover.sh" off > /dev/null
 "$HERE/hover.sh" on > /dev/null
 wait_for "home is back to its default toggles and tiles" \
@@ -1063,6 +1063,16 @@ wait_for "a downloaded document shows its icon" \
 # Like a notification, it goes after [notifications] duration_ms (5 s).
 wait_for "the document preview closes by itself" "$FIND !shown('nokta-download')" 10
 
+# The daemon's MemoryLow names the app using the most memory in an urgent
+# alert. Real memory pressure cannot be made here, so the handler is called.
+js "Main.extensionManager.lookup('nokta@nokta.io').stateObj.session.onMemoryLow(14.6e9, 15.4e9, 'firefox'); true" > /dev/null
+wait_for "low memory shows an urgent alert naming the app" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Memory is almost full' && one('nokta-osd-detail').text === 'firefox'" 5 \
+    "$FIND JSON.stringify([shown('nokta-osd'), any('nokta-osd-text') && one('nokta-osd-text').text, any('nokta-osd-detail') && one('nokta-osd-detail').text])"
+sleep 0.4
+"$HERE/shot.sh" smoke-memory-low > /dev/null
+wait_for "the memory alert goes away" "$FIND !shown('nokta-osd')" 15
+
 # A copy goes to the clipboard history; its tile in home opens the list, a
 # row copies the entry back, and the menu pauses the history.
 clip_items() {
@@ -1150,6 +1160,37 @@ sleep 0.4
 js "$FIND find(Main.layoutManager.uiGroup, 'nokta-panel-clock-remove').find((b) => b.mapped).emit('clicked', 1); true" > /dev/null
 wait_for "its remove button takes the row away" \
     "$FIND !any('nokta-panel-clock') && Math.round(one('nokta-body').height) === $HOME_HEIGHT" 5
+# The system tile opens CPU, memory, temperature and network. The daemon
+# samples only while the page is open, and is back to zero once it closes.
+system_usage() {
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/System \
+        --method org.freedesktop.DBus.Properties.Get io.nokta.System1 Usage
+}
+SYSTEM_TILE="find(one('nokta-panel-tiles'), 'nokta-tile').find((t) => find(t, 'nokta-tile-label')[0]?.text === 'System')"
+SYSTEM_VALUES="find(Main.layoutManager.uiGroup, 'nokta-system-value').filter((l) => l.mapped).map((l) => l.text)"
+js "$FIND $SYSTEM_TILE.emit('clicked', 1); true" > /dev/null
+# The header and four 26 px rows: 14 + 28 + 10 + 122 + 14.
+wait_for "the system tile opens its page" \
+    "$FIND find(Main.layoutManager.uiGroup, 'nokta-system-row').filter((r) => r.mapped).length === 4 && Math.round(one('nokta-body').height) === 188" 5 \
+    "$FIND JSON.stringify([$SYSTEM_VALUES, Math.round(one('nokta-body').height)])"
+wait_for "the daemon's samples fill it" \
+    "$FIND const v = $SYSTEM_VALUES; /%$/.test(v[0]) && /^[0-9.]+ [/] [0-9.]+ [KMGT]?B$/.test(v[1]) && /^↓ .+ ↑ .+$/.test(v[3])" 5 \
+    "$FIND JSON.stringify($SYSTEM_VALUES)"
+case $(system_usage) in
+*"uint64 0, uint64 0"*) fail "the daemon does not sample while the page is open: $(system_usage)" ;;
+esac
+ok "the daemon samples while the page is open"
+sleep 0.4
+"$HERE/shot.sh" smoke-system-page > /dev/null
+js "$FIND one('nokta-subpage-back').emit('clicked', 1); true" > /dev/null
+wait_for "the back arrow goes home from the system page" "$FIND shown('nokta-panel') && !shown('nokta-subpage')" 5
+i=0
+until system_usage | grep -q "uint64 0, uint64 0"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "the daemon still samples after the page closed: $(system_usage)"
+    sleep 0.2
+done
+ok "the daemon stops sampling when the page closes"
 # The settings tile opens Nokta's own page: six theme swatches, three
 # switches, motion and a row for the settings window. A swatch and a switch
 # change the setting through the daemon at once.

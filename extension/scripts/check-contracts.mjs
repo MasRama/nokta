@@ -22,6 +22,7 @@ const TS_TYPE = {
     'a(sssbxxxx)': 'Array<[string, string, string, boolean, number, number, number, number]>',
     'a{ss}': 'Record<string, string>',
     'a{sv}': 'Record<string, unknown>',
+    '(dttddd)': '[number, number, number, number, number, number]',
 };
 
 const parser = new XMLParser({

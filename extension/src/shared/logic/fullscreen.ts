@@ -13,10 +13,10 @@ export type FullscreenAlerts = (typeof FULLSCREEN_ALERTS)[number];
  * (battery low or critical), `device` every other one; `focus` a focus
  * session or break ending; `clock` a countdown or alarm done; `calendar` a
  * reminder or an event starting; `activity` a live activity ending;
- * `download` a finished download; `osd` volume, brightness, the lock keys
+ * `download` a finished download; `memory` memory almost full; `osd` volume, brightness, the lock keys
  * and the keyboard layout.
  */
-export type AlertKind = 'battery' | 'device' | 'focus' | 'clock' | 'calendar' | 'activity' | 'download' | 'osd';
+export type AlertKind = 'battery' | 'device' | 'focus' | 'clock' | 'calendar' | 'activity' | 'download' | 'memory' | 'osd';
 
 const IMPORTANT: readonly AlertKind[] = ['battery', 'focus', 'clock', 'calendar'];
 

@@ -5,7 +5,7 @@ export type QuickToggle = 'do_not_disturb' | 'caffeine' | 'dark_style' | 'night_
 export type QuickToggles = Record<Exclude<QuickToggle, 'night_light'>, boolean> & { night_light: boolean | null };
 
 /** A tile, by its name in home.tiles. */
-export type HomeTile = 'notifications' | 'focus' | 'timer' | 'clipboard' | 'settings' | 'screenshot';
+export type HomeTile = 'notifications' | 'focus' | 'timer' | 'clipboard' | 'settings' | 'screenshot' | 'system';
 
 /** Which toggles and tiles home shows, in order. */
 export interface HomeLayout {

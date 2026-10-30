@@ -1010,3 +1010,51 @@ async fn a_finished_download_is_announced() {
         ("report.pdf", "x-office-document", 8, "")
     );
 }
+
+type Usage = (f64, u64, u64, f64, f64, f64);
+
+fn usage(changed: &HashMap<String, OwnedValue>) -> Usage {
+    Usage::try_from(changed["Usage"].try_clone().unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn the_system_is_sampled_only_while_watched() {
+    let bus = TestBus::start();
+    let _daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/System").await;
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let system = zbus::Proxy::new(&conn, NAME, "/io/nokta/System", "io.nokta.System1")
+        .await
+        .unwrap();
+    let idle = Usage::try_from(get(&p, "io.nokta.System1", "Usage").await).unwrap();
+    assert_eq!(idle.2, 0, "nothing sampled before a watch");
+
+    let _: () = system.call("Watch", &()).await.unwrap();
+    let (cpu, used, total, _, _, _) = usage(&next_change_with(&mut changes, "Usage").await);
+    assert!((0.0..=1.0).contains(&cpu), "{cpu}");
+    assert!(total > 0 && used <= total, "{used} of {total}");
+
+    let _: () = system.call("Unwatch", &()).await.unwrap();
+    let mut stopped = usage(&next_change_with(&mut changes, "Usage").await);
+    while stopped.2 != 0 {
+        // A sample may have been on its way.
+        stopped = usage(&next_change_with(&mut changes, "Usage").await);
+    }
+    let quiet = tokio::time::timeout(Duration::from_millis(2500), changes.next()).await;
+    assert!(quiet.is_err(), "still sampling after Unwatch");
+
+    // A client that leaves without Unwatch stops its watch too.
+    let other = bus.connect().await;
+    let theirs = zbus::Proxy::new(&other, NAME, "/io/nokta/System", "io.nokta.System1")
+        .await
+        .unwrap();
+    let _: () = theirs.call("Watch", &()).await.unwrap();
+    assert!(usage(&next_change_with(&mut changes, "Usage").await).2 > 0);
+    drop(theirs);
+    drop(other);
+    let mut gone = usage(&next_change_with(&mut changes, "Usage").await);
+    while gone.2 != 0 {
+        gone = usage(&next_change_with(&mut changes, "Usage").await);
+    }
+}

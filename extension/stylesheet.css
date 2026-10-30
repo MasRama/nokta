@@ -1011,6 +1011,36 @@
     height: 2px;
 }
 
+/* The System tile's page (system/page.ts): four rows of 26 px, 6 apart. */
+.nokta-system-row {
+    spacing: 12px;
+}
+
+.nokta-system-name {
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 92px;
+}
+
+.nokta-system-value {
+    font-size: 13px;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+}
+
+.nokta-system-spark-bar {
+    border-radius: 1px;
+}
+
+.nokta-system-track {
+    height: 4px;
+    border-radius: 2px;
+}
+
+.nokta-system-fill {
+    border-radius: 2px;
+}
+
 /* The Settings tile's page (settings/page.ts); its height is SETTINGS_PAGE_HEIGHT. */
 .nokta-settings {
     spacing: 8px;

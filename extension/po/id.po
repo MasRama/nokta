@@ -647,6 +647,31 @@ msgstr "Folder"
 msgid "Empty for the system's download folder"
 msgstr "Kosongkan untuk folder unduhan sistem"
 
+msgid "System"
+msgstr "Sistem"
+
+msgid "Warn when memory is almost full"
+msgstr "Peringatkan saat memori hampir penuh"
+
+msgid "Names the app that uses the most"
+msgstr "Menyebut aplikasi yang paling banyak memakainya"
+
+msgid "Memory is almost full"
+msgstr "Memori hampir penuh"
+
+
+msgid "CPU"
+msgstr "CPU"
+
+msgid "Memory"
+msgstr "Memori"
+
+msgid "Temperature"
+msgstr "Suhu"
+
+msgid "Network"
+msgstr "Jaringan"
+
 msgid "Live activities"
 msgstr "Aktivitas langsung"
 
@@ -755,8 +780,8 @@ msgstr "Maksimal 3, sesuai urutan ini"
 msgid "Tiles"
 msgstr "Ubin"
 
-msgid "Up to 5, in this order"
-msgstr "Maksimal 5, sesuai urutan ini"
+msgid "Up to 6, in this order"
+msgstr "Maksimal 6, sesuai urutan ini"
 
 msgid "Cover's color"
 msgstr "Warna sampul"

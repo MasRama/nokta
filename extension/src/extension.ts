@@ -28,6 +28,7 @@ import {
 } from './features/calendar/index.js';
 import { batteryLevel, deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
 import { downloadButtons, DownloadsClient, type Download, type DownloadButton } from './features/downloads/index.js';
+import { memoryAlert, SystemClient } from './features/system/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
@@ -95,7 +96,7 @@ import {
     wantsQuiet,
 } from './features/timer/index.js';
 import { WeatherClient } from './features/weather/index.js';
-import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource } from './monitor-notch.js';
+import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource, type SystemSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
 import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { Keybinding } from './shared/keybinding.js';
@@ -148,6 +149,12 @@ class Session {
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
     private readonly downloads = new DownloadsClient((download) => this.onDownload(download));
+    private readonly system = new SystemClient((used, total, app) => this.onMemoryLow(used, total, app));
+    private readonly systemSource: SystemSource = {
+        usage: () => this.system.usage(),
+        watch: () => this.system.watch(),
+        unwatch: () => this.system.unwatch(),
+    };
     private readonly timer = new TimerClient(
         (phase) => this.onTimerFinished(phase),
         (kind, label) => this.onClockDone(kind, label),
@@ -197,6 +204,7 @@ class Session {
     private readonly eventColorsId: number;
     private readonly shelfId: number;
     private readonly clipboardId: number;
+    private readonly systemId: number;
     private readonly callId: number;
     private readonly recordingId: number;
     private timerTickId = 0;
@@ -303,6 +311,7 @@ class Session {
         this.eventColorsId = this.eventColors.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.shelfId = this.shelf.onChanged(() => this.notches.forEach((n) => n.onShelf()));
         this.clipboardId = this.clipboard.onChanged(() => this.notches.forEach((n) => n.onClipboard()));
+        this.systemId = this.system.onChanged(() => this.notches.forEach((n) => n.onSystem()));
         // An app starting or stopping to record can leave GNOME's indicator as it is.
         this.callId = this.call.onChanged(() => {
             this.onPrivacy();
@@ -367,6 +376,7 @@ class Session {
         this.eventColors.destroy();
         this.shelf.disconnect(this.shelfId);
         this.clipboard.disconnect(this.clipboardId);
+        this.system.disconnect(this.systemId);
         this.clipboardWatcher.destroy();
         this.calendarAlarms.destroy();
         this.calendar.destroy();
@@ -379,6 +389,7 @@ class Session {
         this.weather.destroy();
         this.shelf.destroy();
         this.clipboard.destroy();
+        this.system.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
         this.caffeine.release();
@@ -442,6 +453,7 @@ class Session {
             weather: () => this.weather.attach(connection, cancellable),
             shelf: () => this.shelf.attach(connection, cancellable),
             clipboard: () => this.clipboard.attach(connection, cancellable),
+            system: () => this.system.attach(connection, cancellable),
             'meeting links': () => this.meetingLinks.attach(connection, cancellable),
             'event colors': () => this.eventColors.attach(connection, cancellable),
         });
@@ -463,6 +475,7 @@ class Session {
         this.weather.detach();
         this.shelf.detach();
         this.clipboard.detach();
+        this.system.detach();
         this.meetingLinks.detach();
         this.eventColors.detach();
         this.devices.detach();
@@ -611,6 +624,7 @@ class Session {
             panel: this.panel,
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
+            system: this.systemSource,
             countdown: { text: () => this.countdownText },
             systemStyle: { dark: () => this.interfaceSettings.get_string('color-scheme') === 'prefer-dark' },
         };
@@ -710,6 +724,15 @@ class Session {
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device };
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
         this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone, this.motion(kind));
+    }
+
+    /** Memory is almost full: a red alert naming the app that uses the most. */
+    private onMemoryLow(used: number, total: number, app: string): void {
+        if (!this.settings.system.memoryAlert || total <= 0) return;
+        const { title, detail } = memoryAlert(used, total, app);
+        const content = { fraction: null, text: title, detail, urgent: true, battery: null };
+        const icon = iconFor('nokta-system');
+        this.showOsd(-1, 'memory', content, icon, this.settings.behavior.alertDurationMs, 'urgent', this.motion('memory-low'));
     }
 
     /**

@@ -22,6 +22,7 @@ export const PATHS = {
     Shelf1: '/io/nokta/Shelf',
     Clipboard1: '/io/nokta/Clipboard',
     Downloads1: '/io/nokta/Downloads',
+    System1: '/io/nokta/System',
 } as const;
 
 export interface NoktaProps {
@@ -114,6 +115,7 @@ export interface SettingsProps {
     Calendar: Record<string, unknown>;
     Clipboard: Record<string, unknown>;
     Downloads: Record<string, unknown>;
+    System: Record<string, unknown>;
     Home: Record<string, unknown>;
     PicturePath: string;
     PictureColor: string;
@@ -228,4 +230,20 @@ export const CLIPBOARD_METHODS = {
     Remove: 's',
     Clear: '',
     SetPaused: 'b',
+} as const;
+
+export interface SystemProps {
+    /** CPU 0 to 1, memory used and total in bytes, CPU temperature in °C (NaN when unknown), download and upload in bytes a second; all zero while nobody watches. */
+    Usage: [number, number, number, number, number, number];
+}
+
+/** io.nokta.System1 methods and the D-Bus signature of their arguments. */
+export const SYSTEM_METHODS = {
+    Watch: '',
+    Unwatch: '',
+} as const;
+
+/** io.nokta.System1 signals and the D-Bus signature of their arguments. */
+export const SYSTEM_SIGNALS = {
+    MemoryLow: 'tts',
 } as const;

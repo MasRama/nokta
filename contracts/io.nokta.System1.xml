@@ -1,0 +1,30 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/System. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.System1">
+    <!--
+      The latest sample, every 2 s while someone watches: CPU use 0 to 1,
+      memory used and total in bytes, the CPU temperature in °C (NaN when
+      unknown), and download and upload in bytes a second. All zero (and NaN)
+      while nobody watches.
+    -->
+    <property name="Usage" type="(dttddd)" access="read"/>
+    <!--
+      Starts sampling for the caller. Each Watch needs its own Unwatch; a
+      caller that leaves the bus stops watching.
+    -->
+    <method name="Watch"/>
+    <method name="Unwatch"/>
+    <!--
+      Memory is almost full ([system] memory_alert): used and total bytes, and
+      the name of the process using the most memory, empty when unknown. At
+      most once in 10 minutes.
+    -->
+    <signal name="MemoryLow">
+      <arg name="used" type="t"/>
+      <arg name="total" type="t"/>
+      <arg name="app" type="s"/>
+    </signal>
+  </interface>
+</node>

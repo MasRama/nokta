@@ -21,6 +21,7 @@ pub struct Config {
     pub calendar: CalendarConfig,
     pub clipboard: ClipboardConfig,
     pub downloads: DownloadsConfig,
+    pub system: SystemConfig,
     pub home: HomeConfig,
 }
 
@@ -331,6 +332,19 @@ impl Default for DownloadsConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
 #[serde(default)]
+pub struct SystemConfig {
+    /// Warn in the notch when memory is almost full.
+    pub memory_alert: bool,
+}
+
+impl Default for SystemConfig {
+    fn default() -> Self {
+        SystemConfig { memory_alert: true }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
 pub struct HomeConfig {
     /// The quick toggles, in the order shown; names from [`HOME_TOGGLES`].
     pub toggles: Vec<String>,
@@ -344,9 +358,16 @@ impl Default for HomeConfig {
             toggles: ["do_not_disturb", "caffeine", "dark_style"]
                 .map(String::from)
                 .to_vec(),
-            tiles: ["notifications", "focus", "timer", "clipboard", "settings"]
-                .map(String::from)
-                .to_vec(),
+            tiles: [
+                "notifications",
+                "focus",
+                "timer",
+                "clipboard",
+                "system",
+                "settings",
+            ]
+            .map(String::from)
+            .to_vec(),
         }
     }
 }
@@ -557,7 +578,7 @@ impl Config {
             )));
         }
         check_names("home.toggles", &self.home.toggles, &HOME_TOGGLES, 3)?;
-        check_names("home.tiles", &self.home.tiles, &HOME_TILES, 5)?;
+        check_names("home.tiles", &self.home.tiles, &HOME_TILES, 6)?;
         if !self.timer.shortcut.is_empty() && !is_accelerator(&self.timer.shortcut) {
             return Err(ConfigError::invalid(format!(
                 "timer.shortcut must be keys like \"<Super><Alt>f\" or empty, got {:?}",
@@ -572,13 +593,14 @@ impl Config {
 pub const HOME_TOGGLES: [&str; 4] = ["do_not_disturb", "caffeine", "dark_style", "night_light"];
 
 /// The names `home.tiles` accepts.
-pub const HOME_TILES: [&str; 6] = [
+pub const HOME_TILES: [&str; 7] = [
     "notifications",
     "focus",
     "timer",
     "clipboard",
     "settings",
     "screenshot",
+    "system",
 ];
 
 /// At most `max` names from `known`, each once.
@@ -863,6 +885,12 @@ impl DownloadsConfig {
             ("enabled", self.enabled.into()),
             ("folder", (&self.folder).into()),
         ]
+    }
+}
+
+impl SystemConfig {
+    pub fn entries(&self) -> Entries {
+        vec![("memory_alert", self.memory_alert.into())]
     }
 }
 

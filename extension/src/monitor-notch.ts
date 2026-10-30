@@ -7,6 +7,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import type { ActivitiesClient, Activity } from './features/activities/index.js';
 import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
+import { SystemPage, type Usage } from './features/system/index.js';
 import { NotchGestures } from './features/gestures/index.js';
 import {
     LYRIC_ROW_EXTRA,
@@ -130,7 +131,7 @@ const VIEW_SCALE_FROM = 0.96;
 const ALERT_KICK = 0.06;
 
 /** The pages that home's tiles open. */
-type PageName = 'clipboard' | 'timer' | 'settings';
+type PageName = 'clipboard' | 'timer' | 'settings' | 'system';
 
 /** A notification the notch shows. */
 export interface NotchNotification {
@@ -189,6 +190,14 @@ export interface ClipboardSource {
     setPaused(paused: boolean): void;
 }
 
+/** The system's use, sampled while a page watches; owned by the session. */
+export interface SystemSource {
+    /** Null before the first sample. */
+    usage(): Usage | null;
+    watch(): void;
+    unwatch(): void;
+}
+
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
     settings: SettingsClient;
@@ -204,6 +213,7 @@ export interface NotchSources {
     panel: PanelSource;
     shelf: ShelfSource;
     clipboard: ClipboardSource;
+    system: SystemSource;
     /** The closed notch's countdown to a meeting, `5 min` ... `Now`; null when none is near. */
     countdown: { text(): string | null };
     /** Whether the system's style is dark, for themes that follow it. */
@@ -295,6 +305,8 @@ export class MonitorNotch implements ShelfNotch {
     private readonly timerSubPage: SubPage;
     private readonly settingsPage: SettingsPage;
     private readonly settingsSubPage: SubPage;
+    private readonly systemPage = new SystemPage();
+    private readonly systemSubPage: SubPage;
     /** Holds the pages; the one open shows. */
     private readonly pages = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly menu: NotchMenu;
@@ -358,6 +370,7 @@ export class MonitorNotch implements ShelfNotch {
                 openScreenshot: () => this.onPanelClick(() => panel.openScreenshot()),
                 openClipboard: () => this.setPage('clipboard'),
                 openTimer: () => this.setPage('timer'),
+                openSystem: () => this.setPage('system'),
                 openPlayer: () => this.setHomeOpen(false),
                 // A toggle acts in place; home stays open to show it.
                 toggle: (which) => panel.toggle(which),
@@ -406,9 +419,11 @@ export class MonitorNotch implements ShelfNotch {
             openWindow: () => this.onPanelClick(() => panel.openSettings()),
         });
         this.settingsSubPage = new SubPage(_('Settings'), this.settingsPage.actor, () => this.setPage(null));
+        this.systemSubPage = new SubPage(_('System'), this.systemPage.actor, () => this.setPage(null));
         this.pages.add_child(this.clipboardSubPage.actor);
         this.pages.add_child(this.timerSubPage.actor);
         this.pages.add_child(this.settingsSubPage.actor);
+        this.pages.add_child(this.systemSubPage.actor);
         // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
         this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
@@ -563,6 +578,9 @@ export class MonitorNotch implements ShelfNotch {
         this.timerSubPage.destroy();
         this.settingsPage.destroy();
         this.settingsSubPage.destroy();
+        if (this.page === 'system') this.sources.system.unwatch();
+        this.systemPage.destroy();
+        this.systemSubPage.destroy();
         this.pages.destroy();
         this.privacyDots.destroy();
         this.progress.destroy();
@@ -709,6 +727,12 @@ export class MonitorNotch implements ShelfNotch {
         if (this.drawn === 'panel') this.refreshPanel();
     }
 
+    /** A new sample of the system's use. */
+    onSystem(): void {
+        if (this.destroyed || this.page !== 'system') return;
+        this.systemPage.show(this.sources.system.usage(), this.sources.settings.weather.units === 'fahrenheit');
+    }
+
     /** A page's body changed height. */
     private resizePage(): void {
         if (this.destroyed) return;
@@ -723,10 +747,12 @@ export class MonitorNotch implements ShelfNotch {
         this.clipboardSubPage.actor.set_size(width, subPageHeight(this.clipboardPage.height));
         this.timerSubPage.actor.set_size(width, subPageHeight(this.timerPage.height));
         this.settingsSubPage.actor.set_size(width, subPageHeight(this.settingsPage.height));
+        this.systemSubPage.actor.set_size(width, subPageHeight(this.systemPage.height));
         const shown = this.page ?? 'clipboard';
         this.clipboardSubPage.actor.visible = shown === 'clipboard';
         this.timerSubPage.actor.visible = shown === 'timer';
         this.settingsSubPage.actor.visible = shown === 'settings';
+        this.systemSubPage.actor.visible = shown === 'system';
         this.pages.set_size(...this.sizeFor('page'));
     }
 
@@ -1324,7 +1350,7 @@ export class MonitorNotch implements ShelfNotch {
         if (this.machine.mode !== 'expanded') {
             this.homeOpen = false;
             if (this.page) this.clipboardPage.reset();
-            this.page = null;
+            this.switchPage(null);
             this.updateGrab();
         }
         this.draw(this.overlay());
@@ -1336,10 +1362,23 @@ export class MonitorNotch implements ShelfNotch {
         // Back from a page lands on home, also over a player.
         if (page) this.homeOpen = true;
         else this.clipboardPage.reset();
-        this.page = page;
+        this.switchPage(page);
         if (page === 'settings') this.showSettingsPage();
         this.sizePages();
         this.draw(this.overlay());
+    }
+
+    /** Sets the open page; the system page watches the system while it is open. */
+    private switchPage(page: PageName | null): void {
+        const before = this.page;
+        this.page = page;
+        if (before === page) return;
+        if (before === 'system') this.sources.system.unwatch();
+        if (page === 'system') {
+            this.systemPage.reset();
+            this.sources.system.watch();
+            this.onSystem();
+        }
     }
 
     /** The settings page as the daemon has them, with the cover's color for aurora's swatch. */
@@ -1403,12 +1442,13 @@ export class MonitorNotch implements ShelfNotch {
 
     private sizeFor(mode: Drawn): [number, number] {
         const appearance = this.sources.settings.appearance;
-        const page =
-            this.page === 'timer'
-                ? this.timerPage.height
-                : this.page === 'settings'
-                  ? this.settingsPage.height
-                  : this.clipboardPage.height;
+        const pages: Record<PageName, { height: number }> = {
+            clipboard: this.clipboardPage,
+            timer: this.timerPage,
+            settings: this.settingsPage,
+            system: this.systemPage,
+        };
+        const page = pages[this.page ?? 'clipboard'].height;
         const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
         const shelf = this.sources.shelf.items().length > 0 ? EXPANDED_SHELF_EXTRA : 0;
         return viewSize(mode, {
@@ -1475,6 +1515,7 @@ export class MonitorNotch implements ShelfNotch {
         this.idlePanel.setColors({ foreground, accent, onAccent, light });
         this.clipboardPage.setColors({ foreground, accent });
         this.timerPage.setColors({ foreground });
+        this.systemPage.setColors({ foreground, light });
         this.settingsPage.setColors({ foreground, accent, onAccent });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
