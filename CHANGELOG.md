@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.10.0](https://github.com/MasRama/nokta/compare/v0.9.0...v0.10.0) (2026-10-30)
+
+
+### Features
+
+* **extension:** fly the cover between the closed notch and the player, and bring rows in in order ([776e59b](https://github.com/MasRama/nokta/commit/776e59b4e2e0f569ddd3a2862dc9faace34e74ed))
+* **extension:** press the notch's buttons in, and they spring back ([a17a055](https://github.com/MasRama/nokta/commit/a17a0553cb10e85036920971b8bfca90c543086b))
+* **media:** let the bars settle and the closed cover dim on pause ([324e5f6](https://github.com/MasRama/nokta/commit/324e5f615265dde221f557f88c202dcb4c61ed3d))
+* **media:** show the new song's title in the closed notch for a moment ([eba9d6e](https://github.com/MasRama/nokta/commit/eba9d6e15cff0cdcd6c70db363fe6a1e6eeb3f84))
+* **osd:** give each alert its own motion ([e4ca00e](https://github.com/MasRama/nokta/commit/e4ca00e704adf3c7615b14967d4b9fdd709d8341))
+* **panel:** fade home's toggles on and off, pop their icon and lift a tile under the pointer ([6df07e4](https://github.com/MasRama/nokta/commit/6df07e452be84573d97fe59a4f3a587eb317dac9))
+* **panel:** fly the closed notch's timer or activity into its row in home ([8430224](https://github.com/MasRama/nokta/commit/8430224e9a742da12b3d076f21901a7f12dd2896))
+* **prefs:** show Nokta's wordmark at the top of the settings sidebar ([680eb6b](https://github.com/MasRama/nokta/commit/680eb6bd7565751b4745b84a5186a3cbe0faf857))
+* **settings:** add the alert_motion setting ([c6a86fa](https://github.com/MasRama/nokta/commit/c6a86fae2c5119ab96d78dd28f5178cdf0b00797))
+* **settings:** add the depth setting ([0f979f3](https://github.com/MasRama/nokta/commit/0f979f32816087a67b29b067b8de903bb2eec528))
+* **settings:** add the morph setting ([8201cbf](https://github.com/MasRama/nokta/commit/8201cbfa06f32050893ce77221978b03679b8296))
+* **settings:** add the track_peek setting ([96b226d](https://github.com/MasRama/nokta/commit/96b226d34287e1e0624c8c54bdd4e07d739bcc51))
+* **themes:** a soft shadow under the notch and a light rim along its edge ([6c53452](https://github.com/MasRama/nokta/commit/6c534523f0c5a1007eb3377de8a1fe967582974c))
+
+
+### Bug Fixes
+
+* **extension:** ignore a system style change once the notch is destroyed ([53a5054](https://github.com/MasRama/nokta/commit/53a5054ea1a4cda3ebcd9481437132d20648ecd9))
+* **extension:** keep the other interfaces when one fails to attach ([4ec04a0](https://github.com/MasRama/nokta/commit/4ec04a0d45d9e303891fa6d16cbad237b04b5b08))
+* **extension:** let GNOME show a banner or OSD when the notch's part throws ([4afe349](https://github.com/MasRama/nokta/commit/4afe349f6b29925d7e44f0831a300ad37727ddec))
+* **lyrics:** read local lyrics and the cache off the async runtime ([4765ab9](https://github.com/MasRama/nokta/commit/4765ab9871ecc2c69eb30be179c4aaa918c52f43))
+* **media:** wake the level capture only on a change, not four times a second ([7f52556](https://github.com/MasRama/nokta/commit/7f525569e58d7ab02963c01d154fb9961e82e32e))
+* **packaging:** render the units right when the install path has & or | ([4d570a8](https://github.com/MasRama/nokta/commit/4d570a89768328df1335403e7a8b6b579bf33901))
+* **settings:** keep the widths at or above the notch's height in the settings window ([88de737](https://github.com/MasRama/nokta/commit/88de737d02cae54114ea940f1c6214a297a5ba9a))
+
 ## [0.9.0](https://github.com/MasRama/nokta/compare/v0.8.0...v0.9.0) (2026-10-29)
 
 
