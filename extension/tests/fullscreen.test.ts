@@ -9,7 +9,7 @@ import {
 } from '../src/shared/logic/fullscreen.js';
 
 const IMPORTANT: AlertKind[] = ['battery', 'focus', 'clock', 'calendar'];
-const OTHERS: AlertKind[] = ['device', 'activity', 'osd', 'download'];
+const OTHERS: AlertKind[] = ['device', 'activity', 'osd', 'download', 'memory'];
 
 test('important_alerts_show_over_fullscreen_by_default', () => {
     for (const kind of IMPORTANT) assert.equal(showsOverFullscreen(kind, 'important'), true, kind);

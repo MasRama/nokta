@@ -270,6 +270,10 @@ msgstr ""
 msgid "Screenshot"
 msgstr ""
 
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts
+msgid "System"
+msgstr ""
+
 #: src/features/panel/view.ts
 msgid "Screen recording"
 msgstr ""
@@ -855,6 +859,14 @@ msgid "Empty for the system's download folder"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
+msgid "Warn when memory is almost full"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Names the app that uses the most"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
 msgid "Live activities"
 msgstr ""
 
@@ -999,7 +1011,7 @@ msgid "Tiles"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
-msgid "Up to 5, in this order"
+msgid "Up to 6, in this order"
 msgstr ""
 
 #: src/features/settings/page.ts
@@ -1016,6 +1028,26 @@ msgstr ""
 
 #: src/features/shelf/drop.ts
 msgid "Drop to keep here"
+msgstr ""
+
+#: src/features/system/logic/format.ts
+msgid "Memory is almost full"
+msgstr ""
+
+#: src/features/system/page.ts
+msgid "CPU"
+msgstr ""
+
+#: src/features/system/page.ts
+msgid "Memory"
+msgstr ""
+
+#: src/features/system/page.ts
+msgid "Temperature"
+msgstr ""
+
+#: src/features/system/page.ts
+msgid "Network"
 msgstr ""
 
 #: src/features/timer/logic/clocks.ts src/features/timer/page.ts

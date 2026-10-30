@@ -105,6 +105,9 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
   shelf.
 - **[Clipboard history](#clipboard-history).** What you copy, text and
   pictures, ready to search and copy again from home.
+- **[System monitor](#system-monitor).** CPU, memory, temperature and
+  network a tap away in home, and an alert naming the app that uses the
+  most memory when it is almost full.
 - **Privacy dots.** A green dot while an app uses the camera, an orange
   one for the microphone or screen sharing.
 - **Calls.** While an app uses the microphone, the notch shows a
@@ -320,6 +323,22 @@ history (copies are not kept until you resume) and clear it. The notch's right-c
 too. Nokta skips what a password manager marks as secret, and pictures
 larger than 8 MB. The history is kept in memory only, so it is empty again
 after you log out.
+
+### System monitor
+
+The `System` tile in home opens four rows: CPU use with a line of the last
+minute, memory as a bar with `used / total`, the CPU's temperature, and how
+fast the network downloads and uploads. The temperature is in °F when
+`[weather] units = "fahrenheit"`, and shows `–` where the computer has no
+CPU sensor that Linux knows. `noktad` reads these every 2 seconds while the
+page is open and not at all otherwise.
+
+When memory runs so short that apps wait for it, the notch shows a red
+`Memory is almost full` alert with the name of the app using the most, at
+most once in 10 minutes. The kernel tells `noktad` (memory pressure, on
+kernels that let users watch it), so nothing polls. Turn it off with
+`[system] memory_alert = false`. Over a fullscreen app it shows only with
+`fullscreen_alerts = "all"`.
 
 ## Settings
 
@@ -539,12 +558,21 @@ countdown.
 </details>
 
 <details>
+<summary><code>[system]</code>: the system monitor</summary>
+
+| Key | Default | What it does |
+|---|---|---|
+| `memory_alert` | `true` | Warn when memory is almost full, naming the app that uses the most |
+
+</details>
+
+<details>
 <summary><code>[home]</code>: home's toggles and tiles</summary>
 
 | Key | Default | What it does |
 |---|---|---|
 | `toggles` | `["do_not_disturb", "caffeine", "dark_style"]` | The quick toggles, in the order shown: at most 3 of these and `night_light`. Night Light shows only where GNOME has it. `[]` hides the row |
-| `tiles` | `["notifications", "focus", "timer", "clipboard", "settings"]` | The tiles, in the order shown: at most 5 of these and `screenshot`, which opens GNOME's screenshot UI. `[]` hides the row |
+| `tiles` | `["notifications", "focus", "timer", "clipboard", "system", "settings"]` | The tiles, in the order shown: at most 6 of these and `screenshot`, which opens GNOME's screenshot UI. `[]` hides the row |
 
 </details>
 
@@ -577,6 +605,10 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   folder, and reads a file only to make a small thumbnail of a picture, in
   `~/.cache/nokta/downloads/` (the 20 newest are kept). It sends nothing
   anywhere.
+- **System monitor.** `noktad` reads the system's counters in `/proc` and
+  `/sys` while the System page is open, and the names and memory of running
+  processes only when memory is almost full, to name the app in the alert.
+  It keeps and sends nothing.
 - **Bars that follow the music.** With `[media] real_equalizer = true`,
   `noktad` records what your speakers play while a player plays, never the
   microphone, and stops 2 seconds after the music does. The sound is only

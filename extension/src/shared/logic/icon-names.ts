@@ -38,6 +38,7 @@ export const NOKTA_ICONS = [
     'screenshot',
     'calendar',
     'clipboard',
+    'system',
     'text',
     'link',
     'image',

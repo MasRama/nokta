@@ -4,6 +4,7 @@ import {
     calendarFrom,
     clipboardFrom,
     downloadsFrom,
+    systemFrom,
     behaviorFrom,
     homeFrom,
     lyricsFrom,
@@ -48,6 +49,7 @@ export type Table =
     | 'calendar'
     | 'clipboard'
     | 'downloads'
+    | 'system'
     | 'home';
 
 export interface Row {
@@ -473,6 +475,18 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('System'),
+                rows: [
+                    {
+                        table: 'system',
+                        key: 'memory_alert',
+                        title: N_('Warn when memory is almost full'),
+                        subtitle: N_('Names the app that uses the most'),
+                        kind: bool(),
+                    },
+                ],
+            },
+            {
                 title: N_('Live activities'),
                 rows: [
                     behavior(
@@ -574,7 +588,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
             },
             {
                 title: N_('Tiles'),
-                description: N_('Up to 5, in this order'),
+                description: N_('Up to 6, in this order'),
                 rows: [
                     home('tiles', N_('Tiles'), {
                         type: 'order',
@@ -586,6 +600,7 @@ export const SETTINGS_PAGES: readonly Page[] = [
                             { value: 'clipboard', label: N_('Clipboard') },
                             { value: 'settings', label: N_('Settings') },
                             { value: 'screenshot', label: N_('Screenshot') },
+                            { value: 'system', label: N_('System') },
                         ],
                     }),
                 ],
@@ -606,6 +621,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     calendar: calendarFrom,
     clipboard: clipboardFrom,
     downloads: downloadsFrom,
+    system: systemFrom,
     home: homeFrom,
 };
 

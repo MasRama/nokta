@@ -14,6 +14,7 @@ test('each alert picks its own motion', () => {
         ['clock-done', 'ring'],
         ['activity-done', 'pop'],
         ['activity-failed', 'shake'],
+        ['memory-low', 'shake'],
         ['calendar', 'kick'],
         ['bluetooth-disconnected', 'kick'],
         ['charger-unplugged', 'kick'],

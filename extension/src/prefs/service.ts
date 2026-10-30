@@ -20,6 +20,7 @@ const PROPERTIES: Record<Table, string> = {
     calendar: 'Calendar',
     clipboard: 'Clipboard',
     downloads: 'Downloads',
+    system: 'System',
     home: 'Home',
 };
 

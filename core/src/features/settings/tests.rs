@@ -323,12 +323,30 @@ fn calendar_defaults_and_reminder_range() {
 }
 
 #[test]
+fn system_alerts_on_low_memory_by_default() {
+    assert!(Config::default().system.memory_alert);
+    let c = parse("[system]\nmemory_alert = false\n").unwrap();
+    assert!(!c.system.memory_alert);
+    let map = entries(Config::default().system.entries());
+    assert_eq!(map.keys().copied().collect::<Vec<_>>(), ["memory_alert"]);
+    let c = parse("[home]\ntiles = [\"system\", \"focus\"]\n").unwrap();
+    assert_eq!(c.home.tiles, ["system", "focus"]);
+}
+
+#[test]
 fn home_defaults_names_and_limits() {
     let h = Config::default().home;
     assert_eq!(h.toggles, ["do_not_disturb", "caffeine", "dark_style"]);
     assert_eq!(
         h.tiles,
-        ["notifications", "focus", "timer", "clipboard", "settings"]
+        [
+            "notifications",
+            "focus",
+            "timer",
+            "clipboard",
+            "system",
+            "settings"
+        ]
     );
     let c = parse(
         "[home]\ntoggles = [\"night_light\", \"dark_style\"]\ntiles = [\"screenshot\", \"settings\"]\n",
@@ -347,7 +365,7 @@ fn home_defaults_names_and_limits() {
         ),
         ("tiles = [\"calendar\"]", "home.tiles"),
         (
-            "tiles = [\"notifications\", \"focus\", \"timer\", \"clipboard\", \"settings\", \"screenshot\"]",
+            "tiles = [\"notifications\", \"focus\", \"timer\", \"clipboard\", \"settings\", \"screenshot\", \"system\"]",
             "home.tiles",
         ),
     ] {
@@ -649,6 +667,8 @@ mod edit {
         assert_eq!(parse(&text).unwrap().calendar.reminder_minutes, 10);
         let text = set_key("", "clipboard", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().clipboard.enabled);
+        let text = set_key("", "system", "memory_alert", &Value::Bool(false)).unwrap();
+        assert!(!parse(&text).unwrap().system.memory_alert);
         let text = set_key("", "downloads", "folder", &Value::Text("/dl".into())).unwrap();
         assert_eq!(parse(&text).unwrap().downloads.folder, "/dl");
         let text = set_key("", "media", "real_equalizer", &Value::Bool(true)).unwrap();

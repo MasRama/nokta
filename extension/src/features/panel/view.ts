@@ -120,6 +120,7 @@ export interface PanelHandlers {
     openScreenshot(): void;
     openClipboard(): void;
     openTimer(): void;
+    openSystem(): void;
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     pauseClock(id: string, paused: boolean): void;
@@ -145,6 +146,7 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['clipboard', 'edit-paste-symbolic', N_('Clipboard'), TONES.clipboard],
     ['settings', 'emblem-system-symbolic', N_('Settings'), TONES.settings],
     ['screenshot', 'camera-photo-symbolic', N_('Screenshot'), TONES.screenshot],
+    ['system', 'nokta-system', N_('System'), TONES.system],
 ];
 
 /** One live activity: icon chip in the accent, title, detail and elapsed time, and a thin bar. */
@@ -518,6 +520,7 @@ export class HomePanel {
             clipboard: () => handlers.openClipboard(),
             settings: () => handlers.openSettings(),
             screenshot: () => handlers.openScreenshot(),
+            system: () => handlers.openSystem(),
         };
         this.tileRow = new St.BoxLayout({ style_class: 'nokta-panel-tiles' });
         for (const [which, icon, label, tone] of TILES) {

@@ -10,6 +10,7 @@ export type {
     HomeToggle,
     MediaSettings,
     NotificationSettings,
+    SystemSettings,
     TimerSettings,
 } from './logic/parse.js';
 export { appearanceFrom } from './logic/parse.js';

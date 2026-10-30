@@ -273,14 +273,14 @@ test('clipboard settings from table', () => {
 test('home layout from table', () => {
     assert.deepEqual(DEFAULT_HOME, {
         toggles: ['do_not_disturb', 'caffeine', 'dark_style'],
-        tiles: ['notifications', 'focus', 'timer', 'clipboard', 'settings'],
+        tiles: ['notifications', 'focus', 'timer', 'clipboard', 'system', 'settings'],
     });
     assert.deepEqual(homeFrom({ toggles: ['night_light'], tiles: [] }), { toggles: ['night_light'], tiles: [] });
     // Unknown names and repeats are dropped, the lists cut to their size.
     assert.deepEqual(homeFrom({ toggles: ['wifi', 'caffeine', 'caffeine'] }).toggles, ['caffeine']);
     assert.deepEqual(
-        homeFrom({ tiles: ['screenshot', 'settings', 'timer', 'focus', 'clipboard', 'notifications'] }).tiles,
-        ['screenshot', 'settings', 'timer', 'focus', 'clipboard'],
+        homeFrom({ tiles: ['screenshot', 'settings', 'timer', 'focus', 'clipboard', 'system', 'notifications'] }).tiles,
+        ['screenshot', 'settings', 'timer', 'focus', 'clipboard', 'system'],
     );
     assert.deepEqual(homeFrom({ toggles: 'caffeine', tiles: [3] }), { toggles: DEFAULT_HOME.toggles, tiles: [] });
     assert.notEqual(homeFrom(undefined).tiles, DEFAULT_HOME.tiles);
