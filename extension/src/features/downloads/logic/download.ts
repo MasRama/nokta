@@ -1,3 +1,5 @@
+import { sizeLabel } from '../../../shared/logic/format.js';
+
 /** A button of the download preview. */
 export type DownloadButton = 'open' | 'files' | 'keep';
 
@@ -11,21 +13,6 @@ export interface Download {
     size: string;
     /** A PNG of a picture, empty for other files. */
     thumbnail: string;
-}
-
-const UNITS = ['kB', 'MB', 'GB', 'TB'];
-
-/** `999 B`, `2.4 MB`: powers of 1000 and one decimal, as GNOME Files shows sizes. */
-export function sizeLabel(bytes: number): string {
-    if (bytes < 1000) return `${bytes} B`;
-    let value = bytes / 1000;
-    let unit = 0;
-    // 999.96 kB rounds to 1000.0 kB; show it as 1.0 MB instead.
-    while (Number(value.toFixed(1)) >= 1000 && unit < UNITS.length - 1) {
-        value /= 1000;
-        unit += 1;
-    }
-    return `${value.toFixed(1)} ${UNITS[unit]}`;
 }
 
 /** Open and Show in Files, and Keep on shelf while the shelf is on. */

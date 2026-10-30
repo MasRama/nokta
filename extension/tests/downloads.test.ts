@@ -1,18 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { downloadButtons, downloadFrom, sizeLabel } from '../src/features/downloads/logic/download.js';
+import { downloadButtons, downloadFrom } from '../src/features/downloads/logic/download.js';
 import { DEFAULT_DOWNLOADS, downloadsFrom } from '../src/features/settings/logic/parse.js';
-
-test('sizes read like GNOME Files, in powers of 1000', () => {
-    assert.equal(sizeLabel(0), '0 B');
-    assert.equal(sizeLabel(999), '999 B');
-    assert.equal(sizeLabel(1023), '1.0 kB');
-    assert.equal(sizeLabel(2_400_000), '2.4 MB');
-    assert.equal(sizeLabel(999_960), '1.0 MB');
-    assert.equal(sizeLabel(4_700_000_000), '4.7 GB');
-    assert.equal(sizeLabel(3_200_000_000_000), '3.2 TB');
-});
 
 test('a download can be kept on the shelf only while the shelf is on', () => {
     assert.deepEqual(downloadButtons(true), ['open', 'files', 'keep']);

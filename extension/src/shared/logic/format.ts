@@ -1,5 +1,7 @@
 const pad = (n: number): string => String(n).padStart(2, '0');
 
+const SIZE_UNITS = ['kB', 'MB', 'GB', 'TB'];
+
 /** `m:ss`, or `h:mm:ss` from one hour. */
 export function formatDuration(us: number): string {
     const total = Math.max(0, Math.floor(us / 1_000_000));
@@ -24,4 +26,17 @@ export function uses24h(clockFormat: string, gnomeClockFormat: string): boolean 
     if (clockFormat === '24h') return true;
     if (clockFormat === '12h') return false;
     return gnomeClockFormat === '24h';
+}
+
+/** `999 B`, `2.4 MB`: powers of 1000 and one decimal, as GNOME Files shows sizes. */
+export function sizeLabel(bytes: number): string {
+    if (bytes < 1000) return `${bytes} B`;
+    let value = bytes / 1000;
+    let unit = 0;
+    // 999.96 kB rounds to 1000.0 kB; show it as 1.0 MB instead.
+    while (Number(value.toFixed(1)) >= 1000 && unit < SIZE_UNITS.length - 1) {
+        value /= 1000;
+        unit += 1;
+    }
+    return `${value.toFixed(1)} ${SIZE_UNITS[unit]}`;
 }
