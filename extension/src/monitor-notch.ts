@@ -646,6 +646,7 @@ export class MonitorNotch implements ShelfNotch {
 
     /** The system switched between its light and dark style. */
     onSystemStyle(): void {
+        if (this.destroyed) return;
         this.applyPalette();
         if (this.page === 'settings') this.showSettingsPage();
     }
