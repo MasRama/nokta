@@ -239,6 +239,19 @@ export const DEFAULT_CLIPBOARD: Readonly<ClipboardSettings> = {
     maxItems: 25,
 };
 
+/** io.nokta.Settings1.Downloads in camelCase. */
+export interface DownloadsSettings {
+    /** Show a file that finishes downloading. */
+    enabled: boolean;
+    /** The folder noktad watches; empty for the system's download folder. */
+    folder: string;
+}
+
+export const DEFAULT_DOWNLOADS: Readonly<DownloadsSettings> = {
+    enabled: true,
+    folder: '',
+};
+
 /** The names home.toggles takes, as the daemon checks them. */
 export const HOME_TOGGLES = ['do_not_disturb', 'caffeine', 'dark_style', 'night_light'] as const;
 /** The names home.tiles takes. */
@@ -326,6 +339,7 @@ export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(ra
 export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);
 export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);
 export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);
+export const downloadsFrom = (raw: unknown): DownloadsSettings => fromTable(raw, DEFAULT_DOWNLOADS);
 
 /** Known names, each once, at most `max`; anything but a list gives `fallback`. */
 function namesFrom<T extends string>(raw: unknown, known: readonly T[], max: number, fallback: readonly T[]): T[] {

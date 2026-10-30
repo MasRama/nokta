@@ -18,6 +18,7 @@ test('the drop area goes over the OSD, over a notification, over the mode', () =
     assert.equal(drawnView({ ...calm, dropping: true, osd: true, notification: 'notification' }), 'drop');
     assert.equal(drawnView({ ...calm, osd: true, notification: 'notification' }), 'osd');
     assert.equal(drawnView({ ...calm, notification: 'screenshot' }), 'screenshot');
+    assert.equal(drawnView({ ...calm, notification: 'download' }), 'download');
     assert.equal(drawnView(calm), 'expanded');
 });
 
@@ -38,17 +39,16 @@ test('open, a page goes over home, and home shows without a player or when asked
 test('the notch opens into a tall view, closes out of one, and else only changes width', () => {
     assert.equal(resizeKind('idle', 'expanded'), 'open');
     assert.equal(resizeKind('panel', 'notification'), 'open');
+    assert.equal(resizeKind('idle', 'download'), 'open');
     assert.equal(resizeKind('expanded', 'collapsed'), 'close');
     assert.equal(resizeKind('drop', 'idle'), 'close');
     assert.equal(resizeKind('idle', 'osd'), 'width');
     assert.equal(resizeKind('collapsed', 'peek'), 'width');
 });
 
-test('only the OSD, a notification and a screenshot keep the alert glow', () => {
-    const alerts = (['idle', 'collapsed', 'peek', 'expanded', 'panel', 'page', 'osd', 'notification', 'screenshot', 'drop'] as const).filter(
-        showsAlert,
-    );
-    assert.deepEqual(alerts, ['osd', 'notification', 'screenshot']);
+test('only the OSD, a notification, a screenshot and a download keep the alert glow', () => {
+    const views = ['idle', 'collapsed', 'peek', 'expanded', 'panel', 'page', 'osd', 'notification', 'screenshot', 'download', 'drop'] as const;
+    assert.deepEqual(views.filter(showsAlert), ['osd', 'notification', 'screenshot', 'download']);
 });
 
 const sizes: SizeInput = {
@@ -69,6 +69,8 @@ test('each view has its own size', () => {
     assert.deepEqual(viewSize('page', sizes), [420, 300]);
     assert.deepEqual(viewSize('notification', sizes), [420, 60]);
     assert.deepEqual(viewSize('screenshot', sizes), [420, 116]);
+    // A download has a line for its size under the name.
+    assert.deepEqual(viewSize('download', sizes), [420, 134]);
     assert.deepEqual(viewSize('drop', sizes), [420, 108]);
 });
 

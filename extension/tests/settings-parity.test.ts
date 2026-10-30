@@ -9,6 +9,7 @@ import {
     DEFAULT_BEHAVIOR,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
+    DEFAULT_DOWNLOADS,
     DEFAULT_HOME,
     DEFAULT_LYRICS,
     DEFAULT_MEDIA,
@@ -66,6 +67,7 @@ const EXTENSION_DEFAULTS: Record<string, object> = {
     weather: DEFAULT_WEATHER,
     calendar: DEFAULT_CALENDAR,
     clipboard: DEFAULT_CLIPBOARD,
+    downloads: DEFAULT_DOWNLOADS,
     home: DEFAULT_HOME,
 };
 

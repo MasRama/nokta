@@ -20,6 +20,7 @@ pub struct Config {
     pub weather: WeatherConfig,
     pub calendar: CalendarConfig,
     pub clipboard: ClipboardConfig,
+    pub downloads: DownloadsConfig,
     pub home: HomeConfig,
 }
 
@@ -306,6 +307,24 @@ impl Default for ClipboardConfig {
         ClipboardConfig {
             enabled: true,
             max_items: 25,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct DownloadsConfig {
+    /// Show a file that finishes downloading.
+    pub enabled: bool,
+    /// The folder to watch; empty for the system's download folder.
+    pub folder: String,
+}
+
+impl Default for DownloadsConfig {
+    fn default() -> Self {
+        DownloadsConfig {
+            enabled: true,
+            folder: String::new(),
         }
     }
 }
@@ -834,6 +853,15 @@ impl ClipboardConfig {
         vec![
             ("enabled", self.enabled.into()),
             ("max_items", self.max_items.into()),
+        ]
+    }
+}
+
+impl DownloadsConfig {
+    pub fn entries(&self) -> Entries {
+        vec![
+            ("enabled", self.enabled.into()),
+            ("folder", (&self.folder).into()),
         ]
     }
 }

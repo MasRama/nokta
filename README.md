@@ -100,6 +100,9 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
 - **[Screenshots](#screenshots).** After a screenshot, the notch shows it
   with buttons to open it, show it in Files or keep it on the shelf. A
   screen recording shows how long it runs, with a stop button in home.
+- **[Downloads](#downloads).** When a file finishes downloading, the notch
+  shows it with buttons to open it, show it in Files or keep it on the
+  shelf.
 - **[Clipboard history](#clipboard-history).** What you copy, text and
   pictures, ready to search and copy again from home.
 - **Privacy dots.** A green dot while an app uses the camera, an orange
@@ -287,6 +290,21 @@ While the screenshot UI records the screen, the notch shows a red dot and
 how long it has been recording, and home has a row with a stop button.
 When the recording is saved, the notch shows the same preview with a
 video icon instead of GNOME's `Screencast recorded` banner.
+
+### Downloads
+
+When a file finishes downloading into your Downloads folder, the notch
+shows it like a screenshot: a picture for an image, else the icon for its
+kind, its name and size, and `Open`, `Show in Files` and `Keep on shelf`. A
+click on the picture opens it. It stays as long as a notification
+(`[notifications] duration_ms`), and over a fullscreen app only with
+`fullscreen_alerts = "all"`.
+
+`noktad` watches the folder, not its subfolders, and shows a file once it
+has its final name (browsers rename it from `.part` or `.crdownload` at the
+end) and nothing has written to it for a moment. Hidden files and empty
+ones are left out. It watches the folder your session names in
+`~/.config/user-dirs.dirs`, or the one you set in `[downloads] folder`.
 
 ### Clipboard history
 
@@ -511,6 +529,16 @@ countdown.
 </details>
 
 <details>
+<summary><code>[downloads]</code>: finished downloads</summary>
+
+| Key | Default | What it does |
+|---|---|---|
+| `enabled` | `true` | Show a file that finishes downloading. Off, `noktad` stops watching the folder |
+| `folder` | `""` | The folder to watch. Empty for the session's download folder (`XDG_DOWNLOAD_DIR`, else `~/Downloads`) |
+
+</details>
+
+<details>
 <summary><code>[home]</code>: home's toggles and tiles</summary>
 
 | Key | Default | What it does |
@@ -545,6 +573,10 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   written to disk, except small thumbnails of copied pictures in
   `$XDG_RUNTIME_DIR/nokta/clipboard/` (memory, readable only by you,
   emptied when `noktad` starts and when an entry goes).
+- **Downloads.** `noktad` watches the names of the files in your download
+  folder, and reads a file only to make a small thumbnail of a picture, in
+  `~/.cache/nokta/downloads/` (the 20 newest are kept). It sends nothing
+  anywhere.
 - **Bars that follow the music.** With `[media] real_equalizer = true`,
   `noktad` records what your speakers play while a player plays, never the
   microphone, and stops 2 seconds after the music does. The sound is only

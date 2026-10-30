@@ -97,6 +97,10 @@ countdown = true         # from the reminder, the closed notch counts the minute
 enabled = true           # keep what you copy, text and pictures, in the open notch; in memory only
 max_items = 25           # entries kept besides the pinned ones, 5 to 100
 
+[downloads]
+enabled = true           # show a file that finishes downloading, with Open, Show in Files and Keep on shelf
+folder = ""              # the folder to watch; empty for the system's download folder
+
 [home]
 # The open notch's home, in the order shown.
 toggles = ["do_not_disturb", "caffeine", "dark_style"]                 # at most 3 of these and "night_light"

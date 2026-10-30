@@ -4,6 +4,7 @@ export type {
     Behavior,
     CalendarSettings,
     ClipboardSettings,
+    DownloadsSettings,
     HomeSettings,
     HomeTile,
     HomeToggle,

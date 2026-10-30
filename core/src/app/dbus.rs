@@ -12,6 +12,7 @@ use crate::features::activities;
 use crate::features::calendar;
 use crate::features::clipboard;
 use crate::features::devices;
+use crate::features::downloads;
 use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
 use crate::features::settings;
@@ -89,6 +90,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     calendar::dbus::serve(&conn).await?;
     shelf::dbus::serve(&conn, services.shelf).await?;
     clipboard::dbus::serve(&conn, services.clipboard).await?;
+    downloads::dbus::serve(&conn, services.downloads).await?;
     let super::Timer {
         commands,
         state,

@@ -62,6 +62,7 @@ fn expected_type(table: &str, key: &str) -> Result<SettingValue, ConfigError> {
         "weather" => defaults.weather.entries(),
         "calendar" => defaults.calendar.entries(),
         "clipboard" => defaults.clipboard.entries(),
+        "downloads" => defaults.downloads.entries(),
         "home" => defaults.home.entries(),
         _ => {
             return Err(ConfigError::invalid(format!(

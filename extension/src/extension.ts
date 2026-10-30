@@ -27,6 +27,7 @@ import {
     type CalendarEvent,
 } from './features/calendar/index.js';
 import { batteryLevel, deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
+import { downloadButtons, DownloadsClient, type Download, type DownloadButton } from './features/downloads/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
@@ -146,6 +147,7 @@ class Session {
     private readonly outputs = new AudioOutputs();
     private readonly lyrics = new LyricsClient();
     private readonly devices = new DevicesClient((alert) => this.onDeviceAlert(alert));
+    private readonly downloads = new DownloadsClient((download) => this.onDownload(download));
     private readonly timer = new TimerClient(
         (phase) => this.onTimerFinished(phase),
         (kind, label) => this.onClockDone(kind, label),
@@ -391,6 +393,7 @@ class Session {
         this.recording.disconnect(this.recordingId);
         this.recording.destroy();
         this.devices.detach();
+        this.downloads.detach();
         this.settings.detach();
         Main.layoutManager.disconnect(this.monitorsId);
         this.restoreClock?.();
@@ -445,6 +448,7 @@ class Session {
         if (cancellable.is_cancelled()) return;
         for (const { name, error } of failures) console.error(`Nokta: cannot follow noktad's ${name}`, error);
         this.devices.attach(connection);
+        this.downloads.attach(connection);
         this.askEventAnswers();
     }
 
@@ -462,6 +466,7 @@ class Session {
         this.meetingLinks.detach();
         this.eventColors.detach();
         this.devices.detach();
+        this.downloads.detach();
     }
 
     // Focus timer
@@ -705,6 +710,51 @@ class Session {
         const tone: AlertTone = alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device };
         const fullscreenKind = isBatteryWarning(kind) ? 'battery' : 'device';
         this.showOsd(-1, fullscreenKind, content, iconFor(alert.icon), alertDurationMs, tone, this.motion(kind));
+    }
+
+    /**
+     * A file finished downloading: its preview in the focused notch, for as
+     * long as a notification. A new one replaces what shows there.
+     */
+    private onDownload(download: Download): void {
+        const { notch } = this.routeMessage(-1, 'download');
+        if (!notch) return;
+        // A GNOME notification it replaces must not close it when it goes.
+        if (this.shownNotification?.notch === notch) this.releaseNotification();
+        const buttons = downloadButtons(this.settings.behavior.fileShelf);
+        const press = (button: DownloadButton) => this.onDownloadPress(download.uri, button);
+        notch.showDownload(download, buttons, this.settings.notifications.durationMs, { color: TONES.downloads }, press);
+    }
+
+    private onDownloadPress(uri: string, button: DownloadButton): void {
+        if (button === 'keep') {
+            this.shelf.add([uri]);
+        } else if (button === 'files') {
+            Gio.DBus.session.call(
+                'org.freedesktop.FileManager1',
+                '/org/freedesktop/FileManager1',
+                'org.freedesktop.FileManager1',
+                'ShowItems',
+                new GLib.Variant('(ass)', [[uri], '']),
+                null,
+                Gio.DBusCallFlags.NONE,
+                -1,
+                null,
+                (connection, result) => {
+                    try {
+                        connection!.call_finish(result);
+                    } catch (error) {
+                        console.warn('Nokta: could not show the download in Files', error);
+                    }
+                },
+            );
+        } else {
+            try {
+                Gio.AppInfo.launch_default_for_uri(uri, global.create_app_launch_context(0, -1));
+            } catch (error) {
+                console.warn('Nokta: could not open the download', error);
+            }
+        }
     }
 
     /** An activity ended: a check mark or a red cross in the focused notch. */

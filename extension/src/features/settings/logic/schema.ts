@@ -3,6 +3,7 @@ import {
     appearanceFrom,
     calendarFrom,
     clipboardFrom,
+    downloadsFrom,
     behaviorFrom,
     homeFrom,
     lyricsFrom,
@@ -46,6 +47,7 @@ export type Table =
     | 'weather'
     | 'calendar'
     | 'clipboard'
+    | 'downloads'
     | 'home';
 
 export interface Row {
@@ -116,6 +118,14 @@ const calendar = (key: string, title: string, kind: RowKind, subtitle?: string):
 
 const clipboard = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
     table: 'clipboard',
+    key,
+    title,
+    kind,
+    subtitle,
+});
+
+const downloads = (key: string, title: string, kind: RowKind, subtitle?: string): Row => ({
+    table: 'downloads',
     key,
     title,
     kind,
@@ -451,6 +461,18 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('Downloads'),
+                rows: [
+                    downloads(
+                        'enabled',
+                        N_('Show finished downloads'),
+                        bool(),
+                        N_('Open the file, show it in Files or keep it on the shelf'),
+                    ),
+                    downloads('folder', N_('Folder'), text(), N_("Empty for the system's download folder")),
+                ],
+            },
+            {
                 title: N_('Live activities'),
                 rows: [
                     behavior(
@@ -583,6 +605,7 @@ const READERS: Record<Table, (raw: unknown) => object> = {
     weather: weatherFrom,
     calendar: calendarFrom,
     clipboard: clipboardFrom,
+    downloads: downloadsFrom,
     home: homeFrom,
 };
 

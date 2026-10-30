@@ -34,6 +34,7 @@ import {
     shouldPeek,
     type PeekTrack,
 } from './features/media/index.js';
+import { downloadPicture, downloadPreview, type Download, type DownloadButton } from './features/downloads/index.js';
 import {
     NotificationTimer,
     NotificationView,
@@ -89,7 +90,7 @@ import {
     type TimerClient,
 } from './features/timer/index.js';
 import { IndicatorWidgets } from './indicator-widgets.js';
-import { drawnView, type Drawn, resizeKind, showsAlert, viewSize } from './logic/views.js';
+import { drawnView, type Drawn, type Message, resizeKind, showsAlert, viewSize } from './logic/views.js';
 import { IdleClock } from './shared/clock.js';
 import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
@@ -260,8 +261,10 @@ export class MonitorNotch implements ShelfNotch {
     private notificationButtons = false;
     private readonly screenshotView = screenshotPreview((button) => this.onScreenshotPress(button));
     private screenshotPress: ((button: ScreenshotButton) => void) | null = null;
-    /** Which of the two the notification timer is showing. */
-    private notificationKind: 'notification' | 'screenshot' = 'notification';
+    private readonly downloadView = downloadPreview((button) => this.onDownloadPress(button));
+    private downloadPress: ((button: DownloadButton) => void) | null = null;
+    /** Which message the notification timer is showing. */
+    private notificationKind: Message = 'notification';
     private readonly privacyDots = new PrivacyDots();
     private readonly progress = new ProgressLine();
     /** Where the cover flies between the closed notch and the player. */
@@ -428,6 +431,7 @@ export class MonitorNotch implements ShelfNotch {
             osd: this.osdView.actor,
             notification: this.notificationView.actor,
             screenshot: this.screenshotView.actor,
+            download: this.downloadView.actor,
             drop: this.dropView.actor,
         };
         for (const [mode, actor] of Object.entries(this.views)) {
@@ -456,7 +460,7 @@ export class MonitorNotch implements ShelfNotch {
             () => settings.behavior.osdDurationMs,
             (active) => this.onOsdTimer(active),
         );
-        this.notificationTimer = new NotificationTimer(glibSchedule, () => this.draw(this.overlay()));
+        this.notificationTimer = new NotificationTimer(glibSchedule, () => this.onNotificationTimer());
 
         // The notch follows fullscreen itself, so an alert can show over it.
         Main.layoutManager.addTopChrome(this.notch.actor, { affectsStruts: false, trackFullscreen: false });
@@ -533,6 +537,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationClick = null;
         this.notificationButton = null;
         this.screenshotPress = null;
+        this.downloadPress = null;
         this.stopTimers();
         this.notch.actor.disconnect(this.hoverId);
         this.notch.actor.disconnect(this.motionId);
@@ -550,6 +555,7 @@ export class MonitorNotch implements ShelfNotch {
         this.osdView.destroy();
         this.notificationView.destroy();
         this.screenshotView.destroy();
+        this.downloadView.destroy();
         this.idlePanel.destroy();
         this.clipboardPage.destroy();
         this.clipboardSubPage.destroy();
@@ -744,6 +750,15 @@ export class MonitorNotch implements ShelfNotch {
         // An alert from before goes with the notch; one over the app is no longer over it.
         this.alertOverFullscreen = false;
         this.applyFullscreen();
+    }
+
+    private onNotificationTimer(): void {
+        // A download let through over a fullscreen app goes with it.
+        if (this.alertOverFullscreen && !this.notificationTimer.active && !this.osdTimer.active) {
+            this.alertOverFullscreen = false;
+            this.applyFullscreen();
+        }
+        this.draw(this.overlay());
     }
 
     private onOsdTimer(active: boolean): void {
@@ -1021,6 +1036,7 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationClick = () => notification.onClick();
         this.notificationButton = (index) => notification.onButton(index);
         this.screenshotPress = null;
+        this.downloadPress = null;
         this.notificationKind = 'notification';
         this.peekTimer.hide();
         this.setNotificationButtons(buttons.length > 0);
@@ -1045,6 +1061,7 @@ export class MonitorNotch implements ShelfNotch {
         if (this.destroyed) return;
         this.screenshotView.show(screenshotPicture(image), title, '', buttons);
         this.screenshotPress = onPress;
+        this.downloadPress = null;
         this.notificationClick = null;
         this.notificationButton = null;
         this.notificationKind = 'screenshot';
@@ -1052,6 +1069,35 @@ export class MonitorNotch implements ShelfNotch {
         this.notificationTimer.show(durationMs);
         this.draw(this.overlay());
         this.alert('accent');
+    }
+
+    /**
+     * A finished download, timed like a notification; a button calls
+     * `onPress` and closes it. It glows in `tone`.
+     */
+    showDownload(
+        download: Download,
+        buttons: readonly DownloadButton[],
+        durationMs: number,
+        tone: AlertTone,
+        onPress: (button: DownloadButton) => void,
+    ): void {
+        if (this.destroyed) return;
+        // The session sends one here over a fullscreen app only when it is let through.
+        if (this.inFullscreen) {
+            this.alertOverFullscreen = true;
+            this.applyFullscreen();
+        }
+        this.downloadView.show(downloadPicture(download), download.name, download.size, buttons);
+        this.downloadPress = onPress;
+        this.screenshotPress = null;
+        this.notificationClick = null;
+        this.notificationButton = null;
+        this.notificationKind = 'download';
+        this.peekTimer.hide();
+        this.notificationTimer.show(durationMs);
+        this.draw(this.overlay());
+        this.alert(tone);
     }
 
     /** The buttons of the screenshot preview while it shows. */
@@ -1199,6 +1245,13 @@ export class MonitorNotch implements ShelfNotch {
     private showPrivacyDots(): void {
         const closed = this.drawn === 'idle' || this.drawn === 'collapsed' || this.drawn === 'peek';
         this.privacyDots.actor.visible = this.privacyCount > 0 && closed;
+    }
+
+    private onDownloadPress(button: DownloadButton): void {
+        const press = this.downloadPress;
+        this.downloadPress = null;
+        this.notificationTimer.hide();
+        press?.(button);
     }
 
     private onScreenshotPress(button: ScreenshotButton): void {
@@ -1425,6 +1478,7 @@ export class MonitorNotch implements ShelfNotch {
         this.settingsPage.setColors({ foreground, accent, onAccent });
         this.dropView.setForeground(foreground);
         this.screenshotView.setForeground(foreground);
+        this.downloadView.setForeground(foreground);
         this.notificationView.setColors(foreground, accent, onAccent);
     }
 

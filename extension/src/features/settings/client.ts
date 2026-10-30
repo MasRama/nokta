@@ -9,10 +9,12 @@ import {
     behaviorFrom,
     calendarFrom,
     clipboardFrom,
+    downloadsFrom,
     DEFAULT_APPEARANCE,
     DEFAULT_BEHAVIOR,
     DEFAULT_CALENDAR,
     DEFAULT_CLIPBOARD,
+    DEFAULT_DOWNLOADS,
     DEFAULT_LYRICS,
     DEFAULT_MEDIA,
     homeFrom,
@@ -26,6 +28,7 @@ import {
     type Behavior,
     type CalendarSettings,
     type ClipboardSettings,
+    type DownloadsSettings,
     type HomeSettings,
     type Lyrics,
     type MediaSettings,
@@ -41,7 +44,7 @@ export interface PreparedPicture {
 }
 
 /**
- * The notch's appearance, behavior, media, lyrics, timer, notification, calendar, clipboard and home settings from io.nokta.Settings1. Until the
+ * The notch's appearance, behavior, media, lyrics, timer, notification, calendar, clipboard, downloads and home settings from io.nokta.Settings1. Until the
  * daemon answers it holds the defaults; when the daemon goes away it
  * keeps the last values it saw, so a daemon restart does not flicker.
  */
@@ -54,6 +57,7 @@ export class SettingsClient {
     notifications: NotificationSettings = { ...DEFAULT_NOTIFICATIONS };
     calendar: CalendarSettings = { ...DEFAULT_CALENDAR };
     clipboard: ClipboardSettings = { ...DEFAULT_CLIPBOARD };
+    downloads: DownloadsSettings = { ...DEFAULT_DOWNLOADS };
     home: HomeSettings = homeFrom(undefined);
     /** The picture theme's image as the daemon prepared it; empty strings while there is none. */
     picture: PreparedPicture = { path: '', color: '', tone: '' };
@@ -107,6 +111,7 @@ export class SettingsClient {
         this.notifications = notificationsFrom(cached(this.proxy, 'Notifications'));
         this.calendar = calendarFrom(cached(this.proxy, 'Calendar'));
         this.clipboard = clipboardFrom(cached(this.proxy, 'Clipboard'));
+        this.downloads = downloadsFrom(cached(this.proxy, 'Downloads'));
         this.home = homeFrom(cached(this.proxy, 'Home'));
         const text = (name: string): string => {
             const value = cached(this.proxy!, name);

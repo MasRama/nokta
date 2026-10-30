@@ -40,6 +40,8 @@ pub struct Paths {
     /// Thumbnails of copied pictures, emptied at start: in the runtime
     /// folder (memory, this user only) where there is one.
     pub clipboard_dir: PathBuf,
+    /// The folder finished downloads land in; none outside a real session.
+    pub downloads_dir: Option<PathBuf>,
 }
 
 impl Paths {
@@ -52,6 +54,7 @@ impl Paths {
             lyrics_offsets_file: data_home.join("nokta").join("lyrics-offsets.toml"),
             system_thumbnails: Some(cache_home.join("thumbnails")),
             clipboard_dir: cache_home.join("nokta").join("clipboard"),
+            downloads_dir: None,
         }
     }
 
@@ -75,18 +78,24 @@ impl Paths {
                     (None, Some(home)) => Ok(home.join(fallback)),
                     (None, None) => bail!("neither {name} nor HOME is set"),
                 };
+                let config_home = pick("XDG_CONFIG_HOME", ".config")?;
                 let mut paths = Paths::new(
-                    &pick("XDG_CONFIG_HOME", ".config")?,
+                    &config_home,
                     &pick("XDG_CACHE_HOME", ".cache")?,
                     &pick("XDG_DATA_HOME", ".local/share")?,
                 );
+                if let Some(home) = &home {
+                    let user_dirs = std::fs::read_to_string(config_home.join("user-dirs.dirs"));
+                    paths.downloads_dir = Some(download_dir(user_dirs.ok().as_deref(), home));
+                }
                 if let Some(runtime) = dir("XDG_RUNTIME_DIR") {
                     paths.clipboard_dir = runtime.join("nokta").join("clipboard");
                 }
                 paths
             }
             System::MacOs => {
-                let library = need("HOME")?.join("Library");
+                let home = need("HOME")?;
+                let library = home.join("Library");
                 let support = library.join("Application Support").join("nokta");
                 let cache_dir = library.join("Caches").join("nokta");
                 Paths {
@@ -96,6 +105,7 @@ impl Paths {
                     lyrics_dir: support.join("lyrics"),
                     lyrics_offsets_file: support.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
+                    downloads_dir: Some(home.join("Downloads")),
                 }
             }
             System::Windows => {
@@ -108,10 +118,32 @@ impl Paths {
                     lyrics_dir: roaming.join("lyrics"),
                     lyrics_offsets_file: roaming.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
+                    downloads_dir: dir("USERPROFILE").map(|home| home.join("Downloads")),
                 }
             }
         })
     }
+}
+
+/// `XDG_DOWNLOAD_DIR` from the text of `user-dirs.dirs`, with `$HOME`
+/// filled in, or `~/Downloads` when it is not set or turned off.
+pub fn download_dir(user_dirs: Option<&str>, home: &Path) -> PathBuf {
+    let value = user_dirs.and_then(|text| {
+        text.lines()
+            .rev()
+            .find_map(|line| line.trim().strip_prefix("XDG_DOWNLOAD_DIR="))
+    });
+    let dir = value.map(|v| v.trim().trim_matches('"')).and_then(|v| {
+        match v.strip_prefix("$HOME") {
+            // The home folder itself means the folder is turned off.
+            Some(rest) => {
+                let rest = rest.trim_start_matches('/');
+                (!rest.is_empty()).then(|| home.join(rest))
+            }
+            None => v.starts_with('/').then(|| PathBuf::from(v)),
+        }
+    });
+    dir.unwrap_or_else(|| home.join("Downloads"))
 }
 
 #[cfg(test)]
@@ -152,7 +184,10 @@ mod tests {
         let paths = Paths::for_system(System::Linux, env(&vars)).unwrap();
         assert_eq!(
             paths,
-            Paths::new(Path::new("/xc"), Path::new("/xk"), Path::new("/xd"))
+            Paths {
+                downloads_dir: Some(PathBuf::from("/home/u/Downloads")),
+                ..Paths::new(Path::new("/xc"), Path::new("/xk"), Path::new("/xd"))
+            }
         );
     }
 
@@ -170,11 +205,14 @@ mod tests {
         );
         assert_eq!(
             paths,
-            Paths::new(
-                &home.join(".config"),
-                &home.join(".cache"),
-                &home.join(".local").join("share")
-            )
+            Paths {
+                downloads_dir: Some(home.join("Downloads")),
+                ..Paths::new(
+                    &home.join(".config"),
+                    &home.join(".cache"),
+                    &home.join(".local").join("share")
+                )
+            }
         );
         assert!(Paths::for_system(System::Linux, env(&[])).is_err());
     }
@@ -253,5 +291,42 @@ mod tests {
             System::Linux
         };
         assert_eq!(System::current(), expected);
+    }
+
+    #[test]
+    fn the_download_folder_comes_from_user_dirs() {
+        let home = Path::new("/home/x");
+        let user_dirs = "# written by xdg-user-dirs-update\n\
+                         XDG_DESKTOP_DIR=\"$HOME/Desktop\"\n\
+                         XDG_DOWNLOAD_DIR=\"$HOME/Unduhan\"\n";
+        assert_eq!(
+            download_dir(Some(user_dirs), home),
+            Path::new("/home/x/Unduhan")
+        );
+        assert_eq!(
+            download_dir(Some("XDG_DOWNLOAD_DIR=\"/data/dl\"\n"), home),
+            Path::new("/data/dl")
+        );
+        // Missing, commented out, or the home folder itself (turned off).
+        for text in [
+            None,
+            Some("XDG_DESKTOP_DIR=\"$HOME/Desktop\"\n"),
+            Some("# XDG_DOWNLOAD_DIR=\"$HOME/Unduhan\"\n"),
+            Some("XDG_DOWNLOAD_DIR=\"$HOME/\"\n"),
+        ] {
+            assert_eq!(download_dir(text, home), home.join("Downloads"), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn only_a_real_session_has_a_download_folder() {
+        let paths = Paths::new(Path::new("/c"), Path::new("/k"), Path::new("/d"));
+        assert_eq!(paths.downloads_dir, None);
+        let vars = [("HOME", "/Users/u")];
+        let paths = Paths::for_system(System::MacOs, env(&vars)).unwrap();
+        assert_eq!(
+            paths.downloads_dir.as_deref(),
+            Some(Path::new("/Users/u").join("Downloads").as_path())
+        );
     }
 }

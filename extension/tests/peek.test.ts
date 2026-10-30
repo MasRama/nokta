@@ -19,7 +19,7 @@ test('no peek on the first snapshot', () => {
 });
 
 test('no peek while the notch is open', () => {
-    for (const drawn of ['expanded', 'panel', 'page', 'osd', 'notification', 'screenshot', 'drop'])
+    for (const drawn of ['expanded', 'panel', 'page', 'osd', 'notification', 'screenshot', 'download', 'drop'])
         assert.equal(shouldPeek(first, second, { ...closed, drawn }), false, drawn);
 });
 

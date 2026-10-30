@@ -1021,6 +1021,48 @@ wait_for "the recording preview closes" "$FIND !shown('nokta-screenshot')" 5
 gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
 wait_for "the clock comes back when the shelf is cleared again" "$FIND shown('nokta-clock')" 10
 
+# A file that finishes downloading shows with its thumbnail, name and size,
+# in its own taller preview; Keep on shelf parks it. noktad watches the
+# folder [downloads] names, and only reports the file once it is renamed
+# from .part and settles.
+DOWNLOADS="$STATE/files/downloads"
+mkdir -p "$DOWNLOADS"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Settings \
+    --method io.nokta.Settings1.Set downloads folder "<'$DOWNLOADS'>" > /dev/null
+sleep 0.5
+cp "$STATE/files/smoke-shot.png" "$DOWNLOADS/holiday.png.part"
+mv "$DOWNLOADS/holiday.png.part" "$DOWNLOADS/holiday.png"
+SIZE=$(wc -c < "$DOWNLOADS/holiday.png" | tr -d ' ')
+DL="one('nokta-download')"
+DL_BUTTONS="find($DL, 'nokta-file-preview-button').map((b) => b.mapped).join()"
+DL_TEXT="[find($DL, 'nokta-file-preview-title')[0].text, find($DL, 'nokta-file-preview-detail')[0].text].join(' ')"
+DL_THUMB="find($DL, 'nokta-file-preview-thumb')[0].style.includes('background-image')"
+wait_for "a finished download shows its thumbnail, name, size and three buttons" \
+    "$FIND shown('nokta-download') && $DL_TEXT === 'holiday.png $SIZE B' && $DL_THUMB && $DL_BUTTONS === 'true,true,true'" 10 \
+    "$FIND JSON.stringify([shown('nokta-download'), $DL_TEXT, $DL_THUMB, $DL_BUTTONS])"
+# 32 px closed and 102 px for the picture, the name, the size and two rows of buttons.
+wait_for "the download preview is 134 px tall" "$FIND Math.round(one('nokta-body').height) === 134" 5 \
+    "$FIND Math.round(one('nokta-body').height)"
+sleep 0.4
+"$HERE/shot.sh" smoke-download > /dev/null
+js "$FIND find($DL, 'nokta-file-preview-button')[2].emit('clicked', 1); true" > /dev/null
+i=0
+until shelf_items | grep -q "holiday.png'"; do
+    i=$((i + 1))
+    [ "$i" -le 25 ] || fail "Keep on shelf did not put the download on the shelf: $(shelf_items)"
+    sleep 0.2
+done
+ok "Keep on shelf puts the download on the shelf"
+wait_for "the download preview closes" "$FIND !shown('nokta-download')" 5
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Shelf --method io.nokta.Shelf1.Clear > /dev/null
+# Any other file shows the icon for its kind.
+printf '%%PDF-1.7 smoke' > "$DOWNLOADS/report.pdf"
+wait_for "a downloaded document shows its icon" \
+    "$FIND shown('nokta-download') && find($DL, 'nokta-file-preview-icon')[0].mapped && $DL_TEXT === 'report.pdf 14 B'" 10 \
+    "$FIND JSON.stringify([shown('nokta-download'), $DL_TEXT])"
+# Like a notification, it goes after [notifications] duration_ms (5 s).
+wait_for "the document preview closes by itself" "$FIND !shown('nokta-download')" 10
+
 # A copy goes to the clipboard history; its tile in home opens the list, a
 # row copies the entry back, and the menu pauses the history.
 clip_items() {
@@ -1281,6 +1323,8 @@ wait_for "the notch hides again after the alert, unredirection back on" \
 js "$FIND global._noktaShows = 0; global._noktaShowsId = one('nokta-notch').connect('notify::visible', (a) => { if (a.visible) global._noktaShows++; }); true" > /dev/null
 "$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
 holds "a volume OSD leaves the notch hidden over the fullscreen window" "global._noktaShows === 0" 1
+printf 'smoke' > "$DOWNLOADS/fullscreen.txt"
+holds "a finished download leaves the notch hidden over the fullscreen window" "global._noktaShows === 0" 3
 set_fullscreen_alerts none
 "$HERE/timer.sh" countdown 1 "Smoke hidden"
 holds "with fullscreen_alerts = none the notch stays hidden for an alert" "global._noktaShows === 0" 3

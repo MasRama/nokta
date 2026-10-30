@@ -632,6 +632,21 @@ msgstr "Pratinjau tangkapan layar"
 msgid "Open a new screenshot, show it in Files or keep it on the shelf"
 msgstr "Buka tangkapan layar baru, tampilkan di Berkas atau simpan di rak"
 
+msgid "Downloads"
+msgstr "Unduhan"
+
+msgid "Show finished downloads"
+msgstr "Tampilkan unduhan yang selesai"
+
+msgid "Open the file, show it in Files or keep it on the shelf"
+msgstr "Buka berkasnya, tampilkan di Berkas atau simpan di rak"
+
+msgid "Folder"
+msgstr "Folder"
+
+msgid "Empty for the system's download folder"
+msgstr "Kosongkan untuk folder unduhan sistem"
+
 msgid "Live activities"
 msgstr "Aktivitas langsung"
 

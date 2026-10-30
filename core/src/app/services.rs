@@ -1,5 +1,5 @@
 //! The services that run on every system: settings, lyrics, the timer, live
-//! activities, the weather and the file shelf.
+//! activities, the weather, the file shelf, the clipboard and downloads.
 //! Media players and device alerts are system sources; the platform part of
 //! `app` starts them and hands the media state in.
 
@@ -10,6 +10,7 @@ use tokio::sync::{mpsc, watch};
 use super::{OpenMeteoUrls, USER_AGENT};
 use crate::features::activities;
 use crate::features::clipboard;
+use crate::features::downloads;
 use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::MediaState;
 use crate::features::settings::{self, Config, Store};
@@ -31,6 +32,8 @@ pub struct Services {
     pub weather: weather::service::Handle,
     pub shelf: shelf::service::Handle,
     pub clipboard: clipboard::service::Handle,
+    /// Files that finished downloading.
+    pub downloads: mpsc::Receiver<downloads::service::Finished>,
     /// Watches config.toml as long as the services live.
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
@@ -99,6 +102,12 @@ impl Services {
             wall_us,
         );
 
+        let downloads = downloads::service::spawn(
+            follow(config.clone(), |c| c.downloads.clone()),
+            paths.downloads_dir.clone(),
+            paths.cache_dir.join("downloads"),
+        );
+
         Services {
             config,
             config_file: paths.config_file.clone(),
@@ -118,6 +127,7 @@ impl Services {
             weather,
             shelf,
             clipboard,
+            downloads,
             _config_watcher: config_watcher,
         }
     }
