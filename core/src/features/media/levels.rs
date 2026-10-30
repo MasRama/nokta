@@ -121,6 +121,17 @@ impl Lifecycle {
         Step::Stop
     }
 
+    /// When `step` may answer differently with nothing else changing: the
+    /// end of the linger or of the backoff, if still ahead of `now`.
+    pub fn wake_at(&self, now: Instant) -> Option<Instant> {
+        let linger_end = self.unwanted_since.map(|since| since + LINGER);
+        [linger_end, self.retry_at]
+            .into_iter()
+            .flatten()
+            .filter(|&at| at > now)
+            .min()
+    }
+
     /// The recorder could not start or quit on its own.
     pub fn failed(&mut self, now: Instant) {
         self.retry_at = Some(now + BACKOFF);
