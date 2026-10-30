@@ -8,7 +8,7 @@ import {
     formatElapsed,
     progressLabel,
 } from '../src/features/activities/logic/activities.js';
-import { chooseIndicator } from '../src/shared/logic/indicator.js';
+import { chooseIndicator, INDICATOR_SLOTS, slotFor } from '../src/shared/logic/indicator.js';
 import { panelHeight, subPageHeight, type PanelRow } from '../src/features/panel/logic/height.js';
 
 test('activities are read from the daemon rows, skipping broken ones', () => {
@@ -109,4 +109,16 @@ test('home loses the toggles or the tiles when none are chosen', () => {
 
 test('a sub-page is its padding, its header and its body', () => {
     assert.equal(subPageHeight(100), 14 + 28 + 10 + 100 + 14);
+});
+
+test('each indicator has its widget, and the focus timer and the clocks share one', () => {
+    assert.equal(slotFor('recording'), 'recording');
+    assert.equal(slotFor('call'), 'call');
+    assert.equal(slotFor('timer'), 'timer');
+    assert.equal(slotFor('clock'), 'timer');
+    assert.equal(slotFor('activity'), 'badge');
+    assert.equal(slotFor('meeting'), 'countdown');
+    assert.equal(slotFor('shelf'), 'shelf');
+    // In the order they sit over the clock.
+    assert.deepEqual(INDICATOR_SLOTS, ['recording', 'call', 'timer', 'badge', 'shelf', 'countdown']);
 });
