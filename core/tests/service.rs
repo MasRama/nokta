@@ -973,3 +973,40 @@ async fn dock_progress_becomes_an_activity_that_stops_with_its_app() {
         ("app:nokta-test.desktop", false, "Stopped")
     );
 }
+
+#[tokio::test]
+async fn a_finished_download_is_announced() {
+    let bus = TestBus::start();
+    let folder = tempfile::tempdir().unwrap();
+    let config = format!(
+        "[downloads]\nfolder = {:?}\n",
+        folder.path().display().to_string()
+    );
+    let _daemon = Daemon::start_with_config(&bus, NO_LRCLIB, Some(&config)).await;
+    let conn = bus.connect().await;
+    let downloads = zbus::Proxy::new(&conn, NAME, "/io/nokta/Downloads", "io.nokta.Downloads1")
+        .await
+        .unwrap();
+    let mut finished = downloads.receive_signal("Finished").await.unwrap();
+
+    std::fs::write(folder.path().join("report.pdf.part"), "%PDF-1.7").unwrap();
+    std::fs::rename(
+        folder.path().join("report.pdf.part"),
+        folder.path().join("report.pdf"),
+    )
+    .unwrap();
+    let signal = tokio::time::timeout(Duration::from_secs(5), finished.next())
+        .await
+        .expect("Finished within 5 s")
+        .unwrap();
+    let (uri, name, icon, size, thumbnail): (String, String, String, u64, String) =
+        signal.body().deserialize().unwrap();
+    assert!(
+        uri.starts_with("file:///") && uri.ends_with("/report.pdf"),
+        "{uri}"
+    );
+    assert_eq!(
+        (name.as_str(), icon.as_str(), size, thumbnail.as_str()),
+        ("report.pdf", "x-office-document", 8, "")
+    );
+}

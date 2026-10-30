@@ -18,6 +18,7 @@ export const TONES = {
     clipboard: '#40c8e0',
     settings: '#a2a2ab',
     screenshot: '#ff6482',
+    downloads: '#30d5a0',
     calendar: '#ff453a',
     device: '#0a84ff',
     call: '#ff9500',

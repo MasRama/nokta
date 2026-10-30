@@ -19,6 +19,7 @@ const PROPERTIES: Record<Table, string> = {
     weather: 'Weather',
     calendar: 'Calendar',
     clipboard: 'Clipboard',
+    downloads: 'Downloads',
     home: 'Home',
 };
 

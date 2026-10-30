@@ -4,7 +4,10 @@ import type { NotchMode } from '../shared/logic/machine.js';
  * What the notch draws: the state machine's mode (home or a page when it
  * opens over one), or the OSD, a notification or the drop area over it.
  */
-export type Drawn = NotchMode | 'peek' | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'drop';
+export type Drawn = NotchMode | 'peek' | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'download' | 'drop';
+
+/** A message timed like a notification. */
+export type Message = 'notification' | 'screenshot' | 'download';
 
 /** A notification is two lines tall: this much taller than the closed notch. */
 export const NOTIFICATION_EXTRA_HEIGHT = 28;
@@ -12,6 +15,8 @@ export const NOTIFICATION_EXTRA_HEIGHT = 28;
 export const NOTIFICATION_BUTTONS_EXTRA = 32;
 /** A screenshot preview: the thumbnail and two rows of buttons. */
 export const SCREENSHOT_EXTRA_HEIGHT = 84;
+/** A finished download: like a screenshot, with its size under the name. */
+export const DOWNLOAD_EXTRA_HEIGHT = 102;
 /** The drop area: this much taller than the closed notch. */
 export const DROP_EXTRA_HEIGHT = 76;
 
@@ -21,7 +26,7 @@ export interface OverlayState {
     /** The OSD shows. */
     osd: boolean;
     /** The message that shows, if any. */
-    notification: 'notification' | 'screenshot' | null;
+    notification: Message | null;
     /** The state machine's mode, which keeps running underneath. */
     mode: NotchMode;
     /** A new song's title widens the closed notch. */
@@ -54,6 +59,7 @@ function isTall(drawn: Drawn): boolean {
         drawn === 'page' ||
         drawn === 'notification' ||
         drawn === 'screenshot' ||
+        drawn === 'download' ||
         drawn === 'drop'
     );
 }
@@ -66,7 +72,7 @@ export function resizeKind(previous: Drawn, mode: Drawn): 'open' | 'close' | 'wi
 
 /** The views that are alerts and keep the glow. */
 export function showsAlert(drawn: Drawn): boolean {
-    return drawn === 'osd' || drawn === 'notification' || drawn === 'screenshot';
+    return drawn === 'osd' || drawn === 'notification' || drawn === 'screenshot' || drawn === 'download';
 }
 
 export interface SizeInput {
@@ -100,6 +106,8 @@ export function viewSize(mode: Drawn, input: SizeInput): [number, number] {
         }
         case 'screenshot':
             return [a.expandedWidth, a.height + SCREENSHOT_EXTRA_HEIGHT];
+        case 'download':
+            return [a.expandedWidth, a.height + DOWNLOAD_EXTRA_HEIGHT];
         case 'drop':
             return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
         case 'panel':

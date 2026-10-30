@@ -140,6 +140,18 @@ msgstr ""
 msgid "Fully charged"
 msgstr ""
 
+#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts
+msgid "Open"
+msgstr ""
+
+#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts
+msgid "Show in Files"
+msgstr ""
+
+#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts
+msgid "Keep on shelf"
+msgstr ""
+
 #: src/features/lyrics/logic/offset.ts
 msgid "On time"
 msgstr ""
@@ -172,18 +184,6 @@ msgstr ""
 
 #: src/features/media/logic/players.ts
 msgid "Player"
-msgstr ""
-
-#: src/features/notifications/screenshot-view.ts
-msgid "Open"
-msgstr ""
-
-#: src/features/notifications/screenshot-view.ts
-msgid "Show in Files"
-msgstr ""
-
-#: src/features/notifications/screenshot-view.ts
-msgid "Keep on shelf"
 msgstr ""
 
 #: src/features/osd/logic/content.ts
@@ -832,6 +832,26 @@ msgstr ""
 
 #: src/features/settings/logic/schema.ts
 msgid "Open a new screenshot, show it in Files or keep it on the shelf"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Downloads"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show finished downloads"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Open the file, show it in Files or keep it on the shelf"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Folder"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Empty for the system's download folder"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts

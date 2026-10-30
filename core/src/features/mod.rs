@@ -4,6 +4,7 @@ pub mod activities;
 pub mod calendar;
 pub mod clipboard;
 pub mod devices;
+pub mod downloads;
 pub mod lyrics;
 pub mod media;
 pub mod settings;

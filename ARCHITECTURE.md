@@ -44,7 +44,7 @@ core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
   src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
   src/features/     media, lyrics, settings, devices, timer, activities, weather,
-                    calendar, shelf, clipboard
+                    calendar, shelf, clipboard, downloads
   src/shared/       paths, monotonic clock, hashing, atomic file writes, picture
                     thumbnails, D-Bus helpers
   tests/            integration tests on a private bus, contract test
@@ -56,7 +56,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf,
-                    clipboard
+                    clipboard, downloads
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
                     keyboard focus, D-Bus helpers, icons, dim levels
@@ -75,7 +75,7 @@ docs/               manual test checklist, screenshots
   exports. Other code imports the feature, never its files.
 - Feature dependencies are acyclic. `lyrics` depends on `media` (it needs the
   current track). `media`, `settings`, `osd`, `devices`, `timer`, `privacy`,
-  `notifications`, `panel`, `activities`, `weather`, `calendar`, `shelf` and `clipboard` depend on no other feature;
+  `notifications`, `panel`, `activities`, `weather`, `calendar`, `shelf`, `clipboard` and `downloads` depend on no other feature;
   `extension.ts` shows device, timer and activity alerts through the OSD
   row. The closed notch has one spot for extra information, where the clock
   or the equalizer would be: `shared/logic/indicator.ts` picks a screen
@@ -140,7 +140,10 @@ docs/               manual test checklist, screenshots
   no inline reply: neither the freedesktop spec nor GNOME Shell has one. A
   banner from GNOME's
   screenshot source with an image becomes a screenshot preview; its file
-  comes from `Main.screenshotUI`'s `screenshot-taken` signal. `calendar` reads the events
+  comes from `Main.screenshotUI`'s `screenshot-taken` signal. `downloads`
+  follows the daemon's `Finished` signal and shows the file in the same
+  preview (`shared/file-preview.ts`): open it, show it in Files, or keep it
+  on the shelf. `calendar` reads the events
   the date menu already loads (`dateMenu._eventSource`, found with a
   feature check) and never asks for a time range itself, since the
   calendar server keeps one range for all its clients. One exact timeout
@@ -300,6 +303,16 @@ docs/               manual test checklist, screenshots
   thumbnail of each picture to `clipboard_dir` (`$XDG_RUNTIME_DIR/nokta/clipboard`
   on Linux, mode 0700, emptied at start) and deletes it with its entry.
   Turning the history off forgets every entry, pinned ones too.
+- **downloads** watches the download folder (`[downloads] folder`, else
+  `XDG_DOWNLOAD_DIR` from `user-dirs.dirs`), not its subfolders, and says
+  when a file finished (`Finished`). On Linux a file counts when it is
+  renamed into place or closed after writing; elsewhere when it appears or
+  changes. `model.rs` is pure: hidden names, names ending in `~` and the
+  names browsers use while they download (`.part`, `.crdownload` and so on)
+  never count, a file must go untouched for 1.5 s and be larger than zero,
+  and the same file is told once a minute at most. A PNG, JPEG or WebP gets
+  a 128 px thumbnail in `cache_dir/downloads`, which keeps the 20 newest.
+  A missing folder is logged and watched no further.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -324,7 +337,7 @@ the Linux adapters touch D-Bus:
 
 Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
 is a Linux-only dependency. `app::Services` starts the rest (settings,
-lyrics, timer, activities, weather, shelf, clipboard) on any system. CI builds and tests the daemon on macOS and
+lyrics, timer, activities, weather, shelf, clipboard, downloads) on any system. CI builds and tests the daemon on macOS and
 Windows, where `noktad` says it has no frontend yet. A new system adds its
 own sources and transport next to the Linux ones; nothing in a feature's
 model changes.
@@ -340,7 +353,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`, `Shuffle`, `LoopStatus`, `CanShuffle`, `CanLoop`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)`, `SetShuffle(b)`, `SetLoopStatus(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text, already shifted), `OffsetMs` (`x`, positive is earlier, ±30 000); `SetOffset(offset_ms x)` |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard`, `Downloads` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Clocks` `a(sssbxxxx)` (id, kind, label, running, duration, value and monotonic timestamp in µs, alarm time in Unix µs); `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`, `AddCountdown(label s, duration_us x) → id s`, `AddStopwatch(label s) → id s`, `AddAlarm(label s, unix_us x) → id s`, `PauseClock(id s)`, `ResumeClock(id s)`, `RemoveClock(id s)`, `ClearClocks()`; signals `Finished(phase s)`, `ClockDone(id s, kind s, label s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
@@ -348,6 +361,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Calendar1` | `/io/nokta/Calendar` | `MeetingLink(event_id s) → link s`, `EventColor(event_id s) → color s` (empty when none) |
 | `io.nokta.Shelf1` | `/io/nokta/Shelf` | `Items` (`a(sss)`: uri, name, icon name, oldest first), `Thumbnails` (`a{ss}`: uri to a PNG path, for items with a picture); `Add(uris as)`, `Remove(uri s)`, `Clear()` |
 | `io.nokta.Clipboard1` | `/io/nokta/Clipboard` | `Items` (`a(ssssbx)`: id, kind `text` or `image`, preview, thumbnail path, pinned, copied at in Unix µs, newest first), `Paused` (`b`); `Add(kind s, text s, image ay)`, `Get(id s) → (kind s, text s, image ay)`, `Pin(id s, pinned b)`, `Remove(id s)`, `Clear()` (keeps pinned entries), `SetPaused(paused b)` |
+| `io.nokta.Downloads1` | `/io/nokta/Downloads` | signal `Finished(uri s, name s, icon s, size t, thumbnail s)` (thumbnail is a PNG path, empty for a file that is not a picture) |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with

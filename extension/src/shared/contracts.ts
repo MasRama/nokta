@@ -21,6 +21,7 @@ export const PATHS = {
     Calendar1: '/io/nokta/Calendar',
     Shelf1: '/io/nokta/Shelf',
     Clipboard1: '/io/nokta/Clipboard',
+    Downloads1: '/io/nokta/Downloads',
 } as const;
 
 export interface NoktaProps {
@@ -96,6 +97,11 @@ export const DEVICES_SIGNALS = {
     Alert: 'ssi',
 } as const;
 
+/** io.nokta.Downloads1 signals and the D-Bus signature of their arguments. */
+export const DOWNLOADS_SIGNALS = {
+    Finished: 'sssts',
+} as const;
+
 export interface SettingsProps {
     Appearance: Record<string, unknown>;
     Behavior: Record<string, unknown>;
@@ -107,6 +113,7 @@ export interface SettingsProps {
     Weather: Record<string, unknown>;
     Calendar: Record<string, unknown>;
     Clipboard: Record<string, unknown>;
+    Downloads: Record<string, unknown>;
     Home: Record<string, unknown>;
     PicturePath: string;
     PictureColor: string;

@@ -250,6 +250,22 @@ fn clipboard_defaults_and_size_range() {
 }
 
 #[test]
+fn downloads_default_to_the_download_folder() {
+    let d = Config::default().downloads;
+    assert!(d.enabled);
+    assert_eq!(d.folder, "");
+    let d = parse("[downloads]\nenabled = false\nfolder = \"/data/dl\"\n")
+        .unwrap()
+        .downloads;
+    assert!(!d.enabled);
+    assert_eq!(d.folder, "/data/dl");
+    let map = entries(Config::default().downloads.entries());
+    let mut keys: Vec<_> = map.keys().copied().collect();
+    keys.sort();
+    assert_eq!(keys, ["enabled", "folder"]);
+}
+
+#[test]
 fn media_defaults_to_the_pattern_bars() {
     assert!(!Config::default().media.real_equalizer);
     assert!(
@@ -633,6 +649,8 @@ mod edit {
         assert_eq!(parse(&text).unwrap().calendar.reminder_minutes, 10);
         let text = set_key("", "clipboard", "enabled", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().clipboard.enabled);
+        let text = set_key("", "downloads", "folder", &Value::Text("/dl".into())).unwrap();
+        assert_eq!(parse(&text).unwrap().downloads.folder, "/dl");
         let text = set_key("", "media", "real_equalizer", &Value::Bool(true)).unwrap();
         assert!(parse(&text).unwrap().media.real_equalizer);
 
