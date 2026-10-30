@@ -46,7 +46,7 @@ extension in a headless GNOME Shell that cannot touch your own session.
 
   It runs CI's steps one at a time and stops at the first failure: format,
   lint and tests of the daemon and the extension, the shell scripts, the
-  installer, the smoke test here and, with [podman](https://podman.io)
+  installer, the dependency audit (with `cargo-audit` installed), the smoke test here and, with [podman](https://podman.io)
   installed, the smoke test in the containers of every GNOME version CI
   tests. `--quick` skips those containers. The Rust version is pinned in
   `rust-toolchain.toml`, so clippy here says what clippy in CI says.
