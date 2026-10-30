@@ -23,7 +23,8 @@ import type { OrderOption } from './order.js';
 
 export type RowKind =
     | { type: 'bool' }
-    | { type: 'int'; min: number; max: number; step: number }
+    /** `atLeast` names a key of the same table whose value is the floor, as the daemon checks it. */
+    | { type: 'int'; min: number; max: number; step: number; atLeast?: string }
     | { type: 'float'; min: number; max: number; step: number; percent?: boolean }
     | { type: 'color' }
     | { type: 'choice'; options: readonly { value: string; label: string }[] }
@@ -69,7 +70,7 @@ export interface Page {
 }
 
 const bool = (): RowKind => ({ type: 'bool' });
-const int = (min: number, max: number, step = 1): RowKind => ({ type: 'int', min, max, step });
+const int = (min: number, max: number, step = 1, atLeast?: string): RowKind => ({ type: 'int', min, max, step, atLeast });
 const color = (): RowKind => ({ type: 'color' });
 const text = (): RowKind => ({ type: 'text' });
 
@@ -144,7 +145,8 @@ const THEME_CHOICE: RowKind = {
 };
 
 /** Widths and the expanded height may not be below the height; the daemon says so. */
-const SIZE = int(16, 2000);
+/** A width or the open height: never below the notch's height, which the daemon checks. */
+const SIZE = int(16, 2000, 1, 'height');
 
 export const SETTINGS_PAGES: readonly Page[] = [
     {
@@ -592,6 +594,17 @@ const camelCase = (key: string): string => key.replace(/_([a-z])/g, (_, c: strin
 export function rowValue(row: Row, tables: Partial<Record<Table, unknown>>): unknown {
     const values = READERS[row.table](tables[row.table]) as Record<string, unknown>;
     return values[camelCase(row.key)];
+}
+
+/** The lowest value the row takes now: its own minimum, or the key it must stay at or above. */
+export function rowMin(row: Row, tables: Partial<Record<Table, unknown>>): number {
+    const { kind } = row;
+    if (kind.type !== 'int' && kind.type !== 'float') return 0;
+    if (kind.type === 'int' && kind.atLeast) {
+        const floor = Number(rowValue({ ...row, key: kind.atLeast }, tables));
+        return Math.max(kind.min, floor);
+    }
+    return kind.min;
 }
 
 export const allRows = (): Row[] => SETTINGS_PAGES.flatMap((page) => page.groups.flatMap((group) => group.rows));
