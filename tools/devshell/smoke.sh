@@ -383,6 +383,39 @@ wait_for "a click outside closes it and lets go" "$FIND shown('nokta-collapsed')
 js "Main.overview.hide(); true" > /dev/null
 wait_for "the overview is closed" "!Main.overview.visible" 10
 
+# The first-run tour: the devshell starts with it seen (run.sh). Turned off,
+# as the settings window's "Show the tour again" does, it opens held on the
+# primary notch with Next focused; Enter walks the four steps, and Done ends
+# it, closes the notch, lets go of the keyboard and marks it seen. Escape
+# ends it too.
+TOUR_SETTINGS="Main.extensionManager.lookup('nokta@nokta.io').stateObj.getSettings()"
+TOUR_SHOWN="$TOUR_SETTINGS.get_boolean('tour-shown')"
+show_tour() { js "$TOUR_SETTINGS.set_boolean('tour-shown', false); true" > /dev/null; }
+TOUR_AT="(title) => shown('nokta-tour') && one('nokta-tour-title').text === title && $HELD && $FOCUS === one('nokta-tour-next')"
+TOUR_STATE="$FIND JSON.stringify([shown('nokta-tour'), one('nokta-tour-title')?.text, one('nokta-tour-body')?.text, Main.actionMode, $NOTCH.holdsKeyboard, $FOCUS?.style_class ?? null, $TOUR_SHOWN])"
+show_tour
+wait_for "turned off, the tour opens held on the notch, Next focused" "$FIND ($TOUR_AT)('This is Nokta')" 5 "$TOUR_STATE"
+sleep 0.4
+"$HERE/shot.sh" smoke-tour-1 > /dev/null
+"$HERE/keys.sh" Return
+wait_for "Enter goes on: opening names the hover and the shortcut" \
+    "$FIND ($TOUR_AT)('Open it') && one('nokta-tour-body').text === 'Rest the pointer on it or press Super+Alt+N.'" 5 "$TOUR_STATE"
+"$HERE/shot.sh" smoke-tour-2 > /dev/null
+"$HERE/keys.sh" Return
+wait_for "then home" "$FIND ($TOUR_AT)('Home')" 5 "$TOUR_STATE"
+"$HERE/shot.sh" smoke-tour-3 > /dev/null
+"$HERE/keys.sh" Return
+wait_for "the last step offers the settings and ends with Done" \
+    "$FIND ($TOUR_AT)('Make it yours') && shown('nokta-tour-settings') && one('nokta-tour-next').label === 'Done'" 5 "$TOUR_STATE"
+"$HERE/shot.sh" smoke-tour-4 > /dev/null
+"$HERE/keys.sh" Return
+wait_for "Done ends the tour, closes the notch, lets go and marks it seen" \
+    "$FIND !shown('nokta-tour') && shown('nokta-collapsed') && $FREE && $TOUR_SHOWN" 5 "$TOUR_STATE"
+show_tour
+wait_for "shown again, it starts over" "$FIND ($TOUR_AT)('This is Nokta')" 5 "$TOUR_STATE"
+"$HERE/keys.sh" Escape
+wait_for "Escape skips it" "$FIND !shown('nokta-tour') && shown('nokta-collapsed') && $FREE && $TOUR_SHOWN" 5 "$TOUR_STATE"
+
 # With open_on = "click", resting the pointer does not open the notch; a
 # click does, and leaving closes it after the close delay.
 set_open_on() {
@@ -1398,6 +1431,16 @@ wait_for "the notch comes back closed when the window leaves fullscreen" \
     "$FIND $NOTCH_SHOWN && !shown('nokta-osd') && (shown('nokta-clock') || shown('nokta-collapsed'))" 5
 sleep 0.4
 "$HERE/shot.sh" smoke-fullscreen-after > /dev/null
+# The tour waits while a fullscreen window hides the notch, and opens once
+# the window leaves fullscreen.
+"$HERE/fullscreen.sh" on
+wait_for "fullscreen again" "$FIND !$NOTCH_SHOWN" 5
+show_tour
+holds "the tour does not open over the fullscreen window" "$FIND !$NOTCH_SHOWN && !shown('nokta-tour') && !$TOUR_SHOWN" 3 "$TOUR_STATE"
+"$HERE/fullscreen.sh" off
+wait_for "leaving fullscreen, the tour that waited opens" "$FIND $NOTCH_SHOWN && ($TOUR_AT)('This is Nokta')" 5 "$TOUR_STATE"
+"$HERE/keys.sh" Escape
+wait_for "and Escape skips it" "$FIND !shown('nokta-tour') && $FREE && $TOUR_SHOWN" 5 "$TOUR_STATE"
 
 "$HERE/prefs.sh"
 # A window actor exists before its first frame; the map animation fades it in.

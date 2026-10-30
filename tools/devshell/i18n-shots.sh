@@ -90,6 +90,20 @@ sleep 0.4
 "$HERE/shot.sh" i18n-settings > /dev/null
 "$HERE/hover.sh" off > /dev/null
 
+# The tour's longest steps, in Indonesian.
+wait_for "the notch closes" "$FIND shown('nokta-clock')" 10
+TOUR_TITLE="find(Main.layoutManager.uiGroup, 'nokta-tour-title').find((a) => a.mapped)?.text"
+js "Main.extensionManager.lookup('nokta@nokta.io').stateObj.getSettings().set_boolean('tour-shown', false); true" > /dev/null
+wait_for "the tour is in Indonesian" "$FIND $TOUR_TITLE === 'Ini Nokta' && one('nokta-tour-next').label === 'Lanjut'" 5 "$FIND $TOUR_TITLE"
+sleep 0.4
+"$HERE/shot.sh" i18n-tour > /dev/null
+"$HERE/keys.sh" Return
+"$HERE/keys.sh" Return
+wait_for "its home step too" "$FIND $TOUR_TITLE === 'Beranda'" 5 "$FIND $TOUR_TITLE"
+"$HERE/shot.sh" i18n-tour-home > /dev/null
+"$HERE/keys.sh" Escape
+wait_for "Escape skips it" "$FIND !shown('nokta-tour')" 5
+
 # GNOME 50 can bring the startup overview back, which hides every window.
 js "Main.overview.hide(); true" > /dev/null
 wait_for "the overview is closed" "!Main.overview.visible" 10

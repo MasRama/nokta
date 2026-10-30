@@ -65,6 +65,9 @@ if [ -z "${NOKTA_DEVSHELL_INNER:-}" ]; then
 enabled-extensions=['devtools@nokta.io', 'nokta@nokta.io']
 disable-user-extensions=false
 welcome-dialog-last-shown-version='999'
+
+[org/gnome/shell/extensions/nokta]
+tour-shown=true
 KEYFILE
 
     # A bare session bus: no system service directories, so the shell does

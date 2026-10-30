@@ -8,6 +8,7 @@ import { fillWindow } from './prefs/window.js';
 export default class NoktaPreferences extends ExtensionPreferences {
     override fillPreferencesWindow(window: Adw.PreferencesWindow): void {
         setTranslator({ gettext: (s) => this.gettext(s), ngettext: (s, p, n) => this.ngettext(s, p, n) });
-        fillWindow(window, this.path);
+        // The shell watches the key and shows the tour again.
+        fillWindow(window, this.path, () => this.getSettings().set_boolean('tour-shown', false));
     }
 }

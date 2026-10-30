@@ -2,9 +2,20 @@ import type { NotchMode } from '../shared/logic/machine.js';
 
 /**
  * What the notch draws: the state machine's mode (home or a page when it
- * opens over one), or the OSD, a notification or the drop area over it.
+ * opens over one), the first-run tour, or the OSD, a notification or the
+ * drop area over it.
  */
-export type Drawn = NotchMode | 'peek' | 'panel' | 'page' | 'osd' | 'notification' | 'screenshot' | 'download' | 'drop';
+export type Drawn =
+    | NotchMode
+    | 'peek'
+    | 'panel'
+    | 'page'
+    | 'osd'
+    | 'notification'
+    | 'screenshot'
+    | 'download'
+    | 'drop'
+    | 'tour';
 
 /** A message timed like a notification. */
 export type Message = 'notification' | 'screenshot' | 'download';
@@ -19,6 +30,8 @@ export const SCREENSHOT_EXTRA_HEIGHT = 84;
 export const DOWNLOAD_EXTRA_HEIGHT = 102;
 /** The drop area: this much taller than the closed notch. */
 export const DROP_EXTRA_HEIGHT = 76;
+/** The tour: its dots, title, up to three lines of text and its buttons. */
+export const TOUR_EXTRA_HEIGHT = 124;
 
 export interface OverlayState {
     /** Files are dragged near the notch. */
@@ -37,13 +50,16 @@ export interface OverlayState {
     homeOpen: boolean;
     /** A player is there. */
     player: boolean;
+    /** The first-run tour holds the notch open. */
+    tour: boolean;
 }
 
-/** The drop area over the OSD over a notification over the state machine's mode. */
+/** The drop area over the OSD over a notification over the tour over the state machine's mode. */
 export function drawnView(state: OverlayState): Drawn {
     if (state.dropping) return 'drop';
     if (state.osd) return 'osd';
     if (state.notification) return state.notification;
+    if (state.tour) return 'tour';
     const { mode } = state;
     if (mode === 'collapsed' && state.peek) return 'peek';
     if (mode !== 'expanded') return mode;
@@ -60,7 +76,8 @@ function isTall(drawn: Drawn): boolean {
         drawn === 'notification' ||
         drawn === 'screenshot' ||
         drawn === 'download' ||
-        drawn === 'drop'
+        drawn === 'drop' ||
+        drawn === 'tour'
     );
 }
 
@@ -110,6 +127,8 @@ export function viewSize(mode: Drawn, input: SizeInput): [number, number] {
             return [a.expandedWidth, a.height + DOWNLOAD_EXTRA_HEIGHT];
         case 'drop':
             return [a.expandedWidth, a.height + DROP_EXTRA_HEIGHT];
+        case 'tour':
+            return [a.expandedWidth, a.height + TOUR_EXTRA_HEIGHT];
         case 'panel':
             return [a.expandedWidth, input.panelHeight];
         case 'page':

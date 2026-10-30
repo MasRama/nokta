@@ -996,3 +996,60 @@ msgstr "Beri tahu saat ada Nokta versi baru"
 
 msgid "Asks github.com once a day and sends nothing else"
 msgstr "Bertanya ke github.com sekali sehari, tanpa mengirim apa pun lagi"
+
+msgid "This is Nokta"
+msgstr "Ini Nokta"
+
+msgid "The notch at the top of your screen shows what's happening now: your song, timers, downloads and alerts."
+msgstr "Notch di atas layarmu menampilkan apa yang sedang terjadi: lagumu, timer, unduhan, dan peringatan."
+
+msgid "Open it"
+msgstr "Buka notch"
+
+msgid "Rest the pointer on it or press %s."
+msgstr "Diamkan kursor di atasnya atau tekan %s."
+
+msgid "Rest the pointer on it."
+msgstr "Diamkan kursor di atasnya."
+
+msgid "Click it or press %s."
+msgstr "Klik notch atau tekan %s."
+
+msgid "Click it."
+msgstr "Klik notch."
+
+msgid "With nothing playing it opens on home: your day, quick toggles and tiles."
+msgstr "Saat tidak ada yang diputar, notch terbuka di beranda: harimu, tombol cepat, dan ubin."
+
+msgid "Make it yours"
+msgstr "Atur sesukamu"
+
+msgid "Right-click the notch, or use the Settings tile."
+msgstr "Klik kanan notch, atau pakai ubin Pengaturan."
+
+msgid "Skip"
+msgstr "Lewati"
+
+msgid "Next"
+msgstr "Lanjut"
+
+msgid "Done"
+msgstr "Selesai"
+
+msgid "Open settings"
+msgstr "Buka pengaturan"
+
+msgid "Getting started"
+msgstr "Memulai"
+
+msgid "Show"
+msgstr "Tampilkan"
+
+msgid "Show the tour again"
+msgstr "Tampilkan tur lagi"
+
+msgid "The notch walks you through Nokta once more"
+msgstr "Notch mengajakmu berkeliling Nokta sekali lagi"
+
+msgid "The tour shows in the notch"
+msgstr "Tur tampil di notch"
