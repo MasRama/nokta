@@ -9,6 +9,7 @@ import { offsetLabel, stepOffset } from './logic/offset.js';
 import { BREAK } from './logic/visible.js';
 import { romanizedRows, type LyricWindow } from './logic/window.js';
 import { iconFor } from '../../shared/icons.js';
+import { _ } from '../../shared/logic/i18n.js';
 
 /** The lyrics view's rows; the middle one is the current line. */
 export const SHEET_ROWS = 7;
@@ -79,7 +80,7 @@ export class LyricsSheet {
             height: FOOTER_HEIGHT,
         });
         footer.add_child(
-            footerButton('list-remove-symbolic', 'Show the lyrics later', () =>
+            footerButton('list-remove-symbolic', _('Show the lyrics later'), () =>
                 onOffset(stepOffset(this.offsetMs, -1)),
             ),
         );
@@ -88,18 +89,18 @@ export class LyricsSheet {
             child: this.offsetText,
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
-            accessible_name: 'Reset the lyric timing',
+            accessible_name: _('Reset the lyric timing'),
         });
         reset.connect('clicked', () => {
             if (this.offsetMs !== 0) onOffset(0);
         });
         footer.add_child(reset);
         footer.add_child(
-            footerButton('list-add-symbolic', 'Show the lyrics earlier', () => onOffset(stepOffset(this.offsetMs, 1))),
+            footerButton('list-add-symbolic', _('Show the lyrics earlier'), () => onOffset(stepOffset(this.offsetMs, 1))),
         );
 
         // The timing buttons stay centred: a spacer as wide as the corner the full-screen button sits in.
-        const fullscreen = footerButton('view-fullscreen-symbolic', 'Full-screen lyrics', onFullscreen);
+        const fullscreen = footerButton('view-fullscreen-symbolic', _('Full-screen lyrics'), onFullscreen);
         fullscreen.add_style_class_name('nokta-lyrics-fullscreen-button');
         const corner = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_expand: true });
         fullscreen.x_align = Clutter.ActorAlign.END;

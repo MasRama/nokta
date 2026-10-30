@@ -22,8 +22,8 @@ for entry in dist/*; do
   esac
 done
 
-# gnome-extensions install compiles the schema.
+# gnome-extensions install compiles the schema; pack compiles po/ into locale/.
 mkdir -p ../build
 gnome-extensions pack dist --force --out-dir ../build \
-  --schema=../schemas/org.gnome.shell.extensions.nokta.gschema.xml "$@"
+  --schema=../schemas/org.gnome.shell.extensions.nokta.gschema.xml --podir=../po "$@"
 echo "Packed ../build/nokta@nokta.io.shell-extension.zip"

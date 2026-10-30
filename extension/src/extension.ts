@@ -106,6 +106,7 @@ import { showsOverFullscreen, type AlertKind } from './shared/logic/fullscreen.j
 import { iconFor, setIconsDir } from './shared/icons.js';
 import { TONES } from './shared/logic/tones.js';
 import { moveDateMenuRight, type Restore } from './shared/topbar.js';
+import { _, setTranslator } from './shared/logic/i18n.js';
 
 const KEYBOARD_ICON = 'input-keyboard-symbolic';
 const TIMER_ICON = 'alarm-symbolic';
@@ -840,7 +841,7 @@ class Session {
                 title: alert.title,
                 detail: alert.detail,
                 icon: iconFor(alert.icon),
-                buttons: ['Join'],
+                buttons: [_('Join')],
                 badge: null,
                 onClick: () => this.openCalendar(),
                 onButton: () => this.joinMeeting(id),
@@ -1105,11 +1106,13 @@ export default class NoktaExtension extends Extension {
     private session: Session | null = null;
 
     override enable(): void {
+        setTranslator({ gettext: (s) => this.gettext(s), ngettext: (s, p, n) => this.ngettext(s, p, n) });
         this.session = new Session(this.getSettings(), this.path, () => this.openPreferences());
     }
 
     override disable(): void {
         this.session?.destroy();
         this.session = null;
+        setTranslator(null);
     }
 }

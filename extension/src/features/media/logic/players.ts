@@ -1,3 +1,5 @@
+import { _ } from '../../../shared/logic/i18n.js';
+
 /** A player from io.nokta.Media1's `Players`: (id, display name). */
 export type PlayerEntry = [string, string];
 
@@ -10,7 +12,7 @@ export const SCROLL_PAUSE_MS = 250;
 export function playerLabels(players: readonly PlayerEntry[]): string[] {
     const seen = new Map<string, number>();
     return players.map(([, name]) => {
-        const base = name || 'Player';
+        const base = name || _('Player');
         const count = (seen.get(base) ?? 0) + 1;
         seen.set(base, count);
         return count > 1 ? `${base} ${count}` : base;

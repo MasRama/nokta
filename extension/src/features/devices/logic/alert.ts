@@ -1,3 +1,5 @@
+import { _ } from '../../../shared/logic/i18n.js';
+
 /** What the notch shows for one io.nokta.Devices1.Alert. */
 export interface DeviceAlert {
     icon: string;
@@ -17,7 +19,7 @@ const percent = (value: number): string =>
  * or null for a kind this extension does not know.
  */
 export function deviceAlert(kind: string, name: string, percentage: number): DeviceAlert | null {
-    const device = name.trim() || 'Bluetooth device';
+    const device = name.trim() || _('Bluetooth device');
     const level = percent(percentage);
     const alert = (icon: string, title: string, detail: string, urgent = false): DeviceAlert => ({
         icon,
@@ -27,19 +29,19 @@ export function deviceAlert(kind: string, name: string, percentage: number): Dev
     });
     switch (kind) {
         case 'bluetooth-connected':
-            return alert(HEADPHONES, device, level || 'Connected');
+            return alert(HEADPHONES, device, level || _('Connected'));
         case 'bluetooth-disconnected':
-            return alert(HEADPHONES, device, 'Disconnected');
+            return alert(HEADPHONES, device, _('Disconnected'));
         case 'charger-plugged':
-            return alert('battery-good-charging-symbolic', 'Charging', level);
+            return alert('battery-good-charging-symbolic', _('Charging'), level);
         case 'charger-unplugged':
-            return alert('battery-good-symbolic', 'On battery', level);
+            return alert('battery-good-symbolic', _('On battery'), level);
         case 'battery-low':
-            return alert('battery-low-symbolic', 'Battery low', level);
+            return alert('battery-low-symbolic', _('Battery low'), level);
         case 'battery-critical':
-            return alert('battery-caution-symbolic', 'Battery critical', level, true);
+            return alert('battery-caution-symbolic', _('Battery critical'), level, true);
         case 'battery-full':
-            return alert('battery-full-charged-symbolic', 'Fully charged', level);
+            return alert('battery-full-charged-symbolic', _('Fully charged'), level);
         default:
             return null;
     }

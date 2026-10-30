@@ -11,6 +11,7 @@ import { NotchPreview } from './preview.js';
 import { buildRow, type SettingRow } from './rows.js';
 import { errorMessage, SettingsService } from './service.js';
 import { ThemeGallery } from './themes.js';
+import { _ } from '../shared/logic/i18n.js';
 
 /** A change is sent after this long without another one, so a dragged slider sends one value. */
 const SEND_DELAY_MS = 250;
@@ -81,7 +82,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
         const setting = rows.find((r) => r.row.table === 'appearance' && r.row.key === 'picture');
         const chosen = rowValue({ table: 'appearance', key: 'picture', title: '', kind: { type: 'file' } }, service.tables);
         if (setting?.widget instanceof Adw.ActionRow && service.available && chosen && !service.picture.path)
-            setting.widget.subtitle = "Can't read this picture";
+            setting.widget.subtitle = _("Can't read this picture");
     };
 
     /** Sends `value` once the user stops changing it; `refused` shows the daemon's value again. */
@@ -114,12 +115,12 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
 
     const stack = new Gtk.Stack({ transition_type: Gtk.StackTransitionType.CROSSFADE });
     for (const spec of SETTINGS_PAGES) {
-        const page = new Adw.PreferencesPage({ name: spec.name, title: spec.title });
+        const page = new Adw.PreferencesPage({ name: spec.name, title: _(spec.title) }); // i18n: runtime
         // Shown only while the daemon is away; an empty group would still take space.
         const banner = new Adw.PreferencesGroup();
         const notice = new Adw.Banner({
-            title: "Nokta's service is not running, so changes can't be saved",
-            button_label: 'How to Install',
+            title: _("Nokta's service is not running, so changes can't be saved"),
+            button_label: _('How to Install'),
             revealed: true,
         });
         notice.connect('button-clicked', () => openUri(window, INSTALL_URL, toast));
@@ -129,7 +130,10 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
 
         if (spec.name === 'appearance') page.add(lookGroup(preview, gallery));
         for (const groupSpec of spec.groups) {
-            const group = new Adw.PreferencesGroup({ title: groupSpec.title, description: groupSpec.description ?? '' });
+            const group = new Adw.PreferencesGroup({
+                title: _(groupSpec.title), // i18n: runtime
+                description: _(groupSpec.description ?? ''), // i18n: runtime
+            });
             for (const row of groupSpec.rows) {
                 // The gallery above picks the theme.
                 if (row.table === 'appearance' && row.key === 'theme') continue;
@@ -144,7 +148,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
             page.add(group);
         }
         if (spec.name === 'behavior') {
-            const group = new Adw.PreferencesGroup({ title: 'Config file' });
+            const group = new Adw.PreferencesGroup({ title: _('Config file') });
             group.add(openConfigRow(window, toast));
             group.add(resetRow);
             page.add(group);
@@ -155,7 +159,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string): void {
     gallery.widget.sensitive = false;
     showLook();
 
-    const content = new Adw.NavigationPage({ title: SETTINGS_PAGES[0].title, child: toolbar(stack) });
+    const content = new Adw.NavigationPage({ title: _(SETTINGS_PAGES[0].title), child: toolbar(stack) }); // i18n: runtime
     const split = new Adw.NavigationSplitView({
         sidebar: new Adw.NavigationPage({ title: 'Nokta', child: toolbar(sidebar(stack, content, path), brand()) }),
         content,
@@ -231,14 +235,14 @@ function sidebar(stack: Gtk.Stack, content: Adw.NavigationPage, path: string): G
         // Found by name in a search path GTK would not recolor them; as files it does.
         const file = Gio.File.new_for_path(GLib.build_filenamev([path, 'icons', `nokta-${icon}-symbolic.svg`]));
         box.append(icon ? new Gtk.Image({ gicon: Gio.FileIcon.new(file) }) : new Gtk.Image({ icon_name: spec.icon }));
-        box.append(new Gtk.Label({ label: spec.title, xalign: 0, hexpand: true }));
+        box.append(new Gtk.Label({ label: _(spec.title), xalign: 0, hexpand: true })); // i18n: runtime
         list.append(new Gtk.ListBoxRow({ child: box }));
     }
     list.connect('row-selected', (_list, row) => {
         if (!row) return;
         const spec = SETTINGS_PAGES[row.get_index()];
         stack.visible_child_name = spec.name;
-        content.title = spec.title;
+        content.title = _(spec.title); // i18n: runtime
     });
     // When collapsed, a click on the page already picked opens it again.
     list.connect('row-activated', () => {
@@ -260,7 +264,7 @@ function lookGroup(preview: NotchPreview, gallery: ThemeGallery): Adw.Preference
 }
 
 function openConfigRow(window: Gtk.Window, toast: (title: string) => void): Adw.ActionRow {
-    const row = new Adw.ActionRow({ title: 'Open config.toml', subtitle: CONFIG_FILE, activatable: true });
+    const row = new Adw.ActionRow({ title: _('Open config.toml'), subtitle: CONFIG_FILE, activatable: true });
     row.add_suffix(new Gtk.Image({ icon_name: 'adw-external-link-symbolic' }));
     row.connect('activated', () => openUri(window, Gio.File.new_for_path(CONFIG_FILE).get_uri(), toast));
     return row;
@@ -279,22 +283,22 @@ function openUri(window: Gtk.Widget, uri: string, toast: (title: string) => void
 }
 
 function resetAllRow(window: Gtk.Widget, reset: () => Promise<void>, toast: (title: string) => void): Adw.ActionRow {
-    const button = new Gtk.Button({ label: 'Reset', valign: Gtk.Align.CENTER, css_classes: ['destructive-action'] });
+    const button = new Gtk.Button({ label: _('Reset'), valign: Gtk.Align.CENTER, css_classes: ['destructive-action'] });
     const row = new Adw.ActionRow({
-        title: 'Reset all settings',
-        subtitle: 'Replace config.toml with the default one',
+        title: _('Reset all settings'),
+        subtitle: _('Replace config.toml with the default one'),
         activatable_widget: button,
     });
     row.add_suffix(button);
     button.connect('clicked', () => {
         const dialog = new Adw.AlertDialog({
-            heading: 'Reset all settings?',
-            body: 'Every setting goes back to its default. config.toml is replaced, including any comments you added.',
+            heading: _('Reset all settings?'),
+            body: _('Every setting goes back to its default. config.toml is replaced, including any comments you added.'),
             default_response: 'cancel',
             close_response: 'cancel',
         });
-        dialog.add_response('cancel', 'Cancel');
-        dialog.add_response('reset', 'Reset');
+        dialog.add_response('cancel', _('Cancel'));
+        dialog.add_response('reset', _('Reset'));
         dialog.set_response_appearance('reset', Adw.ResponseAppearance.DESTRUCTIVE);
         dialog.connect('response', (_dialog, response) => {
             if (response === 'reset') reset().catch((error) => toast(errorMessage(error)));

@@ -2,6 +2,7 @@ import * as BoxPointer from 'resource:///org/gnome/shell/ui/boxpointer.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import St from 'gi://St';
+import { _ } from '../../shared/logic/i18n.js';
 
 export interface NotchMenuHandlers {
     openSettings(): void;
@@ -40,13 +41,13 @@ export class NotchMenu {
         this.manager = new PopupMenu.PopupMenuManager(this.anchor);
         this.manager.addMenu(this.menu, 0);
 
-        const settings = new PopupMenu.PopupMenuItem('Settings');
+        const settings = new PopupMenu.PopupMenuItem(_('Settings'));
         settings.connect('activate', () => handlers.openSettings());
-        this.doNotDisturb = new PopupMenu.PopupSwitchMenuItem('Do Not Disturb', false);
+        this.doNotDisturb = new PopupMenu.PopupSwitchMenuItem(_('Do Not Disturb'), false);
         this.doNotDisturb.connect('toggled', (_item, on: boolean) => handlers.setDoNotDisturb(on));
-        this.clearShelf = new PopupMenu.PopupMenuItem('Clear shelf');
+        this.clearShelf = new PopupMenu.PopupMenuItem(_('Clear shelf'));
         this.clearShelf.connect('activate', () => handlers.clearShelf());
-        this.pauseClipboard = new PopupMenu.PopupSwitchMenuItem('Pause clipboard', false);
+        this.pauseClipboard = new PopupMenu.PopupSwitchMenuItem(_('Pause clipboard'), false);
         this.pauseClipboard.connect('toggled', (_item, on: boolean) => handlers.setClipboardPaused(on));
         this.menu.addMenuItem(settings);
         this.menu.addMenuItem(this.doNotDisturb);

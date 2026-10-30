@@ -2,6 +2,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import type { Inhibitor } from './logic/caffeine.js';
+import { _ } from '../../shared/logic/i18n.js';
 
 /** `GsmInhibitorFlag`: keep the session from going idle, so the screen stays on. */
 const INHIBIT_IDLE = 8;
@@ -35,7 +36,7 @@ export function sessionInhibitor(): Inhibitor {
         inhibit: async () => {
             const reply = await callSessionManager(
                 'Inhibit',
-                new GLib.Variant('(susu)', ['nokta', 0, 'Caffeine is on in Nokta', INHIBIT_IDLE]),
+                new GLib.Variant('(susu)', ['nokta', 0, _('Caffeine is on in Nokta'), INHIBIT_IDLE]),
             );
             const [cookie] = reply.deepUnpack() as [number];
             return cookie;

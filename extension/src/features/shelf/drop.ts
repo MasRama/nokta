@@ -5,6 +5,7 @@ import St from 'gi://St';
 import { setVertical } from '../../shared/compat.js';
 import { parseHexColor } from '../../shared/logic/color.js';
 import { iconFor } from '../../shared/icons.js';
+import { _ } from '../../shared/logic/i18n.js';
 
 const INSET = 10;
 const RADIUS = 14;
@@ -39,7 +40,7 @@ export class DropView {
                 x_align: Clutter.ActorAlign.CENTER,
             }),
         );
-        content.add_child(new St.Label({ style_class: 'nokta-drop-label', text: 'Drop to keep here' }));
+        content.add_child(new St.Label({ style_class: 'nokta-drop-label', text: _('Drop to keep here') }));
         this.actor.add_child(this.border);
         this.actor.add_child(content);
     }

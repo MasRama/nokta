@@ -1,3 +1,5 @@
+import { _ } from '../../../shared/logic/i18n.js';
+
 /**
  * What the OSD row shows: a bar filled to `fraction` (none when null) and a
  * text. Without a bar, `detail` is shown on the right; `urgent` turns it red.
@@ -30,8 +32,8 @@ export function osdContent(
     iconNames: readonly string[] = [],
 ): OsdContent {
     if (!label) {
-        if (iconNames.some((name) => name.startsWith(MUTED_MICROPHONE))) return { fraction: null, text: 'Microphone off' };
-        if (iconNames.some((name) => name.startsWith(MUTED_SPEAKER))) return { fraction: null, text: 'Muted' };
+        if (iconNames.some((name) => name.startsWith(MUTED_MICROPHONE))) return { fraction: null, text: _('Microphone off') };
+        if (iconNames.some((name) => name.startsWith(MUTED_SPEAKER))) return { fraction: null, text: _('Muted') };
     }
     if (isNumber(level)) {
         const max = isNumber(maxLevel) && maxLevel > 0 ? maxLevel : 1;
@@ -41,10 +43,16 @@ export function osdContent(
     return { fraction: null, text: label ?? '' };
 }
 
+const lockText = (key: string, on: boolean): string => {
+    if (key === 'Caps Lock') return on ? _('Caps Lock on') : _('Caps Lock off');
+    if (key === 'Num Lock') return on ? _('Num Lock on') : _('Num Lock off');
+    return `${key} ${on ? _('on') : _('off')}`;
+};
+
 /** Caps Lock or Num Lock turned on or off. */
 export const lockKeyContent = (key: string, on: boolean): OsdContent => ({
     fraction: null,
-    text: `${key} ${on ? 'on' : 'off'}`,
+    text: lockText(key, on),
 });
 
 export interface InputSourceChange {

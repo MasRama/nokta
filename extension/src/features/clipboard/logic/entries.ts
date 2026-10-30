@@ -1,3 +1,5 @@
+import { _, format } from '../../../shared/logic/i18n.js';
+
 /** One copy, as io.nokta.Clipboard1.Items lists it. */
 export interface ClipboardEntry {
     id: string;
@@ -47,10 +49,10 @@ export function captureKind(mimetypes: readonly string[]): 'text' | 'image' | nu
 export function ageLabel(nowUs: number, timeUs: number): string {
     const minutes = Math.floor(Math.max(0, nowUs - timeUs) / 60_000_000);
     if (minutes < 1) return 'now';
-    if (minutes < 60) return `${minutes} min`;
+    if (minutes < 60) return format(_('%d min'), minutes);
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} h`;
-    return `${Math.floor(hours / 24)} d`;
+    if (hours < 24) return format(_('%d h'), hours);
+    return format(_('%d d'), Math.floor(hours / 24));
 }
 
 /** Rows the page is tall enough for; one for the note when it is empty. */
@@ -93,7 +95,7 @@ export function entryIcon(entry: ClipboardEntry): 'nokta-image' | 'nokta-link' |
 
 /** What a row says, as the search reads it. */
 export const entryText = (entry: ClipboardEntry): string =>
-    entry.kind === 'image' ? `Picture · ${entry.preview}` : entry.preview;
+    entry.kind === 'image' ? format(_('Picture · %s'), entry.preview) : entry.preview;
 
 /** Lower case without accents, so `CAFÉ` finds `cafe`. */
 const fold = (text: string): string =>

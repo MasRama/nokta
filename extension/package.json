@@ -16,7 +16,8 @@
   "scripts": {
     "gen-contracts": "node scripts/gen-contracts.mjs",
     "build": "npm run gen-contracts && tsc -p tsconfig.json",
-    "check": "npm run gen-contracts && tsc -p tsconfig.json --noEmit && node scripts/check-contracts.mjs",
+    "check": "npm run gen-contracts && tsc -p tsconfig.json --noEmit && node scripts/check-contracts.mjs && node scripts/i18n.mjs --check",
+    "i18n": "node scripts/i18n.mjs",
     "lint": "eslint .",
     "test": "node -e \"require('fs').rmSync('.test-build',{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test \".test-build/tests/**/*.test.js\"",
     "pack": "sh scripts/pack.sh"

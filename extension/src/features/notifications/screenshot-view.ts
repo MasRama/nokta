@@ -6,15 +6,16 @@ import { TintedButton } from '../../shared/button.js';
 import { setVertical } from '../../shared/compat.js';
 import type { ScreenshotButton } from './logic/screenshot.js';
 import { iconFor } from '../../shared/icons.js';
+import { _, N_ } from '../../shared/logic/i18n.js';
 
 /** The thumbnail's box; the image keeps its shape inside it. */
 const THUMB_WIDTH = 160;
 const THUMB_HEIGHT = 90;
 
 const BUTTONS: Record<ScreenshotButton, { icon: string; label: string }> = {
-    open: { icon: 'document-open-symbolic', label: 'Open' },
-    files: { icon: 'folder-open-symbolic', label: 'Show in Files' },
-    keep: { icon: 'folder-documents-symbolic', label: 'Keep on shelf' },
+    open: { icon: 'document-open-symbolic', label: N_('Open') },
+    files: { icon: 'folder-open-symbolic', label: N_('Show in Files') },
+    keep: { icon: 'folder-documents-symbolic', label: N_('Keep on shelf') },
 };
 
 /**
@@ -66,7 +67,7 @@ export class ScreenshotView {
         const make = (button: ScreenshotButton) => {
             const { icon, label } = BUTTONS[button];
             const made = new TintedButton('nokta-screenshot-button', icon, () => onPress(button));
-            made.text = label;
+            made.text = _(label); // i18n: runtime
             return made;
         };
         this.buttons = { open: make('open'), files: make('files'), keep: make('keep') };

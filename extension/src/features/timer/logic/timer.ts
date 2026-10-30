@@ -1,6 +1,7 @@
 import type { TimerProps } from '../../../shared/contracts.js';
 import type { TimerSettings } from '../../settings/logic/parse.js';
 import { TONES } from '../../../shared/logic/tones.js';
+import { _, format } from '../../../shared/logic/i18n.js';
 
 export type TimerState = 'idle' | 'running' | 'paused';
 export type TimerPhase = 'focus' | 'break' | '';
@@ -79,11 +80,11 @@ export function msUntilNextSecond(timer: TimerSnapshot, nowUs: number): number |
 
 /** The Quick Settings toggle's subtitle. */
 export function toggleSubtitle(timer: TimerSnapshot, nowUs: number, focusMinutes: number): string {
-    if (timer.state === 'idle') return `${focusMinutes} min`;
-    const minutes = `${Math.max(1, Math.ceil(remainingAt(timer, nowUs) / MIN))} min left`;
-    if (timer.state === 'paused') return `Paused, ${minutes}`;
+    if (timer.state === 'idle') return format(_('%d min'), focusMinutes);
+    const minutes = format(_('%d min left'), Math.max(1, Math.ceil(remainingAt(timer, nowUs) / MIN)));
+    if (timer.state === 'paused') return format(_('Paused, %s'), minutes);
     if (timer.phase !== 'break') return minutes;
-    return timer.longBreak ? `Long break, ${minutes}` : `Break, ${minutes}`;
+    return format(timer.longBreak ? _('Long break, %s') : _('Break, %s'), minutes);
 }
 
 /** A break's length in minutes and whether it is the long one. */
@@ -123,10 +124,10 @@ export interface FinishedAlert {
 /** The notch alert for io.nokta.Timer1.Finished, or null for an unknown phase. */
 export function finishedAlert(phase: string, next: BreakInfo): FinishedAlert | null {
     if (phase === 'focus') {
-        const kind = next.long ? 'long break' : 'break';
-        return { title: 'Focus done', detail: next.minutes > 0 ? `${next.minutes} min ${kind}` : 'Time for a break' };
+        const detail = next.long ? _('%d min long break') : _('%d min break');
+        return { title: _('Focus done'), detail: next.minutes > 0 ? format(detail, next.minutes) : _('Time for a break') };
     }
-    if (phase === 'break') return { title: 'Break over', detail: 'Ready to focus' };
+    if (phase === 'break') return { title: _('Break over'), detail: _('Ready to focus') };
     return null;
 }
 

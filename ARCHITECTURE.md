@@ -61,7 +61,8 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
                     keyboard focus, D-Bus helpers, icons, dim levels
   icons/            Nokta's own symbolic icons
-  scripts/          contract code generation and checks, packing
+  po/               translations: the template and one .po per language
+  scripts/          contract code generation and checks, translation template, packing
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
 tools/devshell/     headless GNOME Shell for checking the UI
@@ -391,6 +392,18 @@ How both sides stay honest:
   a green camera. The OSD bar takes the text color, not the cover's. A
   device alert draws the battery before its percentage, filled in red,
   amber or green by level (`osd/logic/battery.ts`).
+- Words: every string the user reads goes through `_()` from
+  `shared/logic/i18n.ts`, which `enable()` and the settings window connect
+  to the extension's gettext (domain `nokta@nokta.io` from `metadata.json`)
+  and `disable()` disconnects. Module-level tables mark their strings with
+  `N_()` and translate them where they are drawn; numbers go in with
+  `format()`, so a translation can reorder them. The daemon's own words
+  (PackageKit titles and details) arrive in English and are translated as
+  they arrive (`activitiesFrom`); `shared/logic/daemon-strings.ts` lists
+  them, and a test keeps it in step with the Rust source. Song titles, app
+  names and user text pass through untouched. `scripts/i18n.mjs` writes
+  `po/nokta@nokta.io.pot` and, inside `npm run check`, fails while `id.po`
+  misses an entry; `pack.sh` compiles the `.po` files into the zip.
 - Text follows one type scale (caption 11, body 13, title 15, the sung
   lyric 17; semibold labels, bold digits). St CSS ignores `opacity`, so
   dimmed text is dimmed from code with the two levels in `shared/dim.ts`.

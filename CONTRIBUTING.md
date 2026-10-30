@@ -55,6 +55,21 @@ extension in a headless GNOME Shell that cannot touch your own session.
   part of the checklist in [docs/testing.md](docs/testing.md) and add a
   screenshot to the pull request.
 
+## Translations
+
+The extension's text lives in `extension/po/`: `nokta@nokta.io.pot` is the
+template and each language has a `.po` file named after its code. Every
+string the user reads goes through `_('…')` in the source, or `N_('…')` in a
+table built when a module loads, and numbers go in with `format()` and `%s`
+or `%d`, so a translation can put them where its grammar wants.
+
+- After changing text in `extension/src/`, run `npm run i18n` in
+  `extension/` to update the template, then translate the new entries.
+- To add a language, copy the template to `extension/po/<code>.po`, fill in
+  every `msgstr`, and add the code to `extension/po/LINGUAS`.
+- `npm run check` fails while a language misses an entry, keeps one marked
+  fuzzy, or drops a placeholder.
+
 ## Commit messages
 
 Nokta uses [Conventional Commits](https://www.conventionalcommits.org/). The
@@ -69,7 +84,7 @@ docs: explain the Just Perfection clock setting
 
 Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`,
 `chore`. Scopes: `media`, `lyrics`, `settings`, `osd`, `devices`, `timer`,
-`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `screenshots`, `themes`, `panel`, `app`, `contracts`, `extension`, `packaging`, `core`. A breaking change gets a `!` after the
+`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `screenshots`, `themes`, `panel`, `i18n`, `app`, `contracts`, `extension`, `packaging`, `core`. A breaking change gets a `!` after the
 scope and a `BREAKING CHANGE:` footer.
 
 ## Releases

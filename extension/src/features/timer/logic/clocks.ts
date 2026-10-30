@@ -1,5 +1,6 @@
 import { formatRemaining } from './timer.js';
 import { TONES } from '../../../shared/logic/tones.js';
+import { _, format, N_ } from '../../../shared/logic/i18n.js';
 
 export type ClockKind = 'countdown' | 'stopwatch' | 'alarm';
 
@@ -69,24 +70,24 @@ export function clockText(clock: Clock, nowUs: number): string {
     return h > 0 ? `${h}:${pad(m)}:${pad(total % 60)}` : `${m}:${pad(total % 60)}`;
 }
 
-const DEFAULT_TITLES: Record<ClockKind, string> = { countdown: 'Timer', stopwatch: 'Stopwatch', alarm: 'Alarm' };
+const DEFAULT_TITLES: Record<ClockKind, string> = { countdown: N_('Timer'), stopwatch: N_('Stopwatch'), alarm: N_('Alarm') };
 
-export const clockTitle = (clock: Clock): string => clock.label || DEFAULT_TITLES[clock.kind];
+export const clockTitle = (clock: Clock): string => clock.label || _(DEFAULT_TITLES[clock.kind]); // i18n: runtime
 
 /** Like `1 h 30 min` or `45 s`. */
 function formatLength(us: number): string {
     const total = Math.round(us / S);
     const parts: string[] = [];
-    if (total >= 3600) parts.push(`${Math.floor(total / 3600)} h`);
-    if (total % 3600 >= 60) parts.push(`${Math.floor((total % 3600) / 60)} min`);
-    if (total % 60 > 0) parts.push(`${total % 60} s`);
+    if (total >= 3600) parts.push(format(_('%d h'), Math.floor(total / 3600)));
+    if (total % 3600 >= 60) parts.push(format(_('%d min'), Math.floor((total % 3600) / 60)));
+    if (total % 60 > 0) parts.push(format(_('%d s'), total % 60));
     return parts.join(' ');
 }
 
 /** The dimmed text after the title in home: a countdown's length or an alarm's time, and whether it is paused. */
 export function clockDetail(clock: Clock, alarmTime: string): string {
     const what = clock.kind === 'countdown' ? formatLength(clock.durationUs) : clock.kind === 'alarm' ? alarmTime : '';
-    return [clock.running ? '' : 'Paused', what].filter(Boolean).join(' · ');
+    return [clock.running ? '' : _('Paused'), what].filter(Boolean).join(' · ');
 }
 
 const due = (clock: Clock, nowUs: number): boolean =>
@@ -143,8 +144,8 @@ export interface ClockAlert {
 
 /** The notch alert for io.nokta.Timer1.ClockDone; `time` is the local time now. A stopwatch never finishes. */
 export function clockDoneAlert(kind: string, label: string, time: string): ClockAlert | null {
-    if (kind === 'countdown') return label ? { title: label, detail: 'Timer done' } : { title: 'Timer done', detail: '' };
-    if (kind === 'alarm') return label ? { title: label, detail: `Alarm · ${time}` } : { title: 'Alarm', detail: time };
+    if (kind === 'countdown') return label ? { title: label, detail: _('Timer done') } : { title: _('Timer done'), detail: '' };
+    if (kind === 'alarm') return label ? { title: label, detail: format(_('Alarm · %s'), time) } : { title: _('Alarm'), detail: time };
     return null;
 }
 

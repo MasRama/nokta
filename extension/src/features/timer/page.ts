@@ -4,6 +4,7 @@ import St from 'gi://St';
 import { withAlpha } from '../../shared/logic/color.js';
 import { TIMER_PRESETS } from './logic/clocks.js';
 import { iconFor } from '../../shared/icons.js';
+import { _, format } from '../../shared/logic/i18n.js';
 
 export interface TimerPageHandlers {
     countdown(minutes: number): void;
@@ -37,14 +38,14 @@ export class TimerPage {
         });
         this.actor = new St.Widget({ style_class: 'nokta-timer-page', layout_manager: layout, x_expand: true });
         TIMER_PRESETS.forEach((minutes, i) => {
-            const button = this.button(new St.Label({ text: `${minutes} min`, x_align: Clutter.ActorAlign.CENTER }), () =>
+            const button = this.button(new St.Label({ text: format(_('%d min'), minutes), x_align: Clutter.ActorAlign.CENTER }), () =>
                 handlers.countdown(minutes),
             );
             layout.attach(button, i % COLUMNS, Math.floor(i / COLUMNS), 1, 1);
         });
         const box = new St.BoxLayout({ style_class: 'nokta-timer-stopwatch', x_align: Clutter.ActorAlign.CENTER });
         box.add_child(new St.Icon({ gicon: iconFor('media-playback-start-symbolic'), style_class: 'nokta-button-icon' }));
-        box.add_child(new St.Label({ text: 'Stopwatch', y_align: Clutter.ActorAlign.CENTER }));
+        box.add_child(new St.Label({ text: _('Stopwatch'), y_align: Clutter.ActorAlign.CENTER }));
         const used = TIMER_PRESETS.length;
         layout.attach(
             this.button(box, () => handlers.stopwatch()),

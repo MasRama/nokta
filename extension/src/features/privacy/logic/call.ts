@@ -1,5 +1,6 @@
 import { formatDuration } from '../../../shared/logic/format.js';
 import { TONES } from '../../../shared/logic/tones.js';
+import { _ } from '../../../shared/logic/i18n.js';
 
 /** An app recording from a microphone, as GNOME's mixer names it. */
 export interface RecordingStream {
@@ -37,7 +38,7 @@ export function microphoneInUse(indicator: boolean, streams: readonly RecordingS
 
 /** The app's name, else the stream's, else just the microphone. */
 export function callTitle(appName: string | null, stream: RecordingStream | null): string {
-    return appName || stream?.name || 'Microphone';
+    return appName || stream?.name || _('Microphone');
 }
 
 /** How long the microphone has been on: `12:03`. */
@@ -47,7 +48,7 @@ export function callText(startedUs: number, nowUs: number): string {
 
 /** `Microphone · 12:03`, or `Muted · 12:03`. */
 export function callDetail(startedUs: number, nowUs: number, muted: boolean): string {
-    return `${muted ? 'Muted' : 'Microphone'} · ${callText(startedUs, nowUs)}`;
+    return `${muted ? _('Muted') : _('Microphone')} · ${callText(startedUs, nowUs)}`;
 }
 
 /** Until the shown second changes. */
