@@ -2,7 +2,6 @@
 //! the session bus and turns it into activities.
 
 use std::collections::HashMap;
-use std::time::Duration;
 
 use futures_util::StreamExt;
 use tokio::sync::{mpsc, oneshot};
@@ -12,7 +11,7 @@ use zbus::{Connection, MatchRule, MessageStream};
 use super::desktop::{app_for, data_dirs};
 use super::launcher::{Action, LauncherState, Report};
 use super::service::Command;
-use crate::shared::clock::monotonic_us;
+use crate::shared::clock::{monotonic_us, sleep_for, until_monotonic};
 
 const INTERFACE: &str = "com.canonical.Unity.LauncherEntry";
 
@@ -60,9 +59,7 @@ async fn watch(
     let dirs = data_dirs();
     let mut state = LauncherState::default();
     loop {
-        let wait = state
-            .next_deadline()
-            .map(|at| Duration::from_micros((at - monotonic_us()).max(0) as u64));
+        let wait = state.next_deadline().map(until_monotonic);
         let actions = tokio::select! {
             Some(Ok(msg)) = updates.next() => {
                 let sender = msg.header().sender().map(|s| s.to_string()).unwrap_or_default();
@@ -83,7 +80,7 @@ async fn watch(
                 }
                 state.sender_gone(&name)
             }
-            () = sleep(wait) => state.tick(monotonic_us()),
+            () = sleep_for(wait) => state.tick(monotonic_us()),
             else => break,
         };
         for action in actions {
@@ -115,11 +112,4 @@ pub(super) async fn send(commands: &mpsc::Sender<Command>, action: Action) {
         },
     };
     let _ = commands.send(command).await;
-}
-
-async fn sleep(wait: Option<Duration>) {
-    match wait {
-        Some(wait) => tokio::time::sleep(wait).await,
-        None => std::future::pending().await,
-    }
 }

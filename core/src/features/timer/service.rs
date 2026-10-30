@@ -1,13 +1,11 @@
 //! Owns the timer: takes commands, sleeps until the deadline and reports
 //! finished phases. Nothing polls.
 
-use std::time::Duration;
-
 use tokio::sync::{mpsc, oneshot, watch};
 
 use super::clocks::{AddError, ClockView, Clocks, Done};
 use super::logic::{Lengths, Phase, Snapshot, Timer};
-use crate::shared::clock::monotonic_us;
+use crate::shared::clock::{monotonic_us, sleep_for, until_monotonic, wait_us};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Command {
@@ -33,9 +31,7 @@ pub fn spawn(
     tokio::spawn(async move {
         let mut timer = Timer::default();
         loop {
-            let wait = timer
-                .deadline()
-                .map(|deadline| Duration::from_micros((deadline - monotonic_us()).max(0) as u64));
+            let wait = timer.deadline().map(until_monotonic);
             let changed = tokio::select! {
                 command = rx.recv() => {
                     let now = monotonic_us();
@@ -47,7 +43,7 @@ pub fn spawn(
                         Some(Command::Stop) => timer.stop(),
                     }
                 }
-                () = sleep(wait) => {
+                () = sleep_for(wait) => {
                     let now = monotonic_us();
                     let ended = timer.expire(now, &lengths());
                     if let Some(phase) = ended {
@@ -65,14 +61,6 @@ pub fn spawn(
         }
     });
     (commands, state, finished)
-}
-
-/// Sleeps for `wait`, or forever without one.
-async fn sleep(wait: Option<Duration>) {
-    match wait {
-        Some(wait) => tokio::time::sleep(wait).await,
-        None => std::future::pending().await,
-    }
 }
 
 type Reply = oneshot::Sender<Result<String, AddError>>;
@@ -133,9 +121,7 @@ pub fn spawn_clocks(
         loop {
             // Sleeps on the monotonic clock; a wall clock that moves under
             // it, as after a suspend, is caught by Wake.
-            let wait = clocks
-                .next_due(wall())
-                .map(|us| Duration::from_micros(us.max(0) as u64));
+            let wait = clocks.next_due(wall()).map(wait_us);
             let changed = tokio::select! {
                 command = rx.recv() => {
                     let now = wall();
@@ -157,7 +143,7 @@ pub fn spawn_clocks(
                         Some(ClockCommand::Wake) => true,
                     }
                 }
-                () = sleep(wait) => false,
+                () = sleep_for(wait) => false,
             };
             let done = clocks.expire(wall());
             let expired = !done.is_empty();
