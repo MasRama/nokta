@@ -55,6 +55,19 @@ wait_for() {
     ok "$1"
 }
 
+# Checks for $3 whole seconds that the JavaScript $2 stays true, and fails at
+# the first moment it is not: for what must not happen. On failure it prints
+# the result of the JavaScript $4, when given.
+holds() {
+    i=0
+    while [ "$i" -lt $(($3 * 5)) ]; do
+        [ "$(js "$2" 2> /dev/null)" = true ] || fail "$1${4:+: $(js "$4" 2> /dev/null)}"
+        i=$((i + 1))
+        sleep 0.2
+    done
+    ok "$1"
+}
+
 FIND='const find = (a, cls, out = []) => {
     if (a.has_style_class_name && a.has_style_class_name(cls)) out.push(a);
     for (const c of a.get_children()) find(c, cls, out);
@@ -230,9 +243,7 @@ c?.get_sinks().map((s) => s.get_name())])"
     sleep 0.4
     "$HERE/shot.sh" smoke-outputs > /dev/null
     "$HERE/hover.sh" off > /dev/null
-    sleep 1
-    [ "$(js "$FIND shown('nokta-expanded')")" = true ] || fail "the notch closed under the output menu"
-    ok "the output menu holds the notch open"
+    holds "the output menu holds the notch open" "$FIND shown('nokta-expanded')" 1
     js "$MENU items().find((i) => i.label_actor?.text === 'Headphones').activate(imports.gi.Clutter.get_current_event()); true" > /dev/null
     wait_for "picking the headphones switches the sound output" \
         "$FIND one('nokta-output-button').child.gicon?.to_string().endsWith('/nokta-headphones-symbolic.svg')" 5
@@ -348,9 +359,8 @@ js "$FIND $NOTCH_MENU.close(); true" > /dev/null
 wait_for "closing the menu gives the keyboard back to the notch" \
     "$FIND !$NOTCH_MENU.isOpen && $HELD && ($FOCUSED_IN)('nokta-expanded')" 5 "$KEYBOARD_STATE"
 "$HERE/hover.sh" off > /dev/null
-sleep 1
-[ "$(js "$FIND shown('nokta-expanded') && $HELD")" = true ] || fail "the pointer leaving closed the notch held from the keyboard: $(js "$KEYBOARD_STATE")"
-ok "held from the keyboard, the pointer leaving keeps it open"
+holds "held from the keyboard, the pointer leaving keeps it open" \
+    "$FIND shown('nokta-expanded') && $HELD" 1 "$KEYBOARD_STATE"
 js "$FIND one('nokta-grid-button').grab_key_focus(); true" > /dev/null
 "$HERE/keys.sh" Return
 wait_for "Enter presses the focused button: the grid button opens home, its first button focused" \
@@ -383,9 +393,8 @@ set_open_on() {
 }
 set_open_on click
 "$HERE/hover.sh" on > /dev/null
-sleep 1
-[ "$(js "$FIND shown('nokta-collapsed') && !shown('nokta-expanded')")" = true ] || fail "hovering opened the notch with open_on = click"
-ok "with open_on = click, hovering does not open the notch"
+holds "with open_on = click, hovering does not open the notch" \
+    "$FIND shown('nokta-collapsed') && !shown('nokta-expanded')" 1
 # Gestures on the closed notch: a wheel click up raises the volume 5 % and
 # shows it in the notch; a middle click pauses the song and plays it again.
 MIXER="Main.panel.statusArea.quickSettings._volumeOutput._output._control"
@@ -1261,10 +1270,8 @@ wait_for "a finished countdown shows over the fullscreen window, unredirection o
     "$FIND $NOTCH_SHOWN && shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke fullscreen' && global._noktaUnredirect === 1" 10 \
     "$FIND JSON.stringify([one('nokta-notch').visible, shown('nokta-osd'), one('nokta-osd-text')?.text, global._noktaUnredirect])"
 "$HERE/hover.sh" on > /dev/null
-sleep 1
-[ "$(js "$FIND $NOTCH_SHOWN && shown('nokta-osd') && !shown('nokta-panel') && !shown('nokta-expanded')")" = true ] ||
-    fail "hovering opened the notch over the fullscreen window"
-ok "hovering does not open the notch over the fullscreen window"
+holds "hovering does not open the notch over the fullscreen window" \
+    "$FIND $NOTCH_SHOWN && shown('nokta-osd') && !shown('nokta-panel') && !shown('nokta-expanded')" 1
 "$HERE/shot.sh" smoke-fullscreen-alert > /dev/null
 "$HERE/hover.sh" off > /dev/null
 wait_for "the notch hides again after the alert, unredirection back on" \
@@ -1273,14 +1280,10 @@ wait_for "the notch hides again after the alert, unredirection back on" \
 # Counts every time the notch shows from here on.
 js "$FIND global._noktaShows = 0; global._noktaShowsId = one('nokta-notch').connect('notify::visible', (a) => { if (a.visible) global._noktaShows++; }); true" > /dev/null
 "$HERE/osd.sh" level audio-volume-medium-symbolic 0.5
-sleep 1
-[ "$(js "global._noktaShows")" = 0 ] || fail "a volume OSD showed the notch over the fullscreen window"
-ok "a volume OSD leaves the notch hidden over the fullscreen window"
+holds "a volume OSD leaves the notch hidden over the fullscreen window" "global._noktaShows === 0" 1
 set_fullscreen_alerts none
 "$HERE/timer.sh" countdown 1 "Smoke hidden"
-sleep 3
-[ "$(js "global._noktaShows")" = 0 ] || fail "an alert showed the notch over the fullscreen window with fullscreen_alerts = none"
-ok "with fullscreen_alerts = none the notch stays hidden for an alert"
+holds "with fullscreen_alerts = none the notch stays hidden for an alert" "global._noktaShows === 0" 3
 "$HERE/shot.sh" smoke-fullscreen-none > /dev/null
 js "$FIND one('nokta-notch').disconnect(global._noktaShowsId); global._noktaRestoreUnredirect(); true" > /dev/null
 set_fullscreen_alerts important
