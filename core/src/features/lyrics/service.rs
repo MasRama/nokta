@@ -132,11 +132,14 @@ async fn run(
             }
         };
         if wanted.as_ref().map(|r| &r.key) != current.as_ref().map(|c| &c.key) {
-            current = wanted.map(|request| Current {
-                offset_ms: offsets.get(&request.key.offset_name()),
-                key: request.key.clone(),
-                found: start(request, &files, &source, &done_tx),
-            });
+            current = match wanted {
+                Some(request) => Some(Current {
+                    offset_ms: offsets.get(&request.key.offset_name()),
+                    key: request.key.clone(),
+                    found: start(request, &files, &source, &done_tx).await,
+                }),
+                None => None,
+            };
             publish(&tx, current.as_ref());
         }
         tokio::select! {
@@ -184,27 +187,26 @@ async fn load_offsets(file: &Path) -> Offsets {
 
 /// What is known about the track right away: the user's own lyrics, a
 /// cached answer, or else loading while LRCLIB is asked.
-fn start(
+async fn start(
     request: Request,
     files: &Files,
     source: &Arc<dyn LyricsSource>,
     done: &mpsc::UnboundedSender<(TrackKey, LyricsState)>,
 ) -> LyricsState {
-    let q = &request.query;
-    if let Some(lines) = local::find(
-        &files.local_dir,
-        request.url.as_deref(),
-        &q.artist,
-        &q.title,
-    ) {
-        return LyricsState {
-            status: Status::Synced,
-            lines,
-            offset_ms: 0,
-        };
-    }
-    if let Some(hit) = files.cache.get(&request.key, now_unix()) {
-        return hit.into();
+    // The lyrics folder, a song's own folder and the cache can sit on a
+    // slow disk or mount: read them off the async runtime.
+    let (local_dir, cache) = (files.local_dir.clone(), files.cache.clone());
+    let (key, query, url) = (
+        request.key.clone(),
+        request.query.clone(),
+        request.url.clone(),
+    );
+    let known = tokio::task::spawn_blocking(move || {
+        known(&local_dir, &cache, &key, &query, url.as_deref())
+    })
+    .await;
+    if let Ok(Some(state)) = known {
+        return state;
     }
     let (cache, source, done) = (files.cache.clone(), source.clone(), done.clone());
     tokio::spawn(async move {
@@ -234,6 +236,25 @@ fn start(
         status: Status::Loading,
         ..LyricsState::default()
     }
+}
+
+/// The user's own lyrics for the track, else a cached answer; blocks on
+/// the disk.
+fn known(
+    local_dir: &Path,
+    cache: &Cache,
+    key: &TrackKey,
+    query: &Query,
+    url: Option<&str>,
+) -> Option<LyricsState> {
+    if let Some(lines) = local::find(local_dir, url, &query.artist, &query.title) {
+        return Some(LyricsState {
+            status: Status::Synced,
+            lines,
+            offset_ms: 0,
+        });
+    }
+    cache.get(key, now_unix()).map(LyricsState::from)
 }
 
 /// Publishes the current track's lyrics, shifted by its offset, or none.
