@@ -52,6 +52,7 @@ step "npm test" in_extension npm test
 step "cargo build --release" cargo build --release --locked
 step "npm run pack" in_extension npm run pack
 step "smoke (this machine)" tools/devshell/smoke.sh
+step "Indonesian (this machine)" tools/devshell/i18n-shots.sh
 if [ "$QUICK" = true ]; then
     echo "precheck: skipped the GNOME matrix (--quick)"
 elif command -v podman > /dev/null; then

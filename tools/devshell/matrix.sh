@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs smoke.sh in the containers CI uses (gnome.yml), one GNOME version at
+# Runs smoke.sh and i18n-shots.sh in the containers CI uses (gnome.yml), one GNOME version at
 # a time, with podman. Each version's image is built once with deps.sh and
 # then reused. Needs target/release/noktad and the packed extension
 # (tools/precheck.sh builds both).
@@ -52,16 +52,16 @@ for version in $VERSIONS; do
         }
     fi
     echo "matrix: GNOME $version"
-    if podman run --rm -v "$ROOT:/nokta:Z" -w /nokta "$tag" tools/devshell/smoke.sh \
-        > "$out/smoke.log" 2>&1; then
+    if podman run --rm -v "$ROOT:/nokta:Z" -w /nokta "$tag" \
+        sh -c 'tools/devshell/smoke.sh && tools/devshell/i18n-shots.sh' > "$out/smoke.log" 2>&1; then
         echo "matrix: GNOME $version ok"
     else
         echo "matrix: GNOME $version FAILED:"
-        grep -E "smoke: (FAIL|error)" "$out/smoke.log" | tail -5 || tail -5 "$out/smoke.log"
+        grep -E "(smoke|i18n): (FAIL|error)" "$out/smoke.log" | tail -5 || tail -5 "$out/smoke.log"
         failed="$failed $version"
     fi
     cp -r "$ROOT/build/shots" "$out/shots" 2>/dev/null || true
-    cp "$ROOT"/build/devshell/*.log "$ROOT/build/smoke-run.log" "$out/" 2>/dev/null || true
+    cp "$ROOT"/build/devshell/*.log "$ROOT/build/smoke-run.log" "$ROOT/build/i18n-run.log" "$out/" 2>/dev/null || true
     if grep -qs "JS ERROR" "$out"/*.log; then
         echo "matrix: GNOME $version logged a JS ERROR (see $out)"
         failed="$failed $version"

@@ -7,11 +7,11 @@ hand before a release and after any change to the extension's UI.
 |---|---|---|
 | Daemon | `cargo test` | Player selection, MPRIS following, LRC parsing, LRCLIB client, caches, config, every D-Bus interface against `contracts/*.xml`. Integration tests run on a private `dbus-daemon` with fake players and a local LRCLIB stub; nothing touches the real session or the network. |
 | Extension logic | `cd extension && npm test` | Pure modules without `gi://` imports: position extrapolation, lyric line lookup, time and clock formatting, the hover state machine (click mode, opening held from the keyboard), the keys of the keyboard mode, shortcut parsing, settings parsing, colors, progress math. |
-| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the open shortcut (a real key press) opens the notch and holds the keyboard, Tab and Shift+Tab move the focus, the output menu and the right-click menu still open over it, the pointer leaving keeps it open, Enter presses the focused button, Escape, the shortcut again and a click outside close it and let go, with `open_on = "click"` hovering does not open the notch and a click does, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, a fullscreen window hides the notch, a countdown alert shows over it (unredirection off, hover does not open it) and hides again while a volume OSD and, with `fullscreen_alerts = "none"`, an alert leave it hidden, the settings window opens, and Nokta logs no errors. Screenshots are kept as job artifacts. |
+| GNOME versions | `tools/devshell/smoke.sh`, in CI per version | Inside a headless GNOME Shell 46, 48, 49, 50 and 51 (one container each): the extension is active, the playing, idle and OSD notch have the right size, hovering the idle notch opens home, its toggles change GNOME's settings, `[home]` picks and orders its toggles and tiles, the Screenshot tile opens GNOME's screenshot UI, the open shortcut (a real key press) opens the notch and holds the keyboard, Tab and Shift+Tab move the focus, the output menu and the right-click menu still open over it, the pointer leaving keeps it open, Enter presses the focused button, Escape, the shortcut again and a click outside close it and let go, with `open_on = "click"` hovering does not open the notch and a click does, the right-click menu opens, its notifications tile opens the calendar, a notification shows its buttons, closes with ×, and counts the ones stacked from the same app, a fullscreen window hides the notch, a countdown alert shows over it (unredirection off, hover does not open it) and hides again while a volume OSD and, with `fullscreen_alerts = "none"`, an alert leave it hidden, the settings window opens, and Nokta logs no errors. Then `i18n-shots.sh` starts it again in Indonesian and checks home, the settings page and the settings window. Screenshots are kept as job artifacts. |
 | UI | `tools/devshell/` and the checklist below | What the notch looks like and how it behaves inside a real GNOME Shell. |
 
-`npm run check` (types and the contract check) and `npm run lint` also run in
-CI.
+`npm run check` (types, the contract check and the translation check) and
+`npm run lint` also run in CI.
 
 ## The devshell
 
@@ -71,7 +71,8 @@ tools/devshell/prefs.sh               # open the settings window there
 tools/devshell/click.sh X Y           # click at a point of the full screenshot
 tools/devshell/keys.sh KEY...         # press keys together, e.g. Super_L Alt_L f
 tools/devshell/smoke.sh               # start, check, stop (what CI runs per GNOME version)
-tools/devshell/matrix.sh [46 48 49 50 51]  # smoke.sh in CI's container of each GNOME version (podman)
+tools/devshell/i18n-shots.sh          # the same in Indonesian: home, the settings page and window
+tools/devshell/matrix.sh [46 48 49 50 51]  # smoke.sh and i18n-shots.sh in CI's container of each GNOME version (podman)
 tools/devshell/stop.sh
 ```
 
@@ -688,6 +689,17 @@ banner for a fake file.
 - [ ] Reset all settings: a confirmation, then the default `config.toml`.
 - [ ] Stop the daemon: a banner says so and the rows are dimmed.
 - [ ] The Settings button in the Extensions app opens it *(real session)*.
+
+### Language
+
+- [ ] `i18n-shots.sh`: home's tiles and toggles, the settings page and the
+      settings window are in Indonesian; the shots are
+      `build/shots/i18n-*.png`.
+- [ ] In the devshell started with `LANGUAGE=id LANG=en_US.UTF-8`: a
+      countdown alert, a device alert and `activity.sh` read in Indonesian;
+      a song title and an activity title set by hand stay as they are.
+- [ ] Switch the session to Indonesian in Settings, log out and in: the
+      notch and the settings window follow *(real session)*.
 
 ### Keyboard and click to open
 
