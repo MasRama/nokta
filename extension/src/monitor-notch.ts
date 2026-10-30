@@ -5,8 +5,7 @@ import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import { ActivityBadge, type ActivitiesClient, type Activity } from './features/activities/index.js';
-import { CountdownBadge } from './features/calendar/index.js';
+import type { ActivitiesClient, Activity } from './features/activities/index.js';
 import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
 import { NotchGestures } from './features/gestures/index.js';
 import {
@@ -58,13 +57,11 @@ import {
     type QuickToggle,
 } from './features/panel/index.js';
 import {
-    CallLabel,
     type CallMonitor,
     callText,
     dotsFor,
     PrivacyDots,
     type PrivacyMonitor,
-    RecordingLabel,
     type ScreenRecording,
 } from './features/privacy/index.js';
 import type { SettingsClient } from './features/settings/index.js';
@@ -73,7 +70,6 @@ import {
     DropView,
     pointIn,
     SHELF_ROW_HEIGHT,
-    ShelfBadge,
     ShelfRow,
     type Hit,
     type Rect,
@@ -88,10 +84,10 @@ import {
     indicatorClock,
     phaseColor,
     remainingAt,
-    TimerLabel,
     TimerPage,
     type TimerClient,
 } from './features/timer/index.js';
+import { IndicatorWidgets } from './indicator-widgets.js';
 import { IdleClock } from './shared/clock.js';
 import { disableUnredirect, enableUnredirect } from './shared/compat.js';
 import { focusButtons, focusFirst, keyFocus, moveFocus } from './shared/focus.js';
@@ -233,18 +229,7 @@ export class MonitorNotch implements ShelfNotch {
     private readonly clock = new IdleClock();
     /** The clock, or the indicator: the timer while one is set, else the newest activity. */
     private readonly idle = new St.Widget({ layout_manager: new Clutter.BinLayout() });
-    private readonly idleTimer = new TimerLabel();
-    private readonly collapsedTimer = new TimerLabel();
-    private readonly idleRecording = new RecordingLabel();
-    private readonly collapsedRecording = new RecordingLabel();
-    private readonly idleCall = new CallLabel();
-    private readonly collapsedCall = new CallLabel();
-    private readonly idleBadge = new ActivityBadge();
-    private readonly collapsedBadge = new ActivityBadge();
-    private readonly idleShelf = new ShelfBadge();
-    private readonly collapsedShelf = new ShelfBadge();
-    private readonly idleCountdown = new CountdownBadge();
-    private readonly collapsedCountdown = new CountdownBadge();
+    private readonly indicators = new IndicatorWidgets();
     private readonly panelShelf = new ShelfRow();
     private readonly expandedShelf = new ShelfRow();
     private readonly dropView = new DropView();
@@ -440,18 +425,10 @@ export class MonitorNotch implements ShelfNotch {
         this.clock.actor.x_expand = true;
         this.clock.actor.y_expand = true;
         this.idle.add_child(this.clock.actor);
-        this.idle.add_child(this.idleRecording.actor);
-        this.idle.add_child(this.idleCall.actor);
-        this.idle.add_child(this.idleTimer.actor);
-        this.idle.add_child(this.idleBadge.actor);
-        this.idle.add_child(this.idleShelf.actor);
-        this.idle.add_child(this.idleCountdown.actor);
-        this.idleRecording.actor.hide();
-        this.idleCall.actor.hide();
-        this.idleTimer.actor.hide();
-        this.idleBadge.actor.hide();
-        this.idleShelf.actor.hide();
-        this.idleCountdown.actor.hide();
+        for (const actor of this.indicators.idleActors()) {
+            this.idle.add_child(actor);
+            actor.hide();
+        }
         this.views = {
             idle: this.idle,
             collapsed: this.collapsed.actor,
@@ -595,18 +572,7 @@ export class MonitorNotch implements ShelfNotch {
         this.privacyDots.destroy();
         this.progress.destroy();
         this.collapsed.setAside(null);
-        this.idleRecording.destroy();
-        this.collapsedRecording.destroy();
-        this.idleCall.destroy();
-        this.collapsedCall.destroy();
-        this.idleTimer.destroy();
-        this.collapsedTimer.destroy();
-        this.idleBadge.destroy();
-        this.collapsedBadge.destroy();
-        this.idleShelf.destroy();
-        this.collapsedShelf.destroy();
-        this.idleCountdown.destroy();
-        this.collapsedCountdown.destroy();
+        this.indicators.destroy();
         this.panelShelf.destroy();
         this.expandedShelf.destroy();
         this.dropView.destroy();
@@ -672,10 +638,7 @@ export class MonitorNotch implements ShelfNotch {
         if (timer.state !== 'idle')
             shown = [formatRemaining(remainingAt(timer, now)), phaseColor(timer.phase), timer.state === 'paused'];
         else if (clock) shown = [clockText(clock, now), clockColor(clock.kind), !clock.running];
-        if (shown) {
-            this.idleTimer.update(...shown);
-            this.collapsedTimer.update(...shown);
-        }
+        if (shown) this.indicators.each((set) => set.timer.update(...shown));
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
     }
@@ -685,9 +648,8 @@ export class MonitorNotch implements ShelfNotch {
         if (this.destroyed) return;
         const call = this.shownCall();
         if (call) {
-            const now = GLib.get_monotonic_time();
-            this.idleCall.update(callText(call.startedUs, now), call.muted);
-            this.collapsedCall.update(callText(call.startedUs, now), call.muted);
+            const text = callText(call.startedUs, GLib.get_monotonic_time());
+            this.indicators.each((set) => set.call.update(text, call.muted));
         }
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
@@ -699,8 +661,7 @@ export class MonitorNotch implements ShelfNotch {
         const since = this.sources.recording.since();
         if (since !== null) {
             const text = formatDuration(GLib.get_monotonic_time() - since);
-            this.idleRecording.update(text);
-            this.collapsedRecording.update(text);
+            this.indicators.each((set) => set.recording.update(text));
         }
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
@@ -710,10 +671,7 @@ export class MonitorNotch implements ShelfNotch {
     onActivities(): void {
         if (this.destroyed) return;
         const newest = this.liveActivities()[0];
-        if (newest) {
-            this.idleBadge.update(newest);
-            this.collapsedBadge.update(newest);
-        }
+        if (newest) this.indicators.each((set) => set.badge.update(newest));
         if (this.drawn === 'panel') this.refreshPanel();
         this.applyIndicator();
     }
@@ -722,10 +680,7 @@ export class MonitorNotch implements ShelfNotch {
     onCountdown(): void {
         if (this.destroyed) return;
         const text = this.sources.countdown.text();
-        if (text !== null) {
-            this.idleCountdown.update(text);
-            this.collapsedCountdown.update(text);
-        }
+        if (text !== null) this.indicators.each((set) => set.countdown.update(text));
         this.applyIndicator();
     }
 
@@ -739,8 +694,7 @@ export class MonitorNotch implements ShelfNotch {
     onShelf(): void {
         if (this.destroyed) return;
         const items = this.sources.shelf.items();
-        this.idleShelf.update(items.length);
-        this.collapsedShelf.update(items.length);
+        this.indicators.each((set) => set.shelf.update(items.length));
         this.panelShelf.show(items);
         this.expandedShelf.show(items);
         if (items.length === 0) this.sources.shelf.rowGone(this);
@@ -1172,26 +1126,13 @@ export class MonitorNotch implements ShelfNotch {
         if (indicator !== this.indicator) {
             this.indicator = indicator;
             this.clock.actor.visible = indicator === null;
-            this.idleRecording.actor.visible = indicator === 'recording';
-            this.idleCall.actor.visible = indicator === 'call';
-            this.idleTimer.actor.visible = indicator === 'timer' || indicator === 'clock';
-            this.idleBadge.actor.visible = indicator === 'activity';
-            this.idleShelf.actor.visible = indicator === 'shelf';
-            this.idleCountdown.actor.visible = indicator === 'meeting';
-            const aside = {
-                recording: this.collapsedRecording.actor,
-                call: this.collapsedCall.actor,
-                timer: this.collapsedTimer.actor,
-                clock: this.collapsedTimer.actor,
-                activity: this.collapsedBadge.actor,
-                meeting: this.collapsedCountdown.actor,
-                shelf: this.collapsedShelf.actor,
-            };
-            this.collapsed.setAside(indicator ? aside[indicator] : null);
+            this.indicators.showIdle(indicator);
+            const { indicators } = this;
+            this.collapsed.setAside(indicator ? indicators.actorFor(indicators.collapsed, indicator) : null);
             this.collapsed.setActive(this.drawn === 'collapsed', this.sources.media.snapshot());
         }
-        this.idleBadge.setActive(this.drawn === 'idle' && indicator === 'activity');
-        this.collapsedBadge.setActive(this.drawn === 'collapsed' && indicator === 'activity');
+        this.indicators.idle.badge.setActive(this.drawn === 'idle' && indicator === 'activity');
+        this.indicators.collapsed.badge.setActive(this.drawn === 'collapsed' && indicator === 'activity');
         this.applyProgress();
     }
 
@@ -1612,26 +1553,12 @@ export class MonitorNotch implements ShelfNotch {
             const anchor = anchorRow(this.indicator, this.panelRows);
             const to = anchor === 'shelf' ? this.panelShelf.firstSlot : anchor ? this.idlePanel.anchorFor(anchor) : null;
             if (!to) return;
-            const from = this.idleIndicator(this.indicator);
+            const from = this.indicators.actorFor(this.indicators.idle, this.indicator);
             // From the indicator's icon, a square at its left, so the clone of the row's icon only shrinks.
             const rect = stageRect(from);
             const square = rect ? { ...rect, width: rect.height } : null;
             this.morph.fly(from, square, to, () => this.restRect(to, mode), to, true, animationSpeed);
         }
-    }
-
-    /** The closed notch's widget for `indicator`. */
-    private idleIndicator(indicator: Indicator): Clutter.Actor {
-        const widgets: Record<Indicator, Clutter.Actor> = {
-            recording: this.idleRecording.actor,
-            call: this.idleCall.actor,
-            timer: this.idleTimer.actor,
-            clock: this.idleTimer.actor,
-            activity: this.idleBadge.actor,
-            meeting: this.idleCountdown.actor,
-            shelf: this.idleShelf.actor,
-        };
-        return widgets[indicator];
     }
 
     /**
