@@ -127,7 +127,10 @@ docs/               manual test checklist, screenshots
   screen recording is followed and stopped through GNOME's own screenshot
   UI (`Main.screenshotUI`). `notifications` too: it wraps
   GNOME's `MessageTray._showNotification`, so the notch only gets the
-  banners GNOME has already decided to show. Its buttons come from the
+  banners GNOME has already decided to show. Both hooks run Nokta's part
+  through `orGnome` (`shared/logic/guard.ts`): when it throws, the error is
+  logged and GNOME's own banner or popup shows, so a Nokta bug never stalls
+  the message queue or loses the volume popup. Its buttons come from the
   notification's `actions` (each a `label` and `activate()`, GNOME 46 and
   later), checked to be an array of labels; a new one from the same
   `source` object stacks on the one that shows (`logic/stack.ts`). There is
