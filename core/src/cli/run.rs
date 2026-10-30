@@ -68,6 +68,7 @@ pub async fn execute(cli: Cli) -> ExitCode {
             clock(|timer| async move { timer.call("ClearClocks", &()).await }).await
         }
         Cli::Settings => settings(),
+        Cli::Update { yes, check_only } => super::update::update(yes, check_only).await,
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
     }
 }

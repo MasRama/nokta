@@ -163,6 +163,10 @@ export interface PanelSource {
     openScreenshot(): void;
     toggle(which: QuickToggle): void;
     setDoNotDisturb(on: boolean): void;
+    /** Starts installing the newer Nokta. */
+    installUpdate(): void;
+    /** The newer Nokta's release page, in the browser. */
+    openRelease(): void;
 }
 
 /** The parked files and the helper window; owned by the session. */
@@ -379,6 +383,8 @@ export class MonitorNotch implements ShelfNotch {
                 stopRecording: () => sources.recording.stop(),
                 toggleCallMute: () => sources.call.toggleMute(),
                 hideCall: () => sources.call.hide(),
+                installUpdate: () => panel.installUpdate(),
+                openRelease: () => this.onPanelClick(() => panel.openRelease()),
             },
         );
         this.menu = new NotchMenu({
@@ -1789,6 +1795,7 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const event: PanelRow[] = events > 0 ? ['event', ...Array<PanelRow>(events - 1).fill('agenda')] : [];
     const recording: PanelRow[] = content.recording !== null ? ['recording'] : [];
     const call: PanelRow[] = content.call ? ['call'] : [];
+    const update: PanelRow[] = content.update ? ['update'] : [];
     const files: PanelRow[] = shelf ? ['shelf'] : [];
     const shown = shownControls(content.layout, content.toggles, content.clipboard);
     const toggles: PanelRow[] = shown.toggles.length > 0 ? ['toggles'] : [];
@@ -1800,6 +1807,7 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
         ...call,
         ...Array<PanelRow>(activities).fill('activity'),
         ...Array<PanelRow>(clocks).fill('clock'),
+        ...update,
         ...files,
         ...toggles,
         ...tiles,

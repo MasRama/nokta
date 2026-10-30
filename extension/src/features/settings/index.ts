@@ -11,6 +11,7 @@ export type {
     MediaSettings,
     NotificationSettings,
     SystemSettings,
+    UpdatesSettings,
     TimerSettings,
 } from './logic/parse.js';
 export { appearanceFrom } from './logic/parse.js';

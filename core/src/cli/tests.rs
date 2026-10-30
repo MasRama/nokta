@@ -181,3 +181,30 @@ fn stopwatch_and_alarm() {
     assert!(parse(&args("alarm")).unwrap_err().contains("07:30"));
     assert!(parse(&args("alarm 25:00")).unwrap_err().contains("25:00"));
 }
+
+#[test]
+fn update_asks_installs_or_only_checks() {
+    assert_eq!(
+        parse(&args("update")),
+        Ok(Cli::Update {
+            yes: false,
+            check_only: false
+        })
+    );
+    assert_eq!(
+        parse(&args("update --yes")),
+        Ok(Cli::Update {
+            yes: true,
+            check_only: false
+        })
+    );
+    assert_eq!(
+        parse(&args("update --check")),
+        Ok(Cli::Update {
+            yes: false,
+            check_only: true
+        })
+    );
+    assert!(parse(&args("update --now")).unwrap_err().contains("--now"));
+    assert!(parse(&args("update --yes --check")).is_err());
+}

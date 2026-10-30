@@ -52,6 +52,7 @@ export const NOKTA_ICONS = [
     'brightness',
     'keyboard',
     'fullscreen',
+    'update',
 ] as const;
 export type NoktaIcon = (typeof NOKTA_ICONS)[number];
 
@@ -112,6 +113,7 @@ const FROM_GNOME: Record<string, NoktaIcon> = {
     'audio-volume-overamplified': 'volume-3',
     'display-brightness': 'brightness',
     'input-keyboard': 'keyboard',
+    'software-update-available': 'update',
 };
 
 const OWN = new Set<string>(NOKTA_ICONS);

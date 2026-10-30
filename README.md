@@ -108,6 +108,8 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
 - **[System monitor](#system-monitor).** CPU, memory, temperature and
   network a tap away in home, and an alert naming the app that uses the
   most memory when it is almost full.
+- **[Updates](#updating).** Home says when a new Nokta is out, and its
+  Update button installs it.
 - **Privacy dots.** A green dot while an app uses the camera, an orange
   one for the microphone or screen sharing.
 - **Calls.** While an app uses the microphone, the notch shows a
@@ -182,12 +184,39 @@ Then:
    ```
 
 The daemon starts by itself the first time the extension needs it. To
-update, do the same with the new release.
+update, see [Updating](#updating).
 
 **Just Perfection users:** Nokta moves the GNOME clock to the right side of
 the top bar so the notch does not cover it. When Just Perfection is
 enabled, Nokta leaves the clock alone so the two don't fight over it. Set
 Just Perfection's **Clock Menu Position** to **Right** instead.
+
+## Updating
+
+From 0.11 on, `noktad` asks GitHub once a day whether a newer Nokta is out
+(the first time 30 seconds after it starts). When one is, home shows
+`Nokta 0.12.0 is available`: click the text to read what is new, or press
+**Update**. The notch shows the update as an activity while it downloads
+and installs; then home asks you to log out and back in, since GNOME loads
+the new extension only at login.
+
+The same from a terminal:
+
+```sh
+nokta update --check   # only say whether there is a newer one
+nokta update           # ask, then install it
+nokta update --yes     # install without asking
+```
+
+`nokta update` downloads the release's tarball and its `SHA256SUMS` into
+`~/.cache/nokta/update/`, and installs nothing unless the tarball's SHA-256
+is the one listed there. It then runs the tarball's own `install.sh`, which
+restarts `noktad`. Prebuilt releases are for x86_64; elsewhere, build from
+source. `[updates] check = false` stops the daily check; home's button and
+`nokta update` still work when you ask.
+
+From 0.10 or older, update by hand once: download the new release and run
+its `install.sh` as in [Install](#install).
 
 ## Using Nokta
 
@@ -569,6 +598,15 @@ countdown.
 </details>
 
 <details>
+<summary><code>[updates]</code>: new versions of Nokta</summary>
+
+| Key | Default | What it does |
+|---|---|---|
+| `check` | `true` | Ask GitHub once a day whether a newer Nokta is out, and say so in home |
+
+</details>
+
+<details>
 <summary><code>[home]</code>: home's toggles and tiles</summary>
 
 | Key | Default | What it does |
@@ -607,6 +645,11 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   folder, and reads a file only to make a small thumbnail of a picture, in
   `~/.cache/nokta/downloads/` (the 20 newest are kept). It sends nothing
   anywhere.
+- **Updates.** With `[updates] check = true`, the default, `noktad` asks
+  `api.github.com` for Nokta's latest release once a day. The request
+  carries nothing about you but the usual IP address and a `User-Agent`
+  naming Nokta's version. `nokta update` downloads from GitHub only when
+  you install. With `check = false` nothing is sent until you ask.
 - **System monitor.** `noktad` reads the system's counters in `/proc` and
   `/sys` while the System page is open, and the names and memory of running
   processes only when memory is almost full, to name the app in the alert.

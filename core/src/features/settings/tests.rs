@@ -334,6 +334,15 @@ fn system_alerts_on_low_memory_by_default() {
 }
 
 #[test]
+fn updates_are_checked_by_default() {
+    assert!(Config::default().updates.check);
+    let c = parse("[updates]\ncheck = false\n").unwrap();
+    assert!(!c.updates.check);
+    let map = entries(Config::default().updates.entries());
+    assert_eq!(map.keys().copied().collect::<Vec<_>>(), ["check"]);
+}
+
+#[test]
 fn home_defaults_names_and_limits() {
     let h = Config::default().home;
     assert_eq!(h.toggles, ["do_not_disturb", "caffeine", "dark_style"]);
@@ -669,6 +678,8 @@ mod edit {
         assert!(!parse(&text).unwrap().clipboard.enabled);
         let text = set_key("", "system", "memory_alert", &Value::Bool(false)).unwrap();
         assert!(!parse(&text).unwrap().system.memory_alert);
+        let text = set_key("", "updates", "check", &Value::Bool(false)).unwrap();
+        assert!(!parse(&text).unwrap().updates.check);
         let text = set_key("", "downloads", "folder", &Value::Text("/dl".into())).unwrap();
         assert_eq!(parse(&text).unwrap().downloads.folder, "/dl");
         let text = set_key("", "media", "real_equalizer", &Value::Bool(true)).unwrap();

@@ -14,6 +14,7 @@ Usage:
   nokta stopwatch [LABEL...]
   nokta alarm HH:MM [LABEL...]
   nokta settings
+  nokta update [--yes | --check]
   nokta --version | --help
 
 run shows COMMAND in the notch while it runs, then how it ended, and exits
@@ -29,6 +30,10 @@ stopwatch starts a stopwatch. alarm rings at the next HH:MM on the local
 24-hour clock, today or tomorrow. The notch shows them all, at most 6.
 
 settings opens Nokta's settings window.
+
+update installs the latest Nokta release from GitHub after asking (--yes
+does not ask), once its download matches the release's SHA256SUMS; --check
+only says whether there is one.
 
 Icon names are theme icons, like drive-harddisk-symbolic.";
 

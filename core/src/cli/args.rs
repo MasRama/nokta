@@ -38,6 +38,12 @@ pub enum Cli {
         label: String,
     },
     ClearClocks,
+    /// Installs the latest release; `yes` skips the question, `check_only`
+    /// only says what it found.
+    Update {
+        yes: bool,
+        check_only: bool,
+    },
 }
 
 pub fn parse(args: &[String]) -> Result<Cli, String> {
@@ -119,6 +125,14 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
             })
         }
         ["alarm"] => Err("alarm needs a time, like: nokta alarm 07:30 Wake up".into()),
+        ["update", rest @ ..] => {
+            let mut o = Options::read(rest, &[], &["--yes", "--check"])?;
+            let (yes, check_only) = (o.flag("--yes"), o.flag("--check"));
+            if yes && check_only {
+                return Err("update takes --yes or --check, not both".into());
+            }
+            Ok(Cli::Update { yes, check_only })
+        }
         [first, ..] => Err(format!("unknown command {first:?}")),
     }
 }

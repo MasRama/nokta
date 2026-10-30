@@ -624,14 +624,16 @@
 /* A countdown, stopwatch or alarm in home: one line. */
 .nokta-panel-clock,
 .nokta-panel-call,
-.nokta-panel-recording {
+.nokta-panel-recording,
+.nokta-panel-update {
     height: 26px;
     spacing: 10px;
 }
 
 .nokta-panel-clock-title,
 .nokta-panel-call-title,
-.nokta-panel-recording-title {
+.nokta-panel-recording-title,
+.nokta-panel-update-title {
     font-size: 13px;
     font-weight: 600;
 }
@@ -639,6 +641,11 @@
 .nokta-panel-clock-detail,
 .nokta-panel-call-detail {
     font-size: 11px;
+}
+
+/* The update row's text opens the release notes; it reads as text. */
+.nokta-panel-update-link {
+    padding: 0;
 }
 
 .nokta-panel-clock-time,

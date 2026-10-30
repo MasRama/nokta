@@ -102,6 +102,8 @@ test('every_text_the_daemon_shows_is_listed_for_translation', () => {
     const shown = [body('packagekit.rs', 'title'), body('packagekit.rs', 'detail'), body('launcher.rs', 'detail_for')]
         .flatMap((code) => [...code.matchAll(/"([A-Z][a-z][^"]*)"/g)])
         .map((m) => m[1]);
-    assert.ok(shown.length >= 19, `found only ${shown.length}`);
+    const update = readFileSync(join(core, '..', '..', 'cli', 'update.rs'), 'utf8');
+    shown.push(...[...update.matchAll(/(?:TITLE: &str = |say\()"([^"]+)"/g)].map((m) => m[1]));
+    assert.ok(shown.length >= 22, `found only ${shown.length}`);
     for (const text of shown) assert.ok(DAEMON_STRINGS.includes(text), `${text} is not in daemon-strings.ts`);
 });

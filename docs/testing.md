@@ -636,6 +636,26 @@ is open and after it closes, and calls the extension's `MemoryLow` handler
 - [ ] Over a fullscreen window the memory alert shows only with
       `fullscreen_alerts = "all"`.
 
+### Updates
+
+`smoke.sh` writes a release into the devshell's stand-in for GitHub, calls
+`Check()`, and reads home's row; an older release takes it away.
+`core/tests/cli.rs` runs `nokta update` against a fake GitHub: a tarball
+that matches its sum is installed, one that does not, or one without
+`SHA256SUMS`, is not unpacked.
+
+- [ ] `nokta update --check` *(real session)* says the newest is installed,
+      or names the newer one and its page.
+- [ ] With a newer release out *(real session)*: about 30 s after login,
+      home shows `Nokta x.y.z is available`; a click on the text opens the
+      release page; **Update** shows `Updating Nokta` as an activity, then
+      home says `Log out and back in to finish updating Nokta`. After a new
+      login the row is gone and `nokta --version` is the new one.
+- [ ] Update with `nokta` missing next to `noktad`: a red `Cannot update
+      Nokta` alert, and the button comes back.
+- [ ] `[updates] check = false`: the row goes away and does not come back
+      after `systemctl --user restart nokta` and a minute's wait.
+
 ### Screen recordings
 
 `smoke.sh` tells GNOME's screenshot UI that it records (there is no

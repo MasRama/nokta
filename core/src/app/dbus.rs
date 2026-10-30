@@ -19,7 +19,9 @@ use crate::features::settings;
 use crate::features::shelf;
 use crate::features::system as system_monitor;
 use crate::features::timer::{self, service::ClockCommand};
+use crate::features::updates::{self, github};
 use crate::features::weather;
+use crate::shared::clock::wall_us;
 use crate::shared::dbus::resumes;
 use crate::shared::http;
 use crate::shared::paths::Paths;
@@ -99,6 +101,14 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         system_monitor::pressure::spawn(),
     );
     system_monitor::dbus::serve(&conn, monitor).await?;
+    let releases = updates::service::spawn(
+        super::services::follow(services.config.clone(), |c| c.updates.clone()),
+        std::sync::Arc::new(github::Client::new(&options.github_api_url, USER_AGENT)),
+        env!("CARGO_PKG_VERSION"),
+        resumes.clone(),
+        wall_us,
+    );
+    updates::dbus::serve(&conn, releases).await?;
     let super::Timer {
         commands,
         state,

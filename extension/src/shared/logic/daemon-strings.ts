@@ -4,7 +4,8 @@ import { N_ } from './i18n.js';
  * Text noktad puts on screen in English: activity titles and details. They
  * are translated where they arrive (`activitiesFrom`); this list only lets
  * `scripts/i18n.mjs` find them. Keep it in step with
- * `core/src/features/activities/packagekit.rs` and `launcher.rs`.
+ * `core/src/features/activities/packagekit.rs`, `launcher.rs` and
+ * `core/src/cli/update.rs`.
  */
 export const DAEMON_STRINGS: readonly string[] = [
     // PackageKit titles.
@@ -29,4 +30,6 @@ export const DAEMON_STRINGS: readonly string[] = [
     // Apps that report progress through the launcher API.
     N_('Working on files'),
     N_('In progress'),
+    // `nokta update`; its details are PackageKit's.
+    N_('Updating Nokta'),
 ];

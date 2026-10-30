@@ -11,4 +11,5 @@ pub mod settings;
 pub mod shelf;
 pub mod system;
 pub mod timer;
+pub mod updates;
 pub mod weather;

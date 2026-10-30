@@ -104,6 +104,9 @@ folder = ""              # the folder to watch; empty for the system's download 
 [system]
 memory_alert = true      # warn when memory is almost full, naming the app that uses the most
 
+[updates]
+check = true             # ask GitHub once a day whether a newer Nokta is out
+
 [home]
 # The open notch's home, in the order shown.
 toggles = ["do_not_disturb", "caffeine", "dark_style"]                           # at most 3 of these and "night_light"

@@ -790,6 +790,45 @@ async fn weather_reaches_ready_and_refresh_keeps_a_fresh_reading() {
 }
 
 #[tokio::test]
+async fn check_publishes_a_newer_release_and_nothing_is_asked_before() {
+    let server = MockServer::start().await;
+    Mock::given(path("/repos/MasRama/nokta/releases/latest"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "tag_name": "v99.0.0",
+            "html_url": "https://github.com/MasRama/nokta/releases/tag/v99.0.0",
+            "assets": []
+        })))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let bus = TestBus::start();
+    let mut options = Daemon::options(&bus, NO_LRCLIB);
+    options.github_api_url = server.uri();
+    let _daemon = Daemon::start_with(&bus, options, None).await;
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Updates").await;
+    const UPDATES: &str = "io.nokta.Updates1";
+    let text = |v: OwnedValue| -> String { v.try_into().unwrap() };
+    assert_eq!(
+        text(get(&p, UPDATES, "Latest").await),
+        "",
+        "the first check waits 30 s"
+    );
+
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let updates = zbus::Proxy::new(&conn, NAME, "/io/nokta/Updates", UPDATES)
+        .await
+        .unwrap();
+    let _: () = updates.call("Check", &()).await.unwrap();
+    let changed = next_change_with(&mut changes, "Latest").await;
+    assert_eq!(text(changed["Latest"].try_clone().unwrap()), "99.0.0");
+    assert_eq!(
+        text(get(&p, UPDATES, "ReleaseUrl").await),
+        "https://github.com/MasRama/nokta/releases/tag/v99.0.0"
+    );
+}
+
+#[tokio::test]
 async fn files_added_to_the_shelf_are_listed_until_removed() {
     let bus = TestBus::start();
     let daemon = Daemon::start(&bus, NO_LRCLIB).await;

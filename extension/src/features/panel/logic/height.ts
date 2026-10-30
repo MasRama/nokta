@@ -8,6 +8,7 @@ export type PanelRow =
     | 'call'
     | 'activity'
     | 'clock'
+    | 'update'
     | 'shelf'
     | 'toggles'
     | 'tiles';
@@ -29,6 +30,7 @@ const ROW_HEIGHT: Record<Exclude<PanelRow, 'date' | 'agenda'>, number> = {
     call: 26,
     activity: 36,
     clock: 26,
+    update: 26,
     shelf: 44,
     toggles: 32,
     tiles: 59,

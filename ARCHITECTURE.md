@@ -327,6 +327,23 @@ docs/               manual test checklist, screenshots
   `poll()` on a PSI trigger (`/proc/pressure/memory`), which tells it when
   memory runs short. Where the kernel refuses the trigger there is no
   alert. `app/dbus.rs` starts it, since its source is Linux only.
+- **updates** asks GitHub's API for the latest release
+  (`github.rs`, `/repos/MasRama/nokta/releases/latest`, which leaves out
+  drafts and pre-releases) 30 s after start and then every 24 h by the
+  wall clock: the task sleeps until the deadline and looks again after
+  each resume from suspend (`shared::dbus::resumes`, logind's
+  `PrepareForSleep`). `model.rs` is pure: a tag is newer only as three
+  plain numbers above the running version, and `check_sum` finds a file's
+  SHA-256 in `sha256sum` output. A failed request keeps what was known.
+  `[updates] check = false` sends nothing and forgets; `Check()` asks
+  anyway. `Install()` (`install.rs`) runs the `nokta` beside the running
+  `noktad` as `systemd-run --user --unit=nokta-update -- nokta update
+  --yes`, so the installer's restart of `nokta.service` does not stop it.
+  `nokta update` (`cli/update.rs`) downloads the tarball and `SHA256SUMS`
+  into `cache_dir/update`, refuses a tarball that is not listed or does not
+  match, unpacks it with `tar` and runs its `install.sh`, reporting the
+  activity `update:nokta` meanwhile. The release job publishes
+  `SHA256SUMS` from 0.11 on.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -367,7 +384,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Nokta1` | `/io/nokta/Nokta` | `ApiVersion` (`u`, `1`), `DaemonVersion` (`s`) |
 | `io.nokta.Media1` | `/io/nokta/Media` | `Available`, `PlayerId`, `PlayerName`, `Players`, `PlaybackStatus`, `Title`, `Artists`, `Album`, `LengthUs`, `ArtPath`, `AccentColor`, `PositionUs`, `PositionTimestampUs`, `Rate`, `CanPlayPause`, `CanGoNext`, `CanGoPrevious`, `CanSeek`, `Shuffle`, `LoopStatus`, `CanShuffle`, `CanLoop`; `PlayPause()`, `Next()`, `Previous()`, `SetPosition(x)`, `RefreshPosition()`, `SelectPlayer(s)`, `SetShuffle(b)`, `SetLoopStatus(s)` |
 | `io.nokta.Lyrics1` | `/io/nokta/Lyrics` | `Status` (`s`), `Lines` (`a(xs)`, start in µs and text, already shifted), `OffsetMs` (`x`, positive is earlier, ±30 000); `SetOffset(offset_ms x)` |
-| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard`, `Downloads`, `System` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
+| `io.nokta.Settings1` | `/io/nokta/Settings` | `Appearance`, `Behavior`, `Lyrics`, `Timer`, `Notifications`, `Activities`, `Weather`, `Calendar`, `Clipboard`, `Downloads`, `System`, `Updates` (each `a{sv}`); `Set(table s, key s, value v)`, `Reset()` |
 | `io.nokta.Devices1` | `/io/nokta/Devices` | signal `Alert(kind s, name s, percentage i)` |
 | `io.nokta.Timer1` | `/io/nokta/Timer` | `State`, `Phase`, `DurationUs`, `RemainingUs`, `TimestampUs`, `Sessions`, `LongBreak`; `Clocks` `a(sssbxxxx)` (id, kind, label, running, duration, value and monotonic timestamp in µs, alarm time in Unix µs); `Start(phase s)`, `Pause()`, `Resume()`, `Stop()`, `AddCountdown(label s, duration_us x) → id s`, `AddStopwatch(label s) → id s`, `AddAlarm(label s, unix_us x) → id s`, `PauseClock(id s)`, `ResumeClock(id s)`, `RemoveClock(id s)`, `ClearClocks()`; signals `Finished(phase s)`, `ClockDone(id s, kind s, label s)` |
 | `io.nokta.Activities1` | `/io/nokta/Activities` | `Activities` (`a(ssssdx)`: id, title, detail, icon, progress, start); `Set(id s, title s, detail s, icon s, progress d)`, `End(id s, success b, message s)`; signal `Ended(id s, title s, success b, message s, elapsed_us x)` |
@@ -377,6 +394,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Clipboard1` | `/io/nokta/Clipboard` | `Items` (`a(ssssbx)`: id, kind `text` or `image`, preview, thumbnail path, pinned, copied at in Unix µs, newest first), `Paused` (`b`); `Add(kind s, text s, image ay)`, `Get(id s) → (kind s, text s, image ay)`, `Pin(id s, pinned b)`, `Remove(id s)`, `Clear()` (keeps pinned entries), `SetPaused(paused b)` |
 | `io.nokta.Downloads1` | `/io/nokta/Downloads` | signal `Finished(uri s, name s, icon s, size t, thumbnail s)` (thumbnail is a PNG path, empty for a file that is not a picture) |
 | `io.nokta.System1` | `/io/nokta/System` | `Usage (dttddd)`: CPU 0-1, memory used and total bytes, temperature °C (NaN when unknown), download and upload bytes/s, all zero while nobody watches; `Watch()`, `Unwatch()`; signal `MemoryLow(used t, total t, app s)` |
+| `io.nokta.Updates1` | `/io/nokta/Updates` | `Latest` (`s`, the newer release's version, empty when none), `ReleaseUrl` (`s`); `Check()`, `Install()` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with

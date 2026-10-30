@@ -59,6 +59,13 @@ export interface PanelWeather {
     detail: string;
 }
 
+/** A newer Nokta, or one that waits for a new login, as home's row says it. */
+export interface PanelUpdate {
+    text: string;
+    /** An Update button, and the text opens the release's page. */
+    canInstall: boolean;
+}
+
 /** A calendar event in home's agenda. */
 export interface PanelEvent {
     /** The shell's event id. */
@@ -98,6 +105,8 @@ export interface PanelContent {
     focusActive: boolean;
     /** Newest first; the panel shows the first MAX_PANEL_CLOCKS. */
     clocks: readonly PanelClock[];
+    /** Null hides the update row. */
+    update: PanelUpdate | null;
     toggles: QuickToggles;
     /** A player is open, so home has a way back to it. */
     player: boolean;
@@ -128,6 +137,8 @@ export interface PanelHandlers {
     stopRecording(): void;
     toggleCallMute(): void;
     hideCall(): void;
+    installUpdate(): void;
+    openRelease(): void;
 }
 
 /** Each toggle's icon, name and tone. */
@@ -345,6 +356,48 @@ class CallRow {
     }
 }
 
+/** A newer Nokta: its chip, the text, which opens the release's page, and an Update button. */
+class UpdateRow {
+    readonly actor: St.BoxLayout;
+    readonly chip = new IconChip(TONES.update, iconFor('software-update-available-symbolic'));
+    private readonly title: St.Label;
+    private readonly link: St.Button;
+    private readonly install: St.Button;
+
+    constructor(handlers: Pick<PanelHandlers, 'installUpdate' | 'openRelease'>) {
+        this.title = new St.Label({ style_class: 'nokta-panel-update-title', y_align: Clutter.ActorAlign.CENTER });
+        this.title.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.link = new St.Button({
+            style_class: 'nokta-panel-update-link',
+            child: this.title,
+            x_expand: true,
+            x_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.link.connect('clicked', () => handlers.openRelease());
+        this.install = new St.Button({
+            style_class: 'nokta-panel-join',
+            label: _('Update'),
+            style: `background-color: ${withAlpha(TONES.update, 0.22)}; color: ${TONES.update};`,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        this.install.connect('clicked', () => handlers.installUpdate());
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-update', visible: false });
+        for (const child of [this.chip.actor, this.link, this.install]) this.actor.add_child(child);
+    }
+
+    show(update: PanelUpdate | null): void {
+        this.actor.visible = update !== null;
+        if (!update) return;
+        this.title.text = update.text;
+        // While it installs, or waits for a login, the row is only text.
+        this.install.visible = update.canInstall;
+        this.link.can_focus = update.canInstall;
+        this.link.reactive = update.canInstall;
+    }
+}
+
 /** Today's weather at the right of the heading: icon and temperature, the place and range dimmed under them. */
 class WeatherBox {
     readonly actor: St.BoxLayout;
@@ -451,7 +504,8 @@ class EventRow {
 /**
  * Home, the open notch's other page and the only one while nothing plays:
  * the date and weather, the next event, a screen recording, a call, live
- * activities, then the quick toggles and a row of tiles.
+ * activities, clocks, a newer Nokta, then the quick toggles and a row of
+ * tiles.
  */
 export class HomePanel {
     readonly actor: St.BoxLayout;
@@ -466,6 +520,7 @@ export class HomePanel {
     private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
+    private readonly update: UpdateRow;
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
     private readonly pills: St.BoxLayout;
@@ -506,6 +561,7 @@ export class HomePanel {
         }
         this.recording = new RecordingRow(handlers);
         this.call = new CallRow(handlers);
+        this.update = new UpdateRow(handlers);
 
         this.pills = new St.BoxLayout({ style_class: 'nokta-panel-toggles' });
         for (const [which, icon, label, tone] of TOGGLES) {
@@ -546,6 +602,7 @@ export class HomePanel {
             this.clocks.push(row);
             this.actor.add_child(row.actor);
         }
+        this.actor.add_child(this.update.actor);
         this.actor.add_child(this.controls);
     }
 
@@ -565,6 +622,7 @@ export class HomePanel {
         this.call.show(content.call);
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.clocks.forEach((row, i) => row.show(content.clocks[i]));
+        this.update.show(content.update);
         for (const [which, pill] of this.toggles) pill.set(content.toggles[which] === true);
         this.tiles.get('notifications')?.set(false, notificationBadge(content.notificationCount));
         this.tiles.get('focus')?.set(content.focusActive);
@@ -577,7 +635,7 @@ export class HomePanel {
         for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setColors(colors);
         for (const row of this.clocks) row.chip.setLight(colors.light);
-        for (const row of [this.recording, this.call]) row.chip.setLight(colors.light);
+        for (const row of [this.recording, this.call, this.update]) row.chip.setLight(colors.light);
     }
 
     /**

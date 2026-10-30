@@ -11,6 +11,10 @@ msgstr ""
 msgid "Join"
 msgstr ""
 
+#: src/extension.ts
+msgid "Cannot update Nokta"
+msgstr ""
+
 #: src/features/activities/logic/activities.ts
 #, c-format
 msgid "%d h %d min"
@@ -276,6 +280,10 @@ msgstr ""
 
 #: src/features/panel/view.ts
 msgid "Screen recording"
+msgstr ""
+
+#: src/features/panel/view.ts
+msgid "Update"
 msgstr ""
 
 #: src/features/privacy/logic/call.ts
@@ -942,6 +950,18 @@ msgstr ""
 msgid "While the microphone is on: the app and how long, with a mute button in home"
 msgstr ""
 
+#: src/features/settings/logic/schema.ts
+msgid "Updates"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Tell me when a new Nokta is out"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Asks github.com once a day and sends nothing else"
+msgstr ""
+
 #: src/features/settings/logic/schema.ts src/features/timer/toggle.ts
 msgid "Focus timer"
 msgstr ""
@@ -1144,6 +1164,15 @@ msgstr ""
 msgid "Start break, %d min"
 msgstr ""
 
+#: src/features/updates/logic/update.ts
+msgid "Log out and back in to finish updating Nokta"
+msgstr ""
+
+#: src/features/updates/logic/update.ts
+#, c-format
+msgid "Nokta %s is available"
+msgstr ""
+
 #: src/prefs/rows.ts
 msgid "Choose…"
 msgstr ""
@@ -1282,4 +1311,8 @@ msgstr ""
 
 #: src/shared/logic/daemon-strings.ts
 msgid "In progress"
+msgstr ""
+
+#: src/shared/logic/daemon-strings.ts
+msgid "Updating Nokta"
 msgstr ""

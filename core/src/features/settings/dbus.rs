@@ -64,6 +64,7 @@ fn properties(c: &Config) -> PropertyList {
         ("Clipboard", owned(dbus_map(c.clipboard.entries()))),
         ("Downloads", owned(dbus_map(c.downloads.entries()))),
         ("System", owned(dbus_map(c.system.entries()))),
+        ("Updates", owned(dbus_map(c.updates.entries()))),
         ("Home", owned(dbus_map(c.home.entries()))),
     ]
 }
@@ -180,6 +181,11 @@ impl SettingsInterface {
     #[zbus(property)]
     fn system(&self) -> HashMap<String, OwnedValue> {
         dbus_map(self.config.borrow().system.entries())
+    }
+
+    #[zbus(property)]
+    fn updates(&self) -> HashMap<String, OwnedValue> {
+        dbus_map(self.config.borrow().updates.entries())
     }
 
     #[zbus(property)]
