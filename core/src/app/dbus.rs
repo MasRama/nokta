@@ -18,8 +18,9 @@ use crate::features::media::{self, art::ArtCache};
 use crate::features::settings;
 use crate::features::shelf;
 use crate::features::system as system_monitor;
-use crate::features::timer;
+use crate::features::timer::{self, service::ClockCommand};
 use crate::features::weather;
+use crate::shared::dbus::resumes;
 use crate::shared::http;
 use crate::shared::paths::Paths;
 
@@ -49,7 +50,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
             None
         }
     };
-    let resume = system.clone();
+    let resumes = resumes(system.clone());
     let packagekit = system.clone();
     let alerts = devices::watcher::spawn(system);
 
@@ -104,14 +105,16 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
         finished,
         clocks,
     } = services.timer;
-    if let Some(system) = resume {
-        let commands = clocks.commands.clone();
-        tokio::spawn(async move {
-            if let Err(err) = timer::dbus::watch_resume(system, commands).await {
-                tracing::warn!("alarms will not notice a resume: {err}");
+    // An alarm that came due while asleep goes off on resume.
+    let commands_on_resume = clocks.commands.clone();
+    let mut resumed = resumes.clone();
+    tokio::spawn(async move {
+        while resumed.changed().await.is_ok() {
+            if commands_on_resume.send(ClockCommand::Wake).await.is_err() {
+                break;
             }
-        });
-    }
+        }
+    });
     timer::dbus::serve(&conn, commands, state, finished, clocks).await?;
 
     match conn
