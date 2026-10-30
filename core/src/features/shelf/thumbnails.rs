@@ -5,14 +5,10 @@
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use image::{ImageFormat, ImageReader};
 use md5::Md5;
 use sha2::{Digest, Sha256};
 
-use crate::shared::picture::write_thumbnail;
-
-/// Larger images are not decoded.
-const MAX_FILE_BYTES: u64 = 64 * 1024 * 1024;
+use crate::shared::picture::write_file_thumbnail;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ThumbnailDirs {
@@ -53,10 +49,10 @@ pub fn find(dirs: &ThumbnailDirs, uri: &str, path: &Path) -> Option<PathBuf> {
     if newer(&own, changed) {
         return Some(own);
     }
-    match write(path, &own) {
-        Ok(()) => Some(own),
-        Err(Skip::NotAnImage) => None,
-        Err(Skip::Failed(e)) => {
+    match write_file_thumbnail(path, &own) {
+        Ok(true) => Some(own),
+        Ok(false) => None,
+        Err(e) => {
             tracing::debug!("shelf: no thumbnail for {}: {e}", path.display());
             None
         }
@@ -67,32 +63,4 @@ fn newer(thumbnail: &Path, than: SystemTime) -> bool {
     std::fs::metadata(thumbnail)
         .and_then(|m| m.modified())
         .is_ok_and(|made| made >= than)
-}
-
-enum Skip {
-    NotAnImage,
-    Failed(anyhow::Error),
-}
-
-impl<E: Into<anyhow::Error>> From<E> for Skip {
-    fn from(e: E) -> Skip {
-        Skip::Failed(e.into())
-    }
-}
-
-fn write(source: &Path, dest: &Path) -> Result<(), Skip> {
-    let Ok(format) = ImageFormat::from_path(source) else {
-        return Err(Skip::NotAnImage);
-    };
-    if !matches!(
-        format,
-        ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::WebP
-    ) {
-        return Err(Skip::NotAnImage);
-    }
-    if std::fs::metadata(source)?.len() > MAX_FILE_BYTES {
-        return Err(Skip::NotAnImage);
-    }
-    write_thumbnail(ImageReader::open(source)?, dest)?;
-    Ok(())
 }

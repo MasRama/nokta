@@ -10,6 +10,21 @@ use image::{imageops::FilterType, DynamicImage, ImageFormat, ImageReader, Limits
 pub const THUMBNAIL_SIZE: u32 = 128;
 /// A picture that needs more memory than this is not decoded.
 const MAX_DECODE_BYTES: u64 = 512 * 1024 * 1024;
+/// A picture file larger than this is not decoded.
+const MAX_FILE_BYTES: u64 = 64 * 1024 * 1024;
+
+/// Writes a thumbnail of the PNG, JPEG or WebP file at `source` to `dest`.
+/// `Ok(false)` for other files and pictures over 64 MB. Blocks while it
+/// decodes.
+pub fn write_file_thumbnail(source: &Path, dest: &Path) -> anyhow::Result<bool> {
+    let picture = ImageFormat::from_path(source)
+        .is_ok_and(|f| matches!(f, ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::WebP));
+    if !picture || std::fs::metadata(source)?.len() > MAX_FILE_BYTES {
+        return Ok(false);
+    }
+    write_thumbnail(ImageReader::open(source)?, dest)?;
+    Ok(true)
+}
 
 /// Decodes the picture `reader` holds and writes a `THUMBNAIL_SIZE` PNG of
 /// it to `dest`, whole or not at all. Blocks while it decodes.
@@ -88,6 +103,22 @@ mod tests {
             let v = (40 + (x + y) * 6) as u8;
             Rgb([v, v, v])
         }))
+    }
+
+    #[test]
+    fn only_pictures_get_a_file_thumbnail() {
+        let dir = tempfile::tempdir().unwrap();
+        let png = dir.path().join("red.png");
+        red_image().save(&png).unwrap();
+        let dest = dir.path().join("thumbs").join("red.png");
+        assert!(write_file_thumbnail(&png, &dest).unwrap());
+        assert!(ImageReader::open(&dest).unwrap().decode().is_ok());
+
+        let text = dir.path().join("notes.txt");
+        std::fs::write(&text, "hi").unwrap();
+        let dest = dir.path().join("thumbs").join("notes.png");
+        assert!(!write_file_thumbnail(&text, &dest).unwrap());
+        assert!(!dest.exists());
     }
 
     #[test]
