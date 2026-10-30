@@ -35,6 +35,17 @@ jobs:
       - name: Dry-run the installer
         run: NOKTAD=target/debug/noktad packaging/tests/install-dry-run.sh
 
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: cargo-audit
+      # Fails on a known vulnerability in Cargo.lock; unmaintained crates only warn.
+      - run: cargo audit
+
   rust-portable:
     name: Daemon on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
