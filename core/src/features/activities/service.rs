@@ -1,12 +1,10 @@
 //! Owns the activities: takes commands, ends stale ones at their deadline
 //! and reports every activity that ended. Nothing polls.
 
-use std::time::Duration;
-
 use tokio::sync::{mpsc, oneshot, watch};
 
 use super::model::{Activities, Activity, Ended, SetError, Update};
-use crate::shared::clock::monotonic_us;
+use crate::shared::clock::{monotonic_us, sleep_for, until_monotonic};
 
 #[derive(Debug)]
 pub enum Command {
@@ -38,9 +36,7 @@ pub fn spawn(stale_us: impl Fn() -> i64 + Send + Sync + 'static) -> Handle {
         let mut activities = Activities::default();
         loop {
             let stale = stale_us();
-            let wait = activities
-                .next_deadline(stale)
-                .map(|deadline| Duration::from_micros((deadline - monotonic_us()).max(0) as u64));
+            let wait = activities.next_deadline(stale).map(until_monotonic);
             let ended: Vec<Ended> = tokio::select! {
                 command = rx.recv() => match command {
                     None => break,
@@ -54,7 +50,7 @@ pub fn spawn(stale_us: impl Fn() -> i64 + Send + Sync + 'static) -> Handle {
                         activities.end(&id, success, &message, monotonic_us()).into_iter().collect()
                     }
                 },
-                () = sleep(wait) => activities.expire(monotonic_us(), stale),
+                () = sleep_for(wait) => activities.expire(monotonic_us(), stale),
             };
             state_tx.send_if_modified(|list| {
                 let changed = list.as_slice() != activities.list();
@@ -73,13 +69,5 @@ pub fn spawn(stale_us: impl Fn() -> i64 + Send + Sync + 'static) -> Handle {
         commands,
         state,
         ended,
-    }
-}
-
-/// Sleeps for `wait`, or forever without one.
-async fn sleep(wait: Option<Duration>) {
-    match wait {
-        Some(wait) => tokio::time::sleep(wait).await,
-        None => std::future::pending().await,
     }
 }

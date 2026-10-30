@@ -12,6 +12,7 @@ use tokio::task::JoinHandle;
 
 use super::levels::{Bands, Lifecycle, Step, BANDS, FRAME};
 use super::{MediaState, PlaybackStatus};
+use crate::shared::clock::sleep_for;
 
 /// While it is silent, the zero levels go out this often instead of 25 times a second.
 const SILENT_EVERY: Duration = Duration::from_millis(500);
@@ -107,7 +108,7 @@ async fn run<T>(
             changed = media.changed() => if changed.is_err() { break },
             changed = settings.changed() => if changed.is_err() { break },
             () = quits(recorder.as_mut()) => {}
-            () = sleep_until(wake) => {}
+            () = sleep_for(wake.map(|at| at.saturating_duration_since(Instant::now()))) => {}
         }
     }
     if let Some(r) = recorder {
@@ -121,13 +122,6 @@ async fn quits(recorder: Option<&mut Recorder>) {
         Some(r) => {
             let _ = (&mut r.reader).await;
         }
-        None => std::future::pending().await,
-    }
-}
-
-async fn sleep_until(at: Option<Instant>) {
-    match at {
-        Some(at) => tokio::time::sleep_until(at.into()).await,
         None => std::future::pending().await,
     }
 }
