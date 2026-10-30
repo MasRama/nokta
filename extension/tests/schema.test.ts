@@ -14,7 +14,7 @@ import {
     DEFAULT_TIMER,
     DEFAULT_WEATHER,
 } from '../src/features/settings/logic/parse.js';
-import { allRows, rowValue, SETTINGS_PAGES, variantType } from '../src/features/settings/logic/schema.js';
+import { allRows, rowMin, rowValue, SETTINGS_PAGES, variantType } from '../src/features/settings/logic/schema.js';
 
 const camel = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 const DEFAULTS: Record<string, Record<string, unknown>> = {
@@ -138,4 +138,14 @@ test('row_value_reads_the_daemon_tables', () => {
     assert.equal(rowValue(row('background'), tables), '#000000');
     assert.equal(rowValue(row('enabled'), tables), true);
     assert.equal(rowValue(row('height'), {}), 32);
+});
+
+test('a width cannot go below the height, as the daemon checks', () => {
+    const row = (key: string) => allRows().find((r) => r.table === 'appearance' && r.key === key)!;
+    const tables = { appearance: { height: 40 } };
+    for (const key of ['idle_width', 'playing_width', 'expanded_width', 'expanded_height', 'osd_width'])
+        assert.equal(rowMin(row(key), tables), 40, key);
+    assert.equal(rowMin(row('height'), tables), 16);
+    // Before the daemon answers, the floor is the default height.
+    assert.equal(rowMin(row('idle_width'), {}), DEFAULT_APPEARANCE.height);
 });

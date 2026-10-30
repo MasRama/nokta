@@ -13,6 +13,8 @@ export interface SettingRow {
     readonly widget: Gtk.Widget;
     /** Shows a value from the daemon without sending it back. */
     show(value: unknown): void;
+    /** Moves a number row's lowest value, for a floor that follows another key. */
+    setMin?(min: number): void;
 }
 
 /** Decimals that a step needs, so 0.1 steps send 1.3 rather than 1.3000000000000003. */
@@ -44,7 +46,12 @@ export function buildRow(row: Row, onChange: (value: GLib.Variant) => void): Set
             const widget = Adw.SpinRow.new_with_range(kind.min, kind.max, kind.step);
             Object.assign(widget, { title, subtitle });
             widget.connect('notify::value', () => send(Math.round(widget.value)));
-            return { row, widget, show: (value) => quietly(() => (widget.value = Number(value))) };
+            return {
+                row,
+                widget,
+                show: (value) => quietly(() => (widget.value = Number(value))),
+                setMin: (min) => quietly(() => (widget.adjustment.lower = min)),
+            };
         }
         case 'float': {
             if (kind.percent) {
