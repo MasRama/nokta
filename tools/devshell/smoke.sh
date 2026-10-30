@@ -948,14 +948,14 @@ const n = new MT.Notification({ source, title: 'Screenshot captured', body: 'You
 n.addAction('Show in Files', () => {});
 source.addNotification(n);
 }); true" > /dev/null
-SHOT_BUTTONS="find(Main.layoutManager.uiGroup, 'nokta-screenshot-button').map((b) => b.mapped).join()"
+SHOT_BUTTONS="find(one('nokta-screenshot'), 'nokta-file-preview-button').map((b) => b.mapped).join()"
 wait_for "a screenshot shows as a preview with Open and Show in Files" \
     "$FIND shown('nokta-screenshot') && $SHOT_BUTTONS === 'true,true,false'" 10 \
     "$FIND JSON.stringify([shown('nokta-screenshot'), $SHOT_BUTTONS])"
 js "Main.screenshotUI.emit('screenshot-taken', imports.gi.Gio.File.new_for_path('$STATE/files/smoke-shot.png')); true" > /dev/null
 wait_for "the saved file adds Keep on shelf" "$FIND $SHOT_BUTTONS === 'true,true,true'" 5
 "$HERE/shot.sh" smoke-screenshot > /dev/null
-js "$FIND find(Main.layoutManager.uiGroup, 'nokta-screenshot-button')[2].emit('clicked', 1); true" > /dev/null
+js "$FIND find(one('nokta-screenshot'), 'nokta-file-preview-button')[2].emit('clicked', 1); true" > /dev/null
 i=0
 until shelf_items | grep -q "smoke-shot.png', 'image-x-generic'"; do
     i=$((i + 1))
@@ -1005,11 +1005,11 @@ wait_for "the clock comes back after the recording" "$FIND shown('nokta-clock') 
 printf 'not really a video' > "$STATE/files/smoke-recording.webm"
 js "$UI._screencastPath = '$STATE/files/smoke-recording.webm'; $UI._showNotification('Screencast recorded'); true" > /dev/null
 wait_for "a saved recording shows as a preview with a video icon and three buttons" \
-    "$FIND shown('nokta-screenshot') && shown('nokta-screenshot-video') && $SHOT_BUTTONS === 'true,true,true'" 10 \
-    "$FIND JSON.stringify([shown('nokta-screenshot'), shown('nokta-screenshot-video'), $SHOT_BUTTONS])"
+    "$FIND shown('nokta-screenshot') && find(one('nokta-screenshot'), 'nokta-file-preview-icon')[0].mapped && $SHOT_BUTTONS === 'true,true,true'" 10 \
+    "$FIND JSON.stringify([shown('nokta-screenshot'), find(one('nokta-screenshot'), 'nokta-file-preview-icon')[0].mapped, $SHOT_BUTTONS])"
 sleep 0.4
 "$HERE/shot.sh" smoke-recording-preview > /dev/null
-js "$FIND find(Main.layoutManager.uiGroup, 'nokta-screenshot-button')[2].emit('clicked', 1); true" > /dev/null
+js "$FIND find(one('nokta-screenshot'), 'nokta-file-preview-button')[2].emit('clicked', 1); true" > /dev/null
 i=0
 until shelf_items | grep -q "smoke-recording.webm'"; do
     i=$((i + 1))

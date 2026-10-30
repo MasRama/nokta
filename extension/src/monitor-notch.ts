@@ -37,7 +37,8 @@ import {
 import {
     NotificationTimer,
     NotificationView,
-    ScreenshotView,
+    screenshotPicture,
+    screenshotPreview,
     type ScreenshotButton,
 } from './features/notifications/index.js';
 import { OsdTimer, OsdView, type OsdContent } from './features/osd/index.js';
@@ -257,7 +258,7 @@ export class MonitorNotch implements ShelfNotch {
     private notificationButton: ((index: number) => void) | null = null;
     /** Whether the notification that shows has a row of buttons. */
     private notificationButtons = false;
-    private readonly screenshotView = new ScreenshotView((button) => this.onScreenshotPress(button));
+    private readonly screenshotView = screenshotPreview((button) => this.onScreenshotPress(button));
     private screenshotPress: ((button: ScreenshotButton) => void) | null = null;
     /** Which of the two the notification timer is showing. */
     private notificationKind: 'notification' | 'screenshot' = 'notification';
@@ -1042,7 +1043,7 @@ export class MonitorNotch implements ShelfNotch {
         onPress: (button: ScreenshotButton) => void,
     ): void {
         if (this.destroyed) return;
-        this.screenshotView.show(image, title, buttons);
+        this.screenshotView.show(screenshotPicture(image), title, '', buttons);
         this.screenshotPress = onPress;
         this.notificationClick = null;
         this.notificationButton = null;

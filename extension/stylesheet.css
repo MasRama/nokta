@@ -356,46 +356,54 @@
     icon-size: 14px;
 }
 
-.nokta-screenshot {
+.nokta-file-preview {
     padding: 0 16px;
     spacing: 14px;
 }
 
-.nokta-screenshot-thumb {
+.nokta-file-preview-thumb {
     border-radius: 8px;
 }
 
-.nokta-screenshot-video {
+.nokta-file-preview-icon {
     icon-size: 40px;
 }
 
-.nokta-screenshot-side {
+.nokta-file-preview-side {
     spacing: 8px;
 }
 
-.nokta-screenshot-title {
+.nokta-file-preview-title {
     font-size: 15px;
     font-weight: 600;
 }
 
-.nokta-screenshot-buttons {
+.nokta-file-preview-text {
+    spacing: 2px;
+}
+
+.nokta-file-preview-detail {
+    font-size: 13px;
+}
+
+.nokta-file-preview-buttons {
     spacing: 6px;
 }
 
-.nokta-screenshot-button {
+.nokta-file-preview-button {
     border-radius: 9px;
     padding: 5px 10px;
 }
 
-.nokta-screenshot-button-box {
+.nokta-file-preview-button-box {
     spacing: 6px;
 }
 
-.nokta-screenshot-button-icon {
+.nokta-file-preview-button-icon {
     icon-size: 14px;
 }
 
-.nokta-screenshot-button-label {
+.nokta-file-preview-button-label {
     font-size: 13px;
     font-weight: 600;
 }

@@ -17,5 +17,5 @@ export {
 } from './logic/screenshot.js';
 export { stackBadge, stackCount } from './logic/stack.js';
 export { NotificationTimer } from './logic/timer.js';
-export { ScreenshotView } from './screenshot-view.js';
+export { screenshotPicture, screenshotPreview } from './screenshot-view.js';
 export { NotificationView } from './view.js';
