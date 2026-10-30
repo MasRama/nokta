@@ -68,7 +68,11 @@ put() {
 render() {
   local src="$1" dest="$2"
   mkdir -p "$(dirname "$dest")"
-  sed "s|@BINDIR@|$bin_dir|g" "$src" > "$dest.tmp"
+  # Not sed: the path is data, and sed reads |, & and \ in it as syntax.
+  local line
+  while IFS= read -r line || [[ -n $line ]]; do
+    printf '%s\n' "${line//@BINDIR@/"$bin_dir"}"
+  done < "$src" > "$dest.tmp"
   chmod 644 "$dest.tmp"
   mv -f "$dest.tmp" "$dest"
 }
