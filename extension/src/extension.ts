@@ -98,7 +98,7 @@ import {
 import { WeatherClient } from './features/weather/index.js';
 import { MonitorNotch, type ClipboardSource, type PanelSource, type ShelfSource, type SystemSource } from './monitor-notch.js';
 import { API_VERSION } from './shared/contracts.js';
-import { readApiVersion, unwatchDaemon, watchDaemon } from './shared/dbus.js';
+import { readDaemon, unwatchDaemon, watchDaemon } from './shared/dbus.js';
 import { Keybinding } from './shared/keybinding.js';
 import { alertMotion, type AlertMotion } from './shared/logic/alert-motion.js';
 import { attachAll } from './shared/logic/attach.js';
@@ -432,7 +432,7 @@ class Session {
     }
 
     private async connect(connection: Gio.DBusConnection, cancellable: Gio.Cancellable): Promise<void> {
-        const version = await readApiVersion(connection, cancellable);
+        const { apiVersion: version } = await readDaemon(connection, cancellable);
         if (version !== API_VERSION) {
             if (!warnedApiVersion) {
                 console.warn(

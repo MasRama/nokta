@@ -76,12 +76,16 @@ export function callMethod(proxy: Gio.DBusProxy, method: string, params: GLib.Va
     });
 }
 
-/** io.nokta.Nokta1.ApiVersion, or null when the daemon does not say. */
-export async function readApiVersion(
+/** io.nokta.Nokta1: the API version, null when the daemon does not say, and the daemon's own version. */
+export async function readDaemon(
     connection: Gio.DBusConnection,
     cancellable: Gio.Cancellable,
-): Promise<number | null> {
+): Promise<{ apiVersion: number | null; daemonVersion: string }> {
     const proxy = await makeProxy(NOKTA1_XML, PATHS.Nokta1, connection, cancellable);
-    const version = cached(proxy, 'ApiVersion');
-    return typeof version === 'number' ? version : null;
+    const apiVersion = cached(proxy, 'ApiVersion');
+    const daemonVersion = cached(proxy, 'DaemonVersion');
+    return {
+        apiVersion: typeof apiVersion === 'number' ? apiVersion : null,
+        daemonVersion: typeof daemonVersion === 'string' ? daemonVersion : '',
+    };
 }
