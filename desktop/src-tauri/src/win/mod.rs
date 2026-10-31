@@ -1,6 +1,7 @@
 //! The Windows app: the core in process, a notch window at the top of every
 //! monitor, the tray icon, and the commands the page calls.
 
+mod fullscreen;
 mod log;
 mod notch_window;
 mod osd;
@@ -21,6 +22,7 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
         .invoke_handler(tauri::generate_handler![
             set_hit_region,
+            notch_fullscreen,
             services::bridge_props,
             services::bridge_call
         ])
@@ -41,6 +43,7 @@ pub fn run() {
             }
             topmost::install(&notches);
             pointer::start(app.handle().clone());
+            fullscreen::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -89,4 +92,10 @@ fn set_hit_region(window: WebviewWindow, rect: CssRect) -> Result<(), String> {
     let hit = layout::hit_rect(&frame, window.scale_factor().map_err(error)?, rect);
     pointer::set(window.label(), window.hwnd().map_err(error)?, hit);
     Ok(())
+}
+
+/// Whether a fullscreen app covers the monitor of the window that asks.
+#[tauri::command]
+fn notch_fullscreen(window: WebviewWindow) -> bool {
+    fullscreen::is_covered(window.label())
 }
