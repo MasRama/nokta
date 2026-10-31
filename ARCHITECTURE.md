@@ -658,6 +658,14 @@ WebView2 and runs the core's services itself, with no D-Bus.
   and asks `notch_fullscreen` once at start; the page hides the notch and
   its click box and lets through what `fullscreen_alerts` allows, as the
   extension does.
+- The open shortcut is a hotkey (`RegisterHotKey`) on a thread of its own,
+  read from the same `open_shortcut` as GNOME's (`shortcut.rs`, tested
+  everywhere) and registered again when it changes. It opens the notch on
+  the monitor of the window in front, which takes the focus despite
+  `WS_EX_NOACTIVATE`, and tells the page (`nokta://keyboard`). The page
+  moves the focus as the extension does (Tab, Shift+Tab, the arrows) and
+  closes on Escape, the shortcut again, or the window losing the keyboard;
+  `release_keyboard` then gives it back to the window it came from.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with
