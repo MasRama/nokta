@@ -12,6 +12,7 @@ import { motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
 import { withAlpha } from '@ext/shared/logic/color.js';
 import { uses24h } from '@ext/shared/logic/format.js';
+import { fullscreenView, showsOverFullscreen } from '@ext/shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from '@ext/shared/logic/glow.js';
 import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/keyframes.js';
 import { NotchMachine } from '@ext/shared/logic/machine.js';
@@ -41,7 +42,12 @@ export interface Host {
     setHit(hit: Box): void;
     /** Calls back when the pointer comes over the notch or leaves it. */
     onPointer(cb: (inside: boolean) => void, hit: () => Box | null): void;
+    /** Calls back when a fullscreen app comes over the monitor or goes; none in a browser. */
+    onFullscreen?(cb: (fullscreen: boolean) => void): void;
 }
+
+/** No click goes to the notch while it hides. */
+const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
 
 /** An alert pushes the notch this much wider before it springs back. */
 const ALERT_KICK = 0.06;
@@ -89,6 +95,12 @@ export class MonitorNotch {
     private stopClock: (() => void) | null = null;
     private privacyCount = 0;
     private callTimer = 0;
+    /** A fullscreen app covers the monitor: the notch hides. */
+    private inFullscreen = false;
+    /** An alert let through over the fullscreen app shows until it ends. */
+    private alertOverFullscreen = false;
+    /** The pointer is over the notch, as the window last said. */
+    private pointerOver = false;
 
     constructor(
         bridge: Bridge,
@@ -136,14 +148,21 @@ export class MonitorNotch {
                 return () => window.clearTimeout(timer);
             },
             () => this.settings.behavior.osdDurationMs,
-            () => this.redraw(),
+            (active) => this.onOsdTimer(active),
         );
         this.alerts = new Alerts(
             bridge,
             () => ({ behavior: this.settings.behavior, motions: this.settings.appearance.alertMotion }),
             (request) => this.showOsd(request),
         );
-        host.onPointer((inside) => this.machine.pointer(inside), () => this.hit);
+        host.onPointer(
+            (inside) => {
+                this.pointerOver = inside;
+                this.machine.pointer(this.pointerInside());
+            },
+            () => this.hit,
+        );
+        host.onFullscreen?.((fullscreen) => this.setFullscreen(fullscreen));
     }
 
     /** Lays out in a window `width` CSS px wide and follows the core. */
@@ -193,7 +212,12 @@ export class MonitorNotch {
      * runs out. An alert (`tone` set) kicks the notch and glows; a volume or
      * a key does not.
      */
-    showOsd({ content, icon, durationMs, tone, motion = 'kick' }: OsdRequest): void {
+    showOsd({ content, icon, kind, durationMs, tone, motion = 'kick' }: OsdRequest): void {
+        if (this.inFullscreen) {
+            if (!showsOverFullscreen(kind, this.settings.behavior.fullscreenAlerts)) return;
+            this.alertOverFullscreen = true;
+            this.applyFullscreen();
+        }
         window.clearTimeout(this.peekTimer);
         this.peekTimer = 0;
         const speed = this.settings.appearance.animationSpeed;
@@ -206,6 +230,39 @@ export class MonitorNotch {
             this.notch.stopMotion();
             this.notch.setGlow(null);
         }
+    }
+
+    /** A fullscreen app came over the monitor or went. */
+    setFullscreen(fullscreen: boolean): void {
+        if (fullscreen === this.inFullscreen) return;
+        this.inFullscreen = fullscreen;
+        this.applyFullscreen();
+    }
+
+    private onOsdTimer(active: boolean): void {
+        if (!active) this.alertOverFullscreen = false;
+        // Over a fullscreen app it hides first, so the views settle at once.
+        this.applyFullscreen();
+        this.redraw();
+    }
+
+    /** Shows or hides the notch over a fullscreen app, as the extension does. */
+    private applyFullscreen(): void {
+        const view = fullscreenView(this.inFullscreen, this.alertOverFullscreen);
+        if (!view.visible && this.machine.held) this.machine.close();
+        const hidden = this.notch.element.style.visibility === 'hidden';
+        if (view.visible === hidden) {
+            // Hidden at rest, so it comes back at its size and not mid-motion.
+            if (!view.visible) this.notch.jumpTo(...this.sizeFor(this.drawn));
+            this.notch.element.style.visibility = view.visible ? '' : 'hidden';
+            if (this.hit) this.report(this.hit);
+        }
+        this.machine.pointer(this.pointerInside());
+    }
+
+    /** Whether the pointer counts as over the notch: never while a fullscreen app has it. */
+    private pointerInside(): boolean {
+        return fullscreenView(this.inFullscreen, this.alertOverFullscreen).hover && this.pointerOver;
     }
 
     /**
@@ -322,7 +379,7 @@ export class MonitorNotch {
     /** A new song while the notch is closed on the music widens it with the title for a moment. */
     private peekOnNewTrack(snapshot: MediaSnapshot): void {
         const track = { key: trackKey(snapshot), title: snapshot.title, playing: snapshot.playbackStatus === 'Playing' };
-        const state = { enabled: this.settings.behavior.trackPeek, drawn: this.drawn, fullscreen: false };
+        const state = { enabled: this.settings.behavior.trackPeek, drawn: this.drawn, fullscreen: this.inFullscreen };
         if (shouldPeek(this.peekTrack, track, state)) {
             window.clearTimeout(this.peekTimer);
             this.peekTimer = window.setTimeout(() => {
@@ -449,6 +506,6 @@ export class MonitorNotch {
 
     private report(hit: Box): void {
         this.hit = hit;
-        this.host.setHit(hit);
+        this.host.setHit(this.notch.element.style.visibility === 'hidden' ? NO_HIT : hit);
     }
 }
