@@ -58,7 +58,7 @@ describe('translations on Windows', () => {
         useSystemLanguage(['id-ID']);
         expect(_('Join')).toBe('Gabung');
         expect(ngettext('%d item', '%d items', 2)).toBe('%d items');
-        const prefs = new SettingsWindow(new MockBridge(), { openConfig: () => {}, pickPicture: async () => null }, document.body);
+        const prefs = new SettingsWindow(new MockBridge(), { openConfig: () => {}, pickPicture: async () => null, showTour: async () => {} }, document.body);
         await prefs.start();
         const navs = [...document.querySelectorAll('.nokta-prefs-nav span:not(.nokta-icon)')].map((n) => n.textContent);
         expect(navs.slice(0, 2)).toEqual(['Tampilan', 'Perilaku']);

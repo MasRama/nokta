@@ -16,6 +16,8 @@ export interface Scene {
     drop?: boolean;
     /** The notch is right-clicked at this point of the page. */
     menu?: [number, number];
+    /** The first-run tour starts, before the clicks. */
+    tour?: boolean;
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
@@ -321,6 +323,8 @@ export const SCENES: Record<string, Scene> = {
     'shelf-player': { props: { ...player(true), ...SHELF }, open: true },
     drop: { props: SHELF, drop: true },
     menu: { props: SHELF, menu: [270, 16] },
+    tour: { props: {}, tour: true },
+    'tour-last': { props: {}, tour: true, click: ['.nokta-tour-next', '.nokta-tour-next', '.nokta-tour-next'] },
     'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
     'clipboard-page': { props: clipboard(), open: true, click: ['[data-tile="clipboard"]'] },
     'clipboard-search': {

@@ -21,6 +21,8 @@ url = "2.5.8"
 # Toasts' XML, and the contract test's.
 quick-xml = "0.42.0"
 percent-encoding = "2.3.2"
+# state.toml, kept as the user may have edited it.
+toml_edit = "0.25.17"
 
 # The app itself is Windows only; elsewhere the binary is a stub.
 [target.'cfg(windows)'.dependencies]

@@ -20,9 +20,10 @@ async function mount(settings: Props = {}) {
     const bridge = new MockBridge({ Settings1: settings });
     const pickPicture = vi.fn(() => Promise.resolve<string | null>('C:\\Users\\me\\Pictures\\beach.jpg'));
     const openConfig = vi.fn();
+    const showTour = vi.fn(() => Promise.resolve());
     const root = document.createElement('div');
     document.body.append(root);
-    const prefs = new SettingsWindow(bridge, { pickPicture, openConfig }, root);
+    const prefs = new SettingsWindow(bridge, { pickPicture, openConfig, showTour }, root);
     windows.push(prefs);
     await prefs.start();
     /** The row titled `title` on any page. */
@@ -31,7 +32,7 @@ async function mount(settings: Props = {}) {
             (r) => r.querySelector('.nokta-prefs-title')?.textContent === title,
         )!;
     const sets = () => bridge.calls.filter((c) => c.method === 'Set').map((c) => c.args);
-    return { bridge, root, prefs, row, sets, pickPicture, openConfig };
+    return { bridge, root, prefs, row, sets, pickPicture, openConfig, showTour };
 }
 
 afterEach(() => {
@@ -180,5 +181,16 @@ describe('the settings window', () => {
         scrim.querySelector<HTMLElement>('.nokta-prefs-destructive')!.click();
         expect(bridge.calls.at(-1)).toMatchObject({ iface: 'Settings1', method: 'Reset' });
         expect(scrim.hidden).toBe(true);
+    });
+
+    it('shows the tour again in the notch, and says why it did not', async () => {
+        const { root, row, showTour } = await mount();
+        const toasts = () => [...root.querySelectorAll('.nokta-prefs-toast')].map((t) => t.textContent);
+        row('Show the tour again').querySelector<HTMLElement>('button')!.click();
+        expect(showTour).toHaveBeenCalled();
+        await vi.waitFor(() => expect(toasts()).toEqual(['The tour shows in the notch']));
+        showTour.mockRejectedValueOnce(new Error('no notch shows'));
+        row('Show the tour again').querySelector<HTMLElement>('button')!.click();
+        await vi.waitFor(() => expect(toasts().at(-1)).toBe('no notch shows'));
     });
 });

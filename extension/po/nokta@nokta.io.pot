@@ -1206,19 +1206,19 @@ msgstr ""
 msgid "Rest the pointer on it."
 msgstr ""
 
-#: src/features/tour/view.ts
+#: src/features/tour/view.ts ../desktop/src/views/tour.ts
 msgid "Skip"
 msgstr ""
 
-#: src/features/tour/view.ts
+#: src/features/tour/view.ts ../desktop/src/views/tour.ts
 msgid "Open settings"
 msgstr ""
 
-#: src/features/tour/view.ts
+#: src/features/tour/view.ts ../desktop/src/views/tour.ts
 msgid "Done"
 msgstr ""
 
-#: src/features/tour/view.ts
+#: src/features/tour/view.ts ../desktop/src/views/tour.ts
 msgid "Next"
 msgstr ""
 
@@ -1263,7 +1263,7 @@ msgstr ""
 msgid "How to Install"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Getting started"
 msgstr ""
 
@@ -1275,19 +1275,19 @@ msgstr ""
 msgid "Open config.toml"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Show"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Show the tour again"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "The notch walks you through Nokta once more"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "The tour shows in the notch"
 msgstr ""
 
