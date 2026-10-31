@@ -39,7 +39,7 @@ pub fn meeting_link(ics: &str) -> Option<String> {
 }
 
 /// Content lines with their folds (a line break, then a space or a tab) joined.
-fn unfold(ics: &str) -> Vec<String> {
+pub(super) fn unfold(ics: &str) -> Vec<String> {
     let mut lines: Vec<String> = Vec::new();
     for raw in ics.split('\n') {
         let raw = raw.strip_suffix('\r').unwrap_or(raw);
@@ -67,7 +67,7 @@ fn property(line: &str) -> Option<(&str, &str)> {
 }
 
 /// A text value with `\n`, `\,`, `\;` and `\\` undone.
-fn unescape(value: &str) -> String {
+pub(super) fn unescape(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     let mut chars = value.chars();
     while let Some(c) = chars.next() {

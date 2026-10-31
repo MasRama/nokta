@@ -22,7 +22,8 @@ pub fn source_color(data: &str) -> Option<String> {
     None
 }
 
-fn normalize(color: &str) -> Option<String> {
+/// `color` as `#rrggbb`, from `#rgb`, `#rrggbb`, `#rrrrggggbbbb` or `rgb(r,g,b)`.
+pub(super) fn normalize(color: &str) -> Option<String> {
     let channels = match color.strip_prefix('#') {
         Some(hex) => from_hex(hex)?,
         None => from_rgb(color)?,
