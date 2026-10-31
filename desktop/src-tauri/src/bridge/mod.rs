@@ -7,6 +7,7 @@
 
 pub mod activities;
 pub mod devices;
+pub mod downloads;
 pub mod lyrics;
 pub mod media;
 pub mod nokta;

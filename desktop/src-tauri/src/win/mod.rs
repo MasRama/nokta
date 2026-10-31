@@ -31,6 +31,7 @@ pub fn run() {
             notch_fullscreen,
             release_keyboard,
             open_uri,
+            open_file,
             services::bridge_props,
             services::bridge_call
         ])
@@ -113,20 +114,48 @@ fn release_keyboard(window: WebviewWindow) {
 /// Opens `uri` with Windows: one of its panels or a web page.
 #[tauri::command]
 fn open_uri(uri: String) -> Result<(), String> {
+    if !crate::links::may_open(&uri) {
+        return Err(format!("Nokta does not open {uri}"));
+    }
+    shell_open(&uri)
+}
+
+/// Opens a file the core announced, like a finished download, or shows it
+/// selected in Explorer when `reveal` is set.
+#[tauri::command]
+fn open_file(
+    core: tauri::State<'_, services::Core>,
+    uri: String,
+    reveal: bool,
+) -> Result<(), String> {
+    let path = core
+        .file_path(&uri)
+        .ok_or_else(|| format!("Nokta does not open {uri}"))?;
+    if !reveal {
+        return shell_open(&path.to_string_lossy());
+    }
+    use std::os::windows::process::CommandExt;
+    // Explorer takes the path after `/select,`, quoted as one argument.
+    std::process::Command::new("explorer.exe")
+        .raw_arg(format!("/select,\"{}\"", path.display()))
+        .spawn()
+        .map(drop)
+        .map_err(|err| format!("Explorer does not start: {err}"))
+}
+
+/// Opens `target` as a double-click in Explorer would.
+fn shell_open(target: &str) -> Result<(), String> {
     use windows::core::{w, HSTRING, PCWSTR};
     use windows::Win32::UI::Shell::ShellExecuteW;
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
-    if !crate::links::may_open(&uri) {
-        return Err(format!("Nokta does not open {uri}"));
-    }
-    let target = HSTRING::from(uri.as_str());
-    // SAFETY: `target` is a NUL-ended string that outlives the call.
+    let wide = HSTRING::from(target);
+    // SAFETY: `wide` is a NUL-ended string that outlives the call.
     let done = unsafe {
         ShellExecuteW(
             None,
             w!("open"),
-            PCWSTR(target.as_ptr()),
+            PCWSTR(wide.as_ptr()),
             PCWSTR::null(),
             PCWSTR::null(),
             SW_SHOWNORMAL,
@@ -136,6 +165,6 @@ fn open_uri(uri: String) -> Result<(), String> {
     if done.0 as isize > 32 {
         Ok(())
     } else {
-        Err(format!("Windows cannot open {uri}"))
+        Err(format!("Windows cannot open {target}"))
     }
 }
