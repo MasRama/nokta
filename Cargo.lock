@@ -2490,6 +2490,7 @@ dependencies = [
 name = "nokta-desktop"
 version = "0.10.0"
 dependencies = [
+ "image",
  "nokta-core",
  "quick-xml",
  "serde",
