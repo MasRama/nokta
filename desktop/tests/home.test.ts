@@ -29,9 +29,10 @@ async function mount(initial: Record<string, Props> = {}) {
     const root = document.createElement('div');
     document.body.append(root);
     const openUri = vi.fn();
+    const openSettings = vi.fn();
     const notch = new MonitorNotch(
         bridge,
-        { systemUses24h: () => true, setHit: () => {}, onPointer: () => {}, openUri },
+        { systemUses24h: () => true, setHit: () => {}, onPointer: () => {}, openUri, openSettings },
         root,
         STILL,
     );
@@ -42,7 +43,7 @@ async function mount(initial: Record<string, Props> = {}) {
     const shown = (selector: string) =>
         [...panel().querySelectorAll<HTMLElement>(selector)].filter((e) => !e.closest('[hidden]'));
     const labels = (selector: string) => shown(selector).map((e) => e.textContent);
-    return { bridge, notch, root, openUri, panel, shown, labels };
+    return { bridge, notch, root, openUri, openSettings, panel, shown, labels };
 }
 
 afterEach(() => {
@@ -95,6 +96,13 @@ describe('home on Windows', () => {
         expect(root.querySelector('.nokta-shown')?.classList).toContain('nokta-idle');
     });
 
+    it('closes, then opens the settings window for the Settings tile', async () => {
+        const { root, openSettings, shown } = await mount({ Settings1: { Home: { toggles: [], tiles: ['settings'] } } });
+        shown('.nokta-tile')[0].click();
+        expect(openSettings).toHaveBeenCalled();
+        expect(root.querySelector('.nokta-shown')?.classList).toContain('nokta-idle');
+    });
+
     it("takes the light theme under Windows' light style when the notch follows it", async () => {
         const { root, bridge } = await mount({
             Settings1: { Appearance: { follow_system_style: true, light_theme: 'paper' } },
@@ -112,12 +120,13 @@ describe('home controls', () => {
         const layout = { toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system', 'clipboard', 'settings'] } as const;
         expect(windowsControls({ toggles: [...layout.toggles], tiles: [...layout.tiles] }, true)).toEqual({
             toggles: ['caffeine'],
-            tiles: ['focus', 'notifications', 'system', 'clipboard'],
+            tiles: ['focus', 'notifications', 'system', 'clipboard', 'settings'],
         });
         expect(windowsControls({ toggles: [...layout.toggles], tiles: [...layout.tiles] }, false).tiles).toEqual([
             'focus',
             'notifications',
             'system',
+            'settings',
         ]);
     });
 

@@ -26,6 +26,8 @@ percent-encoding = "2.3.2"
 [target.'cfg(windows)'.dependencies]
 tauri = { version = "2.12.5", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-single-instance = "2.5.5"
+# The settings window's picture chooser.
+tauri-plugin-dialog = "2.8.4"
 # Windows' notification database, read only; SQLite built in.
 rusqlite = { version = "0.37", features = ["bundled"] }
 # The same as the core's, to hear the database change.

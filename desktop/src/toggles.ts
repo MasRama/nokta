@@ -6,8 +6,8 @@ import { Follower } from './follower.js';
 /** The toggles Windows has: it has no public Do Not Disturb or Night Light. */
 const WINDOWS_TOGGLES: readonly QuickToggle[] = ['caffeine', 'dark_style'];
 
-/** The tiles whose page or panel the Windows app has so far. */
-const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'clipboard', 'screenshot', 'system'];
+/** The tiles whose page, panel or window the Windows app has. */
+const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'clipboard', 'settings', 'screenshot', 'system'];
 
 /** The layout's toggles and tiles the Windows app can offer, in its order; no clipboard tile while its history is off. */
 export function windowsControls(layout: HomeLayout, clipboard: boolean): HomeLayout {

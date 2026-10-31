@@ -13,6 +13,7 @@ mod pointer;
 mod privacy;
 mod screenshots;
 mod services;
+mod settings_window;
 mod shelf;
 mod shortcut;
 mod sound;
@@ -29,8 +30,13 @@ use crate::layout::{self, CssRect, NotchSizes};
 
 pub fn run() {
     tauri::Builder::default()
-        // A second start leaves the running Nokta alone.
-        .plugin(tauri_plugin_single_instance::init(|_app, _args, _cwd| {}))
+        // A second start, as from the Start menu, opens the settings.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Err(err) = settings_window::open(app) {
+                tracing::warn!("cannot open the settings: {err}");
+            }
+        }))
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             set_hit_region,
             notch_fullscreen,
@@ -39,6 +45,9 @@ pub fn run() {
             open_uri,
             open_file,
             shelf::shelf_drag,
+            settings_window::open_settings,
+            settings_window::open_config,
+            settings_window::pick_picture,
             services::bridge_props,
             services::bridge_call
         ])
@@ -56,6 +65,7 @@ pub fn run() {
             let core = services::start(app.handle(), &paths);
             let sizes = NotchSizes::from(&core.config().appearance);
             app.manage(core);
+            app.manage(settings_window::ConfigFile(paths.config_file.clone()));
             tray::create(app.handle())?;
             monitors::start(app.handle(), layout::window_logical_size(&sizes));
             pointer::start(app.handle().clone());
