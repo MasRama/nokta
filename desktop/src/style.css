@@ -14,24 +14,88 @@ body.nokta-mock {
     background: linear-gradient(160deg, #3a5f8f, #8b6a9e 55%, #d59a7a);
 }
 
+/* The whole window draws; only the notch takes clicks (pointer.rs). */
 .nokta-notch {
     position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.nokta-art {
+    position: absolute;
+    inset: 0;
+    overflow: visible;
+}
+
+.nokta-clip {
+    position: absolute;
     top: 0;
-    left: 50%;
-    transform: translateX(-50%);
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.nokta-body {
+    position: absolute;
+    top: 0;
+}
+
+/* Every view fills the body; the one for the notch's state fades in. */
+.nokta-view {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 150ms ease-out,
+        visibility 0s 150ms;
+}
+
+.nokta-view.nokta-shown {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 200ms ease-in 60ms;
+}
+
+.nokta-idle {
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.nokta-notch > svg {
-    position: absolute;
-    inset: 0;
-}
-
 .nokta-clock {
-    position: relative;
     font-size: 13px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+}
+
+/* Home; heights in the extension's features/panel/logic/height.ts. */
+.nokta-panel {
+    padding: 14px 18px;
+}
+
+.nokta-panel-heading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 42px;
+}
+
+.nokta-panel-weekday {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.59;
+}
+
+.nokta-panel-date {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nokta-view,
+    .nokta-view.nokta-shown {
+        transition: none;
+    }
 }
