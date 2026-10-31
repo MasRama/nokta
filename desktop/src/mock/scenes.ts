@@ -82,10 +82,34 @@ function call(muted: boolean): Record<string, Props> {
     };
 }
 
+/** Home with the weather, Caffeine on, and both tiles Windows has. */
+const HOME: Record<string, Props> = {
+    Weather1: {
+        Status: 'ready',
+        Units: 'celsius',
+        Place: 'Jakarta',
+        Temperature: 31,
+        High: 33,
+        Low: 25,
+        Condition: 'partly-cloudy',
+        IsDay: true,
+    },
+    Toggles1: { DarkStyle: true, Caffeine: true },
+    Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['notifications', 'screenshot'] } },
+};
+
 /** The scenes `?mock=<name>` shows, for the shots and for working on the page. */
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
-    home: { props: {}, open: true },
+    home: { props: HOME, open: true },
+    'home-light': {
+        props: {
+            ...HOME,
+            Toggles1: { DarkStyle: false, Caffeine: false },
+            Settings1: { ...HOME.Settings1, Appearance: { follow_system_style: true, light_theme: 'paper' } },
+        },
+        open: true,
+    },
     glass: { props: appearance({ theme: 'glass' }), open: true },
     paper: { props: appearance({ theme: 'paper' }), open: true },
     aurora: { props: appearance({ theme: 'aurora' }), open: true },

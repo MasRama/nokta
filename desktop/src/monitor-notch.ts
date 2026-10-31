@@ -4,7 +4,8 @@ import { romanize } from '@ext/features/lyrics/logic/romanize.js';
 import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
-import { panelHeight } from '@ext/features/panel/logic/height.js';
+import { panelHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
+import type { HomeTile } from '@ext/features/panel/logic/layout.js';
 import { callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
 import { dotsFor } from '@ext/features/privacy/logic/dots.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
@@ -25,15 +26,17 @@ import { Lyrics, Media, nowUs } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
+import { Toggles, windowsControls } from './toggles.js';
 import { everyMinute } from './views/clock.js';
 import { CollapsedView } from './views/collapsed.js';
 import { ExpandedView } from './views/expanded.js';
-import { HomeView } from './views/home.js';
+import { HomeView, homeRows } from './views/home.js';
 import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
 import { CallLabel, PrivacyDots } from './views/privacy.js';
+import { Weather } from './weather.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
 export interface Host {
@@ -49,7 +52,15 @@ export interface Host {
     onKeyboard?(cb: () => void): void;
     /** The notch the shortcut opened closed: the window it took the keyboard from gets it back. */
     releaseKeyboard?(): void;
+    /** Opens one of Windows' panels or a web page. */
+    openUri?(uri: string): void;
 }
+
+/** What a home tile opens on Windows, for the tiles that open one of its panels (desktop/src-tauri/src/links.rs). */
+const TILE_URIS: Partial<Record<HomeTile, string>> = {
+    notifications: 'ms-actioncenter:',
+    screenshot: 'ms-screenclip:',
+};
 
 /** No click goes to the notch while it hides. */
 const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
@@ -77,6 +88,8 @@ export class MonitorNotch {
     readonly media: Media;
     readonly lyrics: Lyrics;
     readonly privacy: Privacy;
+    readonly weather: Weather;
+    readonly toggles: Toggles;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -93,6 +106,8 @@ export class MonitorNotch {
     private drawn: Drawn = 'idle';
     private hit: Box | null = null;
     private homeOpen = false;
+    /** Home's rows, for its height. */
+    private homeRows: PanelRow[] = ['date'];
     private peekTimer = 0;
     private peekTrack: PeekTrack | null = null;
     private ticker = 0;
@@ -124,7 +139,13 @@ export class MonitorNotch {
         this.media = new Media(bridge, () => this.onMedia());
         this.lyrics = new Lyrics(bridge, () => this.onLyrics());
         this.privacy = new Privacy(bridge, () => this.onPrivacy());
-        this.home = new HomeView(() => this.setHomeOpen(false));
+        this.weather = new Weather(bridge, () => this.onHome());
+        this.toggles = new Toggles(bridge, () => this.onToggles());
+        this.home = new HomeView({
+            openPlayer: () => this.setHomeOpen(false),
+            toggle: (which) => this.toggles.toggle(which),
+            openTile: (which) => this.openTile(which),
+        });
         this.collapsed = new CollapsedView(() => this.media.levels());
         this.peek = new PeekView(() => this.media.levels());
         this.expanded = new ExpandedView(this.media, () => this.setHomeOpen(true));
@@ -193,6 +214,8 @@ export class MonitorNotch {
             this.media.attach(),
             this.lyrics.attach(),
             this.privacy.attach(),
+            this.weather.attach(),
+            this.toggles.attach(),
         ]);
     }
 
@@ -214,6 +237,8 @@ export class MonitorNotch {
         this.media.detach();
         this.lyrics.detach();
         this.privacy.detach();
+        this.weather.detach();
+        this.toggles.detach();
         window.clearTimeout(this.callTimer);
         this.alerts.detach();
         this.osdTimer.destroy();
@@ -348,8 +373,7 @@ export class MonitorNotch {
         const backdrop = backdropFor({ on: a.coverBackdrop, view: this.drawn, backdrop: backdropPath });
         if (backdrop) return backdropPalette(a, accentColor, backdrop);
         const { path, color, tone } = this.settings.picture;
-        // The system's light style follows in a later part; Windows' default is dark.
-        return paletteFor(themeFor(a, true), a, accentColor || null, { path, color, tone, darken: a.pictureDarken });
+        return paletteFor(themeFor(a, this.toggles.state.dark_style), a, accentColor || null, { path, color, tone, darken: a.pictureDarken });
     }
 
     private applyPalette(): void {
@@ -362,6 +386,7 @@ export class MonitorNotch {
         this.expanded.progress.setColors(palette.accent, withAlpha(palette.foreground, 0.25));
         // The levels are the system's, not the song's: the bar takes the text color.
         this.osd.setColors(palette.foreground, withAlpha(palette.foreground, 0.2));
+        this.home.setColors({ foreground: palette.foreground, light: palette.light });
         this.updateViews();
     }
 
@@ -371,7 +396,33 @@ export class MonitorNotch {
         this.applyPalette();
         this.tickClock(new Date());
         this.onPrivacy();
+        this.onHome();
         this.redraw(true);
+    }
+
+    /** Windows' dark style may pick the notch's light theme. */
+    private onToggles(): void {
+        this.applyPalette();
+        this.onHome();
+    }
+
+    /** The weather, a toggle or home's layout changed: home shows it, at its new height. */
+    private onHome(): void {
+        const layout = windowsControls(this.settings.home);
+        this.home.setWeather(this.weather.line);
+        this.home.setControls(layout, this.toggles.state);
+        const rows = homeRows(layout);
+        if (rows.join() === this.homeRows.join()) return;
+        this.homeRows = rows;
+        if (this.drawn === 'panel') this.notch.resizeTo(...this.sizeFor('panel'), 'width');
+    }
+
+    /** A tile closes the notch, then opens what it stands for. */
+    private openTile(which: HomeTile): void {
+        const uri = TILE_URIS[which];
+        if (!uri) return;
+        this.machine.close();
+        this.host.openUri?.(uri);
     }
 
     /** The camera or the microphone came on or went off. */
@@ -453,6 +504,8 @@ export class MonitorNotch {
             // Opened, the player shows the song: no peek after it closes again.
             window.clearTimeout(this.peekTimer);
             this.peekTimer = 0;
+            // Home's weather is new, unless the core's reading is fresh.
+            this.weather.refresh();
         } else {
             // Closing goes back to the first page.
             this.homeOpen = false;
@@ -487,7 +540,7 @@ export class MonitorNotch {
         return viewSize(drawn, {
             appearance,
             notificationButtons: false,
-            panelHeight: panelHeight(appearance.height, ['date']),
+            panelHeight: panelHeight(appearance.height, this.homeRows),
             pageHeight: 0,
             expandedExtra: this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0,
         });
