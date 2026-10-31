@@ -839,3 +839,114 @@ body.nokta-mock {
     height: 100%;
     transform-origin: left;
 }
+
+/* The newest activity in the closed notch (views/activity.ts ActivityBadge). */
+.nokta-activity-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nokta-activity-badge-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* An unknown progress: the icon pulses slowly. */
+.nokta-pulse {
+    animation: nokta-pulse 900ms ease-in-out infinite alternate;
+}
+
+@keyframes nokta-pulse {
+    to {
+        opacity: 0.35;
+    }
+}
+
+/* A live activity in home: two lines and a thin bar beside its chip, 36 px. */
+.nokta-panel-activity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    height: 36px;
+}
+
+.nokta-panel-activity-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.nokta-panel-activity-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-panel-activity-line {
+    display: flex;
+    gap: 8px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.59;
+}
+
+.nokta-panel-activity-detail {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nokta-panel-activity-track {
+    height: 3px;
+    border-radius: 1.5px;
+    overflow: hidden;
+}
+
+.nokta-panel-activity-fill {
+    height: 100%;
+    border-radius: 1.5px;
+    transform-origin: left;
+}
+
+/* A newer Nokta: one line that opens its release page. */
+.nokta-panel-update {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nokta-panel-update-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-panel-update:hover .nokta-panel-update-title {
+    text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nokta-pulse {
+        animation: none;
+    }
+}

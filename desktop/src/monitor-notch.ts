@@ -1,3 +1,4 @@
+import type { Activity } from '@ext/features/activities/logic/activities.js';
 import { visibleLyric } from '@ext/features/lyrics/logic/visible.js';
 import { lineProgress, nextLyric } from '@ext/features/lyrics/logic/karaoke.js';
 import { romanize } from '@ext/features/lyrics/logic/romanize.js';
@@ -32,7 +33,8 @@ import { NotchMachine } from '@ext/shared/logic/machine.js';
 import { progressLine, type Span } from '@ext/shared/logic/progress-line.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
-import { Alerts, CLOCK_ICON, clockDoneRequest, finishedRequest, TIMER_ICON, type OsdRequest } from './alerts.js';
+import { Activities, type Ended } from './activities.js';
+import { Alerts, CLOCK_ICON, clockDoneRequest, endedRequest, finishedRequest, TIMER_ICON, type OsdRequest } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
@@ -53,6 +55,8 @@ import { CallLabel, PrivacyDots, type HomeCall } from './views/privacy.js';
 import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
 import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
+import { Updates } from './updates.js';
+import { ActivityBadge } from './views/activity.js';
 import { Weather } from './weather.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
@@ -111,6 +115,8 @@ export class MonitorNotch {
     readonly weather: Weather;
     readonly toggles: Toggles;
     readonly timer: Timer;
+    readonly activities: Activities;
+    readonly updates: Updates;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -126,6 +132,7 @@ export class MonitorNotch {
     private readonly calls = { idle: new CallLabel(), collapsed: new CallLabel() };
     /** The focus timer or a clock, in the same two places. */
     private readonly timerLabels = { idle: new TimerLabel(), collapsed: new TimerLabel() };
+    private readonly badges = { idle: new ActivityBadge(), collapsed: new ActivityBadge() };
     private readonly timerPage: TimerPage;
     /** The pages home's tiles open, one shown at a time. */
     private readonly pages: HTMLDivElement;
@@ -174,6 +181,12 @@ export class MonitorNotch {
         this.lyrics = new Lyrics(bridge, () => this.onLyrics());
         this.privacy = new Privacy(bridge, () => this.onPrivacy());
         this.weather = new Weather(bridge, () => this.onHome());
+        this.activities = new Activities(
+            bridge,
+            () => this.onActivities(),
+            (ended) => this.onActivityEnded(ended),
+        );
+        this.updates = new Updates(bridge, () => this.onHome());
         this.toggles = new Toggles(bridge, () => this.onToggles());
         this.timer = new Timer(
             bridge,
@@ -192,6 +205,7 @@ export class MonitorNotch {
             },
             toggle: (which) => this.toggles.toggle(which),
             openTile: (which) => this.openTile(which),
+            openRelease: () => this.openRelease(),
         });
         this.collapsed = new CollapsedView(() => this.media.levels());
         this.peek = new PeekView(() => this.media.levels());
@@ -280,6 +294,8 @@ export class MonitorNotch {
             this.weather.attach(),
             this.toggles.attach(),
             this.timer.attach(),
+            this.activities.attach(),
+            this.updates.attach(),
         ]);
     }
 
@@ -304,6 +320,8 @@ export class MonitorNotch {
         this.weather.detach();
         this.toggles.detach();
         this.timer.detach();
+        this.activities.detach();
+        this.updates.detach();
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
@@ -452,7 +470,7 @@ export class MonitorNotch {
         this.expanded.progress.setColors(palette.accent, withAlpha(palette.foreground, 0.25));
         // The levels are the system's, not the song's: the bar takes the text color.
         this.osd.setColors(palette.foreground, withAlpha(palette.foreground, 0.2));
-        this.home.setColors({ foreground: palette.foreground, light: palette.light });
+        this.home.setColors({ foreground: palette.foreground, light: palette.light, accent: palette.accent });
         this.timerPage.setColors(palette);
         this.updateViews();
         this.applyProgress();
@@ -464,7 +482,7 @@ export class MonitorNotch {
         this.applyPalette();
         this.tickClock(new Date());
         this.onPrivacy();
-        this.onHome();
+        this.onActivities();
         this.redraw(true);
     }
 
@@ -485,7 +503,13 @@ export class MonitorNotch {
             timer: clocks.length > 0,
         });
         this.updateHomeTicker();
-        const rows = homeRows(layout, { call: this.shownCall() !== null, clocks: clocks.length });
+        this.home.setUpdate(this.updates.latest);
+        const rows = homeRows(layout, {
+            call: this.shownCall() !== null,
+            activities: this.liveActivities().length,
+            clocks: clocks.length,
+            update: this.updates.latest !== '',
+        });
         if (rows.join() === this.homeRows.join()) return;
         this.homeRows = rows;
         if (this.drawn === 'panel') this.notch.resizeTo(...this.sizeFor('panel'), 'width');
@@ -503,9 +527,35 @@ export class MonitorNotch {
         return { title: call.app || _('Microphone'), detail: callDetail(call.sinceUs, nowUs(), call.muted), muted: call.muted };
     }
 
-    /** Home's rows that count on: the call's time and the clocks'. */
+    private liveActivities(): readonly Activity[] {
+        return this.settings.behavior.liveActivities ? this.activities.list : [];
+    }
+
+    /** The running activities changed, or the live_activities setting. */
+    private onActivities(): void {
+        const newest = this.liveActivities()[0];
+        if (newest) for (const badge of Object.values(this.badges)) badge.update(newest);
+        this.applyIndicator();
+        this.onHome();
+    }
+
+    private onActivityEnded(ended: Ended): void {
+        const { behavior, appearance } = this.settings;
+        const request = endedRequest(ended, behavior, appearance.alertMotion);
+        if (request) this.showOsd(request);
+    }
+
+    /** The text of home's update row: the release's page. */
+    private openRelease(): void {
+        if (!this.updates.url) return;
+        this.machine.close();
+        this.host.openUri?.(this.updates.url);
+    }
+
+    /** Home's rows that count on: the call's time, the activities' and the clocks'. */
     private tickHome(): void {
         this.home.setCall(this.homeCall());
+        this.home.setActivities(this.liveActivities(), nowUs());
         this.home.setClocks(this.homeClocks());
     }
 
@@ -526,7 +576,8 @@ export class MonitorNotch {
 
     /** Home moves its clocks on while it shows them. */
     private updateHomeTicker(): void {
-        const run = this.drawn === 'panel' && (this.timer.clocks.length > 0 || this.shownCall() !== null);
+        const counting = this.timer.clocks.length > 0 || this.shownCall() !== null || this.liveActivities().length > 0;
+        const run = this.drawn === 'panel' && counting;
         if (run && !this.homeTicker) {
             this.homeTicker = window.setInterval(() => this.tickHome(), TICK_MS);
         } else if (!run && this.homeTicker) {
@@ -608,13 +659,14 @@ export class MonitorNotch {
             call: call !== null,
             timer: snapshot.state !== 'idle',
             clock: clock !== null,
-            activity: false,
+            activity: this.liveActivities().length > 0,
             shelf: false,
         });
         this.indicator = indicator;
         const shown = (place: 'idle' | 'collapsed'): HTMLElement | null => {
             if (indicator === 'call') return this.calls[place].element;
             if (indicator === 'timer' || indicator === 'clock') return this.timerLabels[place].element;
+            if (indicator === 'activity') return this.badges[place].element;
             return null;
         };
         this.idle.setAside(shown('idle'));
@@ -668,7 +720,7 @@ export class MonitorNotch {
                     ? null
                     : span(focus.durationUs, remainingAt(focus, now), focus.state === 'running'),
             clock: clock?.kind === 'countdown' ? span(clock.durationUs, clockValueAt(clock, now), clock.running) : null,
-            activity: -1,
+            activity: this.liveActivities()[0]?.progress ?? -1,
             song:
                 song.lengthUs > 0
                     ? span(song.lengthUs, song.lengthUs - this.media.positionNow(), song.playbackStatus === 'Playing', song.rate)

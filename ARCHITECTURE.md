@@ -723,6 +723,10 @@ WebView2 and runs the core's services itself, with no D-Bus.
   update check counts the wakes the window subclass hears, so a check
   that came due while asleep runs on waking. Windows has no PackageKit or
   app launcher signals, so no activity starts on its own there.
+  The page shows them as the extension does: the newest activity's badge
+  in the indicator's spot and on the progress line, up to three activity
+  rows on home, and the update row, which opens the release page; it gets
+  its Update button with the Windows update install.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

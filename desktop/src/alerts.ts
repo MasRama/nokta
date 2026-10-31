@@ -1,3 +1,4 @@
+import { endedAlert } from '@ext/features/activities/logic/activities.js';
 import { deviceAlert, isBatteryWarning } from '@ext/features/devices/logic/alert.js';
 import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
@@ -9,6 +10,7 @@ import type { AlertKind } from '@ext/shared/logic/fullscreen.js';
 import type { AlertTone } from '@ext/shared/logic/glow.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
+import type { Ended } from './activities.js';
 import type { Bridge } from './bridge/bridge.js';
 
 /** What the notch shows for an OSD key or an alert. */
@@ -134,6 +136,21 @@ export function clockDoneRequest(
         durationMs: CLOCK_ALERT_FACTOR * behavior.alertDurationMs,
         tone: { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') },
         motion: alertMotion('clock-done', motions),
+    };
+}
+
+/** The alert for `Activities1.Ended`: a check mark, or a red cross that shakes the notch. */
+export function endedRequest(ended: Ended, behavior: Behavior, motions: boolean): OsdRequest | null {
+    if (!behavior.liveActivities) return null;
+    const { success } = ended;
+    const alert = endedAlert(ended.title, success, ended.message, ended.elapsedUs);
+    return {
+        content: { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent },
+        icon: alert.icon,
+        kind: 'activity',
+        durationMs: behavior.alertDurationMs,
+        tone: success ? 'success' : 'urgent',
+        motion: alertMotion(success ? 'activity-done' : 'activity-failed', motions),
     };
 }
 
