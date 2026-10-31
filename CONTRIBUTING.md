@@ -30,6 +30,19 @@ npm run lint
 npm test
 ```
 
+The Windows app in `desktop/` builds on Windows only (`npx tauri build`
+there); on any system its page and pure modules can be checked:
+
+```sh
+cargo test -p nokta-desktop
+cd desktop
+npm ci
+npm run check
+npm run lint
+npm test
+npm run shots -- /tmp/nokta-shots
+```
+
 [docs/testing.md](docs/testing.md) explains the test layers and how to run the
 extension in a headless GNOME Shell that cannot touch your own session.
 
@@ -84,7 +97,7 @@ docs: explain the Just Perfection clock setting
 
 Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`,
 `chore`. Scopes: `media`, `lyrics`, `settings`, `osd`, `devices`, `timer`,
-`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `downloads`, `system`, `screenshots`, `themes`, `panel`, `i18n`, `app`, `contracts`, `extension`, `packaging`, `core`. A breaking change gets a `!` after the
+`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `downloads`, `system`, `updates`, `tour`, `screenshots`, `privacy`, `themes`, `panel`, `i18n`, `app`, `contracts`, `extension`, `desktop`, `packaging`, `core`. A breaking change gets a `!` after the
 scope and a `BREAKING CHANGE:` footer.
 
 ## Releases
