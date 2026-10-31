@@ -10,7 +10,7 @@ use std::sync::{Mutex, OnceLock};
 use nokta_core::features::settings::Config;
 use nokta_core::features::timer::logic::Snapshot;
 use nokta_core::features::timer::service::Command;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, WebviewWindow};
 use tokio::sync::{mpsc, watch};
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
@@ -156,12 +156,32 @@ fn toggle(app: &AppHandle) {
     let Some(window) = monitors::notch_on_monitor_of(app, previous) else {
         return;
     };
+    hold(&window, previous);
+    tell(app, window.label());
+}
+
+/// The notch `window` takes the keyboard for a field to type in, as the
+/// open shortcut gives it, unless it has it already.
+pub fn take(window: &WebviewWindow) {
+    let holds = HOLDER
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .is_some_and(|(held, _)| held == window.label());
+    if holds {
+        return;
+    }
+    // SAFETY: reads which window is in front.
+    hold(window, unsafe { GetForegroundWindow() });
+}
+
+/// Gives `window` the keyboard; `previous` gets it back on release.
+fn hold(window: &WebviewWindow, previous: HWND) {
     let label = window.label().to_owned();
     *HOLDER.lock().unwrap_or_else(|e| e.into_inner()) = Some((label.clone(), previous.0 as isize));
     if let Err(err) = window.set_focus() {
         tracing::warn!("cannot give {label} the keyboard: {err}");
     }
-    tell(app, &label);
 }
 
 fn tell(app: &AppHandle, label: &str) {

@@ -32,6 +32,7 @@ pub fn run() {
             set_hit_region,
             notch_fullscreen,
             release_keyboard,
+            take_keyboard,
             open_uri,
             open_file,
             shelf::shelf_drag,
@@ -117,6 +118,12 @@ fn notch_fullscreen(window: WebviewWindow) -> bool {
 #[tauri::command]
 fn release_keyboard(window: WebviewWindow) {
     shortcut::release(window.label());
+}
+
+/// A field to type in opened in the notch that asks: it takes the keyboard.
+#[tauri::command]
+fn take_keyboard(window: WebviewWindow) {
+    shortcut::take(&window);
 }
 
 /// Opens `uri` with Windows: one of its panels or a web page.

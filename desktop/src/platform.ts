@@ -65,6 +65,11 @@ export function releaseKeyboard(): void {
     if (inTauri()) void invoke('release_keyboard');
 }
 
+/** A field to type in opened: the app gives this window the keyboard. */
+export function takeKeyboard(): void {
+    if (inTauri()) void invoke('take_keyboard');
+}
+
 /** Opens one of Windows' panels or a web page; a browser opens a web page in a new tab. */
 export function openUri(uri: string): void {
     if (inTauri()) void invoke('open_uri', { uri }).catch((err: unknown) => console.warn('open_uri:', err));
