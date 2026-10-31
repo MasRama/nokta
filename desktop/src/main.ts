@@ -13,6 +13,7 @@ import {
     onFullscreen,
     onKeyboard,
     onPointer,
+    onTour,
     openFile,
     openSettings,
     openUri,
@@ -20,7 +21,12 @@ import {
     setHitRegion,
     systemUses24h,
     takeKeyboard,
+    tourDone,
+    tourWanted,
 } from './platform.js';
+
+/** The first-run tour opens this long after the app starts, once the desktop has settled. */
+const TOUR_DELAY_MS = 2000;
 
 useSystemLanguage();
 hideWebMenu();
@@ -53,8 +59,11 @@ const notch = new MonitorNotch(
 );
 window.addEventListener('resize', () => notch.setArea(window.innerWidth));
 await notch.start(window.innerWidth);
+onTour(() => notch.startTour({ done: tourDone }));
+if (await tourWanted()) window.setTimeout(() => notch.startTour({ done: tourDone }), TOUR_DELAY_MS);
 if (mock) {
     if (scene.open) notch.open(true);
+    if (scene.tour) notch.startTour({ done: () => {} });
     for (const selector of scene.click ?? []) document.querySelector<HTMLElement>(selector)?.click();
     for (const [iface, props] of scene.changes ?? []) mock.set(iface, props);
     for (const [iface, signal, ...args] of scene.signals ?? []) mock.signal(iface, signal, ...args);

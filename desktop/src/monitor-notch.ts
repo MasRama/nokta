@@ -36,6 +36,7 @@ import {
     msUntilClockChange,
 } from '@ext/features/timer/logic/clocks.js';
 import { formatRemaining, msUntilNextSecond, phaseColor, remainingAt } from '@ext/features/timer/logic/timer.js';
+import { tourAfter, tourStep } from '@ext/features/tour/logic/steps.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
 import { alertMotion, motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
@@ -96,6 +97,7 @@ import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
 import { SystemPage } from './views/system.js';
 import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
+import { TourView } from './views/tour.js';
 import { Updates } from './updates.js';
 import { ActivityBadge } from './views/activity.js';
 import { Weather } from './weather.js';
@@ -126,6 +128,12 @@ export interface Host {
     onDrop?(cb: (dropping: boolean) => void): void;
     /** Drags files on the shelf out of the notch; done when they are dropped. */
     dragFiles?(uris: string[]): Promise<void>;
+}
+
+/** How the first-run tour ends; owned by the page's entry. */
+export interface TourEnds {
+    /** The tour ended: Done, Skip, Escape or a click elsewhere. */
+    done(): void;
 }
 
 /** What a home tile opens on Windows, for the tiles that open one of its panels (desktop/src-tauri/src/links.rs). */
@@ -241,6 +249,13 @@ export class MonitorNotch {
     /** The notch's own click box, as it last laid out. */
     private notchHit: Box | null = null;
     private readonly menu: NotchMenu;
+    private readonly tourView = new TourView({
+        next: () => this.onTourPress('next'),
+        skip: () => this.onTourPress('skip'),
+        openSettings: () => this.endTour(true),
+    });
+    /** The first-run tour from startTour() until it ends; it waits while a fullscreen app hides the notch. */
+    private tour: { step: number; ends: TourEnds } | null = null;
     private homeOpen = false;
     /** Home's rows, for its height. */
     private homeRows: PanelRow[] = ['date'];
@@ -263,9 +278,13 @@ export class MonitorNotch {
     /** The open shortcut opened the notch, and it has the keyboard. */
     private keyboard = false;
     private readonly onKeyDown = (event: KeyboardEvent) => this.onKey(event);
-    /** The window lost the keyboard: a click or a switch elsewhere closes the notch. */
+    /**
+     * The window lost the keyboard: a click or a switch elsewhere closes the
+     * notch, but not the tour, as another app's window opening at login
+     * would end it before anyone read it.
+     */
     private readonly onBlur = () => {
-        if (this.keyboard && this.machine.held) this.machine.close();
+        if (this.keyboard && this.machine.held && !this.tour) this.machine.close();
     };
     /** A press anywhere but the menu closes it. */
     private readonly onPress = (event: PointerEvent) => {
@@ -384,6 +403,7 @@ export class MonitorNotch {
             download: this.download.element,
             notification: this.notificationView.element,
             drop: this.dropView.element,
+            tour: this.tourView.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
         this.notch.body.append(...Object.values(this.views), this.privacyDots.element, this.progress.element);
@@ -425,7 +445,7 @@ export class MonitorNotch {
         );
         // A click on a button does its own thing; anywhere else it opens or closes.
         this.notch.body.addEventListener('click', (e) => {
-            if (!(e.target as HTMLElement).closest('button, .nokta-progress-hit')) this.machine.click();
+            if (!(e.target as HTMLElement).closest('button, .nokta-progress-hit, .nokta-tour')) this.machine.click();
         });
         this.osdTimer = new OsdTimer(
             (ms, fn) => {
@@ -602,7 +622,9 @@ export class MonitorNotch {
         if (!this.keyboard || !this.machine.held) return;
         const view = this.views[this.drawn];
         if (!view || view.contains(document.activeElement)) return;
-        if (!focusFirst(view)) this.notch.element.focus();
+        // Enter goes on through the tour.
+        if (this.drawn === 'tour') this.tourView.focusNext();
+        else if (!focusFirst(view)) this.notch.element.focus();
     }
 
     /** A fullscreen app came over the monitor or went. */
@@ -610,6 +632,58 @@ export class MonitorNotch {
         if (fullscreen === this.inFullscreen) return;
         this.inFullscreen = fullscreen;
         this.applyFullscreen();
+        // A tour that waited for the app shows now.
+        this.openTour();
+    }
+
+    // The first-run tour.
+
+    /** Starts the tour here, held open with the keyboard, or once no fullscreen app hides the notch. */
+    startTour(ends: TourEnds): void {
+        this.tour = { step: 0, ends };
+        this.showTourStep();
+        this.openTour();
+    }
+
+    /** Opens the notch held on the tour, unless a fullscreen app hides it. */
+    private openTour(): void {
+        if (!this.tour || !fullscreenView(this.inFullscreen, this.alertOverFullscreen).visible) return;
+        if (!this.machine.held) {
+            this.keyboard = true;
+            this.host.takeKeyboard?.();
+            this.machine.open(true);
+        }
+        this.redraw();
+    }
+
+    /** The step as the settings say the notch opens. */
+    private showTourStep(): void {
+        if (!this.tour) return;
+        const { openOn, openShortcut } = this.settings.behavior;
+        this.tourView.show(tourStep(this.tour.step, { openOn, shortcut: openShortcut, superName: 'Win' }), this.tour.step);
+    }
+
+    private onTourPress(press: 'next' | 'skip'): void {
+        if (!this.tour) return;
+        const step = tourAfter(this.tour.step, press);
+        if (step === null) {
+            this.endTour(false);
+            return;
+        }
+        this.tour.step = step;
+        this.showTourStep();
+        this.tourView.focusNext();
+    }
+
+    /** Ends the tour and closes the notch; `openSettings` when its button ended it. */
+    private endTour(openSettings: boolean): void {
+        const ends = this.tour?.ends;
+        if (!ends) return;
+        this.tour = null;
+        if (this.machine.mode === 'expanded') this.machine.close();
+        else this.redraw();
+        ends.done();
+        if (openSettings) this.host.openSettings?.();
     }
 
     /**
@@ -777,6 +851,7 @@ export class MonitorNotch {
         this.download.setForeground(palette.foreground);
         this.notificationView.setColors(palette.foreground, palette.accent);
         this.dropView.setForeground(palette.foreground);
+        this.tourView.setColors(palette);
         this.updateViews();
         this.applyProgress();
     }
@@ -791,6 +866,7 @@ export class MonitorNotch {
         this.onShelf();
         this.onClipboard();
         this.onCalendar();
+        this.showTourStep();
         this.redraw(true);
     }
 
@@ -1223,6 +1299,8 @@ export class MonitorNotch {
     }
 
     private onMode(): void {
+        // Closing ends the tour, unless a fullscreen app hid it: then it waits.
+        if (this.tour && this.machine.mode !== 'expanded' && !this.inFullscreen) this.endTour(false);
         if (this.machine.mode === 'expanded') {
             // Opened, the player shows the song: no peek after it closes again.
             window.clearTimeout(this.peekTimer);
@@ -1366,7 +1444,7 @@ export class MonitorNotch {
             page: this.page !== null,
             homeOpen: this.homeOpen,
             player: this.media.snapshot.available,
-            tour: false,
+            tour: this.tour !== null && this.machine.held,
         });
         // The open player may show the blurred cover.
         if (previous !== this.drawn) this.applyPalette();

@@ -839,6 +839,15 @@ WebView2 and runs the core's services itself, with no D-Bus.
   Windows has no Do Not Disturb to switch. While it shows, the window's
   click box spans the notch and the menu; a press elsewhere or the pointer
   leaving closes it. WebView2's own menu shows only in text fields.
+- The first-run tour is the extension's steps in the page
+  (`views/tour.ts`), held open on the primary monitor's notch two seconds
+  after the first start; it waits out a fullscreen app. It asks for the
+  keyboard, for Enter and Escape, but Windows' foreground lock may refuse
+  an app nobody clicked: then Skip and Next are the mouse's. Unlike the
+  extension, the keyboard going elsewhere does not end it, as another
+  app's window opening at login would before anyone read it. Its end is kept as `tour-shown` in `%APPDATA%\nokta\state.toml`
+  (`state.rs`, `win/tour.rs`), next to the config but not in it. The
+  settings window's Show the tour again clears it and tells that notch.
 - The tray icon stands in for the top bar (Settings, Quit). A second start
   opens the settings and leaves the running Nokta alone.
 - The NSIS installer installs per user without admin rights, brings the

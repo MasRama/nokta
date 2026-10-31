@@ -17,6 +17,8 @@ const TOAST_MS = 5000;
 export interface PrefsHost extends RowHost {
     /** Opens config.toml in the app Windows opens it with. */
     openConfig(): void;
+    /** Shows the first-run tour again in the primary monitor's notch. */
+    showTour(): Promise<void>;
 }
 
 const TABLES: Record<Table, string> = {
@@ -103,7 +105,7 @@ export class SettingsWindow {
             this.navs.set(page.name, nav);
             const section = element('section', 'nokta-prefs-page');
             for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
-            if (page.name === 'behavior') section.append(this.configGroup());
+            if (page.name === 'behavior') section.append(this.tourGroup(), this.configGroup());
             this.content.append(section);
             this.sections.set(page.name, section);
         }
@@ -155,6 +157,23 @@ export class SettingsWindow {
             this.rows.push(setting);
             card.append(setting.element);
         }
+        group.append(card);
+        return group;
+    }
+
+    /** Show the tour again. */
+    private tourGroup(): HTMLElement {
+        const group = element('div', 'nokta-prefs-group');
+        group.append(element('h2', 'nokta-prefs-group-title', _('Getting started')));
+        const card = element('div', 'nokta-prefs-card');
+        card.append(
+            this.actionRow(_('Show the tour again'), _('The notch walks you through Nokta once more'), _('Show'), false, () => {
+                this.host
+                    .showTour()
+                    .then(() => this.toast(_('The tour shows in the notch')))
+                    .catch((error: unknown) => this.toast(message(error)));
+            }),
+        );
         group.append(card);
         return group;
     }

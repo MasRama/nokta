@@ -11,6 +11,8 @@ const FULLSCREEN_EVENT = 'nokta://fullscreen';
 const KEYBOARD_EVENT = 'nokta://keyboard';
 /** The app's event for files dragged over the notch (desktop/src-tauri/src/win/shelf.rs). */
 const DROP_EVENT = 'nokta://drop';
+/** The app's event for showing the tour again (desktop/src-tauri/src/win/tour.rs). */
+const TOUR_EVENT = 'nokta://tour';
 
 /** Whether the page runs in the Windows app, not in a plain browser (the mock). */
 export function inTauri(): boolean {
@@ -122,4 +124,24 @@ export function hideWebMenu(): void {
     document.addEventListener('contextmenu', (event) => {
         if (!(event.target as HTMLElement | null)?.closest('input, textarea')) event.preventDefault();
     });
+}
+
+/** Whether this window's notch shows the first-run tour: the primary monitor's, until the tour ended once. */
+export async function tourWanted(): Promise<boolean> {
+    return inTauri() ? invoke<boolean>('tour_wanted') : false;
+}
+
+/** The tour ended: it does not show at the next start. */
+export function tourDone(): void {
+    if (inTauri()) void invoke('tour_done').catch((err: unknown) => console.warn('tour_done:', err));
+}
+
+/** Shows the tour again in the primary monitor's notch. */
+export async function showTour(): Promise<void> {
+    if (inTauri()) await invoke('show_tour');
+}
+
+/** Calls `cb` when the settings window asks this notch to show the tour. A browser has none. */
+export function onTour(cb: () => void): void {
+    if (inTauri()) void listen(TOUR_EVENT, () => cb());
 }

@@ -19,6 +19,7 @@ mod shortcut;
 mod sound;
 mod toggles;
 mod topmost;
+mod tour;
 mod tray;
 
 use std::sync::Mutex;
@@ -48,6 +49,9 @@ pub fn run() {
             settings_window::open_settings,
             settings_window::open_config,
             settings_window::pick_picture,
+            tour::tour_wanted,
+            tour::tour_done,
+            tour::show_tour,
             services::bridge_props,
             services::bridge_call
         ])
@@ -66,6 +70,9 @@ pub fn run() {
             let sizes = NotchSizes::from(&core.config().appearance);
             app.manage(core);
             app.manage(settings_window::ConfigFile(paths.config_file.clone()));
+            app.manage(tour::StateFile(
+                paths.config_file.with_file_name("state.toml"),
+            ));
             tray::create(app.handle())?;
             monitors::start(app.handle(), layout::window_logical_size(&sizes));
             pointer::start(app.handle().clone());
