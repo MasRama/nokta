@@ -5,6 +5,7 @@ mod log;
 mod notch_window;
 mod osd;
 mod pointer;
+mod privacy;
 mod services;
 mod topmost;
 mod tray;
