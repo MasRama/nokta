@@ -208,3 +208,47 @@ fn timer_signals() {
         }
     }
 }
+
+#[test]
+fn activities() {
+    use nokta_core::features::activities::model::{Activities, Update};
+    let mut list = Activities::default();
+    let update = Update {
+        title: "Build".into(),
+        detail: String::new(),
+        icon: String::new(),
+        progress: -1.0,
+    };
+    list.set("build", update, 1).unwrap();
+    check(
+        super::activities::INTERFACE,
+        &super::activities::props(list.list(), 1, 2),
+    );
+}
+
+#[test]
+fn activities_ended() {
+    use nokta_core::features::activities::model::Ended;
+    let ended = Ended {
+        id: "build".into(),
+        title: "Build".into(),
+        success: true,
+        message: String::new(),
+        elapsed_us: 5,
+    };
+    let types = signal_args(super::activities::INTERFACE, super::activities::ENDED);
+    let args = super::activities::ended_args(&ended);
+    assert_eq!(types.len(), args.len(), "{types:?} and {args:?}");
+    for (signature, value) in types.iter().zip(&args) {
+        assert!(fits(signature, value), "{value} is not {signature}");
+    }
+}
+
+#[test]
+fn updates() {
+    use nokta_core::features::updates::UpdateState;
+    check(
+        super::updates::INTERFACE,
+        &super::updates::props(&UpdateState::default()),
+    );
+}

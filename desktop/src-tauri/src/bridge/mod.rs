@@ -5,6 +5,7 @@
 // Only the Windows app uses it; the stub on other systems does not.
 #![cfg_attr(not(windows), allow(dead_code))]
 
+pub mod activities;
 pub mod devices;
 pub mod lyrics;
 pub mod media;
@@ -14,6 +15,7 @@ pub mod privacy;
 pub mod settings;
 pub mod timer;
 pub mod toggles;
+pub mod updates;
 pub mod weather;
 
 #[cfg(test)]
