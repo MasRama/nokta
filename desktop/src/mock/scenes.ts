@@ -1,12 +1,19 @@
 import type { Props } from '../bridge/bridge.js';
 
-/** A state of the browser mock: what the core says, and whether the notch opens. */
+/** A signal the mock sends once the page is up: `[interface, signal, ...args]`. */
+export type SceneSignal = [string, string, ...unknown[]];
+
+/** A state of the browser mock: what the core says, whether the notch opens, and what it is told. */
 export interface Scene {
     props: Record<string, Props>;
     open?: boolean;
+    signals?: SceneSignal[];
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
+
+/** OSDs and alerts stay up long enough for a shot. */
+const LINGER: Record<string, Props> = { Settings1: { Behavior: { osd_duration_ms: 60_000, alert_duration_ms: 60_000 } } };
 
 /** A stand-in cover: what a cover file is in the app, a data URL is in the browser. */
 const COVER =
@@ -75,6 +82,11 @@ export const SCENES: Record<string, Scene> = {
     player: { props: player(true) },
     'player-paused': { props: player(false) },
     'player-open': { props: player(true), open: true },
+    volume: { props: LINGER, signals: [['Osd1', 'Show', 'volume', 0.62, '']] },
+    'caps-lock': { props: LINGER, signals: [['Osd1', 'Show', 'caps-lock', 1, '']] },
+    charging: { props: LINGER, signals: [['Devices1', 'Alert', 'charger-plugged', '', 64]] },
+    'battery-low': { props: LINGER, signals: [['Devices1', 'Alert', 'battery-critical', '', 8]] },
+    headphones: { props: { ...player(true), ...LINGER }, signals: [['Devices1', 'Alert', 'bluetooth-connected', 'WH-1000XM5', 80]] },
 };
 
 /** The scene for `search` (the page's query string); idle when none or unknown. */

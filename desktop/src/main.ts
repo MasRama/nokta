@@ -11,11 +11,15 @@ const scene = sceneFor(location.search);
 if (!app) document.body.classList.add('nokta-mock');
 setPictureUrl(fileUrl);
 
+const mock = app ? null : new MockBridge(scene.props);
 const notch = new MonitorNotch(
-    app ? new TauriBridge() : new MockBridge(scene.props),
+    mock ?? new TauriBridge(),
     { systemUses24h, setHit: (hit) => void setHitRegion(hit), onPointer },
     document.body,
 );
 window.addEventListener('resize', () => notch.setArea(window.innerWidth));
 await notch.start(window.innerWidth);
-if (!app && scene.open) notch.open(true);
+if (mock) {
+    if (scene.open) notch.open(true);
+    for (const [iface, signal, ...args] of scene.signals ?? []) mock.signal(iface, signal, ...args);
+}
