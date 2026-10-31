@@ -7,6 +7,8 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use nokta_core::app::{follow, OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
 use nokta_core::features::activities::model::Activity;
+use nokta_core::features::calendar::feeds::{self, HttpFeeds};
+use nokta_core::features::calendar::ics::Event;
 use nokta_core::features::clipboard::service::{Command as ClipCommand, Published};
 use nokta_core::features::devices;
 use nokta_core::features::downloads::service::Finished;
@@ -30,8 +32,8 @@ use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
-    activities as activities_props, clipboard as clipboard_bridge, devices as devices_bridge,
-    downloads as downloads_bridge, lyrics as lyrics_props, media, nokta,
+    activities as activities_props, calendar as calendar_props, clipboard as clipboard_bridge,
+    devices as devices_bridge, downloads as downloads_bridge, lyrics as lyrics_props, media, nokta,
     notifications as notifications_bridge, osd as osd_bridge, privacy as privacy_props,
     screenshots as screenshots_bridge, settings, shelf as shelf_bridge, system as system_props,
     timer as timer_props, toggles as toggles_props, updates as updates_props,
@@ -80,6 +82,7 @@ pub struct Core {
     privacy: watch::Receiver<PrivacyState>,
     weather: watch::Receiver<WeatherState>,
     weather_refresh: mpsc::Sender<()>,
+    calendar: watch::Receiver<Vec<Event>>,
     toggles: super::toggles::Toggles,
     timer: watch::Receiver<Snapshot>,
     timer_commands: mpsc::Sender<Command>,
@@ -147,7 +150,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     let http = http::client(|b| b.user_agent(USER_AGENT));
     let (media_state, player, mut services, levels, alerts, screenshots) =
         tauri::async_runtime::block_on(async {
-            let art = ArtCache::new(paths.cache_dir.clone(), http);
+            let art = ArtCache::new(paths.cache_dir.clone(), http.clone());
             let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
             let services = Services::start(
                 paths,
@@ -286,6 +289,21 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     );
     let (resumed, resumes) = watch::channel(0);
     let _ = RESUMES.set(resumed);
+    let calendar = tauri::async_runtime::block_on(async {
+        feeds::spawn(
+            follow(services.config.clone(), |c| c.calendar.clone()),
+            resumes.clone(),
+            Arc::new(HttpFeeds::new(http)),
+            jiff::Timestamp::now,
+            jiff::tz::TimeZone::system(),
+        )
+    });
+    forward(
+        app.clone(),
+        calendar.clone(),
+        calendar_props::INTERFACE,
+        |events| calendar_props::props(events),
+    );
     let releases = tauri::async_runtime::block_on(async {
         updates::service::spawn(
             follow(services.config.clone(), |c| c.updates.clone()),
@@ -385,6 +403,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         privacy,
         weather: services.weather.state.clone(),
         weather_refresh: services.weather.refresh.clone(),
+        calendar,
         toggles,
         timer: services.timer.state.clone(),
         timer_commands: services.timer.commands.clone(),
@@ -585,6 +604,7 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
         lyrics_props::INTERFACE => Ok(lyrics_props::props(&core.lyrics.borrow())),
         privacy_props::INTERFACE => Ok(privacy_props::props(&core.privacy.borrow())),
         weather_props::INTERFACE => Ok(weather_props::props(&core.weather.borrow())),
+        calendar_props::INTERFACE => Ok(calendar_props::props(&core.calendar.borrow())),
         toggles_props::INTERFACE => Ok(toggles_props::props(&core.toggles.state.borrow())),
         activities_props::INTERFACE => Ok(activities_props::props(
             &core.activities.borrow(),

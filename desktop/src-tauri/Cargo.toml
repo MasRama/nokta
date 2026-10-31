@@ -30,6 +30,8 @@ tauri-plugin-single-instance = "2.5.5"
 rusqlite = { version = "0.37", features = ["bundled"] }
 # The same as the core's, to hear the database change.
 notify = "8.2.1"
+# The same as the core's, for the calendar feeds' clock and zone.
+jiff = "0.2.38"
 tokio = { version = "1.54.1", features = ["macros", "rt", "sync"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

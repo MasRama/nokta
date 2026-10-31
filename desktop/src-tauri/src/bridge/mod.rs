@@ -6,6 +6,7 @@
 #![cfg_attr(not(windows), allow(dead_code))]
 
 pub mod activities;
+pub mod calendar;
 pub mod clipboard;
 pub mod devices;
 pub mod downloads;

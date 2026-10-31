@@ -2539,6 +2539,7 @@ name = "nokta-desktop"
 version = "0.10.0"
 dependencies = [
  "image",
+ "jiff",
  "nokta-core",
  "notify",
  "percent-encoding",
