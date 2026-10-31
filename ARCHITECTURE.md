@@ -717,6 +717,12 @@ WebView2 and runs the core's services itself, with no D-Bus.
   (after a call, through `chooseIndicator`), up to three clock rows on
   home, the Focus tile, and the Timer tile's page of presets, a sub-page
   sized with the extension's `subPageHeight`.
+- The live activities (`Activities1`) and the update check (`Updates1`)
+  are the core's services, as noktad runs them; the start times go on the
+  wall clock, and `Ended` goes to the notch on the monitor in use. The
+  update check counts the wakes the window subclass hears, so a check
+  that came due while asleep runs on waking. Windows has no PackageKit or
+  app launcher signals, so no activity starts on its own there.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

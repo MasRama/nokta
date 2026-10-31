@@ -3,9 +3,10 @@
 //! their changes (the `nokta://props` event) and its methods
 //! (`bridge_call`), named as in `contracts/*.xml`.
 
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
-use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
+use nokta_core::app::{follow, OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
+use nokta_core::features::activities::model::Activity;
 use nokta_core::features::devices;
 use nokta_core::features::lyrics::{self, LyricsState};
 use nokta_core::features::media::art::ArtCache;
@@ -15,6 +16,7 @@ use nokta_core::features::settings::{Config, Writer};
 use nokta_core::features::timer::clocks::Kind;
 use nokta_core::features::timer::logic::Snapshot;
 use nokta_core::features::timer::service::{ClockCommand, ClocksSnapshot, Command};
+use nokta_core::features::updates::{self, github, UpdateState};
 use nokta_core::features::weather::WeatherState;
 use nokta_core::shared::clock::{monotonic_us, wall_us};
 use nokta_core::shared::http;
@@ -24,9 +26,9 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
-    devices as devices_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
-    privacy as privacy_props, settings, timer as timer_props, toggles as toggles_props,
-    weather as weather_props, Props,
+    activities as activities_props, devices as devices_bridge, lyrics as lyrics_props, media,
+    nokta, osd as osd_bridge, privacy as privacy_props, settings, timer as timer_props,
+    toggles as toggles_props, updates as updates_props, weather as weather_props, Props,
 };
 use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
@@ -39,6 +41,9 @@ pub const SIGNAL_EVENT: &str = "nokta://signal";
 
 /// The clocks' commands, for the system waking from sleep.
 static CLOCKS: OnceLock<mpsc::Sender<ClockCommand>> = OnceLock::new();
+
+/// Counts the system's wakes from sleep, for the update check.
+static RESUMES: OnceLock<watch::Sender<u64>> = OnceLock::new();
 
 #[derive(Clone, serde::Serialize)]
 struct Signal {
@@ -69,6 +74,9 @@ pub struct Core {
     timer_commands: mpsc::Sender<Command>,
     clocks: watch::Receiver<ClocksSnapshot>,
     clock_commands: mpsc::Sender<ClockCommand>,
+    activities: watch::Receiver<Vec<Activity>>,
+    updates: watch::Receiver<UpdateState>,
+    update_commands: mpsc::Sender<updates::service::Command>,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -205,6 +213,38 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         toggles_props::INTERFACE,
         toggles_props::props,
     );
+    forward(
+        app.clone(),
+        services.activities.state.clone(),
+        activities_props::INTERFACE,
+        |list| activities_props::props(list, monotonic_us(), wall_us()),
+    );
+    let ended = std::mem::replace(&mut services.activities.ended, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        ended,
+        To::Front,
+        activities_props::INTERFACE,
+        activities_props::ENDED,
+        activities_props::ended_args,
+    );
+    let (resumed, resumes) = watch::channel(0);
+    let _ = RESUMES.set(resumed);
+    let releases = tauri::async_runtime::block_on(async {
+        updates::service::spawn(
+            follow(services.config.clone(), |c| c.updates.clone()),
+            Arc::new(github::Client::new(github::DEFAULT_API_URL, USER_AGENT)),
+            env!("CARGO_PKG_VERSION"),
+            resumes,
+            wall_us,
+        )
+    });
+    forward(
+        app.clone(),
+        releases.state.clone(),
+        updates_props::INTERFACE,
+        updates_props::props,
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -221,15 +261,22 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         timer_commands: services.timer.commands.clone(),
         clocks: services.timer.clocks.state.clone(),
         clock_commands: services.timer.clocks.commands.clone(),
+        activities: services.activities.state.clone(),
+        updates: releases.state,
+        update_commands: releases.commands,
         _services: Mutex::new(services),
     }
 }
 
-/// The system woke from sleep: the clocks read the wall clock again, as
-/// noktad does on logind's PrepareForSleep.
+/// The system woke from sleep: the clocks read the wall clock again, and
+/// an update check that came due while asleep runs, as noktad does on
+/// logind's PrepareForSleep.
 pub fn woke() {
     if let Some(clocks) = CLOCKS.get() {
         let _ = clocks.try_send(ClockCommand::Wake);
+    }
+    if let Some(resumes) = RESUMES.get() {
+        resumes.send_modify(|count| *count += 1);
     }
 }
 
@@ -353,6 +400,12 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
         privacy_props::INTERFACE => Ok(privacy_props::props(&core.privacy.borrow())),
         weather_props::INTERFACE => Ok(weather_props::props(&core.weather.borrow())),
         toggles_props::INTERFACE => Ok(toggles_props::props(&core.toggles.state.borrow())),
+        activities_props::INTERFACE => Ok(activities_props::props(
+            &core.activities.borrow(),
+            monotonic_us(),
+            wall_us(),
+        )),
+        updates_props::INTERFACE => Ok(updates_props::props(&core.updates.borrow())),
         timer_props::INTERFACE => {
             let (mono, wall) = (monotonic_us(), wall_us());
             let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
@@ -422,6 +475,13 @@ pub async fn bridge_call(
             }
         }
         (timer_props::INTERFACE, method, args) => timer_call(&core, method, args).await,
+        (updates_props::INTERFACE, "Check", []) => {
+            // A full queue already holds a check.
+            let _ = core
+                .update_commands
+                .try_send(updates::service::Command::Check);
+            Ok(Value::Null)
+        }
         (privacy_props::INTERFACE, "ToggleMute", []) => {
             super::privacy::toggle_mute();
             Ok(Value::Null)
