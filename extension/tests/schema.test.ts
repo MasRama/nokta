@@ -37,10 +37,14 @@ const DEFAULTS: Record<string, Record<string, unknown>> = {
     home: { ...DEFAULT_HOME },
 };
 
+/** Settings only the Windows app reads, so GNOME's settings window has no row for them. */
+const WINDOWS_ONLY = ['calendar.feeds'];
+
 test('every_setting_has_exactly_one_row', () => {
     const fromSchema = allRows().map((r) => `${r.table}.${camel(r.key)}`).sort();
     const fromDefaults = Object.entries(DEFAULTS)
         .flatMap(([table, values]) => Object.keys(values).map((key) => `${table}.${key}`))
+        .filter((setting) => !WINDOWS_ONLY.includes(setting))
         .sort();
     assert.deepEqual(fromSchema, fromDefaults);
 });
