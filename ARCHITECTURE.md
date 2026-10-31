@@ -747,6 +747,14 @@ WebView2 and runs the core's services itself, with no D-Bus.
   thumbnail or an icon for its kind (drawn by the page, as Windows has no
   icon theme) with Open and Show in Explorer, for as long as a
   notification and longer under the pointer.
+- The shelf (`Shelf1`) is the core's service. Files dropped on a notch
+  reach it through Tauri's drag-and-drop events (`win/shelf.rs`), and
+  only over the notch, since elsewhere the window lets the pointer
+  through; `nokta://drop` tells that notch to show its drop view. The page
+  may `Add` only files the core announced, like a download. Dragging files
+  out is Windows' own shell drag (`SHDoDragDrop` on a shell item array),
+  which copies them as Explorer would and leaves them on the shelf, as on
+  GNOME; while it runs, a drop back on the notch is ignored.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

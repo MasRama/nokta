@@ -297,3 +297,17 @@ fn downloads_finished() {
         assert!(fits(signature, value), "{value} is not {signature}");
     }
 }
+
+#[test]
+fn shelf() {
+    use nokta_core::features::shelf::model::Item;
+    use nokta_core::features::shelf::service::Thumbnails;
+    // A file URI on this system, so it reads on Windows too.
+    let uri = url::Url::from_file_path(std::env::temp_dir().join("notes.txt")).expect("a path");
+    let item = Item::new(uri.as_str(), false).expect("a file URI");
+    let thumbnails = Thumbnails::from([(item.uri.clone(), "notes.png".to_owned())]);
+    check(
+        super::shelf::INTERFACE,
+        &super::shelf::props(&[item], &thumbnails),
+    );
+}

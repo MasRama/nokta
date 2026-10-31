@@ -14,6 +14,7 @@ use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
+use nokta_core::features::shelf::{self, model::Item, service::Thumbnails};
 use nokta_core::features::system::{self, model::Usage};
 use nokta_core::features::timer::clocks::Kind;
 use nokta_core::features::timer::logic::Snapshot;
@@ -30,7 +31,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::bridge::{
     activities as activities_props, devices as devices_bridge, downloads as downloads_bridge,
     lyrics as lyrics_props, media, nokta, osd as osd_bridge, privacy as privacy_props, settings,
-    system as system_props, timer as timer_props, toggles as toggles_props,
+    shelf as shelf_bridge, system as system_props, timer as timer_props, toggles as toggles_props,
     updates as updates_props, weather as weather_props, Props,
 };
 use crate::files::KnownFiles;
@@ -86,6 +87,9 @@ pub struct Core {
     update_commands: mpsc::Sender<updates::service::Command>,
     usage: watch::Receiver<Usage>,
     system_commands: mpsc::Sender<system::service::Command>,
+    shelf: watch::Receiver<Vec<Item>>,
+    shelf_thumbnails: watch::Receiver<Thumbnails>,
+    shelf_commands: mpsc::Sender<shelf::service::Command>,
     /// The files the page may open.
     known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
@@ -104,6 +108,20 @@ impl Core {
             .lock()
             .unwrap_or_else(|e| e.into_inner())
             .path(uri)
+    }
+
+    /// Puts files dropped on the notch on the shelf.
+    pub fn keep(&self, uris: Vec<String>) {
+        if uris.is_empty() {
+            return;
+        }
+        // A full queue loses the drop; the shelf is stuck.
+        if let Err(err) = self
+            .shelf_commands
+            .try_send(shelf::service::Command::Add(uris))
+        {
+            tracing::warn!("cannot keep the dropped files: {err}");
+        }
     }
 }
 
@@ -297,6 +315,19 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         downloads_bridge::FINISHED,
         downloads_bridge::finished_args,
     );
+    forward(
+        app.clone(),
+        services.shelf.state.clone(),
+        shelf_bridge::INTERFACE,
+        |items| shelf_bridge::items_props(items),
+    );
+    forward(
+        app.clone(),
+        services.shelf.thumbnails.clone(),
+        shelf_bridge::INTERFACE,
+        shelf_bridge::thumbnails_props,
+    );
+    follow_shelf(services.shelf.state.clone(), known.clone());
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -318,6 +349,9 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         update_commands: releases.commands,
         usage: counters.usage,
         system_commands: counters.commands,
+        shelf: services.shelf.state.clone(),
+        shelf_thumbnails: services.shelf.thumbnails.clone(),
+        shelf_commands: services.shelf.commands.clone(),
         known,
         _services: Mutex::new(services),
     }
@@ -362,6 +396,26 @@ fn remembered(
         }
     });
     rx
+}
+
+/// Lets the page open and drag out what is on the shelf, while it is there.
+fn follow_shelf(mut items: watch::Receiver<Vec<Item>>, known: Arc<Mutex<KnownFiles>>) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            let uris = items
+                .borrow_and_update()
+                .iter()
+                .map(|item| item.uri.clone())
+                .collect();
+            known
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .set_shelf(uris);
+            if items.changed().await.is_err() {
+                break;
+            }
+        }
+    });
 }
 
 /// Plays `sound`'s for each of `items` while `[timer] sound` is on, and
@@ -491,6 +545,10 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
         )),
         updates_props::INTERFACE => Ok(updates_props::props(&core.updates.borrow())),
         system_props::INTERFACE => Ok(system_props::props(&core.usage.borrow())),
+        shelf_bridge::INTERFACE => Ok(shelf_bridge::props(
+            &core.shelf.borrow(),
+            &core.shelf_thumbnails.borrow(),
+        )),
         timer_props::INTERFACE => {
             let (mono, wall) = (monotonic_us(), wall_us());
             let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
@@ -582,6 +640,7 @@ pub async fn bridge_call(
                 .map_err(|_| "the system counters have stopped".to_owned())?;
             Ok(Value::Null)
         }
+        (shelf_bridge::INTERFACE, method, args) => shelf_call(&core, method, args).await,
         (privacy_props::INTERFACE, "ToggleMute", []) => {
             super::privacy::toggle_mute();
             Ok(Value::Null)
@@ -591,6 +650,33 @@ pub async fn bridge_call(
             args.len()
         )),
     }
+}
+
+/// Calls `Shelf1.method(args)`. The page may keep only files the core
+/// told it about, like a finished download; drops come from Windows.
+async fn shelf_call(core: &Core, method: &str, args: &[Value]) -> Result<Value, String> {
+    let command = match (method, args) {
+        ("Add", [uris]) => {
+            let uris = shelf_bridge::uris(uris).ok_or("Add takes a list of URIs")?;
+            if let Some(unknown) = uris.iter().find(|uri| core.file_path(uri).is_none()) {
+                return Err(format!("Nokta does not keep {unknown}"));
+            }
+            shelf::service::Command::Add(uris)
+        }
+        ("Remove", [Value::String(uri)]) => shelf::service::Command::Remove(uri.clone()),
+        ("Clear", []) => shelf::service::Command::Clear,
+        _ => {
+            return Err(format!(
+                "no method Shelf1.{method} for {} arguments",
+                args.len()
+            ))
+        }
+    };
+    core.shelf_commands
+        .send(command)
+        .await
+        .map_err(|_| "the shelf has stopped".to_owned())?;
+    Ok(Value::Null)
 }
 
 /// Calls `Timer1.method(args)`; an Add answers with the new clock's id.
