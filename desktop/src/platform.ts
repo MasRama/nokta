@@ -9,6 +9,8 @@ const POINTER_EVENT = 'nokta://pointer';
 const FULLSCREEN_EVENT = 'nokta://fullscreen';
 /** The app's event for the open shortcut (desktop/src-tauri/src/win/shortcut.rs). */
 const KEYBOARD_EVENT = 'nokta://keyboard';
+/** The app's event for files dragged over the notch (desktop/src-tauri/src/win/shelf.rs). */
+const DROP_EVENT = 'nokta://drop';
 
 /** Whether the page runs in the Windows app, not in a plain browser (the mock). */
 export function inTauri(): boolean {
@@ -72,6 +74,16 @@ export function openUri(uri: string): void {
 /** Opens a file the core announced, or shows it in Explorer with `reveal`; a browser has none. */
 export function openFile(uri: string, reveal: boolean): void {
     if (inTauri()) void invoke('open_file', { uri, reveal }).catch((err: unknown) => console.warn('open_file:', err));
+}
+
+/** Calls `cb` when files are dragged over this window's notch, and when no longer. A browser has none. */
+export function onDrop(cb: (dropping: boolean) => void): void {
+    if (inTauri()) void listen<boolean>(DROP_EVENT, ({ payload }) => cb(payload));
+}
+
+/** Drags files on the shelf out of the notch, until they are dropped; a browser has none. */
+export async function dragFiles(uris: string[]): Promise<void> {
+    if (inTauri()) await invoke('shelf_drag', { uris }).catch((err: unknown) => console.warn('shelf_drag:', err));
 }
 
 /** A file as the page can load it: through the app's asset protocol, or as is in a browser. */

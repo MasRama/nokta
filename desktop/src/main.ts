@@ -4,8 +4,10 @@ import { sceneFor } from './mock/scenes.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { setPictureUrl } from './notch/notch.js';
 import {
+    dragFiles,
     fileUrl,
     inTauri,
+    onDrop,
     onFullscreen,
     onKeyboard,
     onPointer,
@@ -23,6 +25,8 @@ if (!app) document.body.classList.add('nokta-mock');
 setPictureUrl(fileUrl);
 
 const mock = app ? null : new MockBridge(scene.props);
+/** The mock's stand-in for files dragged over the notch. */
+let mockDrop: (dropping: boolean) => void = () => {};
 const notch = new MonitorNotch(
     mock ?? new TauriBridge(),
     {
@@ -34,6 +38,8 @@ const notch = new MonitorNotch(
         releaseKeyboard,
         openUri,
         openFile,
+        onDrop: app ? onDrop : (cb) => (mockDrop = cb),
+        dragFiles,
     },
     document.body,
 );
@@ -44,4 +50,5 @@ if (mock) {
     for (const selector of scene.click ?? []) document.querySelector<HTMLElement>(selector)?.click();
     for (const [iface, props] of scene.changes ?? []) mock.set(iface, props);
     for (const [iface, signal, ...args] of scene.signals ?? []) mock.signal(iface, signal, ...args);
+    if (scene.drop) mockDrop(true);
 }

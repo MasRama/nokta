@@ -47,12 +47,14 @@ export interface HomeContent {
     activities?: number;
     clocks?: number;
     update?: boolean;
+    /** The shelf has files. */
+    shelf?: boolean;
 }
 
 /** Home's rows for its content and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
 export function homeRows(
     layout: HomeLayout,
-    { call = false, activities = 0, clocks = 0, update = false }: HomeContent = {},
+    { call = false, activities = 0, clocks = 0, update = false, shelf = false }: HomeContent = {},
 ): PanelRow[] {
     return [
         'date',
@@ -60,6 +62,7 @@ export function homeRows(
         ...Array<PanelRow>(Math.min(activities, MAX_HOME_ACTIVITIES)).fill('activity'),
         ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
         ...(update ? (['update'] as const) : []),
+        ...(shelf ? (['shelf'] as const) : []),
         ...(layout.toggles.length > 0 ? (['toggles'] as const) : []),
         ...(layout.tiles.length > 0 ? (['tiles'] as const) : []),
     ];
@@ -102,7 +105,7 @@ export type TileStates = Partial<Record<HomeTile, boolean>>;
 /**
  * Home, the open notch's other page: the weekday over the date with the
  * weather beside them, the way back to a player, the call, the activities,
- * the clocks, a newer Nokta, then the
+ * the clocks, a newer Nokta, the shelf, then the
  * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
  */
@@ -171,6 +174,11 @@ export class HomeView {
         }
         this.updateRow = new UpdateRow(() => handlers.openRelease());
         this.element.append(this.updateRow.element, this.controls);
+    }
+
+    /** Puts `row` above the controls, like the shelf's. */
+    addRow(row: HTMLElement): void {
+        this.element.insertBefore(row, this.controls);
     }
 
     /** The music button shows while a player is there. */

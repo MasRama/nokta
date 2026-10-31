@@ -1095,3 +1095,103 @@ body.nokta-mock {
         animation: none;
     }
 }
+
+/* The shelf's row (views/shelf.ts): slots 40 px wide where the extension's layout puts them. */
+.nokta-shelf-row {
+    position: relative;
+    flex: none;
+}
+
+/* With the player's 6 px gap, the 8 px the extension leaves above it. */
+.nokta-expanded .nokta-shelf-row {
+    margin-top: 2px;
+}
+
+.nokta-shelf-slot {
+    position: absolute;
+    top: 0;
+    height: 100%;
+}
+
+.nokta-shelf-open {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border-radius: 10px;
+}
+
+.nokta-shelf-stack {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.nokta-shelf-count {
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.nokta-shelf-thumbnail {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.3) center / cover no-repeat;
+}
+
+/* The close button in the slot's top right corner, while the slot is under the pointer or focused. */
+.nokta-shelf-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    color: #ffffff;
+    background-color: rgba(90, 90, 90, 0.95);
+    visibility: hidden;
+}
+
+.nokta-shelf-slot:hover .nokta-shelf-close,
+.nokta-shelf-slot:focus-within .nokta-shelf-close {
+    visibility: visible;
+}
+
+.nokta-shelf-close:hover,
+.nokta-light .nokta-shelf-close:hover {
+    background-color: #e01b24;
+}
+
+.nokta-shelf-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nokta-shelf-badge-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Files dragged over the notch: a dashed area 10 px in, saying where to drop. */
+.nokta-drop {
+    padding: 10px;
+}
+
+.nokta-drop-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    box-sizing: border-box;
+    height: 100%;
+    border: 2px dashed rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+}
+
+.nokta-drop-label {
+    font-size: 13px;
+    font-weight: 600;
+}

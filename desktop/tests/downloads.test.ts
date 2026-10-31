@@ -51,7 +51,7 @@ afterEach(() => {
 });
 
 describe('a finished download', () => {
-    it('shows its name, size and kind with Open and Show in Explorer', async () => {
+    it('shows its name, size and kind with Open, Show in Explorer and Keep on shelf', async () => {
         const { bridge, shown, button } = await mount();
         bridge.signal('Downloads1', 'Finished', ...REPORT);
         expect(shown()?.classList).toContain('nokta-download');
@@ -60,8 +60,7 @@ describe('a finished download', () => {
         expect(shown()?.querySelector<HTMLElement>('.nokta-file-preview-thumb [data-icon]')?.dataset.icon).toBe('x-office-document');
         expect(button('Open')?.hidden).toBe(false);
         expect(button('Show in Explorer')?.hidden).toBe(false);
-        // The shelf comes to Windows later.
-        expect(button('Keep on shelf')?.hidden).toBe(true);
+        expect(button('Keep on shelf')?.hidden).toBe(false);
     });
 
     it("shows a picture's thumbnail", async () => {

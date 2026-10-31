@@ -12,6 +12,8 @@ export interface Scene {
     click?: string[];
     /** Property changes after the clicks, in order, like the samples a page watches. */
     changes?: Array<[string, Props]>;
+    /** Files are dragged over the notch. */
+    drop?: boolean;
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
@@ -170,6 +172,20 @@ const SYSTEM_HOME: Record<string, Props> = {
     Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['focus', 'timer', 'system', 'notifications'] } },
 };
 
+/** Five files on the shelf, the newest a picture with its thumbnail. */
+const SHELF: Record<string, Props> = {
+    Shelf1: {
+        Items: [
+            ['file:///C:/Users/ren/Documents/notes.txt', 'notes.txt', 'text-x-generic'],
+            ['file:///C:/Users/ren/Downloads/setup.zip', 'setup.zip', 'package-x-generic'],
+            ['file:///C:/Users/ren/Documents/Budget.xlsx', 'Budget.xlsx', 'x-office-spreadsheet'],
+            ['file:///C:/Users/ren/Documents/Quarterly%20report.pdf', 'Quarterly report.pdf', 'x-office-document'],
+            ['file:///C:/Users/ren/Pictures/sunset.png', 'sunset.png', 'image-x-generic'],
+        ],
+        Thumbnails: { 'file:///C:/Users/ren/Pictures/sunset.png': COVER },
+    },
+};
+
 /** A minute of CPU going up and down, 6.4 of 16 GB, no temperature, a download. */
 function samples(): Array<[string, Props]> {
     return Array.from({ length: 30 }, (_, i): [string, Props] => {
@@ -208,6 +224,10 @@ export const SCENES: Record<string, Scene> = {
         props: LINGER_MESSAGE,
         signals: [['Downloads1', 'Finished', 'file:///C:/Users/ren/Downloads/sunset.png', 'sunset.png', 'image-x-generic', 830_000, COVER]],
     },
+    shelf: { props: SHELF },
+    'shelf-home': { props: { ...TIMER_HOME, ...SHELF }, open: true },
+    'shelf-player': { props: { ...player(true), ...SHELF }, open: true },
+    drop: { props: SHELF, drop: true },
     'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
     'timer-page': { props: TIMER_HOME, open: true, click: ['[data-tile="timer"]'] },
     'focus-done': { props: { ...LINGER, ...focus() }, signals: [['Timer1', 'Finished', 'focus']] },

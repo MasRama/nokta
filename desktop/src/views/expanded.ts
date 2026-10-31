@@ -119,6 +119,11 @@ export class ExpandedView {
         this.element.append(top, this.lyric.element, this.progress.element, buttons);
     }
 
+    /** Puts `row` under the controls, like the shelf's. */
+    addRow(row: HTMLElement): void {
+        this.element.append(row);
+    }
+
     update(snapshot: MediaSnapshot): void {
         this.cover.set(snapshot.artPath);
         this.coverColor = snapshot.artPath ? snapshot.accentColor : null;
