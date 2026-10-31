@@ -8,6 +8,7 @@ pub mod picture;
 pub mod service;
 mod store;
 mod watch;
+mod writer;
 
 pub use config::{
     parse, ActivitiesConfig, Appearance, Behavior, CalendarConfig, ClipboardConfig, Config,
@@ -16,6 +17,7 @@ pub use config::{
 };
 pub use store::Store;
 pub use watch::watch;
+pub use writer::{WriteError, Writer};
 
 #[cfg(test)]
 mod tests;

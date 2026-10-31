@@ -1,19 +1,16 @@
 //! `io.nokta.Settings1` at `/io/nokta/Settings`.
 
 use std::collections::HashMap;
-use std::io;
 use std::path::PathBuf;
 
-use tokio::sync::{watch, Mutex};
+use tokio::sync::watch;
 use zbus::fdo;
 use zbus::zvariant::{OwnedValue, Str, Value};
 use zbus::Connection;
 
-use super::edit::set_key;
 use super::picture::Prepared;
-use super::{Config, Entries, SettingValue, DEFAULT_CONFIG_TOML};
+use super::{Config, Entries, SettingValue, WriteError, Writer};
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
-use crate::shared::fs::write_atomically;
 
 pub const PATH: &str = "/io/nokta/Settings";
 pub const INTERFACE: &str = "io.nokta.Settings1";
@@ -32,8 +29,7 @@ pub async fn serve(
             SettingsInterface {
                 config: config.clone(),
                 picture: picture.clone(),
-                path,
-                writing: Mutex::new(()),
+                writer: Writer::new(path),
             },
         )
         .await?;
@@ -51,22 +47,10 @@ fn picture_properties(p: &Prepared) -> PropertyList {
 }
 
 fn properties(c: &Config) -> PropertyList {
-    vec![
-        ("Appearance", owned(dbus_map(c.appearance.entries()))),
-        ("Behavior", owned(dbus_map(c.behavior.entries()))),
-        ("Media", owned(dbus_map(c.media.entries()))),
-        ("Lyrics", owned(dbus_map(c.lyrics.entries()))),
-        ("Timer", owned(dbus_map(c.timer.entries()))),
-        ("Notifications", owned(dbus_map(c.notifications.entries()))),
-        ("Activities", owned(dbus_map(c.activities.entries()))),
-        ("Weather", owned(dbus_map(c.weather.entries()))),
-        ("Calendar", owned(dbus_map(c.calendar.entries()))),
-        ("Clipboard", owned(dbus_map(c.clipboard.entries()))),
-        ("Downloads", owned(dbus_map(c.downloads.entries()))),
-        ("System", owned(dbus_map(c.system.entries()))),
-        ("Updates", owned(dbus_map(c.updates.entries()))),
-        ("Home", owned(dbus_map(c.home.entries()))),
-    ]
+    c.tables()
+        .into_iter()
+        .map(|(name, entries)| (name, owned(dbus_map(entries))))
+        .collect()
 }
 
 /// A config table as `a{sv}`.
@@ -116,9 +100,7 @@ fn setting_value(value: &Value<'_>) -> Option<SettingValue> {
 struct SettingsInterface {
     config: watch::Receiver<Config>,
     picture: watch::Receiver<Prepared>,
-    path: PathBuf,
-    /// One read-change-write at a time, so quick changes never lose one.
-    writing: Mutex<()>,
+    writer: Writer,
 }
 
 #[zbus::interface(name = "io.nokta.Settings1")]
@@ -215,32 +197,21 @@ impl SettingsInterface {
                 value.value_signature()
             ))
         })?;
-        let _writing = self.writing.lock().await;
-        let text = match tokio::fs::read_to_string(&self.path).await {
-            Ok(text) => text,
-            Err(err) if err.kind() == io::ErrorKind::NotFound => DEFAULT_CONFIG_TOML.to_owned(),
-            Err(err) => {
-                return Err(fdo::Error::Failed(format!(
-                    "cannot read config.toml: {err}"
-                )))
-            }
-        };
-        let text = set_key(&text, &table, &key, &value)
-            .map_err(|err| fdo::Error::InvalidArgs(err.to_string()))?;
-        write_atomically(&self.path, &text)
+        self.writer
+            .set(&table, &key, &value)
             .await
-            .map_err(|err| fdo::Error::Failed(format!("cannot write config.toml: {err}")))?;
-        tracing::info!("set {table}.{key} = {value}");
-        Ok(())
+            .map_err(dbus_error)
     }
 
     async fn reset(&self) -> fdo::Result<()> {
-        let _writing = self.writing.lock().await;
-        write_atomically(&self.path, DEFAULT_CONFIG_TOML)
-            .await
-            .map_err(|err| fdo::Error::Failed(format!("cannot write config.toml: {err}")))?;
-        tracing::info!("config.toml reset to the defaults");
-        Ok(())
+        self.writer.reset().await.map_err(dbus_error)
+    }
+}
+
+fn dbus_error(err: WriteError) -> fdo::Error {
+    match err {
+        WriteError::Invalid(message) => fdo::Error::InvalidArgs(message),
+        WriteError::Failed(message) => fdo::Error::Failed(message),
     }
 }
 
