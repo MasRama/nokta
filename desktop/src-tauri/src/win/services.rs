@@ -110,6 +110,18 @@ impl Core {
             .path(uri)
     }
 
+    /// Takes files an app took from the shelf off it.
+    pub fn taken(&self, uris: Vec<String>) {
+        for uri in uris {
+            if let Err(err) = self
+                .shelf_commands
+                .try_send(shelf::service::Command::Remove(uri))
+            {
+                tracing::warn!("cannot take a dragged file off the shelf: {err}");
+            }
+        }
+    }
+
     /// Puts files dropped on the notch on the shelf.
     pub fn keep(&self, uris: Vec<String>) {
         if uris.is_empty() {

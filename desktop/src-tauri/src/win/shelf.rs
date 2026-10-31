@@ -1,6 +1,6 @@
 //! The shelf on Windows: files dropped on a notch go on it, and its files
 //! are dragged out to Explorer or an app as Explorer drags them. They are
-//! copied there and stay on the shelf, as on GNOME.
+//! copied there and leave the shelf once an app took them, as on GNOME.
 //!
 //! A drop reaches a notch only over the notch itself: elsewhere the window
 //! lets the pointer through (pointer.rs), so Windows offers the drop to the
@@ -14,7 +14,7 @@ use tokio::sync::oneshot;
 use windows::core::HSTRING;
 use windows::Win32::Foundation::HWND;
 use windows::Win32::System::Com::{IBindCtx, IDataObject};
-use windows::Win32::System::Ole::{IDropSource, DROPEFFECT_COPY};
+use windows::Win32::System::Ole::{IDropSource, DROPEFFECT_COPY, DROPEFFECT_NONE};
 use windows::Win32::UI::Shell::Common::ITEMIDLIST;
 use windows::Win32::UI::Shell::{
     BHID_DataObject, ILFree, SHCreateShellItemArrayFromIDLists, SHDoDragDrop, SHParseDisplayName,
@@ -30,29 +30,29 @@ pub const DROP_EVENT: &str = "nokta://drop";
 /// it again.
 static DRAGGING: AtomicBool = AtomicBool::new(false);
 
-/// Follows files dragged over `window`'s notch and keeps those dropped.
+/// Follows files dragged over `window`'s notch and keeps those dropped,
+/// while `[behavior] file_shelf` is on.
 pub fn dragged_over(window: &Window, event: &DragDropEvent) {
-    if DRAGGING.load(Ordering::Relaxed) {
+    let over = match event {
+        DragDropEvent::Enter { paths, .. } => !paths.is_empty(),
+        DragDropEvent::Drop { .. } | DragDropEvent::Leave => false,
+        _ => return,
+    };
+    let Some(core) = window.try_state::<Core>() else {
+        return;
+    };
+    // Nothing lands on a shelf that is off, or on the one it came from.
+    if DRAGGING.load(Ordering::Relaxed) || !core.config().behavior.file_shelf {
         return;
     }
-    let dropping = |on: bool| {
-        let _ = window.emit_to(window.label(), DROP_EVENT, on);
-    };
-    match event {
-        DragDropEvent::Enter { paths, .. } => dropping(!paths.is_empty()),
-        DragDropEvent::Drop { paths, .. } => {
-            dropping(false);
-            if let Some(core) = window.try_state::<Core>() {
-                core.keep(crate::files::uris(paths));
-            }
-        }
-        DragDropEvent::Leave => dropping(false),
-        _ => {}
+    let _ = window.emit_to(window.label(), DROP_EVENT, over);
+    if let DragDropEvent::Drop { paths, .. } = event {
+        core.keep(crate::files::uris(paths));
     }
 }
 
 /// Drags `uris`, files on the shelf, out of the notch that asks; answers
-/// when they are dropped or the drag is given up.
+/// when they are dropped, and off the shelf then, or the drag is given up.
 #[tauri::command]
 pub async fn shelf_drag(
     window: WebviewWindow,
@@ -81,13 +81,18 @@ pub async fn shelf_drag(
             let _ = done.send(dragged);
         })
         .map_err(|err| err.to_string())?;
-    finished
+    let taken = finished
         .await
-        .map_err(|_| "the drag did not start".to_owned())?
+        .map_err(|_| "the drag did not start".to_owned())??;
+    if taken {
+        core.taken(uris);
+    }
+    Ok(())
 }
 
-/// Runs Windows' drag of `paths` from `hwnd` until it ends.
-fn drag(hwnd: HWND, paths: &[PathBuf]) -> Result<(), String> {
+/// Runs Windows' drag of `paths` from `hwnd` until it ends; true when an
+/// app took them.
+fn drag(hwnd: HWND, paths: &[PathBuf]) -> Result<bool, String> {
     let mut pidls: Vec<*mut ITEMIDLIST> = Vec::with_capacity(paths.len());
     let dragged = drag_items(hwnd, paths, &mut pidls);
     for pidl in pidls {
@@ -103,7 +108,7 @@ fn drag_items(
     hwnd: HWND,
     paths: &[PathBuf],
     pidls: &mut Vec<*mut ITEMIDLIST>,
-) -> windows::core::Result<()> {
+) -> windows::core::Result<bool> {
     for path in paths {
         let name = HSTRING::from(path.as_path());
         let mut pidl = std::ptr::null_mut();
@@ -120,5 +125,6 @@ fn drag_items(
     // SAFETY: on the window's thread, with Windows' own drop source.
     let ended = unsafe { SHDoDragDrop(Some(hwnd), &data, None::<&IDropSource>, DROPEFFECT_COPY) };
     DRAGGING.store(false, Ordering::Relaxed);
-    ended.map(drop)
+    // Given up, the drop's effect is none.
+    ended.map(|effect| effect != DROPEFFECT_NONE)
 }
