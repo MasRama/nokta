@@ -101,3 +101,18 @@ export function systemUses24h(): boolean {
     const cycle = new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hourCycle;
     return cycle === 'h23' || cycle === 'h24';
 }
+
+/** Opens the settings window, or brings it to the front. */
+export function openSettings(): void {
+    if (inTauri()) void invoke('open_settings').catch((err: unknown) => console.warn('open_settings:', err));
+}
+
+/** Opens config.toml in the app Windows opens it with. */
+export function openConfig(): void {
+    if (inTauri()) void invoke('open_config').catch((err: unknown) => console.warn('open_config:', err));
+}
+
+/** Asks for a picture in Windows' file dialog; null when cancelled. */
+export async function pickPicture(): Promise<string | null> {
+    return inTauri() ? invoke<string | null>('pick_picture') : null;
+}
