@@ -807,6 +807,15 @@ WebView2 and runs the core's services itself, with no D-Bus.
   accent without one), the stacked count, two lines from
   `notificationLines`, up to three buttons and a close button, timed as a
   download's preview, and never over a fullscreen app.
+- The calendar comes from the `[calendar] feeds` the core reads
+  (`calendar/feeds.rs`): `Calendar1` (bridge only) sends `Events`, each
+  with its meeting link and color. The page (`src/calendar.ts`) keeps the
+  ones not ended that start by the end of tomorrow, as GNOME's event
+  source does, and runs the extension's calendar logic on them: home's
+  agenda (`views/calendar.ts`), one timeout for the next reminder or start
+  (a meeting's as a notification with Join, else a calendar alert) and
+  the closed notch's countdown in the indicator's spot. A row opens the
+  feed's calendar on the web (Google, Outlook, iCloud), Join the meeting.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

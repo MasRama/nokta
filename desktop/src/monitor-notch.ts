@@ -1,4 +1,15 @@
 import type { Activity } from '@ext/features/activities/logic/activities.js';
+import {
+    agendaEvents,
+    agendaWhen,
+    alarmAlert,
+    countdownChangeMs,
+    countdownEvent,
+    countdownLabel,
+    type Alarm,
+    type CalendarEvent,
+    type EventAlert,
+} from '@ext/features/calendar/logic/events.js';
 import { visibleLyric } from '@ext/features/lyrics/logic/visible.js';
 import { lineProgress, nextLyric } from '@ext/features/lyrics/logic/karaoke.js';
 import { romanize } from '@ext/features/lyrics/logic/romanize.js';
@@ -26,7 +37,7 @@ import {
 } from '@ext/features/timer/logic/clocks.js';
 import { formatRemaining, msUntilNextSecond, phaseColor, remainingAt } from '@ext/features/timer/logic/timer.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
-import { motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
+import { alertMotion, motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
 import { withAlpha } from '@ext/shared/logic/color.js';
 import { formatClock, uses24h } from '@ext/shared/logic/format.js';
@@ -43,6 +54,7 @@ import { TONES } from '@ext/shared/logic/tones.js';
 import { Activities, type Ended } from './activities.js';
 import {
     Alerts,
+    calendarRequest,
     CLOCK_ICON,
     clockDoneRequest,
     endedRequest,
@@ -52,6 +64,7 @@ import {
     type OsdRequest,
 } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
+import { Calendar, CalendarAlarms, feedOf, upcoming, webCalendar } from './calendar.js';
 import { Clipboard } from './clipboard.js';
 import { Downloads } from './downloads.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
@@ -64,6 +77,7 @@ import { Shelf } from './shelf.js';
 import { System } from './system.js';
 import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
+import { CountdownBadge, type HomeEvent } from './views/calendar.js';
 import { everyMinute } from './views/clock.js';
 import { ClipboardPage } from './views/clipboard.js';
 import { CollapsedView } from './views/collapsed.js';
@@ -153,6 +167,8 @@ export class MonitorNotch {
     readonly lyrics: Lyrics;
     readonly privacy: Privacy;
     readonly weather: Weather;
+    readonly calendar: Calendar;
+    private readonly calendarAlarms: CalendarAlarms;
     readonly toggles: Toggles;
     readonly timer: Timer;
     readonly activities: Activities;
@@ -184,6 +200,8 @@ export class MonitorNotch {
     });
     /** The toast that shows, and how many from its app it stands for. */
     private shownToast: { toast: Toast; count: number } | null = null;
+    /** The event whose reminder shows as a notification, for its Join button. */
+    private shownReminder: string | null = null;
     /** Which message the message timer times. */
     private message: 'download' | 'notification' = 'download';
     private readonly alerts: Alerts;
@@ -195,6 +213,9 @@ export class MonitorNotch {
     private readonly timerLabels = { idle: new TimerLabel(), collapsed: new TimerLabel() };
     private readonly badges = { idle: new ActivityBadge(), collapsed: new ActivityBadge() };
     private readonly shelfBadges = { idle: new ShelfBadge(), collapsed: new ShelfBadge() };
+    private readonly countdowns = { idle: new CountdownBadge(), collapsed: new CountdownBadge() };
+    /** The meetings joined from the notch: their countdown ends. */
+    private readonly dismissedCountdowns = new Set<string>();
     /** The shelf's row in home and under the open player. */
     private readonly panelShelf: ShelfRow;
     private readonly expandedShelf: ShelfRow;
@@ -251,6 +272,12 @@ export class MonitorNotch {
         this.lyrics = new Lyrics(bridge, () => this.onLyrics());
         this.privacy = new Privacy(bridge, () => this.onPrivacy());
         this.weather = new Weather(bridge, () => this.onHome());
+        this.calendar = new Calendar(bridge, () => this.onCalendar());
+        this.calendarAlarms = new CalendarAlarms(
+            (nowMs) => this.calendarEvents(nowMs),
+            () => this.settings.calendar.reminderMinutes,
+            (alarm, nowMs) => this.onCalendarAlarm(alarm, nowMs),
+        );
         this.activities = new Activities(
             bridge,
             () => this.onActivities(),
@@ -286,6 +313,8 @@ export class MonitorNotch {
             toggle: (which) => this.toggles.toggle(which),
             openTile: (which) => this.openTile(which),
             openRelease: () => this.openRelease(),
+            openEvent: (id) => this.openEvent(id),
+            joinMeeting: (id) => this.joinMeeting(id),
         });
         const shelfHandlers = {
             open: (uri: string) => this.host.openFile?.(uri, false),
@@ -415,6 +444,7 @@ export class MonitorNotch {
             this.lyrics.attach(),
             this.privacy.attach(),
             this.weather.attach(),
+            this.calendar.attach(),
             this.toggles.attach(),
             this.timer.attach(),
             this.activities.attach(),
@@ -449,6 +479,8 @@ export class MonitorNotch {
         this.lyrics.detach();
         this.privacy.detach();
         this.weather.detach();
+        this.calendar.detach();
+        this.calendarAlarms.stop();
         this.toggles.detach();
         this.timer.detach();
         this.activities.detach();
@@ -556,6 +588,7 @@ export class MonitorNotch {
         }
         this.shownDownload = download;
         this.shownToast = null;
+        this.shownReminder = null;
         this.message = 'download';
         const buttons = downloadButtons(this.settings.behavior.fileShelf);
         const picture = downloadPicture(download, fileUrlOf);
@@ -593,6 +626,7 @@ export class MonitorNotch {
         );
         this.shownToast = { toast, count };
         this.shownDownload = null;
+        this.shownReminder = null;
         this.message = 'notification';
         this.notificationView.show({
             title,
@@ -609,6 +643,13 @@ export class MonitorNotch {
 
     /** A click on the toast, or on its button at `button`, opens what it opens and closes it. */
     private onNotificationPress(button: number | null): void {
+        const reminder = this.shownReminder;
+        if (reminder !== null) {
+            this.messageTimer.hide();
+            if (button === 0) this.joinMeeting(reminder);
+            else this.openEvent(reminder);
+            return;
+        }
         const shown = this.shownToast;
         if (!shown) return;
         this.messageTimer.hide();
@@ -624,6 +665,7 @@ export class MonitorNotch {
         if (!this.messageTimer.active) {
             this.shownDownload = null;
             this.shownToast = null;
+            this.shownReminder = null;
         }
         this.redraw();
     }
@@ -712,6 +754,7 @@ export class MonitorNotch {
         this.onActivities();
         this.onShelf();
         this.onClipboard();
+        this.onCalendar();
         this.redraw(true);
     }
 
@@ -733,7 +776,10 @@ export class MonitorNotch {
         });
         this.updateHomeTicker();
         this.home.setUpdate(this.updates.latest);
+        const events = this.homeEvents();
+        this.home.setEvents(events);
         const rows = homeRows(layout, {
+            events: events.length,
             call: this.shownCall() !== null,
             activities: this.liveActivities().length,
             clocks: clocks.length,
@@ -803,6 +849,104 @@ export class MonitorNotch {
     }
 
     /** The text of home's update row: the release's page. */
+    // Calendar
+
+    /** The events changed, or the calendar settings. */
+    private onCalendar(): void {
+        this.calendarAlarms.reschedule();
+        this.applyIndicator();
+        this.onHome();
+    }
+
+    /** Events not ended that start by the end of tomorrow; none while the calendar is off. */
+    private calendarEvents(nowMs: number): CalendarEvent[] {
+        return this.settings.calendar.enabled ? upcoming(this.calendar.events, nowMs) : [];
+    }
+
+    /** The meeting the closed notch counts down to, if any. */
+    private countdownEvent(nowMs: number): CalendarEvent | null {
+        const { countdown, reminderMinutes } = this.settings.calendar;
+        if (!countdown) return null;
+        return countdownEvent(this.calendarEvents(nowMs), nowMs, reminderMinutes, this.dismissedCountdowns);
+    }
+
+    /** The agenda: each event in its calendar's color; the first says how soon it is. */
+    private homeEvents(): HomeEvent[] {
+        const now = Date.now();
+        const events = agendaEvents(this.calendarEvents(now), now, this.settings.calendar.agendaSize);
+        return events.map((event, i) => {
+            const feed = this.calendar.get(event.id);
+            return {
+                id: event.id,
+                title: event.title,
+                ...agendaWhen(event.startMs, now, i === 0, (ms) => this.formatTime(ms)),
+                color: feed?.color ?? null,
+                joinable: (feed?.link ?? '') !== '',
+            };
+        });
+    }
+
+    /**
+     * A reminder or a start. With a meeting link it shows like a
+     * notification, for its Join button; over a fullscreen app it stays an
+     * alert, as in the extension.
+     */
+    private onCalendarAlarm(alarm: Alarm, nowMs: number): void {
+        this.applyIndicator();
+        this.onHome();
+        const alert = alarmAlert(alarm, nowMs, (ms) => this.formatTime(ms));
+        if (!alert) return;
+        const { behavior, appearance } = this.settings;
+        if (this.calendar.get(alarm.event.id)?.link && !this.inFullscreen) {
+            this.showReminder(alarm.event.id, alert);
+            return;
+        }
+        this.showOsd(calendarRequest(alert, behavior, appearance.alertMotion));
+    }
+
+    private showReminder(id: string, alert: EventAlert): void {
+        this.shownReminder = id;
+        this.shownToast = null;
+        this.shownDownload = null;
+        this.message = 'notification';
+        this.notificationView.show({
+            title: alert.title,
+            detail: alert.detail,
+            picture: null,
+            symbol: alert.icon,
+            round: false,
+            buttons: [_('Join')],
+            badge: null,
+        });
+        this.messageTimer.show(this.settings.behavior.alertDurationMs);
+        this.redraw();
+        this.alert({ color: TONES.calendar }, alertMotion('calendar', this.settings.appearance.alertMotion));
+    }
+
+    /** Opens the event's meeting link; its countdown ends. */
+    private joinMeeting(id: string): void {
+        const link = this.calendar.get(id)?.link;
+        if (!link) return;
+        this.dismissedCountdowns.add(id);
+        this.applyIndicator();
+        this.machine.close();
+        this.host.openUri?.(link);
+    }
+
+    /** Opens the event's calendar on the web, for a feed Nokta knows. */
+    private openEvent(id: string): void {
+        const feed = this.settings.calendar.feeds[feedOf(id)];
+        const uri = feed ? webCalendar(feed) : null;
+        if (!uri) return;
+        this.machine.close();
+        this.host.openUri?.(uri);
+    }
+
+    /** A time like the notch's clock shows it. */
+    private formatTime(ms: number): string {
+        return formatClock(new Date(ms), this.use24h());
+    }
+
     private openRelease(): void {
         if (!this.updates.url) return;
         this.machine.close();
@@ -911,12 +1055,15 @@ export class MonitorNotch {
         const call = this.shownCall();
         const { snapshot, clocks } = this.timer;
         const clock = indicatorClock(clocks, now);
+        const nowMs = Date.now();
+        const meeting = this.countdownEvent(nowMs);
         const indicator = chooseIndicator({
             recording: false,
             call: call !== null,
             timer: snapshot.state !== 'idle',
             clock: clock !== null,
             activity: this.liveActivities().length > 0,
+            meeting: meeting !== null,
             shelf: this.shelfItems().length > 0,
         });
         this.indicator = indicator;
@@ -925,6 +1072,7 @@ export class MonitorNotch {
             if (indicator === 'timer' || indicator === 'clock') return this.timerLabels[place].element;
             if (indicator === 'activity') return this.badges[place].element;
             if (indicator === 'shelf') return this.shelfBadges[place].element;
+            if (indicator === 'meeting') return this.countdowns[place].element;
             return null;
         };
         this.idle.setAside(shown('idle'));
@@ -946,6 +1094,12 @@ export class MonitorNotch {
             label = [clockText(clock, now), clockColor(clock.kind), !clock.running];
         }
         if (label) for (const timer of Object.values(this.timerLabels)) timer.update(...label);
+        if (meeting) {
+            const text = countdownLabel(meeting.startMs, nowMs);
+            for (const badge of Object.values(this.countdowns)) badge.update(text);
+            // Also when it ends, though another indicator may show.
+            waits.push(countdownChangeMs(meeting, nowMs));
+        }
         // Also an alarm coming into its last hour takes the spot.
         const wait = msUntilClockChange(clocks, now);
         if (wait !== null) waits.push(wait);
@@ -1136,6 +1290,8 @@ export class MonitorNotch {
     private tickClock(now: Date): void {
         this.idle.update(now, this.use24h(), this.settings.behavior.showClock);
         this.home.update(now);
+        // The agenda says how soon its first event is, and loses the ones that ended.
+        this.onHome();
     }
 
     private lyricsAvailable(): boolean {
@@ -1147,7 +1303,9 @@ export class MonitorNotch {
         const appearance = this.settings.appearance;
         return viewSize(drawn, {
             appearance,
-            notificationButtons: this.message === 'notification' && (this.shownToast?.toast.buttons.length ?? 0) > 0,
+            notificationButtons:
+                this.message === 'notification' &&
+                (this.shownReminder !== null || (this.shownToast?.toast.buttons.length ?? 0) > 0),
             panelHeight: panelHeight(appearance.height, this.homeRows),
             pageHeight: subPageHeight(this.pageBodyHeight()),
             expandedExtra:

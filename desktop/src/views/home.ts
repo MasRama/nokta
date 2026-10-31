@@ -6,6 +6,7 @@ import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
 import { ActivityRow, UpdateRow } from './activity.js';
+import { EventRow, type EventHandlers, type HomeEvent } from './calendar.js';
 import { Tile, TogglePill, type ControlColors } from './controls.js';
 import { CallRow, type CallHandlers, type HomeCall } from './privacy.js';
 import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
@@ -14,6 +15,8 @@ import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
 export const MAX_HOME_CLOCKS = 3;
 /** And the newest activities. */
 export const MAX_HOME_ACTIVITIES = 3;
+/** And the soonest events, at most `[calendar] agenda_size`. */
+export const MAX_HOME_EVENTS = 5;
 
 /** Each toggle's icon, name and tone, as the extension's panel/view.ts. */
 const TOGGLES: Array<[QuickToggle, string, string, string]> = [
@@ -34,7 +37,7 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['system', 'system', 'System', TONES.system],
 ];
 
-export interface HomeHandlers extends ClockHandlers, CallHandlers {
+export interface HomeHandlers extends ClockHandlers, CallHandlers, EventHandlers {
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
@@ -43,6 +46,8 @@ export interface HomeHandlers extends ClockHandlers, CallHandlers {
 
 /** What home lists above its controls. */
 export interface HomeContent {
+    /** The agenda's events. */
+    events?: number;
     call?: boolean;
     activities?: number;
     clocks?: number;
@@ -54,10 +59,12 @@ export interface HomeContent {
 /** Home's rows for its content and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
 export function homeRows(
     layout: HomeLayout,
-    { call = false, activities = 0, clocks = 0, update = false, shelf = false }: HomeContent = {},
+    { events = 0, call = false, activities = 0, clocks = 0, update = false, shelf = false }: HomeContent = {},
 ): PanelRow[] {
+    const shown = Math.min(events, MAX_HOME_EVENTS);
     return [
         'date',
+        ...(shown > 0 ? ['event' as const, ...Array<PanelRow>(shown - 1).fill('agenda')] : []),
         ...(call ? (['call'] as const) : []),
         ...Array<PanelRow>(Math.min(activities, MAX_HOME_ACTIVITIES)).fill('activity'),
         ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
@@ -104,7 +111,7 @@ export type TileStates = Partial<Record<HomeTile, boolean>>;
 
 /**
  * Home, the open notch's other page: the weekday over the date with the
- * weather beside them, the way back to a player, the call, the activities,
+ * weather beside them, the way back to a player, the agenda, the call, the activities,
  * the clocks, a newer Nokta, the shelf, then the
  * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
@@ -115,6 +122,8 @@ export class HomeView {
     private readonly date: HTMLSpanElement;
     private readonly weather = new WeatherBox();
     private readonly music: HTMLButtonElement;
+    private readonly agenda: HTMLDivElement;
+    private readonly events: EventRow[] = [];
     private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
@@ -160,8 +169,16 @@ export class HomeView {
         this.controls = document.createElement('div');
         this.controls.className = 'nokta-panel-controls';
         this.controls.append(this.pills, this.tileRow);
+        this.agenda = document.createElement('div');
+        this.agenda.className = 'nokta-panel-agenda';
+        this.agenda.hidden = true;
+        for (let i = 0; i < MAX_HOME_EVENTS; i++) {
+            const row = new EventRow(handlers);
+            this.events.push(row);
+            this.agenda.append(row.element);
+        }
         this.call = new CallRow(handlers);
-        this.element.append(heading, this.call.element);
+        this.element.append(heading, this.agenda, this.call.element);
         for (let i = 0; i < MAX_HOME_ACTIVITIES; i++) {
             const row = new ActivityRow();
             this.activities.push(row);
@@ -195,6 +212,12 @@ export class HomeView {
     /** Null hides the weather. */
     setWeather(weather: WeatherLine | null): void {
         this.weather.show(weather);
+    }
+
+    /** The agenda, soonest first, one row each; none hides it. */
+    setEvents(events: readonly HomeEvent[]): void {
+        this.events.forEach((row, i) => row.show(events[i]));
+        this.agenda.hidden = events.length === 0;
     }
 
     /** Null hides the call's row. */

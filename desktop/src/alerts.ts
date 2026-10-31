@@ -1,4 +1,5 @@
 import { endedAlert } from '@ext/features/activities/logic/activities.js';
+import type { EventAlert } from '@ext/features/calendar/logic/events.js';
 import { deviceAlert, isBatteryWarning } from '@ext/features/devices/logic/alert.js';
 import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
@@ -137,6 +138,18 @@ export function clockDoneRequest(
         durationMs: CLOCK_ALERT_FACTOR * behavior.alertDurationMs,
         tone: { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') },
         motion: alertMotion('clock-done', motions),
+    };
+}
+
+/** A calendar reminder or start, in the calendar's tone, as the extension shows one without a meeting link. */
+export function calendarRequest(alert: EventAlert, behavior: Behavior, motions: boolean): OsdRequest {
+    return {
+        content: { fraction: null, text: alert.title, detail: alert.detail, urgent: alert.urgent },
+        icon: alert.icon,
+        kind: 'calendar',
+        durationMs: behavior.alertDurationMs,
+        tone: alert.urgent ? 'urgent' : { color: TONES.calendar },
+        motion: alertMotion('calendar', motions),
     };
 }
 

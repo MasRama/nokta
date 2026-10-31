@@ -760,6 +760,82 @@ body.nokta-mock {
     font-variant-numeric: tabular-nums;
 }
 
+/* Home's agenda: the next events, one row each, 2 px apart (panel/logic/height.ts). */
+.nokta-panel-agenda {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: none;
+}
+
+.nokta-panel-event {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 26px;
+}
+
+/* The strip, time, title and how soon: one button that opens the calendar. */
+.nokta-panel-event-main {
+    flex: 1;
+    min-width: 0;
+    height: 26px;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 0;
+    border-radius: 10px;
+    text-align: left;
+}
+
+.nokta-panel-event-main:hover {
+    background-color: transparent;
+}
+
+.nokta-panel-event-strip {
+    flex: none;
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+}
+
+.nokta-panel-event-time {
+    flex: none;
+    min-width: 40px;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.nokta-panel-event-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-panel-event-when {
+    flex: none;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.59;
+}
+
+.nokta-panel-join {
+    flex: none;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.nokta-panel-join:hover {
+    filter: brightness(1.15);
+}
+
 /* A row's icon in home, on a square of its tone (views/controls.ts IconChip). */
 .nokta-icon-chip {
     display: flex;
@@ -1406,6 +1482,19 @@ body.nokta-mock {
 .nokta-shelf-close:hover,
 .nokta-light .nokta-shelf-close:hover {
     background-color: #e01b24;
+}
+
+/* The closed notch's countdown to a meeting (views/calendar.ts). */
+.nokta-countdown {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nokta-countdown-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
 }
 
 .nokta-shelf-badge {
