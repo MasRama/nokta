@@ -6,6 +6,7 @@
 
 mod bridge;
 mod layout;
+mod osd;
 #[cfg(windows)]
 mod win;
 
