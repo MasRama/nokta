@@ -116,3 +116,10 @@ export function openConfig(): void {
 export async function pickPicture(): Promise<string | null> {
     return inTauri() ? invoke<string | null>('pick_picture') : null;
 }
+
+/** No WebView menu (Back, Refresh, Print...) on a right-click, but in a text field, for cut and paste. */
+export function hideWebMenu(): void {
+    document.addEventListener('contextmenu', (event) => {
+        if (!(event.target as HTMLElement | null)?.closest('input, textarea')) event.preventDefault();
+    });
+}
