@@ -632,6 +632,15 @@ WebView2 and runs the core's services itself, with no D-Bus.
   and `win_bluetooth.rs` follows the paired Bluetooth devices with a
   device watcher (connection and class of device). Windows gives no
   Bluetooth battery, so a connect alert goes at once without one.
+- The OSD's sources (`win/osd/`) each run on a thread of their own, with
+  the rules in `osd.rs` (tested everywhere). A low-level keyboard hook
+  notes the volume keys and, for a moment after a lock key or a modifier
+  comes up, reads Caps Lock, Num Lock and the foreground window's layout;
+  a layout shows only when the same window switches. The default output's
+  volume callback (moved with the default output) shows the volume only
+  just after a volume key, as Windows' own OSD does. The brightness comes
+  from WMI's `WmiMonitorBrightnessEvent`, built-in displays only, and
+  shows when it moves by a key's step, not the light sensor's drift.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with

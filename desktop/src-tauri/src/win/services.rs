@@ -20,7 +20,8 @@ use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
-    devices as devices_bridge, lyrics as lyrics_props, media, nokta, settings, Props,
+    devices as devices_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge, settings,
+    Props,
 };
 use crate::layout::NotchSizes;
 
@@ -103,6 +104,13 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         devices_bridge::INTERFACE,
         devices_bridge::ALERT,
         devices_bridge::alert_args,
+    );
+    forward_signal(
+        app.clone(),
+        super::osd::spawn(),
+        osd_bridge::INTERFACE,
+        osd_bridge::SHOW,
+        osd_bridge::show_args,
     );
     forward(
         app.clone(),
