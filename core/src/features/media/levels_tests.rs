@@ -144,3 +144,16 @@ fn a_backoff_that_passed_while_unwanted_wakes_nothing() {
     life.failed(now);
     assert_eq!(life.wake_at(now + BACKOFF + Duration::from_secs(1)), None);
 }
+
+#[test]
+fn silence_goes_out_twice_a_second_and_sound_always() {
+    let mut silence = Silence::default();
+    let start = Instant::now();
+    let quiet = [0.0; BANDS];
+    let loud = [0.5; BANDS];
+    assert!(silence.pass(&quiet, start));
+    assert!(!silence.pass(&quiet, start + Duration::from_millis(40)));
+    assert!(silence.pass(&quiet, start + Duration::from_millis(500)));
+    assert!(silence.pass(&loud, start + Duration::from_millis(540)));
+    assert!(silence.pass(&quiet, start + Duration::from_millis(580)));
+}

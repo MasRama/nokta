@@ -10,12 +10,10 @@ use tokio::process::{Child, Command};
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
 
-use super::levels::{Bands, Lifecycle, Step, BANDS, FRAME};
+use super::levels::{Bands, Lifecycle, Silence, Step, BANDS, FRAME};
 use super::{MediaState, PlaybackStatus};
 use crate::shared::clock::sleep_for;
 
-/// While it is silent, the zero levels go out this often instead of 25 times a second.
-const SILENT_EVERY: Duration = Duration::from_millis(500);
 /// How long `pw-record --help` may take.
 const HELP_LIMIT: Duration = Duration::from_secs(2);
 /// The default output's monitor, as 16 kHz mono s16 on stdout. The stream
@@ -164,23 +162,16 @@ fn start(program: &str, raw: bool, tx: mpsc::Sender<[f64; BANDS]>) -> io::Result
     let reader = tokio::spawn(async move {
         let mut bands = Bands::new();
         let mut bytes = vec![0u8; FRAME * 2];
-        let mut silent_since: Option<Instant> = None;
+        let mut silence = Silence::default();
         while stdout.read_exact(&mut bytes).await.is_ok() {
             let samples: Vec<i16> = (0..FRAME)
                 .map(|i| i16::from_le_bytes([bytes[2 * i], bytes[2 * i + 1]]))
                 .collect();
             let levels = bands.frame(&samples);
-            if levels == [0.0; BANDS] {
-                let now = Instant::now();
-                if silent_since.is_some_and(|at| now.duration_since(at) < SILENT_EVERY) {
-                    continue;
-                }
-                silent_since = Some(now);
-            } else {
-                silent_since = None;
-            }
             // A slow listener misses levels rather than getting them late.
-            let _ = tx.try_send(levels);
+            if silence.pass(&levels, Instant::now()) {
+                let _ = tx.try_send(levels);
+            }
         }
     });
     Ok(Recorder { child, reader })

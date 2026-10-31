@@ -81,6 +81,33 @@ impl Bands {
     }
 }
 
+/// While it is silent, the zero levels go out this often instead of 25 times a second.
+const SILENT_EVERY: Duration = Duration::from_millis(500);
+
+/// Lets every level through, but zeros only twice a second.
+#[derive(Default)]
+pub struct Silence {
+    since: Option<Instant>,
+}
+
+impl Silence {
+    /// Whether to send `levels`, heard at `now`.
+    pub fn pass(&mut self, levels: &[f64; BANDS], now: Instant) -> bool {
+        if *levels != [0.0; BANDS] {
+            self.since = None;
+            return true;
+        }
+        if self
+            .since
+            .is_some_and(|at| now.duration_since(at) < SILENT_EVERY)
+        {
+            return false;
+        }
+        self.since = Some(now);
+        true
+    }
+}
+
 /// What to do with the recorder now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Step {
