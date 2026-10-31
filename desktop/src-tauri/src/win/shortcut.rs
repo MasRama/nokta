@@ -1,14 +1,17 @@
-//! The open shortcut: a hotkey registered with Windows that opens a notch
-//! with the keyboard, or closes the one that has it. The notch opens on the
-//! monitor of the window in use, takes the focus, and gives it back to that
-//! window when it closes.
+//! The shortcuts, hotkeys registered with Windows. The open shortcut opens
+//! a notch with the keyboard, or closes the one that has it: the notch opens
+//! on the monitor of the window in use, takes the focus, and gives it back
+//! to that window when it closes. The focus shortcut starts a focus session
+//! or stops the timer, as GNOME's does.
 
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use nokta_core::features::settings::Config;
+use nokta_core::features::timer::logic::Snapshot;
+use nokta_core::features::timer::service::Command;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::watch;
+use tokio::sync::{mpsc, watch};
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
@@ -20,27 +23,43 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 
 use super::monitors;
+use crate::bridge::timer::focus_shortcut;
 use crate::shortcut;
 
 /// Tells a page to open with the keyboard, or to close if it has it.
 pub const KEYBOARD_EVENT: &str = "nokta://keyboard";
-/// The one hotkey's id.
-const HOTKEY_ID: i32 = 1;
+/// The open shortcut's hotkey id.
+const OPEN_ID: i32 = 1;
+/// The focus shortcut's hotkey id.
+const FOCUS_ID: i32 = 2;
 /// Asks the thread to register the shortcut again.
 const WM_RESET: u32 = WM_APP + 1;
 
 /// The thread that owns the hotkey; 0 until it runs.
 static THREAD: AtomicU32 = AtomicU32::new(0);
-/// The shortcut the config asks for.
-static WANTED: Mutex<String> = Mutex::new(String::new());
+/// The open and the focus shortcut the config asks for.
+static WANTED: Mutex<[String; 2]> = Mutex::new([String::new(), String::new()]);
+/// The focus timer, which the focus shortcut starts or stops.
+static TIMER: OnceLock<(watch::Receiver<Snapshot>, mpsc::Sender<Command>)> = OnceLock::new();
 /// The notch that has the keyboard, and the window it took it from.
 static HOLDER: Mutex<Option<(String, isize)>> = Mutex::new(None);
 
-/// Registers the config's shortcut, and again whenever it changes.
-pub fn follow(mut config: watch::Receiver<Config>) {
+/// Registers the config's shortcuts, and again whenever they change; the
+/// focus shortcut works `timer`.
+pub fn follow(
+    mut config: watch::Receiver<Config>,
+    timer: (watch::Receiver<Snapshot>, mpsc::Sender<Command>),
+) {
+    let _ = TIMER.set(timer);
     tauri::async_runtime::spawn(async move {
         loop {
-            let wanted = config.borrow_and_update().behavior.open_shortcut.clone();
+            let wanted = {
+                let config = config.borrow_and_update();
+                [
+                    config.behavior.open_shortcut.clone(),
+                    config.timer.shortcut.clone(),
+                ]
+            };
             set(wanted);
             if config.changed().await.is_err() {
                 return;
@@ -49,13 +68,13 @@ pub fn follow(mut config: watch::Receiver<Config>) {
     });
 }
 
-fn set(accelerator: String) {
+fn set(accelerators: [String; 2]) {
     {
         let mut wanted = WANTED.lock().unwrap_or_else(|e| e.into_inner());
-        if *wanted == accelerator {
+        if *wanted == accelerators {
             return;
         }
-        *wanted = accelerator;
+        *wanted = accelerators;
     }
     let thread = THREAD.load(Ordering::Acquire);
     if thread != 0 {
@@ -77,6 +96,7 @@ pub fn start(app: AppHandle) {
             // error.
             while unsafe { GetMessageW(&mut msg, None, 0, 0) }.0 > 0 {
                 match msg.message {
+                    WM_HOTKEY if msg.wParam.0 == FOCUS_ID as usize => focus(),
                     WM_HOTKEY => toggle(&app),
                     WM_RESET => register(),
                     _ => {}
@@ -84,26 +104,42 @@ pub fn start(app: AppHandle) {
             }
         });
     if let Err(err) = spawned {
-        tracing::error!("cannot follow the open shortcut: {err}");
+        tracing::error!("cannot follow the shortcuts: {err}");
     }
 }
 
-/// Registers the wanted shortcut in place of the last one.
+/// Registers the wanted shortcuts in place of the last ones.
 fn register() {
-    let wanted = WANTED.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    let [open, focus] = WANTED.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    register_one(OPEN_ID, "open", &open);
+    register_one(FOCUS_ID, "focus", &focus);
+}
+
+fn register_one(id: i32, name: &str, wanted: &str) {
     // SAFETY: the hotkey is this thread's; none registered only fails.
-    let _ = unsafe { UnregisterHotKey(None, HOTKEY_ID) };
+    let _ = unsafe { UnregisterHotKey(None, id) };
     if wanted.is_empty() {
         return;
     }
-    let Some(hotkey) = shortcut::parse(&wanted) else {
-        tracing::warn!("Windows has no key for the open shortcut {wanted:?}");
+    let Some(hotkey) = shortcut::parse(wanted) else {
+        tracing::warn!("Windows has no key for the {name} shortcut {wanted:?}");
         return;
     };
     let modifiers = HOT_KEY_MODIFIERS(hotkey.modifiers) | MOD_NOREPEAT;
     // SAFETY: a thread hotkey: WM_HOTKEY comes to this thread's loop.
-    if let Err(err) = unsafe { RegisterHotKey(None, HOTKEY_ID, modifiers, hotkey.key) } {
-        tracing::warn!("cannot register the open shortcut {wanted:?}: {err}");
+    if let Err(err) = unsafe { RegisterHotKey(None, id, modifiers, hotkey.key) } {
+        tracing::warn!("cannot register the {name} shortcut {wanted:?}: {err}");
+    }
+}
+
+/// Starts focus when the timer is idle, else stops it.
+fn focus() {
+    let Some((state, commands)) = TIMER.get() else {
+        return;
+    };
+    let command = focus_shortcut(state.borrow().state);
+    if commands.try_send(command).is_err() {
+        tracing::warn!("the timer did not take the focus shortcut");
     }
 }
 
