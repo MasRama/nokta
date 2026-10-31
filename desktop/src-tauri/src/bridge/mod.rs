@@ -10,6 +10,7 @@ pub mod lyrics;
 pub mod media;
 pub mod nokta;
 pub mod osd;
+pub mod privacy;
 pub mod settings;
 
 #[cfg(test)]

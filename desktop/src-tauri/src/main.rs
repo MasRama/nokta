@@ -7,6 +7,7 @@
 mod bridge;
 mod layout;
 mod osd;
+mod privacy;
 #[cfg(windows)]
 mod win;
 
