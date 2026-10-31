@@ -690,6 +690,19 @@ WebView2 and runs the core's services itself, with no D-Bus.
   only to the notch on the monitor of the window in front, as the
   extension routes it to the focused monitor; the player's levels go to
   every notch.
+- Home shows the weather from `Weather1` beside the date (refreshed as the
+  notch opens), the quick toggles and the tiles. The toggles come from
+  `Toggles1`, an interface of the bridge only (`win/toggles.rs`): Dark
+  Style follows `AppsUseLightTheme` under `Themes\Personalize` through
+  `RegNotifyChangeKeyValue`, and setting it writes the apps' and the
+  system's value and broadcasts `ImmersiveColorSet`, as the Settings app
+  does; it also picks the notch's light theme under `follow_system_style`.
+  Caffeine holds `SetThreadExecutionState` on a thread of its own. Windows
+  has no public Do Not Disturb or Night Light, so those toggles do not
+  show. The notifications and screenshot tiles open Windows' own
+  notification centre and snipping overlay through `open_uri`, which
+  opens only those and web pages (`links.rs`, tested everywhere); the
+  other tiles show as their pages come to Windows.
 - The tray icon stands in for the top bar (Quit). A second start leaves
   the running one alone.
 - The NSIS installer installs per user without admin rights, brings the

@@ -9,7 +9,7 @@ import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 
 const out = resolve(process.argv[2] ?? 'shots');
-const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player'];
+const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'home-light', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player'];
 // The window's size for the default config (desktop/src-tauri/src/layout.rs).
 const WIDTH = 500;
 const HEIGHT = 452;

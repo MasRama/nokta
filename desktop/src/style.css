@@ -98,14 +98,34 @@ body.nokta-mock {
 
 /* Home; heights in the extension's features/panel/logic/height.ts. */
 .nokta-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     padding: 14px 18px;
 }
 
+/* The weekday over the date, the weather and the player button in one row. */
 .nokta-panel-heading {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex: none;
     height: 42px;
+}
+
+.nokta-panel-today {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.nokta-panel-weekday,
+.nokta-panel-date,
+.nokta-panel-weather-detail {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .nokta-panel-weekday {
@@ -432,9 +452,150 @@ body.nokta-mock {
     color: var(--nokta-accent);
 }
 
-.nokta-panel {
+/* Today's weather at the right of home's heading (views/home.ts). */
+.nokta-panel-weather {
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 0;
+    max-width: 50%;
+}
+
+.nokta-panel-weather-now {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nokta-panel-weather-temperature {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+.nokta-panel-weather-detail {
+    max-width: 100%;
+    font-size: 11px;
+    opacity: 0.59;
+    font-variant-numeric: tabular-nums;
+}
+
+.nokta-panel-music {
+    align-self: flex-start;
+    padding: 2px;
+}
+
+/* The quick toggles over the tiles (views/controls.ts). */
+.nokta-panel-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nokta-panel-toggles,
+.nokta-panel-tiles {
+    display: flex;
+    gap: 8px;
+}
+
+.nokta-pill,
+.nokta-tile {
+    flex: 1 1 0;
+    min-width: 0;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: default;
+}
+
+/* The colour cross-fades as a toggle turns on or off, and on hover. */
+.nokta-pill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 12px;
+    transition:
+        background-color 150ms,
+        color 150ms;
+}
+
+.nokta-pill-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    height: 59px;
+    border-radius: 10px;
+}
+
+/* A rounded square, like the pills' corners; it rises a little under the pointer. */
+.nokta-tile-square {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    transition:
+        background-color 150ms,
+        color 150ms,
+        transform 150ms ease-out;
+}
+
+.nokta-tile:hover .nokta-tile-square {
+    transform: translateY(-2px) scale(1.05);
+}
+
+.nokta-tile-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 15px;
+    text-align: center;
+}
+
+.nokta-tile-label {
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+}
+
+.nokta-pill:focus-visible,
+.nokta-tile:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nokta-tile:hover .nokta-tile-square {
+        transform: none;
+    }
 }
 
 /* The OSD row: a volume, a key or an alert (views/osd.ts). */
