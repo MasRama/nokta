@@ -7,6 +7,7 @@ mod fullscreen;
 mod log;
 mod monitors;
 mod notch_window;
+mod notifications;
 mod osd;
 mod pointer;
 mod privacy;
