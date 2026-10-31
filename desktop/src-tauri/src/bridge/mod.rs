@@ -9,6 +9,7 @@ pub mod devices;
 pub mod lyrics;
 pub mod media;
 pub mod nokta;
+pub mod osd;
 pub mod settings;
 
 #[cfg(test)]
