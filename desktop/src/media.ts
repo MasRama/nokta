@@ -1,3 +1,4 @@
+import { freshLevels } from '@ext/features/media/logic/equalizer.js';
 import type { LoopStatus } from '@ext/features/media/logic/loop.js';
 import { EMPTY_SNAPSHOT, snapshotFrom, type MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import type { LyricLines } from '@ext/shared/logic/lyrics.js';
@@ -50,9 +51,27 @@ class Follower {
 /** Media1: the active player and its controls, the page's MediaClient. */
 export class Media extends Follower {
     snapshot: MediaSnapshot = { ...EMPTY_SNAPSHOT };
+    private lastLevels: number[] | null = null;
+    private levelsAtMs = 0;
+    private stopLevels: (() => void) | null = null;
 
     constructor(bridge: Bridge, onChanged: () => void) {
         super(bridge, MEDIA, onChanged);
+    }
+
+    override async attach(): Promise<void> {
+        this.stopLevels = this.bridge.onSignal(MEDIA, 'Levels', (levels) => {
+            this.lastLevels = Array.isArray(levels) ? levels.filter((l): l is number => typeof l === 'number') : null;
+            this.levelsAtMs = performance.now();
+        });
+        await super.attach();
+    }
+
+    override detach(): void {
+        this.stopLevels?.();
+        this.stopLevels = null;
+        this.lastLevels = null;
+        super.detach();
     }
 
     /** Where the track is at `now` (µs on the wall clock), without asking the player. */
@@ -70,9 +89,13 @@ export class Media extends Follower {
         );
     }
 
-    /** The music's band levels; Windows has none yet, so the bars follow a pattern. */
-    levels(): readonly number[] | null {
-        return null;
+    /**
+     * The music's band levels while the core keeps sending them (`[media]
+     * real_equalizer`), else null and the bars follow a pattern. Read on
+     * each equalizer step, so they notify no one.
+     */
+    levels(nowMs = performance.now()): readonly number[] | null {
+        return freshLevels(this.lastLevels, this.levelsAtMs, nowMs);
     }
 
     playPause(): void {

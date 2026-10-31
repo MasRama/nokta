@@ -60,6 +60,18 @@ describe('Media', () => {
         expect(bridge.calls.at(-1)).toEqual({ iface: 'Media1', method: 'SetPosition', args: [12_345_678] });
     });
 
+    it('gives the levels while they keep coming', async () => {
+        const bridge = new MockBridge({ Media1: media() });
+        const m = new Media(bridge, () => {});
+        await m.attach();
+        expect(m.levels()).toBeNull();
+        bridge.signal('Media1', 'Levels', [0.1, 0.2, 0.3, 0.4]);
+        const now = performance.now();
+        expect(m.levels(now)).toEqual([0.1, 0.2, 0.3, 0.4]);
+        // Stale after a second without levels.
+        expect(m.levels(now + 1000)).toBeNull();
+    });
+
     it('follows changes', async () => {
         const bridge = new MockBridge({ Media1: media() });
         let changes = 0;

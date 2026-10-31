@@ -8,7 +8,8 @@ use std::sync::Mutex;
 use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
 use nokta_core::features::lyrics::{self, LyricsState};
 use nokta_core::features::media::art::ArtCache;
-use nokta_core::features::media::{gsmtc, MediaState};
+use nokta_core::features::media::levels::BANDS;
+use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
 use nokta_core::shared::clock::{monotonic_us, wall_us};
@@ -23,6 +24,16 @@ use crate::layout::NotchSizes;
 
 /// The event that carries an interface's changed properties to every page.
 pub const PROPS_EVENT: &str = "nokta://props";
+
+/// The event that carries an interface's signals to every page.
+pub const SIGNAL_EVENT: &str = "nokta://signal";
+
+#[derive(Clone, serde::Serialize)]
+struct Signal {
+    interface: &'static str,
+    signal: &'static str,
+    args: Vec<serde_json::Value>,
+}
 
 #[derive(Clone, serde::Serialize)]
 struct Changed {
@@ -52,7 +63,7 @@ impl Core {
 /// Starts the services and the forwarders; the app manages the result.
 pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     let http = http::client(|b| b.user_agent(USER_AGENT));
-    let (media_state, player, services) = tauri::async_runtime::block_on(async {
+    let (media_state, player, services, levels) = tauri::async_runtime::block_on(async {
         let art = ArtCache::new(paths.cache_dir.clone(), http);
         let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
         let services = Services::start(
@@ -61,7 +72,11 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
             DEFAULT_LRCLIB_URL,
             &OpenMeteoUrls::default(),
         );
-        (media_state, player, services)
+        // Records only with `[media] real_equalizer` on and music playing.
+        let levels = loopback::spawn(media_state.clone(), services.config.clone(), |c| {
+            c.media.real_equalizer
+        });
+        (media_state, player, services, levels)
     });
     forward_settings(
         app.clone(),
@@ -71,6 +86,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     forward(app.clone(), media_state.clone(), media::INTERFACE, |s| {
         media::props(s, monotonic_us(), wall_us())
     });
+    forward_levels(app.clone(), levels);
     forward(
         app.clone(),
         services.lyrics.state.clone(),
@@ -134,6 +150,20 @@ fn forward<T: Send + Sync + 'static>(
         while state.changed().await.is_ok() {
             let props = props(&state.borrow_and_update());
             let _ = app.emit(PROPS_EVENT, Changed { interface, props });
+        }
+    });
+}
+
+/// Sends the music's band levels as `Media1.Levels`, as noktad's signal.
+fn forward_levels(app: AppHandle, mut levels: mpsc::Receiver<[f64; BANDS]>) {
+    tauri::async_runtime::spawn(async move {
+        while let Some(levels) = levels.recv().await {
+            let signal = Signal {
+                interface: media::INTERFACE,
+                signal: "Levels",
+                args: vec![serde_json::json!(levels)],
+            };
+            let _ = app.emit(SIGNAL_EVENT, signal);
         }
     });
 }
