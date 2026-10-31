@@ -40,6 +40,43 @@ fn properties(interface: &str) -> Vec<(String, String)> {
     out
 }
 
+/// The types of the arguments of `io.nokta.<interface>`'s `signal`.
+fn signal_args(interface: &str, signal: &str) -> Vec<String> {
+    let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../contracts")
+        .join(format!("io.nokta.{interface}.xml"));
+    let xml = std::fs::read_to_string(&file).unwrap();
+    let mut reader = Reader::from_str(&xml);
+    let mut inside = false;
+    let mut out = Vec::new();
+    loop {
+        match reader.read_event().unwrap() {
+            Event::Start(e) | Event::Empty(e) => {
+                let attr = |key: &str| {
+                    e.attributes()
+                        .flatten()
+                        .find(|a| a.key.as_ref() == key)
+                        .map(|a| {
+                            a.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                                .unwrap()
+                                .into_owned()
+                        })
+                        .unwrap_or_default()
+                };
+                match e.name().as_ref() {
+                    "signal" => inside = attr("name") == signal,
+                    "arg" if inside => out.push(attr("type")),
+                    _ => {}
+                }
+            }
+            Event::End(e) if e.name().as_ref() == "signal" => inside = false,
+            Event::Eof => break,
+            _ => {}
+        }
+    }
+    out
+}
+
 /// Whether `value` is how JSON carries a D-Bus value of type `signature`.
 fn fits(signature: &str, value: &Value) -> bool {
     match signature.as_bytes().first() {
@@ -101,4 +138,15 @@ fn lyrics() {
         super::lyrics::INTERFACE,
         &super::lyrics::props(&LyricsState::default()),
     );
+}
+
+#[test]
+fn devices_alert() {
+    use nokta_core::features::devices::rules::{Alert, Kind};
+    let types = signal_args(super::devices::INTERFACE, super::devices::ALERT);
+    let args = super::devices::alert_args(&Alert::device(Kind::BluetoothConnected, "Buds", 80));
+    assert_eq!(types.len(), args.len(), "{types:?} and {args:?}");
+    for (signature, value) in types.iter().zip(&args) {
+        assert!(fits(signature, value), "{value} is not {signature}");
+    }
 }

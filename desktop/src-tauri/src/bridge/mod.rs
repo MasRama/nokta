@@ -5,6 +5,7 @@
 // Only the Windows app uses it; the stub on other systems does not.
 #![cfg_attr(not(windows), allow(dead_code))]
 
+pub mod devices;
 pub mod lyrics;
 pub mod media;
 pub mod nokta;

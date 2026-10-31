@@ -626,6 +626,12 @@ WebView2 and runs the core's services itself, with no D-Bus.
   The page (`alerts.ts`) turns both into the extension's OSD content,
   icon, glow and motion; Windows has no icon theme, so the page draws the
   battery icons itself.
+- The device alerts come from the same rules as on Linux
+  (`devices/rules.rs`): `win_power.rs` reads `GetSystemPowerStatus`
+  whenever Windows calls back for the power source or the percentage,
+  and `win_bluetooth.rs` follows the paired Bluetooth devices with a
+  device watcher (connection and class of device). Windows gives no
+  Bluetooth battery, so a connect alert goes at once without one.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with
