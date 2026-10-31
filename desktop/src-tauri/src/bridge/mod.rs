@@ -14,6 +14,7 @@ pub mod nokta;
 pub mod osd;
 pub mod privacy;
 pub mod settings;
+pub mod shelf;
 pub mod system;
 pub mod timer;
 pub mod toggles;

@@ -9,6 +9,7 @@ mod osd;
 mod pointer;
 mod privacy;
 mod services;
+mod shelf;
 mod shortcut;
 mod sound;
 mod toggles;
@@ -32,9 +33,15 @@ pub fn run() {
             release_keyboard,
             open_uri,
             open_file,
+            shelf::shelf_drag,
             services::bridge_props,
             services::bridge_call
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::DragDrop(dragged) = event {
+                shelf::dragged_over(window, dragged);
+            }
+        })
         .setup(|app| {
             let paths = Paths::from_env()?;
             log::init(&paths);
