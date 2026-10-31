@@ -825,6 +825,88 @@ body.nokta-mock {
     box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
 }
 
+/* A file in the notch, like a finished download (views/file-preview.ts); its height is views.ts' DOWNLOAD_EXTRA_HEIGHT. */
+.nokta-file-preview {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 16px;
+}
+
+.nokta-file-preview-thumb {
+    flex: none;
+    width: 160px;
+    height: 90px;
+    border-radius: 8px;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.nokta-file-preview-thumb:hover {
+    background-color: transparent;
+}
+
+.nokta-file-preview-thumb-icon,
+.nokta-file-preview-thumb-icon:hover {
+    background-color: var(--nokta-tint);
+}
+
+.nokta-file-preview-side {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.nokta-file-preview-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.nokta-file-preview-title {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nokta-file-preview-detail {
+    font-size: 13px;
+    opacity: 0.6;
+}
+
+.nokta-file-preview-buttons {
+    display: flex;
+    gap: 6px;
+}
+
+.nokta-file-preview-button {
+    gap: 6px;
+    min-width: 0;
+    padding: 5px 10px;
+    border-radius: 9px;
+    background-color: var(--nokta-tint);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.nokta-file-preview-button:hover,
+.nokta-light .nokta-file-preview-button:hover {
+    background-color: var(--nokta-tint-hover);
+}
+
+.nokta-file-preview-button:focus-visible,
+.nokta-file-preview-thumb:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
+}
+
 /* The System tile's page (views/system.ts): four rows 26 px high, 6 apart. */
 .nokta-system-page {
     display: flex;

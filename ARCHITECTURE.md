@@ -743,7 +743,10 @@ WebView2 and runs the core's services itself, with no D-Bus.
   `Finished` goes to the notch on the monitor in use. The page may open a
   file or show it in Explorer (`open_file`) only when the core announced
   it (`files.rs`, tested everywhere), so it can never start a program of
-  its own choosing.
+  its own choosing. The page shows it as the extension does, its
+  thumbnail or an icon for its kind (drawn by the page, as Windows has no
+  icon theme) with Open and Show in Explorer, for as long as a
+  notification and longer under the pointer.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one
