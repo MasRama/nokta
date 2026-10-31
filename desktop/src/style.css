@@ -999,8 +999,11 @@ body.nokta-mock {
 }
 
 .nokta-file-preview-detail {
+    overflow: hidden;
     font-size: 13px;
     opacity: 0.6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .nokta-file-preview-buttons {

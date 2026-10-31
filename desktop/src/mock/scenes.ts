@@ -245,6 +245,20 @@ export const SCENES: Record<string, Scene> = {
         props: LINGER_MESSAGE,
         signals: [['Downloads1', 'Finished', 'file:///C:/Users/ren/Downloads/sunset.png', 'sunset.png', 'image-x-generic', 830_000, COVER]],
     },
+    screenshot: {
+        props: LINGER_MESSAGE,
+        signals: [
+            [
+                'Screenshots1',
+                'Taken',
+                'file:///C:/Users/ren/Pictures/Screenshots/Screenshot%202026-10-31%20164512.png',
+                'Screenshot 2026-10-31 164512.png',
+                'image-x-generic',
+                412_000,
+                COVER,
+            ],
+        ],
+    },
     shelf: { props: SHELF },
     'shelf-home': { props: { ...TIMER_HOME, ...SHELF }, open: true },
     'shelf-player': { props: { ...player(true), ...SHELF }, open: true },

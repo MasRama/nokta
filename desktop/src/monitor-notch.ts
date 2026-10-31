@@ -156,6 +156,7 @@ export class MonitorNotch {
     readonly shelf: Shelf;
     readonly clipboard: Clipboard;
     private readonly downloads: Downloads;
+    private readonly screenshots: Downloads;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -241,6 +242,7 @@ export class MonitorNotch {
         );
         this.updates = new Updates(bridge, () => this.onHome());
         this.downloads = new Downloads(bridge, (download) => this.showDownload(download));
+        this.screenshots = new Downloads(bridge, (shot) => this.showDownload(shot, true), 'Screenshots1', 'Taken');
         this.system = new System(
             bridge,
             () => this.onSystem(),
@@ -387,6 +389,7 @@ export class MonitorNotch {
         this.stopClock = everyMinute((now) => this.tickClock(now));
         this.alerts.attach();
         this.downloads.attach();
+        this.screenshots.attach();
         await Promise.all([
             this.settings.attach(),
             this.media.attach(),
@@ -438,6 +441,7 @@ export class MonitorNotch {
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
         this.downloads.detach();
+        this.screenshots.detach();
         this.osdTimer.destroy();
         this.messageTimer.destroy();
         this.machine.destroy();
@@ -521,10 +525,10 @@ export class MonitorNotch {
     }
 
     /**
-     * A file finished downloading: its preview, for as long as a
-     * notification. A new one replaces what shows.
+     * A file finished downloading, or a new `screenshot` was saved: its
+     * preview, for as long as a notification. A new one replaces what shows.
      */
-    private showDownload(download: Download): void {
+    private showDownload(download: Download, screenshot = false): void {
         if (this.inFullscreen) {
             if (!showsOverFullscreen('download', this.settings.behavior.fullscreenAlerts)) return;
             this.alertOverFullscreen = true;
@@ -532,10 +536,13 @@ export class MonitorNotch {
         }
         this.shownDownload = download;
         const buttons = downloadButtons(this.settings.behavior.fileShelf);
-        this.download.show(downloadPicture(download, fileUrlOf), download.name, download.size, buttons);
+        const picture = downloadPicture(download, fileUrlOf);
+        // A screenshot is named by what it is, as GNOME's banner does, with the file under it.
+        if (screenshot) this.download.show(picture, _('Screenshot'), download.name, buttons);
+        else this.download.show(picture, download.name, download.size, buttons);
         this.messageTimer.show(this.settings.notifications.durationMs);
         this.redraw();
-        this.alert({ color: TONES.downloads }, 'kick');
+        this.alert({ color: screenshot ? TONES.screenshot : TONES.downloads }, 'kick');
     }
 
     private onDownloadPress(button: DownloadButton): void {

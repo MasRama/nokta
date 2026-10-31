@@ -748,6 +748,12 @@ WebView2 and runs the core's services itself, with no D-Bus.
   thumbnail or an icon for its kind (drawn by the page, as Windows has no
   icon theme) with Open and Show in Explorer, for as long as a
   notification and longer under the pointer.
+- Screenshots are the same watcher on Windows' Screenshots folder
+  (`win/screenshots.rs`), where Win+PrtScn and the Snipping Tool save, while
+  `[behavior] screenshot_preview` is on. `Screenshots1.Taken`, only on the
+  bridge, has `Finished`'s arguments; the page shows it in the download's
+  preview titled Screenshot, as GNOME's banner gives way to the extension's
+  preview.
 - The shelf (`Shelf1`) is the core's service. Files dropped on a notch
   reach it through Tauri's drag-and-drop events (`win/shelf.rs`), and
   only over the notch, since elsewhere the window lets the pointer

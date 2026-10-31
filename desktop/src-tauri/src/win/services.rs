@@ -32,9 +32,9 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::bridge::{
     activities as activities_props, clipboard as clipboard_bridge, devices as devices_bridge,
     downloads as downloads_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
-    privacy as privacy_props, settings, shelf as shelf_bridge, system as system_props,
-    timer as timer_props, toggles as toggles_props, updates as updates_props,
-    weather as weather_props, Props,
+    privacy as privacy_props, screenshots as screenshots_bridge, settings, shelf as shelf_bridge,
+    system as system_props, timer as timer_props, toggles as toggles_props,
+    updates as updates_props, weather as weather_props, Props,
 };
 use crate::files::KnownFiles;
 use crate::layout::{self, NotchSizes};
@@ -144,7 +144,7 @@ impl Core {
 /// Starts the services and the forwarders; the app manages the result.
 pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     let http = http::client(|b| b.user_agent(USER_AGENT));
-    let (media_state, player, mut services, levels, alerts) =
+    let (media_state, player, mut services, levels, alerts, screenshots) =
         tauri::async_runtime::block_on(async {
             let art = ArtCache::new(paths.cache_dir.clone(), http);
             let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
@@ -158,12 +158,14 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
             let levels = loopback::spawn(media_state.clone(), services.config.clone(), |c| {
                 c.media.real_equalizer
             });
+            let screenshots = super::screenshots::spawn(services.config.clone(), &paths.cache_dir);
             (
                 media_state,
                 player,
                 services,
                 levels,
                 devices::watcher::spawn(),
+                screenshots,
             )
         });
     forward_settings(
@@ -331,6 +333,14 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         downloads_bridge::FINISHED,
         downloads_bridge::finished_args,
     );
+    forward_signal(
+        app.clone(),
+        remembered(screenshots, known.clone()),
+        To::Front,
+        screenshots_bridge::INTERFACE,
+        screenshots_bridge::TAKEN,
+        downloads_bridge::finished_args,
+    );
     forward(
         app.clone(),
         services.shelf.state.clone(),
@@ -406,8 +416,8 @@ pub fn forget(label: &str) {
     }
 }
 
-/// Remembers each finished download, so the page may open it, and passes
-/// it on.
+/// Remembers each finished download or new screenshot, so the page may
+/// open it, and passes it on.
 fn remembered(
     mut downloads: mpsc::Receiver<Finished>,
     known: Arc<Mutex<KnownFiles>>,
