@@ -20,6 +20,8 @@ export interface OpenHow {
     openOn: OpenOn;
     /** `[behavior] open_shortcut`, like `<Super><Alt>n`; empty for none. */
     shortcut: string;
+    /** What the Super key is called where it runs: Windows calls it Win. */
+    superName?: string;
 }
 
 /** Step `index` (0 to TOUR_STEPS - 1), in the user's language. */
@@ -45,8 +47,8 @@ export function tourStep(index: number, how: OpenHow): TourStep {
     }
 }
 
-function openText({ openOn, shortcut }: OpenHow): string {
-    const keys = shortcutLabel(shortcut);
+function openText({ openOn, shortcut, superName }: OpenHow): string {
+    const keys = shortcutLabel(shortcut, superName);
     if (openOn === 'click') return keys ? format(_('Click it or press %s.'), keys) : _('Click it.');
     return keys ? format(_('Rest the pointer on it or press %s.'), keys) : _('Rest the pointer on it.');
 }

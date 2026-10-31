@@ -25,3 +25,8 @@ test('the_shortcut_reads_as_keys_joined_by_plus', () => {
     assert.equal(shortcutLabel(''), '');
     assert.equal(shortcutLabel('   '), '');
 });
+
+test('windows_names_the_super_key_win', () => {
+    assert.equal(shortcutLabel('<Super><Alt>n', 'Win'), 'Win+Alt+N');
+    assert.equal(shortcutLabel('<Control>n', 'Win'), 'Ctrl+N');
+});
