@@ -464,6 +464,27 @@ fn toml_error(text: &str, err: &toml::de::Error) -> ConfigError {
 }
 
 impl Config {
+    /// Every table as `io.nokta.Settings1` publishes it: the property's name
+    /// and the table's entries.
+    pub fn tables(&self) -> [(&'static str, Entries); 14] {
+        [
+            ("Appearance", self.appearance.entries()),
+            ("Behavior", self.behavior.entries()),
+            ("Media", self.media.entries()),
+            ("Lyrics", self.lyrics.entries()),
+            ("Timer", self.timer.entries()),
+            ("Notifications", self.notifications.entries()),
+            ("Activities", self.activities.entries()),
+            ("Weather", self.weather.entries()),
+            ("Calendar", self.calendar.entries()),
+            ("Clipboard", self.clipboard.entries()),
+            ("Downloads", self.downloads.entries()),
+            ("System", self.system.entries()),
+            ("Updates", self.updates.entries()),
+            ("Home", self.home.entries()),
+        ]
+    }
+
     fn validate(&self) -> Result<(), ConfigError> {
         let a = &self.appearance;
         let b = &self.behavior;
