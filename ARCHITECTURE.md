@@ -710,7 +710,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   window subclass hears `WM_POWERBROADCAST`, so the clocks read the wall
   clock again after sleep, as noktad does on logind's `PrepareForSleep`.
   `[timer] shortcut` is a second hotkey on the shortcut thread that starts
-  focus or stops the timer.
+  focus or stops the timer. The page draws them with the extension's
+  timer logic: the time left in the clock's place on the closed notch
+  (after a call, through `chooseIndicator`), up to three clock rows on
+  home, the Focus tile, and the Timer tile's page of presets, a sub-page
+  sized with the extension's `subPageHeight`.
 - The tray icon stands in for the top bar (Quit). A second start leaves
   the running one alone.
 - The NSIS installer installs per user without admin rights, brings the

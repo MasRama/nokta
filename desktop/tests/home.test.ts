@@ -75,7 +75,7 @@ describe('home on Windows', () => {
             },
         });
         expect(labels('.nokta-pill-label')).toEqual(['Dark Style', 'Caffeine']);
-        expect(labels('.nokta-tile-label')).toEqual(['Screenshot', 'Notifications']);
+        expect(labels('.nokta-tile-label')).toEqual(['Screenshot', 'Timer', 'Notifications']);
     });
 
     it('turns a toggle the other way through the app', async () => {
@@ -110,8 +110,8 @@ describe('home on Windows', () => {
 describe('home controls', () => {
     it('drops the toggles and tiles Windows has not', () => {
         expect(
-            windowsControls({ toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system'] }),
-        ).toEqual({ toggles: ['caffeine'], tiles: ['notifications'] });
+            windowsControls({ toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system', 'clipboard'] }),
+        ).toEqual({ toggles: ['caffeine'], tiles: ['focus', 'notifications'] });
     });
 
     it('counts a row for the toggles and one for the tiles, only when there are some', () => {

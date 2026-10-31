@@ -4,28 +4,39 @@ import { romanize } from '@ext/features/lyrics/logic/romanize.js';
 import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
-import { panelHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
+import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeTile } from '@ext/features/panel/logic/layout.js';
 import { callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
 import { dotsFor } from '@ext/features/privacy/logic/dots.js';
+import {
+    clockColor,
+    clockDetail,
+    clockText,
+    clockTitle,
+    indicatorClock,
+    msUntilClockChange,
+} from '@ext/features/timer/logic/clocks.js';
+import { formatRemaining, msUntilNextSecond, phaseColor, remainingAt } from '@ext/features/timer/logic/timer.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
 import { motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
 import { withAlpha } from '@ext/shared/logic/color.js';
-import { uses24h } from '@ext/shared/logic/format.js';
+import { formatClock, uses24h } from '@ext/shared/logic/format.js';
 import { fullscreenView, showsOverFullscreen } from '@ext/shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from '@ext/shared/logic/glow.js';
+import { chooseIndicator } from '@ext/shared/logic/indicator.js';
 import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/keyframes.js';
 import { NotchMachine } from '@ext/shared/logic/machine.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
-import { Alerts, type OsdRequest } from './alerts.js';
+import { Alerts, CLOCK_ICON, clockDoneRequest, finishedRequest, TIMER_ICON, type OsdRequest } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
+import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
 import { everyMinute } from './views/clock.js';
 import { CollapsedView } from './views/collapsed.js';
@@ -36,6 +47,8 @@ import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
 import { CallLabel, PrivacyDots } from './views/privacy.js';
+import { SubPage } from './views/subpage.js';
+import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
 import { Weather } from './weather.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
@@ -68,7 +81,10 @@ const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
 /** An alert pushes the notch this much wider before it springs back. */
 const ALERT_KICK = 0.06;
 
-/** How often the open player moves its progress and its lyric on. */
+/** A page a home tile opens. */
+type PageName = 'timer';
+
+/** How often the open player moves its progress and its lyric on, and home its clocks. */
 const TICK_MS = 250;
 
 /** Tells one song from the next, as the extension's. */
@@ -90,6 +106,7 @@ export class MonitorNotch {
     readonly privacy: Privacy;
     readonly weather: Weather;
     readonly toggles: Toggles;
+    readonly timer: Timer;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -102,6 +119,15 @@ export class MonitorNotch {
     private readonly privacyDots = new PrivacyDots();
     /** The call in the idle view and in the collapsed one. */
     private readonly calls = { idle: new CallLabel(), collapsed: new CallLabel() };
+    /** The focus timer or a clock, in the same two places. */
+    private readonly timerLabels = { idle: new TimerLabel(), collapsed: new TimerLabel() };
+    private readonly timerPage: TimerPage;
+    /** The pages home's tiles open, one shown at a time. */
+    private readonly pages: HTMLDivElement;
+    private readonly subPages: Record<PageName, HTMLElement>;
+    private page: PageName | null = null;
+    /** Home moves its clocks on while it shows them. */
+    private homeTicker = 0;
     private readonly views: Partial<Record<Drawn, HTMLElement>>;
     private drawn: Drawn = 'idle';
     private hit: Box | null = null;
@@ -114,7 +140,8 @@ export class MonitorNotch {
     private shownPalette: Palette | null = null;
     private stopClock: (() => void) | null = null;
     private privacyCount = 0;
-    private callTimer = 0;
+    /** Until the closed notch's call, timer or clock shows its next second. */
+    private indicatorTimer = 0;
     /** A fullscreen app covers the monitor: the notch hides. */
     private inFullscreen = false;
     /** An alert let through over the fullscreen app shows until it ends. */
@@ -141,20 +168,44 @@ export class MonitorNotch {
         this.privacy = new Privacy(bridge, () => this.onPrivacy());
         this.weather = new Weather(bridge, () => this.onHome());
         this.toggles = new Toggles(bridge, () => this.onToggles());
+        this.timer = new Timer(
+            bridge,
+            () => this.onTimer(),
+            (phase) => this.onTimerFinished(phase),
+            (kind, label) => this.onClockDone(kind, label),
+        );
         this.home = new HomeView({
             openPlayer: () => this.setHomeOpen(false),
+            pauseClock: (id, pause) => this.timer.pauseClock(id, pause),
+            removeClock: (id) => this.timer.removeClock(id),
             toggle: (which) => this.toggles.toggle(which),
             openTile: (which) => this.openTile(which),
         });
         this.collapsed = new CollapsedView(() => this.media.levels());
         this.peek = new PeekView(() => this.media.levels());
         this.expanded = new ExpandedView(this.media, () => this.setHomeOpen(true));
+        // What a preset starts shows in home, so it goes back there.
+        this.timerPage = new TimerPage({
+            countdown: (minutes) => {
+                this.timer.addCountdown(minutes);
+                this.setPage(null);
+            },
+            stopwatch: () => {
+                this.timer.addStopwatch();
+                this.setPage(null);
+            },
+        });
+        this.subPages = { timer: new SubPage('Timer', this.timerPage.element, () => this.setPage(null)).element };
+        this.pages = document.createElement('div');
+        this.pages.className = 'nokta-view nokta-pages';
+        this.pages.append(...Object.values(this.subPages));
         this.views = {
             idle: this.idle.element,
             collapsed: this.collapsed.element,
             peek: this.peek.element,
             expanded: this.expanded.element,
             panel: this.home.element,
+            page: this.pages,
             osd: this.osd.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
@@ -216,6 +267,7 @@ export class MonitorNotch {
             this.privacy.attach(),
             this.weather.attach(),
             this.toggles.attach(),
+            this.timer.attach(),
         ]);
     }
 
@@ -239,7 +291,9 @@ export class MonitorNotch {
         this.privacy.detach();
         this.weather.detach();
         this.toggles.detach();
-        window.clearTimeout(this.callTimer);
+        this.timer.detach();
+        window.clearTimeout(this.indicatorTimer);
+        window.clearInterval(this.homeTicker);
         this.alerts.detach();
         this.osdTimer.destroy();
         this.machine.destroy();
@@ -387,6 +441,7 @@ export class MonitorNotch {
         // The levels are the system's, not the song's: the bar takes the text color.
         this.osd.setColors(palette.foreground, withAlpha(palette.foreground, 0.2));
         this.home.setColors({ foreground: palette.foreground, light: palette.light });
+        this.timerPage.setColors(palette);
         this.updateViews();
     }
 
@@ -406,19 +461,81 @@ export class MonitorNotch {
         this.onHome();
     }
 
-    /** The weather, a toggle or home's layout changed: home shows it, at its new height. */
+    /** The weather, a toggle, a clock or home's layout changed: home shows it, at its new height. */
     private onHome(): void {
         const layout = windowsControls(this.settings.home);
+        const { snapshot, clocks } = this.timer;
         this.home.setWeather(this.weather.line);
-        this.home.setControls(layout, this.toggles.state);
-        const rows = homeRows(layout);
+        this.home.setClocks(this.homeClocks());
+        this.home.setControls(layout, this.toggles.state, {
+            focus: snapshot.state !== 'idle',
+            timer: clocks.length > 0,
+        });
+        this.updateHomeTicker();
+        const rows = homeRows(layout, clocks.length);
         if (rows.join() === this.homeRows.join()) return;
         this.homeRows = rows;
         if (this.drawn === 'panel') this.notch.resizeTo(...this.sizeFor('panel'), 'width');
     }
 
-    /** A tile closes the notch, then opens what it stands for. */
+    /** The clocks as home's rows show them, newest first. */
+    private homeClocks(): HomeClock[] {
+        const now = nowUs();
+        const use24h = this.use24h();
+        return this.timer.clocks.map((clock) => ({
+            id: clock.id,
+            icon: clock.kind === 'alarm' ? TIMER_ICON : CLOCK_ICON,
+            color: clockColor(clock.kind),
+            title: clockTitle(clock),
+            detail: clockDetail(clock, clock.alarmUnixUs ? formatClock(new Date(clock.alarmUnixUs / 1000), use24h) : ''),
+            time: clockText(clock, now),
+            running: clock.running,
+            canPause: clock.kind !== 'alarm',
+        }));
+    }
+
+    /** Home moves its clocks on while it shows them. */
+    private updateHomeTicker(): void {
+        const run = this.drawn === 'panel' && this.timer.clocks.length > 0;
+        if (run && !this.homeTicker) {
+            this.homeTicker = window.setInterval(() => this.home.setClocks(this.homeClocks()), TICK_MS);
+        } else if (!run && this.homeTicker) {
+            window.clearInterval(this.homeTicker);
+            this.homeTicker = 0;
+        }
+    }
+
+    /** The focus timer or the clocks changed. */
+    private onTimer(): void {
+        this.applyIndicator();
+        this.onHome();
+    }
+
+    /** A focus session or a break ran out. */
+    private onTimerFinished(phase: string): void {
+        const { timer, behavior, appearance } = this.settings;
+        const request = finishedRequest(phase, this.timer.snapshot, timer, behavior, appearance.alertMotion);
+        if (request) this.showOsd(request);
+    }
+
+    /** A countdown ran out or an alarm went off. */
+    private onClockDone(kind: string, label: string): void {
+        const { behavior, appearance } = this.settings;
+        const time = formatClock(new Date(), this.use24h());
+        const request = clockDoneRequest(kind, label, time, behavior, appearance.alertMotion);
+        if (request) this.showOsd(request);
+    }
+
+    /** A tile opens its page, works its feature, or closes the notch and opens what it stands for. */
     private openTile(which: HomeTile): void {
+        if (which === 'timer') {
+            this.setPage('timer');
+            return;
+        }
+        if (which === 'focus') {
+            this.timer.toggleFocus();
+            return;
+        }
         const uri = TILE_URIS[which];
         if (!uri) return;
         this.machine.close();
@@ -434,7 +551,7 @@ export class MonitorNotch {
         this.collapsed.setInset(inset);
         this.peek.setInset(inset);
         this.showPrivacyDots();
-        this.onCall();
+        this.applyIndicator();
     }
 
     /** The dots belong to the closed notch. */
@@ -443,20 +560,54 @@ export class MonitorNotch {
         this.privacyDots.setVisible(this.privacyCount > 0 && closed);
     }
 
-    /** Shows the call in the closed notch, and counts its seconds. */
-    private onCall(): void {
-        window.clearTimeout(this.callTimer);
-        this.callTimer = 0;
-        const call = this.settings.behavior.callIndicator ? this.privacy.currentCall() : null;
-        this.idle.setAside(call ? this.calls.idle.element : null);
-        this.collapsed.setAside(call ? this.calls.collapsed.element : null);
-        this.setActive();
-        if (!call) return;
+    /**
+     * The one spot in the closed notch, in the clock's place or beside the
+     * cover: the call, else the focus timer, else a countdown, stopwatch or
+     * alarm. It counts on, second by second.
+     */
+    private applyIndicator(): void {
+        window.clearTimeout(this.indicatorTimer);
+        this.indicatorTimer = 0;
         const now = nowUs();
-        const text = callText(call.sinceUs, now);
-        this.calls.idle.update(text, call.muted);
-        this.calls.collapsed.update(text, call.muted);
-        this.callTimer = window.setTimeout(() => this.onCall(), msUntilElapsedSecond(call.sinceUs, now));
+        const call = this.settings.behavior.callIndicator ? this.privacy.currentCall() : null;
+        const { snapshot, clocks } = this.timer;
+        const clock = indicatorClock(clocks, now);
+        const indicator = chooseIndicator({
+            recording: false,
+            call: call !== null,
+            timer: snapshot.state !== 'idle',
+            clock: clock !== null,
+            activity: false,
+            shelf: false,
+        });
+        const shown = (place: 'idle' | 'collapsed'): HTMLElement | null => {
+            if (indicator === 'call') return this.calls[place].element;
+            if (indicator === 'timer' || indicator === 'clock') return this.timerLabels[place].element;
+            return null;
+        };
+        this.idle.setAside(shown('idle'));
+        this.collapsed.setAside(shown('collapsed'));
+        this.setActive();
+        const waits: number[] = [];
+        if (call) {
+            const text = callText(call.sinceUs, now);
+            this.calls.idle.update(text, call.muted);
+            this.calls.collapsed.update(text, call.muted);
+            waits.push(msUntilElapsedSecond(call.sinceUs, now));
+        }
+        let label: [string, string, boolean] | null = null;
+        if (indicator === 'timer') {
+            label = [formatRemaining(remainingAt(snapshot, now)), phaseColor(snapshot.phase), snapshot.state === 'paused'];
+            const wait = msUntilNextSecond(snapshot, now);
+            if (wait !== null) waits.push(wait);
+        } else if (indicator === 'clock' && clock) {
+            label = [clockText(clock, now), clockColor(clock.kind), !clock.running];
+        }
+        if (label) for (const timer of Object.values(this.timerLabels)) timer.update(...label);
+        // Also an alarm coming into its last hour takes the spot.
+        const wait = msUntilClockChange(clocks, now);
+        if (wait !== null) waits.push(wait);
+        if (waits.length > 0) this.indicatorTimer = window.setTimeout(() => this.applyIndicator(), Math.min(...waits));
     }
 
     private onMedia(): void {
@@ -509,6 +660,7 @@ export class MonitorNotch {
         } else {
             // Closing goes back to the first page.
             this.homeOpen = false;
+            this.page = null;
         }
         this.redraw();
         if (this.keyboard && !this.machine.held) {
@@ -518,15 +670,29 @@ export class MonitorNotch {
         }
     }
 
+    /** Opens a tile's page over home, or goes back to home. */
+    private setPage(page: PageName | null): void {
+        if (this.page === page) return;
+        this.page = page;
+        // Back from a page lands on home, also over a player.
+        if (page) this.homeOpen = true;
+        for (const [name, element] of Object.entries(this.subPages)) element.hidden = name !== page;
+        this.redraw();
+    }
+
     private setHomeOpen(open: boolean): void {
         if (this.homeOpen === open) return;
         this.homeOpen = open;
         this.redraw();
     }
 
+    /** Whether times show on a 24-hour clock: Nokta's `clock_format`, or Windows' region. */
+    private use24h(): boolean {
+        return uses24h(this.settings.behavior.clockFormat, this.host.systemUses24h() ? '24h' : '12h');
+    }
+
     private tickClock(now: Date): void {
-        const b = this.settings.behavior;
-        this.idle.update(now, uses24h(b.clockFormat, this.host.systemUses24h() ? '24h' : '12h'), b.showClock);
+        this.idle.update(now, this.use24h(), this.settings.behavior.showClock);
         this.home.update(now);
     }
 
@@ -541,7 +707,7 @@ export class MonitorNotch {
             appearance,
             notificationButtons: false,
             panelHeight: panelHeight(appearance.height, this.homeRows),
-            pageHeight: 0,
+            pageHeight: subPageHeight(TimerPage.HEIGHT),
             expandedExtra: this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0,
         });
     }
@@ -555,7 +721,7 @@ export class MonitorNotch {
             notification: null,
             mode: this.machine.mode,
             peek: this.peekTimer !== 0,
-            page: false,
+            page: this.page !== null,
             homeOpen: this.homeOpen,
             player: this.media.snapshot.available,
             tour: false,
@@ -580,6 +746,7 @@ export class MonitorNotch {
             this.tick();
         }
         this.updateTicker();
+        this.updateHomeTicker();
         // The focus follows to the new view.
         this.focusView();
     }

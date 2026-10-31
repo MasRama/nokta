@@ -1,7 +1,9 @@
 import { deviceAlert, isBatteryWarning } from '@ext/features/devices/logic/alert.js';
 import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
-import type { Behavior } from '@ext/features/settings/logic/parse.js';
+import type { Behavior, TimerSettings } from '@ext/features/settings/logic/parse.js';
+import { clockColor, clockDoneAlert } from '@ext/features/timer/logic/clocks.js';
+import { breakAfterFocus, finishedAlert, phaseColor, type TimerSnapshot } from '@ext/features/timer/logic/timer.js';
 import { alertMotion, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import type { AlertKind } from '@ext/shared/logic/fullscreen.js';
 import type { AlertTone } from '@ext/shared/logic/glow.js';
@@ -86,6 +88,52 @@ export function deviceRequest(
         durationMs: behavior.alertDurationMs,
         tone: alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device },
         motion: alertMotion(kind, motions),
+    };
+}
+
+/** The timer's icon, and a countdown's, as the extension's. */
+export const TIMER_ICON = 'alarm-symbolic';
+export const CLOCK_ICON = 'nokta-timer';
+/** A countdown or an alarm stays this many times an alert's time. */
+const CLOCK_ALERT_FACTOR = 2;
+
+/** The alert for `Timer1.Finished(phase)`, with the break that follows a focus session. */
+export function finishedRequest(
+    phase: string,
+    timer: TimerSnapshot,
+    settings: TimerSettings,
+    behavior: Behavior,
+    motions: boolean,
+): OsdRequest | null {
+    const alert = finishedAlert(phase, breakAfterFocus(timer, settings));
+    if (!alert) return null;
+    return {
+        content: { fraction: null, text: alert.title, detail: alert.detail, urgent: false },
+        icon: TIMER_ICON,
+        kind: 'focus',
+        durationMs: behavior.alertDurationMs,
+        tone: { color: phaseColor(phase === 'break' ? 'break' : 'focus') },
+        motion: alertMotion('timer-done', motions),
+    };
+}
+
+/** The alert for `Timer1.ClockDone(id, kind, label)`; `time` is the local time now. */
+export function clockDoneRequest(
+    kind: string,
+    label: string,
+    time: string,
+    behavior: Behavior,
+    motions: boolean,
+): OsdRequest | null {
+    const alert = clockDoneAlert(kind, label, time);
+    if (!alert) return null;
+    return {
+        content: { fraction: null, text: alert.title, detail: alert.detail, urgent: false },
+        icon: kind === 'alarm' ? TIMER_ICON : CLOCK_ICON,
+        kind: 'clock',
+        durationMs: CLOCK_ALERT_FACTOR * behavior.alertDurationMs,
+        tone: { color: clockColor(kind === 'alarm' ? 'alarm' : 'countdown') },
+        motion: alertMotion('clock-done', motions),
     };
 }
 
