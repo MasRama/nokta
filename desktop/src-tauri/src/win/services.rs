@@ -5,16 +5,20 @@
 
 use std::sync::Mutex;
 
-use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL};
-use nokta_core::features::media::MediaState;
+use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
+use nokta_core::features::lyrics::{self, LyricsState};
+use nokta_core::features::media::art::ArtCache;
+use nokta_core::features::media::{gsmtc, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
+use nokta_core::shared::clock::{monotonic_us, wall_us};
+use nokta_core::shared::http;
 use nokta_core::shared::paths::Paths;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, State};
-use tokio::sync::watch;
+use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::bridge::{nokta, settings, Props};
+use crate::bridge::{lyrics as lyrics_props, media, nokta, settings, Props};
 use crate::layout::NotchSizes;
 
 /// The event that carries an interface's changed properties to every page.
@@ -30,8 +34,10 @@ pub struct Core {
     config: watch::Receiver<Config>,
     picture: watch::Receiver<Prepared>,
     writer: Writer,
-    /// The media state the Windows media source will publish.
-    _media: watch::Sender<MediaState>,
+    media: watch::Receiver<MediaState>,
+    player: gsmtc::Controller,
+    lyrics: watch::Receiver<LyricsState>,
+    lyrics_commands: mpsc::Sender<lyrics::service::Command>,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -45,25 +51,40 @@ impl Core {
 
 /// Starts the services and the forwarders; the app manages the result.
 pub fn start(app: &AppHandle, paths: &Paths) -> Core {
-    let (media, media_state) = watch::channel(MediaState::default());
-    let services = tauri::async_runtime::block_on(async {
-        Services::start(
+    let http = http::client(|b| b.user_agent(USER_AGENT));
+    let (media_state, player, services) = tauri::async_runtime::block_on(async {
+        let art = ArtCache::new(paths.cache_dir.clone(), http);
+        let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
+        let services = Services::start(
             paths,
-            media_state,
+            media_state.clone(),
             DEFAULT_LRCLIB_URL,
             &OpenMeteoUrls::default(),
-        )
+        );
+        (media_state, player, services)
     });
     forward_settings(
         app.clone(),
         services.config.clone(),
         services.picture.clone(),
     );
+    forward(app.clone(), media_state.clone(), media::INTERFACE, |s| {
+        media::props(s, monotonic_us(), wall_us())
+    });
+    forward(
+        app.clone(),
+        services.lyrics.state.clone(),
+        lyrics_props::INTERFACE,
+        lyrics_props::props,
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
         writer: Writer::new(services.config_file.clone()),
-        _media: media,
+        media: media_state,
+        player,
+        lyrics: services.lyrics.state.clone(),
+        lyrics_commands: services.lyrics.commands.clone(),
         _services: Mutex::new(services),
     }
 }
@@ -102,11 +123,32 @@ fn forward_settings(
     });
 }
 
+/// Sends an interface's properties again on each change of `state`.
+fn forward<T: Send + Sync + 'static>(
+    app: AppHandle,
+    mut state: watch::Receiver<T>,
+    interface: &'static str,
+    props: impl Fn(&T) -> Props + Send + 'static,
+) {
+    tauri::async_runtime::spawn(async move {
+        while state.changed().await.is_ok() {
+            let props = props(&state.borrow_and_update());
+            let _ = app.emit(PROPS_EVENT, Changed { interface, props });
+        }
+    });
+}
+
 /// An interface's properties as they are now.
 #[tauri::command]
 pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, String> {
     match interface.as_str() {
         nokta::INTERFACE => Ok(nokta::props()),
+        media::INTERFACE => Ok(media::props(
+            &core.media.borrow(),
+            monotonic_us(),
+            wall_us(),
+        )),
+        lyrics_props::INTERFACE => Ok(lyrics_props::props(&core.lyrics.borrow())),
         settings::INTERFACE => Ok(settings::props(
             &core.config.borrow(),
             &core.picture.borrow(),
@@ -136,6 +178,26 @@ pub async fn bridge_call(
         ("Settings1", "Reset", []) => {
             core.writer.reset().await.map_err(|e| e.to_string())?;
             Ok(Value::Null)
+        }
+        (media::INTERFACE, method, args) => {
+            core.player.send(media::command(method, args)?);
+            Ok(Value::Null)
+        }
+        (lyrics_props::INTERFACE, "SetOffset", [offset]) => {
+            let offset = offset.as_f64().ok_or("the offset must be a number")?;
+            let (done, answer) = oneshot::channel();
+            let stopped = || "the lyrics service has stopped".to_owned();
+            core.lyrics_commands
+                .send(lyrics::service::Command::SetOffset(
+                    offset.round() as i64,
+                    done,
+                ))
+                .await
+                .map_err(|_| stopped())?;
+            match answer.await.map_err(|_| stopped())? {
+                Ok(_) => Ok(Value::Null),
+                Err(_) => Err("no track to set the lyric timing for".into()),
+            }
         }
         _ => Err(format!(
             "no method {interface}.{method} for {} arguments",
