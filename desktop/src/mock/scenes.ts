@@ -8,6 +8,59 @@ export interface Scene {
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
 
+/** A stand-in cover: what a cover file is in the app, a data URL is in the browser. */
+const COVER =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+            '<defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#ff7a59"/>' +
+            '<stop offset="1" stop-color="#6a2c91"/></linearGradient></defs>' +
+            '<rect width="64" height="64" fill="url(#g)"/><circle cx="40" cy="26" r="12" fill="#ffd36e"/>' +
+            '<path d="M0 50 Q20 34 36 46 T64 42 V64 H0 Z" fill="#2a1240" opacity="0.8"/></svg>',
+    );
+
+/** A song playing in Spotify, two minutes in, with Chrome as a second player. */
+function player(playing: boolean): Record<string, Props> {
+    return {
+        Media1: {
+            Available: true,
+            PlayerId: 'Spotify.exe',
+            PlayerName: 'Spotify',
+            Players: [
+                ['Spotify.exe', 'Spotify'],
+                ['chrome', 'Chrome'],
+            ],
+            PlaybackStatus: playing ? 'Playing' : 'Paused',
+            Title: 'Golden Hour Drive',
+            Artists: ['Nadia Sol', 'The Low Lights'],
+            Album: 'Westbound',
+            LengthUs: 214_000_000,
+            ArtPath: COVER,
+            AccentColor: '#ff7a59',
+            PositionUs: 121_500_000,
+            PositionTimestampUs: Date.now() * 1000,
+            Rate: 1,
+            CanPlayPause: true,
+            CanGoNext: true,
+            CanGoPrevious: true,
+            CanSeek: true,
+            Shuffle: true,
+            LoopStatus: 'None',
+            CanShuffle: true,
+            CanLoop: true,
+        },
+        Lyrics1: {
+            Status: 'synced',
+            Lines: [
+                [118_000_000, 'Windows down and the radio on'],
+                [124_000_000, 'Chasing the light till the light is gone'],
+                [130_000_000, 'Golden hour, take me home'],
+            ],
+            OffsetMs: 0,
+        },
+    };
+}
+
 /** The scenes `?mock=<name>` shows, for the shots and for working on the page. */
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
@@ -19,6 +72,9 @@ export const SCENES: Record<string, Scene> = {
         props: appearance({ theme: 'custom', background: '#1d2b53', gradient: 'diagonal', background_end: '#7e2553' }),
         open: true,
     },
+    player: { props: player(true) },
+    'player-paused': { props: player(false) },
+    'player-open': { props: player(true), open: true },
 };
 
 /** The scene for `search` (the page's query string); idle when none or unknown. */

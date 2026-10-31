@@ -93,9 +93,329 @@ body.nokta-mock {
     line-height: 1.1;
 }
 
+/* A class that sets `display` would win over `hidden`. */
+.nokta-notch [hidden] {
+    display: none !important;
+}
+
+.nokta-icon {
+    display: inline-flex;
+    flex: none;
+}
+
+.nokta-icon svg {
+    display: block;
+}
+
+.nokta-button,
+.nokta-play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: 0;
+    border-radius: 99px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: default;
+    transition:
+        background-color 150ms,
+        opacity 150ms,
+        transform 120ms ease-out;
+}
+
+.nokta-button:hover {
+    background-color: rgba(128, 128, 128, 0.25);
+}
+
+.nokta-light .nokta-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.nokta-button:disabled,
+.nokta-play:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.nokta-button:focus-visible,
+.nokta-play:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
+}
+
+/* The player's cover: a picture, or a note on grey. */
+.nokta-cover {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-size: cover;
+    background-position: center;
+    transition:
+        opacity 260ms ease-out,
+        transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nokta-cover-empty {
+    background-color: rgba(128, 128, 128, 0.3);
+}
+
+.nokta-cover-paused {
+    transition-timing-function: ease-out;
+}
+
+.nokta-equalizer {
+    flex: none;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+}
+
+.nokta-equalizer-bar {
+    width: 3px;
+    height: 14px;
+    border-radius: 1.5px;
+    transform-origin: bottom;
+    transition: transform 83ms linear;
+}
+
+.nokta-equalizer-settling .nokta-equalizer-bar {
+    transition: transform 250ms ease-out;
+}
+
+/* The closed notch with a player, and its peek at a new song. */
+.nokta-collapsed,
+.nokta-peek {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px 0 10px;
+}
+
+.nokta-peek-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 6px;
+    padding: 0 10px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.nokta-peek-title {
+    flex: none;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.nokta-peek-artist {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.59;
+}
+
+/* The open player. */
+.nokta-expanded {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px 18px 8px;
+}
+
+.nokta-expanded-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nokta-expanded-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.nokta-title,
+.nokta-artists,
+.nokta-player-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nokta-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.nokta-artists {
+    font-size: 13px;
+    opacity: 0.59;
+}
+
+.nokta-player-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0.59;
+}
+
+.nokta-player-name {
+    font-size: 11px;
+}
+
+.nokta-player-switch {
+    padding: 1px;
+}
+
+.nokta-home-button {
+    align-self: flex-start;
+    padding: 2px;
+}
+
+.nokta-lyric-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    height: 38px;
+}
+
+.nokta-lyric-moved {
+    animation: nokta-lyric-in 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@keyframes nokta-lyric-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+/* The line being sung: lit over its dim self, from the left. */
+.nokta-lyric {
+    display: inline-grid;
+    max-width: 100%;
+    height: 20px;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.nokta-lyric-base,
+.nokta-lyric-lit {
+    grid-area: 1 / 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nokta-lyric-base {
+    opacity: 0.45;
+}
+
+.nokta-lyric-next {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.45;
+}
+
+.nokta-lyric-romanized {
+    font-weight: 500;
+    font-style: italic;
+}
+
+.nokta-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nokta-time {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.59;
+}
+
+.nokta-progress-hit {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    height: 14px;
+}
+
+.nokta-progress-track {
+    flex: 1;
+    height: 5px;
+    border-radius: 2.5px;
+    overflow: hidden;
+}
+
+.nokta-progress-fill {
+    height: 100%;
+    border-radius: 2.5px;
+}
+
+.nokta-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+}
+
+/* Filled with the accent from code; the pointer lifts it, a press sinks it. */
+.nokta-play {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 19px;
+}
+
+.nokta-play:hover {
+    transform: scale(1.06);
+}
+
+.nokta-play:active {
+    transform: scale(0.9);
+}
+
+.nokta-theme-paper .nokta-play {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+}
+
+/* Shuffle and repeat: dimmed while off, in the accent while on. */
+.nokta-toggle {
+    opacity: 0.39;
+}
+
+.nokta-toggle.nokta-on {
+    opacity: 1;
+    color: var(--nokta-accent);
+}
+
+.nokta-panel {
+    display: flex;
+    justify-content: space-between;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .nokta-view,
-    .nokta-view.nokta-shown {
+    .nokta-view.nokta-shown,
+    .nokta-cover,
+    .nokta-button,
+    .nokta-play {
         transition: none;
+    }
+
+    .nokta-lyric-moved {
+        animation: none;
     }
 }
