@@ -158,7 +158,7 @@ fn lyrics_enabled(config: watch::Receiver<Config>) -> watch::Receiver<bool> {
 }
 
 /// Follows one part of the config, changing only when that part does.
-pub(super) fn follow<T: PartialEq + Send + Sync + 'static>(
+pub fn follow<T: PartialEq + Send + Sync + 'static>(
     mut config: watch::Receiver<Config>,
     part: impl Fn(&Config) -> T + Send + 'static,
 ) -> watch::Receiver<T> {
