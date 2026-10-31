@@ -768,7 +768,9 @@ WebView2 and runs the core's services itself, with no D-Bus.
   clipboard tools to skip it, and nothing at all while the history is off
   or paused. `Copy(id)`, which only the bridge has, puts an entry back:
   the window owns the clipboard, so it writes the text, or the picture as
-  `PNG` and `CF_DIB`.
+  `PNG` and `CF_DIB`. The Clipboard tile opens the extension's page
+  (`views/clipboard.ts`); its search field takes the keyboard as the open
+  shortcut does (`take_keyboard`), and gives it back when the notch closes.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

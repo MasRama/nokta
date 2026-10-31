@@ -49,6 +49,7 @@ import {
     type OsdRequest,
 } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
+import { Clipboard } from './clipboard.js';
 import { Downloads } from './downloads.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
@@ -60,6 +61,7 @@ import { System } from './system.js';
 import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
 import { everyMinute } from './views/clock.js';
+import { ClipboardPage } from './views/clipboard.js';
 import { CollapsedView } from './views/collapsed.js';
 import { downloadPicture, downloadPreview } from './views/download.js';
 import { ExpandedView } from './views/expanded.js';
@@ -92,6 +94,8 @@ export interface Host {
     onKeyboard?(cb: () => void): void;
     /** The notch the shortcut opened closed: the window it took the keyboard from gets it back. */
     releaseKeyboard?(): void;
+    /** A field to type in opened: the notch takes the keyboard, as the open shortcut does. */
+    takeKeyboard?(): void;
     /** Opens one of Windows' panels or a web page. */
     openUri?(uri: string): void;
     /** Opens a file the core announced, or shows it in Explorer with `reveal`. */
@@ -115,10 +119,7 @@ const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
 const ALERT_KICK = 0.06;
 
 /** A page a home tile opens. */
-type PageName = 'timer' | 'system';
-
-/** Each page's body height, for subPageHeight. */
-const PAGE_HEIGHTS: Record<PageName, number> = { timer: TimerPage.HEIGHT, system: SystemPage.HEIGHT };
+type PageName = 'timer' | 'system' | 'clipboard';
 
 /** The shelf row under the player, with the open player's spacing, as the extension's. */
 const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
@@ -153,6 +154,7 @@ export class MonitorNotch {
     readonly updates: Updates;
     readonly system: System;
     readonly shelf: Shelf;
+    readonly clipboard: Clipboard;
     private readonly downloads: Downloads;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
@@ -184,6 +186,7 @@ export class MonitorNotch {
     private dropping = false;
     private readonly timerPage: TimerPage;
     private readonly systemPage = new SystemPage();
+    private readonly clipboardPage: ClipboardPage;
     /** The pages home's tiles open, one shown at a time. */
     private readonly pages: HTMLDivElement;
     private readonly subPages: Record<PageName, HTMLElement>;
@@ -244,6 +247,7 @@ export class MonitorNotch {
             (used, total, app) => this.onMemoryLow(used, total, app),
         );
         this.shelf = new Shelf(bridge, () => this.onShelf());
+        this.clipboard = new Clipboard(bridge, () => this.onClipboard());
         this.toggles = new Toggles(bridge, () => this.onToggles());
         this.timer = new Timer(
             bridge,
@@ -288,9 +292,24 @@ export class MonitorNotch {
                 this.setPage(null);
             },
         });
+        const clipboard = this.clipboard;
+        this.clipboardPage = new ClipboardPage(
+            {
+                copy: (id) => clipboard.copy(id),
+                pin: (id, pinned) => clipboard.pin(id, pinned),
+                remove: (id) => clipboard.remove(id),
+                clear: () => clipboard.clear(),
+                setPaused: (paused) => clipboard.setPaused(paused),
+                searching: (field) => this.setSearchField(field),
+                resized: () => this.resizePage(),
+            },
+            fileUrlOf,
+        );
+        const back = () => this.setPage(null);
         this.subPages = {
-            timer: new SubPage(_('Timer'), this.timerPage.element, () => this.setPage(null)).element,
-            system: new SubPage(_('System'), this.systemPage.element, () => this.setPage(null)).element,
+            timer: new SubPage(_('Timer'), this.timerPage.element, back).element,
+            system: new SubPage(_('System'), this.systemPage.element, back).element,
+            clipboard: new SubPage(_('Clipboard'), this.clipboardPage.element, back, this.clipboardPage.actions).element,
         };
         this.pages = document.createElement('div');
         this.pages.className = 'nokta-view nokta-pages';
@@ -380,6 +399,7 @@ export class MonitorNotch {
             this.updates.attach(),
             this.system.attach(),
             this.shelf.attach(),
+            this.clipboard.attach(),
         ]);
     }
 
@@ -413,6 +433,7 @@ export class MonitorNotch {
         this.updates.detach();
         this.system.detach();
         this.shelf.detach();
+        this.clipboard.detach();
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
@@ -602,6 +623,7 @@ export class MonitorNotch {
         this.home.setColors({ foreground: palette.foreground, light: palette.light, accent: palette.accent });
         this.timerPage.setColors(palette);
         this.systemPage.setColors(palette);
+        this.clipboardPage.setColors(palette);
         this.download.setForeground(palette.foreground);
         this.dropView.setForeground(palette.foreground);
         this.updateViews();
@@ -616,6 +638,7 @@ export class MonitorNotch {
         this.onPrivacy();
         this.onActivities();
         this.onShelf();
+        this.onClipboard();
         this.redraw(true);
     }
 
@@ -627,7 +650,7 @@ export class MonitorNotch {
 
     /** The weather, a toggle, a clock or home's layout changed: home shows it, at its new height. */
     private onHome(): void {
-        const layout = windowsControls(this.settings.home);
+        const layout = windowsControls(this.settings.home, this.settings.clipboard.enabled);
         const { snapshot, clocks } = this.timer;
         this.home.setWeather(this.weather.line);
         this.tickHome();
@@ -770,7 +793,7 @@ export class MonitorNotch {
 
     /** A tile opens its page, works its feature, or closes the notch and opens what it stands for. */
     private openTile(which: HomeTile): void {
-        if (which === 'timer' || which === 'system') {
+        if (which === 'timer' || which === 'system' || which === 'clipboard') {
             this.setPage(which);
             return;
         }
@@ -967,11 +990,50 @@ export class MonitorNotch {
         this.page = page;
         if (before === page) return;
         if (before === 'system') this.system.unwatch();
+        // Back at the newest copy with no search, the next time it opens.
+        if (before === 'clipboard') this.clipboardPage.reset();
         if (page === 'system') {
             this.systemPage.reset();
             this.system.watch();
             this.onSystem();
         }
+    }
+
+    /** The clipboard history changed, or it was turned on or off. */
+    private onClipboard(): void {
+        if (!this.settings.clipboard.enabled && this.page === 'clipboard') this.setPage(null);
+        const before = this.clipboardPage.height;
+        this.clipboardPage.show(this.clipboard.entries, this.clipboard.paused);
+        if (this.clipboardPage.height !== before) this.resizePage();
+    }
+
+    /**
+     * The clipboard's search field opened: the notch takes the keyboard and
+     * stays open, as the open shortcut leaves it, until Escape or a click
+     * elsewhere. Closed, the keyboard stays with the notch's buttons.
+     */
+    private setSearchField(field: HTMLInputElement | null): void {
+        if (!field) {
+            this.focusView();
+            return;
+        }
+        if (!this.keyboard) {
+            this.keyboard = true;
+            this.host.takeKeyboard?.();
+        }
+        this.machine.open(true);
+        field.focus();
+    }
+
+    /** The open page's height changed. */
+    private resizePage(): void {
+        if (this.drawn === 'page') this.notch.resizeTo(...this.sizeFor('page'), 'width');
+    }
+
+    /** The open page's body height, for subPageHeight. */
+    private pageBodyHeight(): number {
+        if (this.page === 'clipboard') return this.clipboardPage.height;
+        return this.page === 'system' ? SystemPage.HEIGHT : TimerPage.HEIGHT;
     }
 
     /** A new sample of the system's use. */
@@ -1014,7 +1076,7 @@ export class MonitorNotch {
             appearance,
             notificationButtons: false,
             panelHeight: panelHeight(appearance.height, this.homeRows),
-            pageHeight: subPageHeight(PAGE_HEIGHTS[this.page ?? 'timer']),
+            pageHeight: subPageHeight(this.pageBodyHeight()),
             expandedExtra:
                 (this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0) + (this.shelfItems().length > 0 ? EXPANDED_SHELF_EXTRA : 0),
         });

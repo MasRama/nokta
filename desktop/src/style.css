@@ -799,6 +799,129 @@ body.nokta-mock {
     font-weight: 700;
 }
 
+/* Buttons at a page header's right end. */
+.nokta-subpage-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+}
+
+/* The clipboard page (views/clipboard.ts); heights in clipboard/logic/entries.ts pageHeight. */
+.nokta-clip-page,
+.nokta-clip-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+}
+
+.nokta-clip-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    box-sizing: border-box;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 15px;
+}
+
+.nokta-clip-search[hidden] {
+    display: none;
+}
+
+.nokta-clip-search-field {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+}
+
+.nokta-clip-search-field::placeholder {
+    color: var(--nokta-clip-hint);
+}
+
+.nokta-clip-search-field::selection {
+    background-color: var(--nokta-clip-selection);
+}
+
+.nokta-clip-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+}
+
+.nokta-clip-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.nokta-clip-entry:hover,
+.nokta-clip-entry:focus-visible {
+    outline: none;
+    background-color: rgba(128, 128, 128, 0.18);
+}
+
+.nokta-light .nokta-clip-entry:hover,
+.nokta-light .nokta-clip-entry:focus-visible {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.nokta-clip-thumbnail {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+}
+
+.nokta-clip-icon {
+    flex: none;
+}
+
+.nokta-clip-preview {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+}
+
+.nokta-clip-age {
+    flex: none;
+    font-size: 11px;
+}
+
+.nokta-clip-button {
+    flex: none;
+}
+
+.nokta-clip-empty {
+    display: flex;
+    align-items: center;
+    flex: none;
+    font-size: 13px;
+}
+
 .nokta-timer-page {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
