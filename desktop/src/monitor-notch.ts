@@ -1,15 +1,27 @@
-import { uses24h } from '@ext/shared/logic/format.js';
-import { NotchMachine, type NotchMode } from '@ext/shared/logic/machine.js';
-import { depthFor, paletteFor, themeFor } from '@ext/shared/logic/theme.js';
+import { visibleLyric } from '@ext/features/lyrics/logic/visible.js';
+import { lineProgress, nextLyric } from '@ext/features/lyrics/logic/karaoke.js';
+import { romanize } from '@ext/features/lyrics/logic/romanize.js';
+import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
+import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { panelHeight } from '@ext/features/panel/logic/height.js';
 import { drawnView, resizeKind, viewSize, type Drawn } from '@ext/logic/views.js';
+import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
+import { withAlpha } from '@ext/shared/logic/color.js';
+import { uses24h } from '@ext/shared/logic/format.js';
+import { NotchMachine } from '@ext/shared/logic/machine.js';
+import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
 import type { Bridge } from './bridge/bridge.js';
+import { Lyrics, Media } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Settings } from './settings.js';
 import { everyMinute } from './views/clock.js';
+import { CollapsedView } from './views/collapsed.js';
+import { ExpandedView } from './views/expanded.js';
 import { HomeView } from './views/home.js';
 import { IdleView } from './views/idle.js';
+import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
+import { PeekView } from './views/peek.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
 export interface Host {
@@ -21,20 +33,39 @@ export interface Host {
     onPointer(cb: (inside: boolean) => void, hit: () => Box | null): void;
 }
 
+/** How often the open player moves its progress and its lyric on. */
+const TICK_MS = 250;
+
+/** Tells one song from the next, as the extension's. */
+function trackKey(s: MediaSnapshot): string {
+    return [s.playerId, s.title, ...s.artists].join('\n');
+}
+
 /**
- * The notch of one window, on one monitor: the settings from the core, the
- * state machine the pointer drives, and the view for each state. The
- * Windows twin of the extension's monitor-notch.ts, which it grows into
- * part by part.
+ * The notch of one window, on one monitor: the settings and the player from
+ * the core, the state machine the pointer drives, and the view for each
+ * state. The Windows twin of the extension's monitor-notch.ts, which it
+ * grows into part by part.
  */
 export class MonitorNotch {
     readonly notch: Notch;
     readonly settings: Settings;
+    readonly media: Media;
+    readonly lyrics: Lyrics;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
-    private readonly home = new HomeView();
+    private readonly home: HomeView;
+    private readonly collapsed: CollapsedView;
+    private readonly peek: PeekView;
+    private readonly expanded: ExpandedView;
+    private readonly views: Partial<Record<Drawn, HTMLElement>>;
     private drawn: Drawn = 'idle';
     private hit: Box | null = null;
+    private homeOpen = false;
+    private peekTimer = 0;
+    private peekTrack: PeekTrack | null = null;
+    private ticker = 0;
+    private shownPalette: Palette | null = null;
     private stopClock: (() => void) | null = null;
 
     constructor(
@@ -44,8 +75,21 @@ export class MonitorNotch {
         frames?: Frames,
     ) {
         this.settings = new Settings(bridge, () => this.restyle());
+        this.media = new Media(bridge, () => this.onMedia());
+        this.lyrics = new Lyrics(bridge, () => this.onLyrics());
+        this.home = new HomeView(() => this.setHomeOpen(false));
+        this.collapsed = new CollapsedView(() => this.media.levels());
+        this.peek = new PeekView(() => this.media.levels());
+        this.expanded = new ExpandedView(this.media, () => this.setHomeOpen(true));
+        this.views = {
+            idle: this.idle.element,
+            collapsed: this.collapsed.element,
+            peek: this.peek.element,
+            expanded: this.expanded.element,
+            panel: this.home.element,
+        };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
-        this.notch.body.append(this.idle.element, this.home.element);
+        this.notch.body.append(...Object.values(this.views));
         root.append(this.notch.element);
         this.machine = new NotchMachine(
             (ms, fn) => {
@@ -56,18 +100,21 @@ export class MonitorNotch {
                 const b = this.settings.behavior;
                 return { openMs: b.openDelayMs, closeMs: b.closeDelayMs, openOn: b.openOn };
             },
-            (mode) => this.redraw(mode),
+            () => this.onMode(),
         );
-        this.notch.body.addEventListener('click', () => this.machine.click());
+        // A click on a button does its own thing; anywhere else it opens or closes.
+        this.notch.body.addEventListener('click', (e) => {
+            if (!(e.target as HTMLElement).closest('button, .nokta-progress-hit')) this.machine.click();
+        });
         host.onPointer((inside) => this.machine.pointer(inside), () => this.hit);
     }
 
-    /** Lays out in a window `width` CSS px wide and follows the settings. */
+    /** Lays out in a window `width` CSS px wide and follows the core. */
     async start(width: number): Promise<void> {
         this.notch.setArea(width);
         this.restyle();
-        this.stopClock = everyMinute((now) => this.tick(now));
-        await this.settings.attach();
+        this.stopClock = everyMinute((now) => this.tickClock(now));
+        await Promise.all([this.settings.attach(), this.media.attach(), this.lyrics.attach()]);
     }
 
     /** Opens the notch at once; `hold` keeps it open until it is closed. */
@@ -83,7 +130,14 @@ export class MonitorNotch {
     stop(): void {
         this.stopClock?.();
         this.settings.detach();
+        this.media.detach();
+        this.lyrics.detach();
         this.machine.destroy();
+        window.clearTimeout(this.peekTimer);
+        window.clearInterval(this.ticker);
+        this.collapsed.destroy();
+        this.peek.destroy();
+        this.expanded.destroy();
         this.notch.destroy();
     }
 
@@ -91,52 +145,182 @@ export class MonitorNotch {
         return { ...this.settings.appearance };
     }
 
-    private palette() {
+    /** The theme's colours with the cover's worked in, or the blurred cover's behind the open player. */
+    private palette(): Palette {
         const a = this.settings.appearance;
+        const { accentColor, backdropPath } = this.media.snapshot;
+        const backdrop = backdropFor({ on: a.coverBackdrop, view: this.drawn, backdrop: backdropPath });
+        if (backdrop) return backdropPalette(a, accentColor, backdrop);
         const { path, color, tone } = this.settings.picture;
         // The system's light style follows in a later part; Windows' default is dark.
-        return paletteFor(themeFor(a, true), a, null, { path, color, tone, darken: a.pictureDarken });
+        return paletteFor(themeFor(a, true), a, accentColor || null, { path, color, tone, darken: a.pictureDarken });
+    }
+
+    private applyPalette(): void {
+        const palette = this.palette();
+        this.notch.setDepth(depthFor(palette.light, this.settings.appearance.depth));
+        if (JSON.stringify(palette) === JSON.stringify(this.shownPalette)) return;
+        this.shownPalette = palette;
+        this.notch.setPalette(palette);
+        this.expanded.setPalette(palette);
+        this.expanded.progress.setColors(palette.accent, withAlpha(palette.foreground, 0.25));
+        this.updateViews();
     }
 
     private restyle(): void {
         this.notch.setAppearance(this.style());
-        const palette = this.palette();
-        this.notch.setPalette(palette);
-        this.notch.setDepth(depthFor(palette.light, this.settings.appearance.depth));
-        this.tick(new Date());
-        this.redraw(this.machine.mode, true);
+        this.shownPalette = null;
+        this.applyPalette();
+        this.tickClock(new Date());
+        this.redraw(true);
     }
 
-    private tick(now: Date): void {
+    private onMedia(): void {
+        const snapshot = this.media.snapshot;
+        this.applyPalette();
+        this.updateViews();
+        this.home.setPlayer(snapshot.available);
+        this.machine.setAvailable(snapshot.available);
+        this.peekOnNewTrack(snapshot);
+        this.redraw();
+        this.tick();
+    }
+
+    private onLyrics(): void {
+        // The lyric row comes and goes with the lyrics: the open player's height follows.
+        this.redraw();
+        this.tick();
+    }
+
+    private updateViews(): void {
+        const snapshot = this.media.snapshot;
+        const accent = this.shownPalette?.accent ?? '#ffffff';
+        this.collapsed.update(snapshot, accent);
+        this.peek.update(snapshot, accent);
+        this.expanded.update(snapshot);
+        this.setActive();
+    }
+
+    /** A new song while the notch is closed on the music widens it with the title for a moment. */
+    private peekOnNewTrack(snapshot: MediaSnapshot): void {
+        const track = { key: trackKey(snapshot), title: snapshot.title, playing: snapshot.playbackStatus === 'Playing' };
+        const state = { enabled: this.settings.behavior.trackPeek, drawn: this.drawn, fullscreen: false };
+        if (shouldPeek(this.peekTrack, track, state)) {
+            window.clearTimeout(this.peekTimer);
+            this.peekTimer = window.setTimeout(() => {
+                this.peekTimer = 0;
+                this.redraw();
+            }, PEEK_MS);
+        }
+        this.peekTrack = track;
+    }
+
+    private onMode(): void {
+        if (this.machine.mode === 'expanded') {
+            // Opened, the player shows the song: no peek after it closes again.
+            window.clearTimeout(this.peekTimer);
+            this.peekTimer = 0;
+        } else {
+            // Closing goes back to the first page.
+            this.homeOpen = false;
+        }
+        this.redraw();
+    }
+
+    private setHomeOpen(open: boolean): void {
+        if (this.homeOpen === open) return;
+        this.homeOpen = open;
+        this.redraw();
+    }
+
+    private tickClock(now: Date): void {
         const b = this.settings.behavior;
         this.idle.update(now, uses24h(b.clockFormat, this.host.systemUses24h() ? '24h' : '12h'), b.showClock);
         this.home.update(now);
     }
 
-    private redraw(mode: NotchMode, jump = false): void {
+    private lyricsAvailable(): boolean {
+        const { status, lines } = this.lyrics;
+        return status === 'synced' && lines.length > 0 && this.settings.behavior.showLyrics;
+    }
+
+    private sizeFor(drawn: Drawn): [number, number] {
+        const appearance = this.settings.appearance;
+        return viewSize(drawn, {
+            appearance,
+            notificationButtons: false,
+            panelHeight: panelHeight(appearance.height, ['date']),
+            pageHeight: 0,
+            expandedExtra: this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0,
+        });
+    }
+
+    /** Draws the view for the notch's state; `jump` skips the animation. */
+    private redraw(jump = false): void {
         const previous = this.drawn;
         this.drawn = drawnView({
             dropping: false,
             osd: false,
             notification: null,
-            mode,
-            peek: false,
+            mode: this.machine.mode,
+            peek: this.peekTimer !== 0,
             page: false,
-            homeOpen: false,
-            player: false,
+            homeOpen: this.homeOpen,
+            player: this.media.snapshot.available,
             tour: false,
         });
-        const [width, height] = viewSize(this.drawn, {
-            appearance: this.settings.appearance,
-            notificationButtons: false,
-            panelHeight: panelHeight(this.settings.appearance.height, ['date']),
-            pageHeight: 0,
-            expandedExtra: 0,
-        });
-        this.idle.element.classList.toggle('nokta-shown', this.drawn === 'idle');
-        this.home.element.classList.toggle('nokta-shown', this.drawn === 'panel');
+        // The open player may show the blurred cover.
+        if (previous !== this.drawn) this.applyPalette();
+        for (const [drawn, element] of Object.entries(this.views)) {
+            element.classList.toggle('nokta-shown', drawn === this.drawn);
+        }
+        const [width, height] = this.sizeFor(this.drawn);
         if (jump) this.notch.jumpTo(width, height);
         else this.notch.resizeTo(width, height, resizeKind(previous, this.drawn));
+        this.setActive();
+        if (this.drawn === 'expanded' && previous !== 'expanded') {
+            this.media.refreshPosition();
+            this.tick();
+        }
+        this.updateTicker();
+    }
+
+    /** Only the view on screen runs its equalizer. */
+    private setActive(): void {
+        this.collapsed.setActive(this.drawn === 'collapsed');
+        this.peek.setActive(this.drawn === 'peek');
+        this.expanded.setActive(this.drawn === 'expanded');
+    }
+
+    /** The open player ticks while the music plays. */
+    private updateTicker(): void {
+        const run = this.drawn === 'expanded' && this.media.snapshot.playbackStatus === 'Playing';
+        if (run && !this.ticker) this.ticker = window.setInterval(() => this.tick(), TICK_MS);
+        else if (!run && this.ticker) {
+            window.clearInterval(this.ticker);
+            this.ticker = 0;
+        }
+    }
+
+    /** Moves the progress and the lyric to where the track is now. */
+    private tick(): void {
+        if (this.drawn !== 'expanded') return;
+        const snapshot = this.media.snapshot;
+        const position = this.media.positionNow();
+        this.expanded.progress.update(position, snapshot.lengthUs, snapshot.canSeek);
+        const { lines, status } = this.lyrics;
+        const text = visibleLyric(status, lines, this.settings.behavior.showLyrics, position);
+        this.expanded.lyric.show(
+            text === null
+                ? null
+                : {
+                      text,
+                      next: nextLyric(lines, position),
+                      romanized: this.settings.lyrics.romanize ? romanize(text) : null,
+                      ...lineProgress(lines, position, snapshot.rate),
+                      playing: snapshot.playbackStatus === 'Playing',
+                  },
+        );
     }
 
     private report(hit: Box): void {
