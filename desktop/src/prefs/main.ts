@@ -1,9 +1,11 @@
 import { MockBridge } from '../bridge/mock.js';
 import { TauriBridge } from '../bridge/tauri.js';
+import { useSystemLanguage } from '../i18n.js';
 import { inTauri, openConfig, pickPicture } from '../platform.js';
 import { SettingsWindow } from './window.js';
 
 // Outside the app the window shows the defaults, for shots; `?page=` picks the page.
+useSystemLanguage();
 const app = inTauri();
 const mock = new MockBridge({
     Settings1: { Calendar: { feeds: ['https://calendar.google.com/calendar/ical/me%40gmail.com/private-abc/basic.ics'] } },

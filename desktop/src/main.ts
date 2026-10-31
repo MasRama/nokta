@@ -1,6 +1,7 @@
 import { TauriBridge } from './bridge/tauri.js';
 import { MockBridge } from './bridge/mock.js';
 import { sceneFor } from './mock/scenes.js';
+import { useSystemLanguage } from './i18n.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { setPictureUrl } from './notch/notch.js';
 import {
@@ -20,6 +21,7 @@ import {
     takeKeyboard,
 } from './platform.js';
 
+useSystemLanguage();
 const app = inTauri();
 const scene = sceneFor(location.search);
 // Outside the app the page stands in for the desktop, so shots show the notch on a wallpaper.
