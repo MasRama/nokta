@@ -98,7 +98,7 @@ export class ClockRow {
         this.time.textContent = clock.time;
         this.time.style.opacity = clock.running ? '' : '0.5';
         this.pause.hidden = !clock.canPause;
-        this.pause.setAttribute('aria-label', clock.running ? 'Pause' : 'Resume');
+        this.pause.setAttribute('aria-label', clock.running ? _('Pause') : _('Resume'));
         setIcon(this.pauseIcon, clock.running ? 'pause' : 'play', 14);
     }
 }

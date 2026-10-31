@@ -2,6 +2,7 @@ import type { Activity } from '@ext/features/activities/logic/activities.js';
 import type { PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from '@ext/features/panel/logic/layout.js';
 import type { WeatherLine } from '@ext/features/weather/logic/weather.js';
+import { _, N_ } from '@ext/shared/logic/i18n.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
@@ -20,21 +21,21 @@ export const MAX_HOME_EVENTS = 5;
 
 /** Each toggle's icon, name and tone, as the extension's panel/view.ts. */
 const TOGGLES: Array<[QuickToggle, string, string, string]> = [
-    ['do_not_disturb', 'bell-off', 'Do Not Disturb', TONES.do_not_disturb],
-    ['caffeine', 'caffeine', 'Caffeine', TONES.caffeine],
-    ['dark_style', 'dark-style', 'Dark Style', TONES.dark_style],
-    ['night_light', 'night-light', 'Night Light', TONES.night_light],
+    ['do_not_disturb', 'bell-off', N_('Do Not Disturb'), TONES.do_not_disturb],
+    ['caffeine', 'caffeine', N_('Caffeine'), TONES.caffeine],
+    ['dark_style', 'dark-style', N_('Dark Style'), TONES.dark_style],
+    ['night_light', 'night-light', N_('Night Light'), TONES.night_light],
 ];
 
 /** Each tile's icon, name and tone. */
 const TILES: Array<[HomeTile, string, string, string]> = [
-    ['notifications', 'bell', 'Notifications', TONES.notifications],
-    ['focus', 'focus', 'Focus', TONES.focus],
-    ['timer', 'timer', 'Timer', TONES.countdown],
-    ['clipboard', 'clipboard', 'Clipboard', TONES.clipboard],
-    ['settings', 'settings', 'Settings', TONES.settings],
-    ['screenshot', 'screenshot', 'Screenshot', TONES.screenshot],
-    ['system', 'system', 'System', TONES.system],
+    ['notifications', 'bell', N_('Notifications'), TONES.notifications],
+    ['focus', 'focus', N_('Focus'), TONES.focus],
+    ['timer', 'timer', N_('Timer'), TONES.countdown],
+    ['clipboard', 'clipboard', N_('Clipboard'), TONES.clipboard],
+    ['settings', 'settings', N_('Settings'), TONES.settings],
+    ['screenshot', 'screenshot', N_('Screenshot'), TONES.screenshot],
+    ['system', 'system', N_('System'), TONES.system],
 ];
 
 export interface HomeHandlers extends ClockHandlers, CallHandlers, EventHandlers {
@@ -156,13 +157,13 @@ export class HomeView {
         this.pills = document.createElement('div');
         this.pills.className = 'nokta-panel-toggles';
         for (const [which, name, label, tone] of TOGGLES) {
-            const pill = new TogglePill(name, label, tone, () => handlers.toggle(which));
+            const pill = new TogglePill(name, _(label), tone, () => handlers.toggle(which)); // i18n: runtime
             this.toggles.set(which, pill);
         }
         this.tileRow = document.createElement('div');
         this.tileRow.className = 'nokta-panel-tiles';
         for (const [which, name, label, tone] of TILES) {
-            const tile = new Tile(name, label, tone, () => handlers.openTile(which));
+            const tile = new Tile(name, _(label), tone, () => handlers.openTile(which)); // i18n: runtime
             tile.element.dataset.tile = which;
             this.tiles.set(which, tile);
         }
