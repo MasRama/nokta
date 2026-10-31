@@ -9,9 +9,10 @@ use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_TOPMOST,
-    MA_NOACTIVATE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOWNOACTIVATE,
-    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_MOUSEACTIVATE, WS_EX_APPWINDOW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+    MA_NOACTIVATE, PBT_APMRESUMEAUTOMATIC, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SW_SHOWNOACTIVATE, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_MOUSEACTIVATE,
+    WM_POWERBROADCAST, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_EX_TRANSPARENT,
 };
 
 use crate::layout::{self, Monitor};
@@ -79,7 +80,8 @@ pub fn make_overlay(hwnd: HWND) {
 }
 
 /// A click on the notch must not take the focus from the app the user is in;
-/// and the windows follow the displays when they change.
+/// the windows follow the displays when they change, and the clocks hear
+/// the system wake.
 unsafe extern "system" fn no_activate(
     hwnd: HWND,
     message: u32,
@@ -93,6 +95,10 @@ unsafe extern "system" fn no_activate(
     }
     if message == WM_DISPLAYCHANGE || message == WM_DPICHANGED {
         super::monitors::changed();
+    }
+    // Woken from sleep: the clocks read the wall clock again.
+    if message == WM_POWERBROADCAST && wparam.0 == PBT_APMRESUMEAUTOMATIC as usize {
+        super::services::woke();
     }
     // SAFETY: passes the message on to the next handler of this window.
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }

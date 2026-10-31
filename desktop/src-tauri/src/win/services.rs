@@ -3,7 +3,7 @@
 //! their changes (the `nokta://props` event) and its methods
 //! (`bridge_call`), named as in `contracts/*.xml`.
 
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
 use nokta_core::features::devices;
@@ -12,6 +12,9 @@ use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
+use nokta_core::features::timer::clocks::Kind;
+use nokta_core::features::timer::logic::Snapshot;
+use nokta_core::features::timer::service::{ClockCommand, ClocksSnapshot, Command};
 use nokta_core::features::weather::WeatherState;
 use nokta_core::shared::clock::{monotonic_us, wall_us};
 use nokta_core::shared::http;
@@ -22,7 +25,8 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
     devices as devices_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
-    privacy as privacy_props, settings, toggles as toggles_props, weather as weather_props, Props,
+    privacy as privacy_props, settings, timer as timer_props, toggles as toggles_props,
+    weather as weather_props, Props,
 };
 use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
@@ -32,6 +36,9 @@ pub const PROPS_EVENT: &str = "nokta://props";
 
 /// The event that carries an interface's signals to every page.
 pub const SIGNAL_EVENT: &str = "nokta://signal";
+
+/// The clocks' commands, for the system waking from sleep.
+static CLOCKS: OnceLock<mpsc::Sender<ClockCommand>> = OnceLock::new();
 
 #[derive(Clone, serde::Serialize)]
 struct Signal {
@@ -58,6 +65,10 @@ pub struct Core {
     weather: watch::Receiver<WeatherState>,
     weather_refresh: mpsc::Sender<()>,
     toggles: super::toggles::Toggles,
+    timer: watch::Receiver<Snapshot>,
+    timer_commands: mpsc::Sender<Command>,
+    clocks: watch::Receiver<ClocksSnapshot>,
+    clock_commands: mpsc::Sender<ClockCommand>,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -72,27 +83,28 @@ impl Core {
 /// Starts the services and the forwarders; the app manages the result.
 pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     let http = http::client(|b| b.user_agent(USER_AGENT));
-    let (media_state, player, services, levels, alerts) = tauri::async_runtime::block_on(async {
-        let art = ArtCache::new(paths.cache_dir.clone(), http);
-        let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
-        let services = Services::start(
-            paths,
-            media_state.clone(),
-            DEFAULT_LRCLIB_URL,
-            &OpenMeteoUrls::default(),
-        );
-        // Records only with `[media] real_equalizer` on and music playing.
-        let levels = loopback::spawn(media_state.clone(), services.config.clone(), |c| {
-            c.media.real_equalizer
+    let (media_state, player, mut services, levels, alerts) =
+        tauri::async_runtime::block_on(async {
+            let art = ArtCache::new(paths.cache_dir.clone(), http);
+            let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
+            let services = Services::start(
+                paths,
+                media_state.clone(),
+                DEFAULT_LRCLIB_URL,
+                &OpenMeteoUrls::default(),
+            );
+            // Records only with `[media] real_equalizer` on and music playing.
+            let levels = loopback::spawn(media_state.clone(), services.config.clone(), |c| {
+                c.media.real_equalizer
+            });
+            (
+                media_state,
+                player,
+                services,
+                levels,
+                devices::watcher::spawn(),
+            )
         });
-        (
-            media_state,
-            player,
-            services,
-            levels,
-            devices::watcher::spawn(),
-        )
-    });
     forward_settings(
         app.clone(),
         services.config.clone(),
@@ -131,7 +143,48 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         lyrics_props::INTERFACE,
         lyrics_props::props,
     );
-    super::shortcut::follow(services.config.clone());
+    super::shortcut::follow(
+        services.config.clone(),
+        (
+            services.timer.state.clone(),
+            services.timer.commands.clone(),
+        ),
+    );
+    forward(
+        app.clone(),
+        services.timer.state.clone(),
+        timer_props::INTERFACE,
+        |s| timer_props::props(s, monotonic_us(), wall_us()),
+    );
+    forward(
+        app.clone(),
+        services.timer.clocks.state.clone(),
+        timer_props::INTERFACE,
+        |s| timer_props::clock_props(s, monotonic_us(), wall_us()),
+    );
+    // The services keep their own end; the signals go to the page.
+    let finished = std::mem::replace(&mut services.timer.finished, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        sounded(finished, services.config.clone(), |_| super::sound::DONE),
+        To::Front,
+        timer_props::INTERFACE,
+        timer_props::FINISHED,
+        timer_props::finished_args,
+    );
+    let done = std::mem::replace(&mut services.timer.clocks.done, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        sounded(done, services.config.clone(), |done| match done.kind {
+            Kind::Alarm => super::sound::ALARM,
+            Kind::Countdown | Kind::Stopwatch => super::sound::COUNTDOWN,
+        }),
+        To::Front,
+        timer_props::INTERFACE,
+        timer_props::CLOCK_DONE,
+        timer_props::clock_done_args,
+    );
+    let _ = CLOCKS.set(services.timer.clocks.commands.clone());
     let privacy = super::privacy::spawn();
     forward(
         app.clone(),
@@ -164,8 +217,41 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         weather: services.weather.state.clone(),
         weather_refresh: services.weather.refresh.clone(),
         toggles,
+        timer: services.timer.state.clone(),
+        timer_commands: services.timer.commands.clone(),
+        clocks: services.timer.clocks.state.clone(),
+        clock_commands: services.timer.clocks.commands.clone(),
         _services: Mutex::new(services),
     }
+}
+
+/// The system woke from sleep: the clocks read the wall clock again, as
+/// noktad does on logind's PrepareForSleep.
+pub fn woke() {
+    if let Some(clocks) = CLOCKS.get() {
+        let _ = clocks.try_send(ClockCommand::Wake);
+    }
+}
+
+/// Plays `sound`'s for each of `items` while `[timer] sound` is on, and
+/// passes them on.
+fn sounded<T: Send + 'static>(
+    mut items: mpsc::Receiver<T>,
+    config: watch::Receiver<Config>,
+    sound: fn(&T) -> &'static str,
+) -> mpsc::Receiver<T> {
+    let (tx, rx) = mpsc::channel(16);
+    tauri::async_runtime::spawn(async move {
+        while let Some(item) = items.recv().await {
+            if config.borrow().timer.sound {
+                super::sound::play(sound(&item));
+            }
+            if tx.send(item).await.is_err() {
+                break;
+            }
+        }
+    });
+    rx
 }
 
 /// Sends Settings1 again on each change of the config or the picture, and
@@ -267,6 +353,12 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
         privacy_props::INTERFACE => Ok(privacy_props::props(&core.privacy.borrow())),
         weather_props::INTERFACE => Ok(weather_props::props(&core.weather.borrow())),
         toggles_props::INTERFACE => Ok(toggles_props::props(&core.toggles.state.borrow())),
+        timer_props::INTERFACE => {
+            let (mono, wall) = (monotonic_us(), wall_us());
+            let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
+            props.extend(timer_props::clock_props(&core.clocks.borrow(), mono, wall));
+            Ok(props)
+        }
         settings::INTERFACE => Ok(settings::props(
             &core.config.borrow(),
             &core.picture.borrow(),
@@ -329,6 +421,7 @@ pub async fn bridge_call(
                 Err(format!("Windows has no toggle {name}"))
             }
         }
+        (timer_props::INTERFACE, method, args) => timer_call(&core, method, args).await,
         (privacy_props::INTERFACE, "ToggleMute", []) => {
             super::privacy::toggle_mute();
             Ok(Value::Null)
@@ -338,4 +431,51 @@ pub async fn bridge_call(
             args.len()
         )),
     }
+}
+
+/// Calls `Timer1.method(args)`; an Add answers with the new clock's id.
+async fn timer_call(core: &Core, method: &str, args: &[Value]) -> Result<Value, String> {
+    use timer_props::Call;
+
+    // A closure cannot take both kinds of send error.
+    fn stopped<E>(_: E) -> String {
+        "the timer has stopped".to_owned()
+    }
+    let (reply, answer) = oneshot::channel();
+    let command = match timer_props::call(method, args)? {
+        Call::Timer(command) => {
+            core.timer_commands.send(command).await.map_err(stopped)?;
+            return Ok(Value::Null);
+        }
+        Call::AddCountdown { label, duration_us } => ClockCommand::AddCountdown {
+            label,
+            duration_us,
+            reply,
+        },
+        Call::AddStopwatch { label } => ClockCommand::AddStopwatch { label, reply },
+        Call::AddAlarm { label, unix_us } => ClockCommand::AddAlarm {
+            label,
+            unix_us,
+            reply,
+        },
+        Call::PauseClock(id) => ClockCommand::Pause(id),
+        Call::ResumeClock(id) => ClockCommand::Resume(id),
+        Call::RemoveClock(id) => ClockCommand::Remove(id),
+        Call::ClearClocks => ClockCommand::Clear,
+    };
+    let adds = matches!(
+        command,
+        ClockCommand::AddCountdown { .. }
+            | ClockCommand::AddStopwatch { .. }
+            | ClockCommand::AddAlarm { .. }
+    );
+    core.clock_commands.send(command).await.map_err(stopped)?;
+    if !adds {
+        return Ok(Value::Null);
+    }
+    let id = answer
+        .await
+        .map_err(|_| "the clocks have stopped".to_owned())?
+        .map_err(|err| err.to_string())?;
+    Ok(Value::String(id))
 }

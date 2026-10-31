@@ -159,3 +159,52 @@ fn weather() {
         &super::weather::props(&WeatherState::default()),
     );
 }
+
+#[test]
+fn timer() {
+    use nokta_core::features::timer::clocks::{ClockView, Kind};
+    use nokta_core::features::timer::logic::Snapshot;
+    use nokta_core::features::timer::service::ClocksSnapshot;
+    let mut props = super::timer::props(&Snapshot::default(), 1, 2);
+    let clocks = ClocksSnapshot {
+        clocks: vec![ClockView {
+            id: "c1".into(),
+            kind: Kind::Stopwatch,
+            label: String::new(),
+            running: true,
+            duration_us: 0,
+            value_us: 5,
+            alarm_unix_us: 0,
+        }],
+        timestamp_us: 1,
+    };
+    props.extend(super::timer::clock_props(&clocks, 1, 2));
+    check(super::timer::INTERFACE, &props);
+}
+
+#[test]
+fn timer_signals() {
+    use nokta_core::features::timer::clocks::{Done, Kind};
+    use nokta_core::features::timer::logic::Phase;
+    let done = Done {
+        id: "c1".into(),
+        kind: Kind::Alarm,
+        label: "Wake up".into(),
+    };
+    for (signal, args) in [
+        (
+            super::timer::FINISHED,
+            super::timer::finished_args(&Phase::Focus),
+        ),
+        (
+            super::timer::CLOCK_DONE,
+            super::timer::clock_done_args(&done),
+        ),
+    ] {
+        let types = signal_args(super::timer::INTERFACE, signal);
+        assert_eq!(types.len(), args.len(), "{signal}: {types:?} and {args:?}");
+        for (signature, value) in types.iter().zip(&args) {
+            assert!(fits(signature, value), "{value} is not {signature}");
+        }
+    }
+}

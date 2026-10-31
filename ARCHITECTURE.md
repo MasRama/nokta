@@ -703,6 +703,14 @@ WebView2 and runs the core's services itself, with no D-Bus.
   notification centre and snipping overlay through `open_uri`, which
   opens only those and web pages (`links.rs`, tested everywhere); the
   other tiles show as their pages come to Windows.
+- The focus timer and the clocks are the core's (`Timer1`), their
+  monotonic timestamps put on the wall clock for the page as `Media1`'s.
+  `Finished` and `ClockDone` go to the notch on the monitor in use, with a
+  sound from Windows' scheme under `[timer] sound` (`win/sound.rs`). The
+  window subclass hears `WM_POWERBROADCAST`, so the clocks read the wall
+  clock again after sleep, as noktad does on logind's `PrepareForSleep`.
+  `[timer] shortcut` is a second hotkey on the shortcut thread that starts
+  focus or stops the timer.
 - The tray icon stands in for the top bar (Quit). A second start leaves
   the running one alone.
 - The NSIS installer installs per user without admin rights, brings the
