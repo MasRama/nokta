@@ -14,6 +14,8 @@ export interface Scene {
     changes?: Array<[string, Props]>;
     /** Files are dragged over the notch. */
     drop?: boolean;
+    /** The notch is right-clicked at this point of the page. */
+    menu?: [number, number];
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
@@ -318,6 +320,7 @@ export const SCENES: Record<string, Scene> = {
     'shelf-home': { props: { ...TIMER_HOME, ...SHELF }, open: true },
     'shelf-player': { props: { ...player(true), ...SHELF }, open: true },
     drop: { props: SHELF, drop: true },
+    menu: { props: SHELF, menu: [270, 16] },
     'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
     'clipboard-page': { props: clipboard(), open: true, click: ['[data-tile="clipboard"]'] },
     'clipboard-search': {
