@@ -292,6 +292,18 @@ docs/               manual test checklist, screenshots
   `#rrrrggggbbbb`, GNOME Calendar's `rgb()`). Answers, found or none, are
   kept 10 minutes (links by event, colors by source); EDS missing or slow
   (5 s) gives none and is logged once for each.
+  For the Windows app, which has no system calendar, `feeds.rs` reads
+  the `[calendar] feeds` (secret iCal addresses, `webcal://` over HTTPS)
+  at start, when they change, every 15 minutes and on wake, and publishes
+  the events not ended that start in the next 7 days; a feed that fails
+  keeps its last events, and only its number and host are logged.
+  `ics.rs` (pure) reads the timed events, all-day ones left out: times
+  in UTC, a TZID (the time zone database's, else the feed's own
+  VTIMEZONE at its standard offset, as for Outlook's Windows names) or the
+  computer's zone; `recur.rs` repeats an RRULE at its local time (DAILY
+  to YEARLY with INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY, BYMONTH; any
+  other BY part shows the event once), less EXDATEs and the times a
+  RECURRENCE-ID moved or cancelled.
 - **shelf** keeps the files dropped on the notch (`Add`, `Remove`,
   `Clear`): only `file://` paths that exist, each once, at most 30 (the
   oldest goes). `model.rs` is pure; the service watches the folders that
