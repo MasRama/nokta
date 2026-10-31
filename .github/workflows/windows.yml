@@ -56,6 +56,11 @@ jobs:
           Start-Sleep -Seconds 1
           ./tools/windows/shot.ps1 -Name home
           ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
+          # Another app's toast shows in the notch, read from Windows' database.
+          Start-Sleep -Seconds 2
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./tools/windows/toast.ps1
+          Start-Sleep -Seconds 3
+          ./tools/windows/shot.ps1 -Name notification
           Start-Process $exe
           Start-Sleep -Seconds 5
           $running = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue).Count
