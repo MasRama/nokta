@@ -61,6 +61,8 @@ const GLOW_BLUR = 12;
 const SHADOW_DROP = 2;
 /** A waiting kick goes off this close to the target, before the width slows to a crawl. */
 const KICK_NEAR_PX = 3;
+/** A pulsing glow dims to this (of 255) between beats, as the extension's. */
+const PULSE_LOW = 70;
 const EASE_OUT_QUAD = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const EASE_IN_QUAD = 'cubic-bezier(0.55, 0.085, 0.68, 0.53)';
 const SVG = 'http://www.w3.org/2000/svg';
@@ -117,6 +119,8 @@ export class Notch {
     private readonly pictureShade: SVGRectElement;
     private picturePath = '';
     private glowColor: string | null = null;
+    /** The last alert's pulse and shake, stopped by the next alert. */
+    private motions: Animation[] = [];
     private style: NotchStyle;
     private palette: Palette;
     private areaWidth = 0;
@@ -261,6 +265,39 @@ export class Notch {
         }
     }
 
+    /** The glow beats `beats` times, `beatMs` each, while it shows; not with reduced motion. */
+    pulseGlow(beats: number, beatMs: number): void {
+        if (!this.glowColor || reducedMotion() || typeof this.glow.animate !== 'function') return;
+        const low = PULSE_LOW / 255;
+        const beat = beatMs * this.style.animationSpeed;
+        this.motions.push(
+            this.glow.animate([{ opacity: 1 }, { opacity: low }, { opacity: 1 }], {
+                duration: beat,
+                iterations: beats,
+                easing: 'ease-in-out',
+            }),
+        );
+    }
+
+    /** The notch shakes sideways through `steps` px, instead of the kick; not with reduced motion. */
+    shake(steps: readonly { value: number; ms: number }[]): void {
+        if (reducedMotion() || typeof this.element.animate !== 'function' || steps.length === 0) return;
+        const duration = steps.reduce((sum, step) => sum + step.ms, 0);
+        let at = 0;
+        const frames: Keyframe[] = [{ transform: 'none', offset: 0 }];
+        for (const step of steps) {
+            at += step.ms;
+            frames.push({ transform: `translateX(${step.value}px)`, offset: at / duration });
+        }
+        this.motions.push(this.element.animate(frames, { duration }));
+    }
+
+    /** Stops the last alert's shake and pulse, for a new alert. */
+    stopMotion(): void {
+        this.motions.forEach((animation) => animation.cancel());
+        this.motions = [];
+    }
+
     /** The shadow under the notch and the rim inside its edge. */
     setDepth(depth: Depth): void {
         if (depth.rim) this.rim.setAttribute('stroke', depth.rim);
@@ -285,6 +322,7 @@ export class Notch {
 
     destroy(): void {
         this.stop();
+        this.stopMotion();
         this.element.remove();
     }
 
