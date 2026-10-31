@@ -86,6 +86,7 @@ import { ExpandedView } from './views/expanded.js';
 import { HomeView, homeRows } from './views/home.js';
 import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
+import { NotchMenu } from './views/menu.js';
 import { NotificationView } from './views/notification.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
@@ -235,7 +236,11 @@ export class MonitorNotch {
     private homeTicker = 0;
     private readonly views: Partial<Record<Drawn, HTMLElement>>;
     private drawn: Drawn = 'idle';
+    /** The window's click box: the notch's, with the right-click menu while it shows. */
     private hit: Box | null = null;
+    /** The notch's own click box, as it last laid out. */
+    private notchHit: Box | null = null;
+    private readonly menu: NotchMenu;
     private homeOpen = false;
     /** Home's rows, for its height. */
     private homeRows: PanelRow[] = ['date'];
@@ -261,6 +266,10 @@ export class MonitorNotch {
     /** The window lost the keyboard: a click or a switch elsewhere closes the notch. */
     private readonly onBlur = () => {
         if (this.keyboard && this.machine.held) this.machine.close();
+    };
+    /** A press anywhere but the menu closes it. */
+    private readonly onPress = (event: PointerEvent) => {
+        if (!this.menu.element.contains(event.target as Node)) this.menu.close();
     };
 
     constructor(
@@ -381,6 +390,28 @@ export class MonitorNotch {
         // A view with no buttons leaves the focus on the notch.
         this.notch.element.tabIndex = -1;
         root.append(this.notch.element);
+        this.menu = new NotchMenu(
+            {
+                openSettings: () => this.host.openSettings?.(),
+                clearShelf: () => this.shelf.clear(),
+                setClipboardPaused: (paused) => this.clipboard.setPaused(paused),
+            },
+            () => this.notchHit && this.report(this.notchHit),
+        );
+        root.append(this.menu.element);
+        this.notch.element.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            this.menu.open(
+                event.clientX,
+                event.clientY,
+                {
+                    shelfItems: this.shelf.items.length,
+                    clipboardPaused: this.settings.clipboard.enabled ? this.clipboard.paused : null,
+                },
+                window.innerWidth,
+                window.innerHeight,
+            );
+        });
         this.machine = new NotchMachine(
             (ms, fn) => {
                 const timer = window.setTimeout(fn, ms);
@@ -418,6 +449,7 @@ export class MonitorNotch {
         );
         host.onPointer(
             (inside) => {
+                if (!inside) this.menu.close();
                 this.pointerOver = inside;
                 this.messageTimer.pointer(this.pointerInside());
                 this.machine.pointer(this.pointerInside());
@@ -428,6 +460,7 @@ export class MonitorNotch {
         host.onKeyboard?.(() => this.toggleKeyboard());
         host.onDrop?.((dropping) => this.setDropping(dropping));
         document.addEventListener('keydown', this.onKeyDown);
+        document.addEventListener('pointerdown', this.onPress);
         window.addEventListener('blur', this.onBlur);
     }
 
@@ -474,6 +507,7 @@ export class MonitorNotch {
 
     stop(): void {
         document.removeEventListener('keydown', this.onKeyDown);
+        document.removeEventListener('pointerdown', this.onPress);
         window.removeEventListener('blur', this.onBlur);
         this.stopClock?.();
         this.settings.detach();
@@ -1399,7 +1433,21 @@ export class MonitorNotch {
     }
 
     private report(hit: Box): void {
-        this.hit = hit;
-        this.host.setHit(this.notch.element.style.visibility === 'hidden' ? NO_HIT : hit);
+        this.notchHit = hit;
+        const menu = this.menu.box();
+        this.hit = menu ? union(hit, menu) : hit;
+        this.host.setHit(this.notch.element.style.visibility === 'hidden' ? NO_HIT : this.hit);
     }
+}
+
+/** The smallest box around `a` and `b`. */
+function union(a: Box, b: Box): Box {
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    return {
+        x,
+        y,
+        width: Math.max(a.x + a.width, b.x + b.width) - x,
+        height: Math.max(a.y + a.height, b.y + b.height) - y,
+    };
 }

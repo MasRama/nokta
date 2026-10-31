@@ -226,7 +226,7 @@ msgstr ""
 msgid "Caffeine is on in Nokta"
 msgstr ""
 
-#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts ../desktop/src/views/home.ts
+#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts ../desktop/src/views/home.ts ../desktop/src/views/menu.ts
 msgid "Settings"
 msgstr ""
 
@@ -234,11 +234,11 @@ msgstr ""
 msgid "Do Not Disturb"
 msgstr ""
 
-#: src/features/panel/menu.ts ../desktop/src/views/shelf.ts
+#: src/features/panel/menu.ts ../desktop/src/views/menu.ts ../desktop/src/views/shelf.ts
 msgid "Clear shelf"
 msgstr ""
 
-#: src/features/panel/menu.ts
+#: src/features/panel/menu.ts ../desktop/src/views/menu.ts
 msgid "Pause clipboard"
 msgstr ""
 

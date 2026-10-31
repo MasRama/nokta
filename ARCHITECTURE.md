@@ -834,6 +834,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   languages (`navigator.languages`, which WebView2 takes from Windows)
   that Nokta has; English comes before any. The tray's two items stay
   English.
+- A right-click on the notch opens the extension's menu drawn in the page
+  (`views/menu.ts`): Settings, Clear shelf and Pause clipboard, as
+  Windows has no Do Not Disturb to switch. While it shows, the window's
+  click box spans the notch and the menu; a press elsewhere or the pointer
+  leaving closes it. WebView2's own menu shows only in text fields.
 - The tray icon stands in for the top bar (Settings, Quit). A second start
   opens the settings and leaves the running Nokta alone.
 - The NSIS installer installs per user without admin rights, brings the

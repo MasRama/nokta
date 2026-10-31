@@ -59,4 +59,9 @@ if (mock) {
     for (const [iface, props] of scene.changes ?? []) mock.set(iface, props);
     for (const [iface, signal, ...args] of scene.signals ?? []) mock.signal(iface, signal, ...args);
     if (scene.drop) mockDrop(true);
+    if (scene.menu) {
+        const [clientX, clientY] = scene.menu;
+        const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX, clientY });
+        document.querySelector('.nokta-notch')?.dispatchEvent(event);
+    }
 }
