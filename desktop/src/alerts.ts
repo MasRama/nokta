@@ -3,6 +3,7 @@ import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
 import type { Behavior } from '@ext/features/settings/logic/parse.js';
 import { alertMotion, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
+import type { AlertKind } from '@ext/shared/logic/fullscreen.js';
 import type { AlertTone } from '@ext/shared/logic/glow.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
@@ -11,6 +12,8 @@ import type { Bridge } from './bridge/bridge.js';
 /** What the notch shows for an OSD key or an alert. */
 export interface OsdRequest {
     content: OsdContent;
+    /** What it is, for whether it shows over a fullscreen app. */
+    kind: AlertKind;
     /** Nokta's icon name, or a GNOME one it draws. */
     icon: string;
     /** Replaces osd_duration_ms; alerts take alert_duration_ms. */
@@ -18,8 +21,6 @@ export interface OsdRequest {
     /** Set for an alert, which kicks the notch and glows; a key does not. */
     tone?: AlertTone;
     motion?: AlertMotion;
-    /** A battery running out, which may show over a fullscreen app. */
-    battery?: boolean;
 }
 
 const KEYBOARD = 'input-keyboard-symbolic';
@@ -40,23 +41,22 @@ function volumeIcon(level: number): string {
  * settings leave it to Windows or turn it off, or for a kind not known.
  */
 export function osdRequest(kind: string, level: number, name: string, behavior: Behavior): OsdRequest | null {
+    const request = (content: OsdContent, icon: string): OsdRequest => ({ content, icon, kind: 'osd' });
     switch (kind) {
         case 'volume':
-            return behavior.replaceOsd ? { content: osdContent(level, 1, null), icon: volumeIcon(level) } : null;
+            return behavior.replaceOsd ? request(osdContent(level, 1, null), volumeIcon(level)) : null;
         case 'muted':
             return behavior.replaceOsd
-                ? { content: osdContent(null, null, null, ['audio-volume-muted-symbolic']), icon: volumeIcon(0) }
+                ? request(osdContent(null, null, null, ['audio-volume-muted-symbolic']), volumeIcon(0))
                 : null;
         case 'brightness':
-            return behavior.replaceOsd
-                ? { content: osdContent(level, 1, null), icon: 'display-brightness-symbolic' }
-                : null;
+            return behavior.replaceOsd ? request(osdContent(level, 1, null), 'display-brightness-symbolic') : null;
         case 'caps-lock':
-            return behavior.showCapsLock ? { content: lockKeyContent('Caps Lock', level > 0), icon: KEYBOARD } : null;
+            return behavior.showCapsLock ? request(lockKeyContent('Caps Lock', level > 0), KEYBOARD) : null;
         case 'num-lock':
-            return behavior.showNumLock ? { content: lockKeyContent('Num Lock', level > 0), icon: KEYBOARD } : null;
+            return behavior.showNumLock ? request(lockKeyContent('Num Lock', level > 0), KEYBOARD) : null;
         case 'layout':
-            return behavior.showInputSource && name ? { content: { fraction: null, text: name }, icon: KEYBOARD } : null;
+            return behavior.showInputSource && name ? request({ fraction: null, text: name }, KEYBOARD) : null;
         default:
             return null;
     }
@@ -82,10 +82,10 @@ export function deviceRequest(
             battery: batteryLevel(percentage),
         },
         icon: alert.icon,
+        kind: isBatteryWarning(kind) ? 'battery' : 'device',
         durationMs: behavior.alertDurationMs,
         tone: alert.urgent ? 'urgent' : charged ? 'success' : { color: TONES.device },
         motion: alertMotion(kind, motions),
-        battery: isBatteryWarning(kind),
     };
 }
 
