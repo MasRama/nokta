@@ -3,7 +3,7 @@ import { MockBridge } from './bridge/mock.js';
 import { sceneFor } from './mock/scenes.js';
 import { MonitorNotch } from './monitor-notch.js';
 import { setPictureUrl } from './notch/notch.js';
-import { fileUrl, inTauri, onPointer, setHitRegion, systemUses24h } from './platform.js';
+import { fileUrl, inTauri, onFullscreen, onPointer, setHitRegion, systemUses24h } from './platform.js';
 
 const app = inTauri();
 const scene = sceneFor(location.search);
@@ -14,7 +14,7 @@ setPictureUrl(fileUrl);
 const mock = app ? null : new MockBridge(scene.props);
 const notch = new MonitorNotch(
     mock ?? new TauriBridge(),
-    { systemUses24h, setHit: (hit) => void setHitRegion(hit), onPointer },
+    { systemUses24h, setHit: (hit) => void setHitRegion(hit), onPointer, onFullscreen },
     document.body,
 );
 window.addEventListener('resize', () => notch.setArea(window.innerWidth));

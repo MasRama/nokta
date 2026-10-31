@@ -648,6 +648,16 @@ WebView2 and runs the core's services itself, with no D-Bus.
   everywhere). `win/privacy.rs` waits on Windows' change events for both
   keys and on the default microphone's mute, which `ToggleMute` flips.
   Windows has no signal for a shared screen, so that dot never shows.
+- A fullscreen app hides the notch on its monitor. `win/fullscreen.rs`
+  follows Windows' window events (foreground, moved or resized,
+  minimized), waits for them to settle and walks the app windows from the
+  top: hidden, minimized, cloaked, tool and shell windows and Nokta's own
+  do not count. The monitor is covered when its top window, past smaller
+  always-on-top ones, reaches every edge without a title bar
+  (`fullscreen.rs`, tested everywhere). Each window hears `nokta://fullscreen`
+  and asks `notch_fullscreen` once at start; the page hides the notch and
+  its click box and lets through what `fullscreen_alerts` allows, as the
+  extension does.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with

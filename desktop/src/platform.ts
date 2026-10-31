@@ -5,6 +5,8 @@ import type { Box } from './notch/notch.js';
 
 /** The app's event for the pointer crossing the notch (desktop/src-tauri/src/win/pointer.rs). */
 const POINTER_EVENT = 'nokta://pointer';
+/** The app's event for a fullscreen app on the window's monitor (desktop/src-tauri/src/win/fullscreen.rs). */
+const FULLSCREEN_EVENT = 'nokta://fullscreen';
 
 /** Whether the page runs in the Windows app, not in a plain browser (the mock). */
 export function inTauri(): boolean {
@@ -37,6 +39,16 @@ export function onPointer(cb: (inside: boolean) => void, hit: () => Box | null):
     };
     document.addEventListener('pointermove', (e) => test(e.clientX, e.clientY));
     document.addEventListener('pointerleave', () => test(-1, -1));
+}
+
+/**
+ * Calls `cb` when a fullscreen app comes over the window's monitor or goes,
+ * and once with how it is now. A browser has none.
+ */
+export function onFullscreen(cb: (fullscreen: boolean) => void): void {
+    if (!inTauri()) return;
+    void listen<boolean>(FULLSCREEN_EVENT, ({ payload }) => cb(payload));
+    void invoke<boolean>('notch_fullscreen').then(cb);
 }
 
 /** A file as the page can load it: through the app's asset protocol, or as is in a browser. */
