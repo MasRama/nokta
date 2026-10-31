@@ -1,5 +1,7 @@
 [workspace]
-members = ["core"]
+members = ["core", "desktop/src-tauri"]
+# The Windows app builds only when asked (`-p nokta-desktop`).
+default-members = ["core"]
 resolver = "2"
 
 [workspace.package]

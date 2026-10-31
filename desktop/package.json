@@ -1,0 +1,39 @@
+{
+  "name": "nokta-desktop",
+  "version": "0.10.0",
+  "private": true,
+  "description": "Nokta for Windows: the notch's interface, drawn in WebView2",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MasRama/nokta.git",
+    "directory": "desktop"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "shots": "node scripts/shots.mjs",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tauri-apps/cli": "2.12.4",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "happy-dom": "21.0.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

@@ -1,0 +1,5 @@
+[advisories]
+# glib 0.18 is in Cargo.lock only as one of Tauri's Linux dependencies.
+# nokta-desktop depends on Tauri on Windows alone, so no build of Nokta
+# compiles it.
+ignore = ["RUSTSEC-2024-0429"]
