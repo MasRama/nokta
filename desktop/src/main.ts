@@ -40,5 +40,6 @@ await notch.start(window.innerWidth);
 if (mock) {
     if (scene.open) notch.open(true);
     for (const selector of scene.click ?? []) document.querySelector<HTMLElement>(selector)?.click();
+    for (const [iface, props] of scene.changes ?? []) mock.set(iface, props);
     for (const [iface, signal, ...args] of scene.signals ?? []) mock.signal(iface, signal, ...args);
 }

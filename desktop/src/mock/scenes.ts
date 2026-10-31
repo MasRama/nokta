@@ -10,6 +10,8 @@ export interface Scene {
     signals?: SceneSignal[];
     /** Elements clicked once the notch is open, like a home tile. */
     click?: string[];
+    /** Property changes after the clicks, in order, like the samples a page watches. */
+    changes?: Array<[string, Props]>;
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
@@ -159,6 +161,20 @@ const TIMER_HOME: Record<string, Props> = {
     Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['focus', 'timer', 'notifications', 'screenshot'] } },
 };
 
+/** Home with the System tile. */
+const SYSTEM_HOME: Record<string, Props> = {
+    ...HOME,
+    Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['focus', 'timer', 'system', 'notifications'] } },
+};
+
+/** A minute of CPU going up and down, 6.4 of 16 GB, no temperature, a download. */
+function samples(): Array<[string, Props]> {
+    return Array.from({ length: 30 }, (_, i): [string, Props] => {
+        const cpu = 0.18 + 0.14 * Math.sin(i / 3) + (i > 22 ? 0.3 : 0);
+        return ['System1', { Usage: [cpu, 6.4e9, 16e9, null, 2_400_000, 85_000] }];
+    });
+}
+
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
     home: { props: HOME, open: true },
@@ -180,6 +196,8 @@ export const SCENES: Record<string, Scene> = {
     focus: { props: focus() },
     'focus-player': { props: { ...player(true), ...focus() } },
     clocks: { props: { ...TIMER_HOME, ...clocks() }, open: true },
+    'system-page': { props: SYSTEM_HOME, open: true, click: ['[data-tile="system"]'], changes: samples() },
+    'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
     'timer-page': { props: TIMER_HOME, open: true, click: ['[data-tile="timer"]'] },
     'focus-done': { props: { ...LINGER, ...focus() }, signals: [['Timer1', 'Finished', 'focus']] },
     player: { props: player(true) },

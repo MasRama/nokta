@@ -34,13 +34,23 @@ import { progressLine, type Span } from '@ext/shared/logic/progress-line.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
 import { Activities, type Ended } from './activities.js';
-import { Alerts, CLOCK_ICON, clockDoneRequest, endedRequest, finishedRequest, TIMER_ICON, type OsdRequest } from './alerts.js';
+import {
+    Alerts,
+    CLOCK_ICON,
+    clockDoneRequest,
+    endedRequest,
+    finishedRequest,
+    memoryLowRequest,
+    TIMER_ICON,
+    type OsdRequest,
+} from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
+import { System } from './system.js';
 import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
 import { everyMinute } from './views/clock.js';
@@ -54,6 +64,7 @@ import { PeekView } from './views/peek.js';
 import { CallLabel, PrivacyDots, type HomeCall } from './views/privacy.js';
 import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
+import { SystemPage } from './views/system.js';
 import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
 import { Updates } from './updates.js';
 import { ActivityBadge } from './views/activity.js';
@@ -90,7 +101,10 @@ const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
 const ALERT_KICK = 0.06;
 
 /** A page a home tile opens. */
-type PageName = 'timer';
+type PageName = 'timer' | 'system';
+
+/** Each page's body height, for subPageHeight. */
+const PAGE_HEIGHTS: Record<PageName, number> = { timer: TimerPage.HEIGHT, system: SystemPage.HEIGHT };
 
 /** How often the open player moves its progress and its lyric on, and home its clocks. */
 const TICK_MS = 250;
@@ -117,6 +131,7 @@ export class MonitorNotch {
     readonly timer: Timer;
     readonly activities: Activities;
     readonly updates: Updates;
+    readonly system: System;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -134,6 +149,7 @@ export class MonitorNotch {
     private readonly timerLabels = { idle: new TimerLabel(), collapsed: new TimerLabel() };
     private readonly badges = { idle: new ActivityBadge(), collapsed: new ActivityBadge() };
     private readonly timerPage: TimerPage;
+    private readonly systemPage = new SystemPage();
     /** The pages home's tiles open, one shown at a time. */
     private readonly pages: HTMLDivElement;
     private readonly subPages: Record<PageName, HTMLElement>;
@@ -187,6 +203,11 @@ export class MonitorNotch {
             (ended) => this.onActivityEnded(ended),
         );
         this.updates = new Updates(bridge, () => this.onHome());
+        this.system = new System(
+            bridge,
+            () => this.onSystem(),
+            (used, total, app) => this.onMemoryLow(used, total, app),
+        );
         this.toggles = new Toggles(bridge, () => this.onToggles());
         this.timer = new Timer(
             bridge,
@@ -221,7 +242,10 @@ export class MonitorNotch {
                 this.setPage(null);
             },
         });
-        this.subPages = { timer: new SubPage('Timer', this.timerPage.element, () => this.setPage(null)).element };
+        this.subPages = {
+            timer: new SubPage(_('Timer'), this.timerPage.element, () => this.setPage(null)).element,
+            system: new SubPage(_('System'), this.systemPage.element, () => this.setPage(null)).element,
+        };
         this.pages = document.createElement('div');
         this.pages.className = 'nokta-view nokta-pages';
         this.pages.append(...Object.values(this.subPages));
@@ -296,12 +320,18 @@ export class MonitorNotch {
             this.timer.attach(),
             this.activities.attach(),
             this.updates.attach(),
+            this.system.attach(),
         ]);
     }
 
     /** Opens the notch at once; `hold` keeps it open until it is closed. */
     open(hold = false): void {
         this.machine.open(hold);
+    }
+
+    /** Closes the notch at once. */
+    close(): void {
+        this.machine.close();
     }
 
     /** The window's width changed. */
@@ -322,6 +352,7 @@ export class MonitorNotch {
         this.timer.detach();
         this.activities.detach();
         this.updates.detach();
+        this.system.detach();
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
@@ -472,6 +503,7 @@ export class MonitorNotch {
         this.osd.setColors(palette.foreground, withAlpha(palette.foreground, 0.2));
         this.home.setColors({ foreground: palette.foreground, light: palette.light, accent: palette.accent });
         this.timerPage.setColors(palette);
+        this.systemPage.setColors(palette);
         this.updateViews();
         this.applyProgress();
     }
@@ -609,8 +641,8 @@ export class MonitorNotch {
 
     /** A tile opens its page, works its feature, or closes the notch and opens what it stands for. */
     private openTile(which: HomeTile): void {
-        if (which === 'timer') {
-            this.setPage('timer');
+        if (which === 'timer' || which === 'system') {
+            this.setPage(which);
             return;
         }
         if (which === 'focus') {
@@ -779,7 +811,7 @@ export class MonitorNotch {
         } else {
             // Closing goes back to the first page.
             this.homeOpen = false;
-            this.page = null;
+            this.showPage(null);
         }
         this.redraw();
         if (this.keyboard && !this.machine.held) {
@@ -792,11 +824,37 @@ export class MonitorNotch {
     /** Opens a tile's page over home, or goes back to home. */
     private setPage(page: PageName | null): void {
         if (this.page === page) return;
-        this.page = page;
+        this.showPage(page);
         // Back from a page lands on home, also over a player.
         if (page) this.homeOpen = true;
         for (const [name, element] of Object.entries(this.subPages)) element.hidden = name !== page;
         this.redraw();
+    }
+
+    /** Sets the open page; the system page watches the system while it is open. */
+    private showPage(page: PageName | null): void {
+        const before = this.page;
+        this.page = page;
+        if (before === page) return;
+        if (before === 'system') this.system.unwatch();
+        if (page === 'system') {
+            this.systemPage.reset();
+            this.system.watch();
+            this.onSystem();
+        }
+    }
+
+    /** A new sample of the system's use. */
+    private onSystem(): void {
+        if (this.page !== 'system') return;
+        this.systemPage.show(this.system.usage, this.settings.weather.units === 'fahrenheit');
+    }
+
+    /** Memory is almost full: an alert names the app using the most. */
+    private onMemoryLow(used: number, total: number, app: string): void {
+        const { system, behavior, appearance } = this.settings;
+        const request = memoryLowRequest(used, total, app, system, behavior, appearance.alertMotion);
+        if (request) this.showOsd(request);
     }
 
     private setHomeOpen(open: boolean): void {
@@ -826,7 +884,7 @@ export class MonitorNotch {
             appearance,
             notificationButtons: false,
             panelHeight: panelHeight(appearance.height, this.homeRows),
-            pageHeight: subPageHeight(TimerPage.HEIGHT),
+            pageHeight: subPageHeight(PAGE_HEIGHTS[this.page ?? 'timer']),
             expandedExtra: this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0,
         });
     }
