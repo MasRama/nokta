@@ -6,9 +6,9 @@
 use std::sync::Mutex;
 
 use nokta_core::app::{OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
+use nokta_core::features::devices;
 use nokta_core::features::lyrics::{self, LyricsState};
 use nokta_core::features::media::art::ArtCache;
-use nokta_core::features::media::levels::BANDS;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
@@ -19,7 +19,9 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::{mpsc, oneshot, watch};
 
-use crate::bridge::{lyrics as lyrics_props, media, nokta, settings, Props};
+use crate::bridge::{
+    devices as devices_bridge, lyrics as lyrics_props, media, nokta, settings, Props,
+};
 use crate::layout::NotchSizes;
 
 /// The event that carries an interface's changed properties to every page.
@@ -63,7 +65,7 @@ impl Core {
 /// Starts the services and the forwarders; the app manages the result.
 pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     let http = http::client(|b| b.user_agent(USER_AGENT));
-    let (media_state, player, services, levels) = tauri::async_runtime::block_on(async {
+    let (media_state, player, services, levels, alerts) = tauri::async_runtime::block_on(async {
         let art = ArtCache::new(paths.cache_dir.clone(), http);
         let (media_state, player) = gsmtc::spawn(art, tokio::runtime::Handle::current());
         let services = Services::start(
@@ -76,7 +78,13 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         let levels = loopback::spawn(media_state.clone(), services.config.clone(), |c| {
             c.media.real_equalizer
         });
-        (media_state, player, services, levels)
+        (
+            media_state,
+            player,
+            services,
+            levels,
+            devices::watcher::spawn(),
+        )
     });
     forward_settings(
         app.clone(),
@@ -86,7 +94,16 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     forward(app.clone(), media_state.clone(), media::INTERFACE, |s| {
         media::props(s, monotonic_us(), wall_us())
     });
-    forward_levels(app.clone(), levels);
+    forward_signal(app.clone(), levels, media::INTERFACE, "Levels", |levels| {
+        vec![serde_json::json!(levels)]
+    });
+    forward_signal(
+        app.clone(),
+        alerts,
+        devices_bridge::INTERFACE,
+        devices_bridge::ALERT,
+        devices_bridge::alert_args,
+    );
     forward(
         app.clone(),
         services.lyrics.state.clone(),
@@ -154,16 +171,25 @@ fn forward<T: Send + Sync + 'static>(
     });
 }
 
-/// Sends the music's band levels as `Media1.Levels`, as noktad's signal.
-fn forward_levels(app: AppHandle, mut levels: mpsc::Receiver<[f64; BANDS]>) {
+/// Sends each of `items` as `interface`'s `signal`, as noktad's signals.
+fn forward_signal<T: Send + 'static>(
+    app: AppHandle,
+    mut items: mpsc::Receiver<T>,
+    interface: &'static str,
+    signal: &'static str,
+    args: impl Fn(&T) -> Vec<Value> + Send + 'static,
+) {
     tauri::async_runtime::spawn(async move {
-        while let Some(levels) = levels.recv().await {
-            let signal = Signal {
-                interface: media::INTERFACE,
-                signal: "Levels",
-                args: vec![serde_json::json!(levels)],
-            };
-            let _ = app.emit(SIGNAL_EVENT, signal);
+        while let Some(item) = items.recv().await {
+            let args = args(&item);
+            let _ = app.emit(
+                SIGNAL_EVENT,
+                Signal {
+                    interface,
+                    signal,
+                    args,
+                },
+            );
         }
     });
 }
