@@ -584,7 +584,7 @@ How both sides stay honest:
 ## The Windows app
 
 `desktop/` is Nokta for Windows: one Tauri 2 process that draws the notch in
-WebView2 and will run the core's services itself, with no D-Bus.
+WebView2 and runs the core's services itself, with no D-Bus.
 
 - `src-tauri/` is the crate `nokta-desktop`. It is a workspace member but
   not a default one, so `cargo test` at the root stays the core's; use
@@ -595,16 +595,29 @@ WebView2 and will run the core's services itself, with no D-Bus.
   imports the extension's pure `logic/` modules through the `@ext` alias
   (`extension/src`), so a decision lives in one place for both; only the
   drawing is new, DOM and SVG where the extension has St actors and a
-  shader (`notch/path.ts` draws the same silhouette).
+  shader (`notch/notch.ts` draws the same silhouette, glow and shadow in
+  SVG on the same springs). `monitor-notch.ts` ties them together as the
+  extension's does.
+- The bridge (`src-tauri/src/bridge/`, `src/bridge/`) stands in for D-Bus:
+  each interface's properties go to the page under their names in
+  `contracts/*.xml` (`bridge_props`, changes on `nokta://props`) and its
+  methods are called by name (`bridge_call`). A test holds the properties
+  to the contracts. In a browser the page uses an in-memory mock instead.
+- `src-tauri/src/win/services.rs` starts `app::Services` on Tauri's async
+  runtime and forwards their changes; the log goes to
+  `%LOCALAPPDATA%\nokta\nokta.log` (`NOKTA_LOG` sets the level).
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with
   `WS_EX_TOOLWINDOW` (no taskbar button, not in Alt+Tab) and
   `WS_EX_NOACTIVATE`, and a subclass answers `WM_MOUSEACTIVATE` with
   `MA_NOACTIVATE`, so a click never takes the focus from the user's app.
-  The page reports the notch's rectangle (`set_hit_region`) and the window
-  is clipped to it with `SetWindowRgn`: only there does it take the
-  pointer, so a click beside the notch reaches the window under it. A
+  The whole window draws, so the glow and the shadow reach past the
+  notch, and lets clicks through (`WS_EX_TRANSPARENT | WS_EX_LAYERED`).
+  The page reports the room the notch takes (`set_hit_region`), the whole
+  motion while it moves; a thread follows the pointer and makes the window
+  take clicks while the pointer is in that room, telling the page on
+  `nokta://pointer`, since the page hears nothing while clicks pass. A
   `SetWinEventHook` on `EVENT_SYSTEM_FOREGROUND` raises the notches again
   whenever another window comes forward.
 - The tray icon stands in for the top bar (Quit). A second start leaves
@@ -614,8 +627,10 @@ WebView2 and will run the core's services itself, with no D-Bus.
   (`installer.nsh`), which Task Manager's Startup apps can turn off.
 - `npm run shots` shoots the page in Chrome on a stand-in desktop
   (`?mock=<scene>`), the check that runs anywhere. `windows.yml` builds the
-  installer on `windows-latest`, installs and starts it, and uploads
-  screenshots of the real desktop (`tools/windows/shot.ps1`).
+  installer on `windows-latest`, installs and starts it, checks that a
+  click beside the notch passes and one on it does not
+  (`tools/windows/hit.ps1`), and uploads screenshots of the real desktop
+  (`tools/windows/shot.ps1`).
 
 ## Locked stack
 
