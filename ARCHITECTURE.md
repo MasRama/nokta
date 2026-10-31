@@ -680,6 +680,16 @@ WebView2 and runs the core's services itself, with no D-Bus.
   `nokta://pointer`, since the page hears nothing while clicks pass. A
   `SetWinEventHook` on `EVENT_SYSTEM_FOREGROUND` raises the notches again
   whenever another window comes forward.
+- The windows follow the monitors (`win/monitors.rs`). The subclass also
+  hears `WM_DISPLAYCHANGE` (a monitor plugged in or out, a new resolution
+  or arrangement) and `WM_DPICHANGED`; half a second after the last, the
+  windows are planned anew (`monitors.rs`, tested everywhere): a window
+  stays on a monitor that did not move, the others take the monitors left
+  in order, the rest close, and a new monitor gets a new window. Each is
+  placed again with its click box. A volume, a key or a device alert goes
+  only to the notch on the monitor of the window in front, as the
+  extension routes it to the focused monitor; the player's levels go to
+  every notch.
 - The tray icon stands in for the top bar (Quit). A second start leaves
   the running one alone.
 - The NSIS installer installs per user without admin rights, brings the

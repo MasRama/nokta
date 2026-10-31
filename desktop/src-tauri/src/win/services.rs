@@ -23,7 +23,7 @@ use crate::bridge::{
     devices as devices_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
     privacy as privacy_props, settings, Props,
 };
-use crate::layout::NotchSizes;
+use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
 
 /// The event that carries an interface's changed properties to every page.
@@ -97,12 +97,18 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     forward(app.clone(), media_state.clone(), media::INTERFACE, |s| {
         media::props(s, monotonic_us(), wall_us())
     });
-    forward_signal(app.clone(), levels, media::INTERFACE, "Levels", |levels| {
-        vec![serde_json::json!(levels)]
-    });
+    forward_signal(
+        app.clone(),
+        levels,
+        To::Every,
+        media::INTERFACE,
+        "Levels",
+        |levels| vec![serde_json::json!(levels)],
+    );
     forward_signal(
         app.clone(),
         alerts,
+        To::Front,
         devices_bridge::INTERFACE,
         devices_bridge::ALERT,
         devices_bridge::alert_args,
@@ -110,6 +116,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
     forward_signal(
         app.clone(),
         super::osd::spawn(),
+        To::Front,
         osd_bridge::INTERFACE,
         osd_bridge::SHOW,
         osd_bridge::show_args,
@@ -162,7 +169,7 @@ fn forward_settings(
             };
             if next != sizes {
                 sizes = next;
-                super::fit_windows(&app, &sizes);
+                super::monitors::resize(layout::window_logical_size(&sizes));
             }
             let _ = app.emit(
                 PROPS_EVENT,
@@ -190,25 +197,38 @@ fn forward<T: Send + Sync + 'static>(
     });
 }
 
+/// Which notch windows hear a signal.
+#[derive(Clone, Copy)]
+enum To {
+    Every,
+    /// The one on the monitor in use, as the extension shows an alert.
+    Front,
+}
+
 /// Sends each of `items` as `interface`'s `signal`, as noktad's signals.
 fn forward_signal<T: Send + 'static>(
     app: AppHandle,
     mut items: mpsc::Receiver<T>,
+    to: To,
     interface: &'static str,
     signal: &'static str,
     args: impl Fn(&T) -> Vec<Value> + Send + 'static,
 ) {
     tauri::async_runtime::spawn(async move {
         while let Some(item) = items.recv().await {
-            let args = args(&item);
-            let _ = app.emit(
-                SIGNAL_EVENT,
-                Signal {
-                    interface,
-                    signal,
-                    args,
-                },
-            );
+            let payload = Signal {
+                interface,
+                signal,
+                args: args(&item),
+            };
+            let front = match to {
+                To::Every => None,
+                To::Front => super::monitors::notch_in_front(&app),
+            };
+            let _ = match front {
+                Some(label) => app.emit_to(label.as_str(), SIGNAL_EVENT, payload),
+                None => app.emit(SIGNAL_EVENT, payload),
+            };
         }
     });
 }
