@@ -7,6 +7,7 @@
 mod bridge;
 mod fullscreen;
 mod layout;
+mod monitors;
 mod osd;
 mod privacy;
 mod shortcut;

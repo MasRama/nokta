@@ -3,6 +3,7 @@
 
 mod fullscreen;
 mod log;
+mod monitors;
 mod notch_window;
 mod osd;
 mod pointer;
@@ -12,10 +13,12 @@ mod shortcut;
 mod topmost;
 mod tray;
 
+use std::sync::Mutex;
+
 use nokta_core::shared::paths::Paths;
 use tauri::{AppHandle, Manager, WebviewWindow};
 
-use crate::layout::{self, CssRect, Monitor, NotchSizes};
+use crate::layout::{self, CssRect, NotchSizes};
 
 pub fn run() {
     tauri::Builder::default()
@@ -36,14 +39,7 @@ pub fn run() {
             let sizes = NotchSizes::from(&core.config().appearance);
             app.manage(core);
             tray::create(app.handle())?;
-            let logical = layout::window_logical_size(&sizes);
-            let mut notches = Vec::new();
-            for (index, found) in app.handle().available_monitors()?.iter().enumerate() {
-                let window =
-                    notch_window::create(app.handle(), index, &monitor_of(found), logical)?;
-                notches.push(window.hwnd()?);
-            }
-            topmost::install(&notches);
+            monitors::start(app.handle(), layout::window_logical_size(&sizes));
             pointer::start(app.handle().clone());
             fullscreen::start(app.handle().clone());
             shortcut::start(app.handle().clone());
@@ -53,47 +49,49 @@ pub fn run() {
         .expect("Nokta could not start");
 }
 
-fn monitor_of(found: &tauri::Monitor) -> Monitor {
-    Monitor {
-        x: found.position().x,
-        y: found.position().y,
-        width: found.size().width,
-        height: found.size().height,
-        scale: found.scale_factor(),
-    }
-}
-
-/// Gives every notch window the size `sizes` need, on its own monitor.
-fn fit_windows(app: &AppHandle, sizes: &NotchSizes) {
-    let logical = layout::window_logical_size(sizes);
-    for (label, window) in app.webview_windows() {
-        if !label.starts_with("notch-") {
-            continue;
-        }
-        let Ok(Some(found)) = window.current_monitor() else {
-            continue;
-        };
-        if let Err(err) = notch_window::place(&window, &monitor_of(&found), logical) {
-            tracing::warn!("cannot fit {label}: {err}");
-        }
-    }
-}
-
 /// The part of `window` that takes clicks, in the page's CSS px: the notch,
 /// with room for its motion while it moves.
 #[tauri::command]
 fn set_hit_region(window: WebviewWindow, rect: CssRect) -> Result<(), String> {
-    let error = |e: tauri::Error| e.to_string();
-    let position = window.outer_position().map_err(error)?;
-    let size = window.outer_size().map_err(error)?;
+    {
+        let mut hits = HIT_REGIONS.lock().unwrap_or_else(|e| e.into_inner());
+        hits.retain(|(label, _)| label != window.label());
+        hits.push((window.label().to_owned(), rect));
+    }
+    apply_hit(&window, rect).map_err(|e| e.to_string())
+}
+
+/// Each window's click box as its page last reported it.
+static HIT_REGIONS: Mutex<Vec<(String, CssRect)>> = Mutex::new(Vec::new());
+
+/// Places every window's click box again, after the windows moved.
+fn refresh_hits(app: &AppHandle) {
+    let hits = HIT_REGIONS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
+    for (label, rect) in hits {
+        let Some(window) = app.get_webview_window(&label) else {
+            continue;
+        };
+        if let Err(err) = apply_hit(&window, rect) {
+            tracing::warn!("cannot place the click box of {label}: {err}");
+        }
+    }
+}
+
+/// Makes `rect` (in the page's CSS px) of `window` take clicks.
+fn apply_hit(window: &WebviewWindow, rect: CssRect) -> tauri::Result<()> {
+    let position = window.outer_position()?;
+    let size = window.outer_size()?;
     let frame = layout::Rect {
         x: position.x,
         y: position.y,
         width: size.width,
         height: size.height,
     };
-    let hit = layout::hit_rect(&frame, window.scale_factor().map_err(error)?, rect);
-    pointer::set(window.label(), window.hwnd().map_err(error)?, hit);
+    let hit = layout::hit_rect(&frame, window.scale_factor()?, rect);
+    pointer::set(window.label(), window.hwnd()?, hit);
     Ok(())
 }
 

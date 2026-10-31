@@ -45,6 +45,12 @@ pub fn set(label: &str, hwnd: HWND, rect: Rect) {
     }
 }
 
+/// The window `label` closed.
+pub fn forget(label: &str) {
+    let mut hits = HITS.lock().unwrap_or_else(|e| e.into_inner());
+    hits.retain(|hit| hit.label != label);
+}
+
 /// Starts following the pointer, once.
 pub fn start(app: AppHandle) {
     let spawned = std::thread::Builder::new()

@@ -10,8 +10,8 @@ use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_TOPMOST,
     MA_NOACTIVATE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOWNOACTIVATE,
-    WM_MOUSEACTIVATE, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-    WS_EX_TRANSPARENT,
+    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_MOUSEACTIVATE, WS_EX_APPWINDOW, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
 };
 
 use crate::layout::{self, Monitor};
@@ -23,25 +23,21 @@ const SUBCLASS_ID: usize = 0x4E4F_4B54;
 /// Clicks go through it until the pointer comes over the notch.
 pub fn create(
     app: &AppHandle,
-    index: usize,
+    label: &str,
     monitor: &Monitor,
     logical: (f64, f64),
 ) -> tauri::Result<WebviewWindow> {
-    let window = WebviewWindowBuilder::new(
-        app,
-        format!("notch-{index}"),
-        WebviewUrl::App("index.html".into()),
-    )
-    .title("Nokta")
-    .decorations(false)
-    .transparent(true)
-    .shadow(false)
-    .resizable(false)
-    .skip_taskbar(true)
-    .always_on_top(true)
-    .focused(false)
-    .visible(false)
-    .build()?;
+    let window = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+        .title("Nokta")
+        .decorations(false)
+        .transparent(true)
+        .shadow(false)
+        .resizable(false)
+        .skip_taskbar(true)
+        .always_on_top(true)
+        .focused(false)
+        .visible(false)
+        .build()?;
     place(&window, monitor, logical)?;
     let hwnd = window.hwnd()?;
     make_overlay(hwnd);
@@ -82,7 +78,8 @@ pub fn make_overlay(hwnd: HWND) {
     }
 }
 
-/// A click on the notch must not take the focus from the app the user is in.
+/// A click on the notch must not take the focus from the app the user is in;
+/// and the windows follow the displays when they change.
 unsafe extern "system" fn no_activate(
     hwnd: HWND,
     message: u32,
@@ -93,6 +90,9 @@ unsafe extern "system" fn no_activate(
 ) -> LRESULT {
     if message == WM_MOUSEACTIVATE {
         return LRESULT(MA_NOACTIVATE as isize);
+    }
+    if message == WM_DISPLAYCHANGE || message == WM_DPICHANGED {
+        super::monitors::changed();
     }
     // SAFETY: passes the message on to the next handler of this window.
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }

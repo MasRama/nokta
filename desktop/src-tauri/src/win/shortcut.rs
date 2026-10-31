@@ -7,10 +7,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Mutex;
 
 use nokta_core::features::settings::Config;
-use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::watch;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, MOD_NOREPEAT,
@@ -20,6 +19,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_APP, WM_HOTKEY,
 };
 
+use super::monitors;
 use crate::shortcut;
 
 /// Tells a page to open with the keyboard, or to close if it has it.
@@ -117,7 +117,7 @@ fn toggle(app: &AppHandle) {
     }
     // SAFETY: reads which window is in front.
     let previous = unsafe { GetForegroundWindow() };
-    let Some(window) = notch_for(app, previous) else {
+    let Some(window) = monitors::notch_on_monitor_of(app, previous) else {
         return;
     };
     let label = window.label().to_owned();
@@ -131,30 +131,6 @@ fn toggle(app: &AppHandle) {
 fn tell(app: &AppHandle, label: &str) {
     if let Err(err) = app.emit_to(label, KEYBOARD_EVENT, ()) {
         tracing::warn!("cannot tell {label} about the shortcut: {err}");
-    }
-}
-
-/// The notch window on the monitor of `front`, else the first.
-fn notch_for(app: &AppHandle, front: HWND) -> Option<WebviewWindow> {
-    // SAFETY: a null or stale window falls back to the primary monitor.
-    let monitor = unsafe { MonitorFromWindow(front, MONITOR_DEFAULTTOPRIMARY) };
-    let mut notches: Vec<WebviewWindow> = app
-        .webview_windows()
-        .into_iter()
-        .filter(|(label, _)| label.starts_with("notch-"))
-        .map(|(_, window)| window)
-        .collect();
-    notches.sort_by(|a, b| a.label().cmp(b.label()));
-    let on_monitor = notches.iter().position(|window| {
-        window.hwnd().is_ok_and(|hwnd| {
-            // SAFETY: the notch window is ours and alive.
-            let own = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY) };
-            own == monitor
-        })
-    });
-    match on_monitor {
-        Some(index) => Some(notches.swap_remove(index)),
-        None => notches.into_iter().next(),
     }
 }
 
@@ -177,5 +153,13 @@ pub fn release(label: &str) {
         if IsWindow(Some(previous)).as_bool() {
             let _ = SetForegroundWindow(previous);
         }
+    }
+}
+
+/// The window `label` closed: it no longer has the keyboard.
+pub fn forget(label: &str) {
+    let mut holder = HOLDER.lock().unwrap_or_else(|e| e.into_inner());
+    if holder.as_ref().is_some_and(|(held, _)| held == label) {
+        *holder = None;
     }
 }
