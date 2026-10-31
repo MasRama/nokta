@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use nokta_core::app::{follow, OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
 use nokta_core::features::activities::model::Activity;
+use nokta_core::features::clipboard::service::{Command as ClipCommand, Published};
 use nokta_core::features::devices;
 use nokta_core::features::downloads::service::Finished;
 use nokta_core::features::lyrics::{self, LyricsState};
@@ -29,10 +30,11 @@ use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
-    activities as activities_props, devices as devices_bridge, downloads as downloads_bridge,
-    lyrics as lyrics_props, media, nokta, osd as osd_bridge, privacy as privacy_props, settings,
-    shelf as shelf_bridge, system as system_props, timer as timer_props, toggles as toggles_props,
-    updates as updates_props, weather as weather_props, Props,
+    activities as activities_props, clipboard as clipboard_bridge, devices as devices_bridge,
+    downloads as downloads_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
+    privacy as privacy_props, settings, shelf as shelf_bridge, system as system_props,
+    timer as timer_props, toggles as toggles_props, updates as updates_props,
+    weather as weather_props, Props,
 };
 use crate::files::KnownFiles;
 use crate::layout::{self, NotchSizes};
@@ -90,6 +92,8 @@ pub struct Core {
     shelf: watch::Receiver<Vec<Item>>,
     shelf_thumbnails: watch::Receiver<Thumbnails>,
     shelf_commands: mpsc::Sender<shelf::service::Command>,
+    clipboard: watch::Receiver<Published>,
+    clipboard_commands: mpsc::Sender<ClipCommand>,
     /// The files the page may open.
     known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
@@ -340,6 +344,17 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         shelf_bridge::thumbnails_props,
     );
     follow_shelf(services.shelf.state.clone(), known.clone());
+    forward(
+        app.clone(),
+        services.clipboard.state.clone(),
+        clipboard_bridge::INTERFACE,
+        clipboard_bridge::props,
+    );
+    super::clipboard::spawn(
+        services.clipboard.commands.clone(),
+        services.config.clone(),
+        services.clipboard.state.clone(),
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -364,6 +379,8 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         shelf: services.shelf.state.clone(),
         shelf_thumbnails: services.shelf.thumbnails.clone(),
         shelf_commands: services.shelf.commands.clone(),
+        clipboard: services.clipboard.state.clone(),
+        clipboard_commands: services.clipboard.commands.clone(),
         known,
         _services: Mutex::new(services),
     }
@@ -561,6 +578,7 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
             &core.shelf.borrow(),
             &core.shelf_thumbnails.borrow(),
         )),
+        clipboard_bridge::INTERFACE => Ok(clipboard_bridge::props(&core.clipboard.borrow())),
         timer_props::INTERFACE => {
             let (mono, wall) = (monotonic_us(), wall_us());
             let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
@@ -653,6 +671,7 @@ pub async fn bridge_call(
             Ok(Value::Null)
         }
         (shelf_bridge::INTERFACE, method, args) => shelf_call(&core, method, args).await,
+        (clipboard_bridge::INTERFACE, method, args) => clipboard_call(&core, method, args).await,
         (privacy_props::INTERFACE, "ToggleMute", []) => {
             super::privacy::toggle_mute();
             Ok(Value::Null)
@@ -688,6 +707,45 @@ async fn shelf_call(core: &Core, method: &str, args: &[Value]) -> Result<Value, 
         .send(command)
         .await
         .map_err(|_| "the shelf has stopped".to_owned())?;
+    Ok(Value::Null)
+}
+
+/// Calls `Clipboard1.method(args)`. `Copy(id)`, only here, puts an entry
+/// back on Windows' clipboard, where the extension does it itself.
+async fn clipboard_call(core: &Core, method: &str, args: &[Value]) -> Result<Value, String> {
+    // A closure cannot take both kinds of error.
+    fn stopped<E>(_: E) -> String {
+        "the clipboard history has stopped".to_owned()
+    }
+    let command = match (method, args) {
+        ("Copy", [Value::String(id)]) => {
+            let (reply, answer) = oneshot::channel();
+            core.clipboard_commands
+                .send(ClipCommand::Get(id.clone(), reply))
+                .await
+                .map_err(stopped)?;
+            let content = answer
+                .await
+                .map_err(stopped)?
+                .ok_or_else(|| format!("no clipboard entry {id}"))?;
+            super::clipboard::copy(content)?;
+            return Ok(Value::Null);
+        }
+        ("Pin", [Value::String(id), Value::Bool(pinned)]) => ClipCommand::Pin(id.clone(), *pinned),
+        ("Remove", [Value::String(id)]) => ClipCommand::Remove(id.clone()),
+        ("Clear", []) => ClipCommand::Clear,
+        ("SetPaused", [Value::Bool(paused)]) => ClipCommand::SetPaused(*paused),
+        _ => {
+            return Err(format!(
+                "no method Clipboard1.{method} for {} arguments",
+                args.len()
+            ))
+        }
+    };
+    core.clipboard_commands
+        .send(command)
+        .await
+        .map_err(stopped)?;
     Ok(Value::Null)
 }
 

@@ -760,6 +760,15 @@ WebView2 and runs the core's services itself, with no D-Bus.
   the closed notch, and the drop area; a slot's own pointer events open,
   remove or drag its file, as the GNOME helper window's presses do.
   Keep on shelf in a download's preview adds it.
+- The clipboard history (`Clipboard1`) is the core's service. A
+  message-only window on its own thread (`win/clipboard.rs`) listens for
+  copies (`AddClipboardFormatListener`) and hands each over as the
+  extension's watcher does: text first, else a picture (the `PNG` format,
+  else a DIB made into a PNG by `src/clipboard.rs`), nothing that asks
+  clipboard tools to skip it, and nothing at all while the history is off
+  or paused. `Copy(id)`, which only the bridge has, puts an entry back:
+  the window owns the clipboard, so it writes the text, or the picture as
+  `PNG` and `CF_DIB`.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

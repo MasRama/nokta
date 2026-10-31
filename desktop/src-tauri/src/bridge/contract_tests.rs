@@ -311,3 +311,23 @@ fn shelf() {
         &super::shelf::props(&[item], &thumbnails),
     );
 }
+
+#[test]
+fn clipboard() {
+    use nokta_core::features::clipboard::service::{Published, Row};
+    let published = Published {
+        items: vec![Row {
+            id: "1".into(),
+            kind: "text",
+            preview: "hello".into(),
+            thumbnail: String::new(),
+            pinned: true,
+            time_us: 1_700_000_000_000_000,
+        }],
+        paused: false,
+    };
+    check(
+        super::clipboard::INTERFACE,
+        &super::clipboard::props(&published),
+    );
+}

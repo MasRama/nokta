@@ -1,6 +1,7 @@
 //! The Windows app: the core in process, a notch window at the top of every
 //! monitor, the tray icon, and the commands the page calls.
 
+mod clipboard;
 mod fullscreen;
 mod log;
 mod monitors;
