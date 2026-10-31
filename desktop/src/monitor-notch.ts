@@ -20,6 +20,7 @@ import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/
 
 import { Alerts, type OsdRequest } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
+import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
@@ -44,6 +45,10 @@ export interface Host {
     onPointer(cb: (inside: boolean) => void, hit: () => Box | null): void;
     /** Calls back when a fullscreen app comes over the monitor or goes; none in a browser. */
     onFullscreen?(cb: (fullscreen: boolean) => void): void;
+    /** Calls back when the open shortcut is pressed for this window; none in a browser. */
+    onKeyboard?(cb: () => void): void;
+    /** The notch the shortcut opened closed: the window it took the keyboard from gets it back. */
+    releaseKeyboard?(): void;
 }
 
 /** No click goes to the notch while it hides. */
@@ -101,6 +106,13 @@ export class MonitorNotch {
     private alertOverFullscreen = false;
     /** The pointer is over the notch, as the window last said. */
     private pointerOver = false;
+    /** The open shortcut opened the notch, and it has the keyboard. */
+    private keyboard = false;
+    private readonly onKeyDown = (event: KeyboardEvent) => this.onKey(event);
+    /** The window lost the keyboard: a click or a switch elsewhere closes the notch. */
+    private readonly onBlur = () => {
+        if (this.keyboard && this.machine.held) this.machine.close();
+    };
 
     constructor(
         bridge: Bridge,
@@ -126,6 +138,8 @@ export class MonitorNotch {
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
         this.notch.body.append(...Object.values(this.views), this.privacyDots.element);
+        // A view with no buttons leaves the focus on the notch.
+        this.notch.element.tabIndex = -1;
         root.append(this.notch.element);
         this.machine = new NotchMachine(
             (ms, fn) => {
@@ -163,6 +177,9 @@ export class MonitorNotch {
             () => this.hit,
         );
         host.onFullscreen?.((fullscreen) => this.setFullscreen(fullscreen));
+        host.onKeyboard?.(() => this.toggleKeyboard());
+        document.addEventListener('keydown', this.onKeyDown);
+        window.addEventListener('blur', this.onBlur);
     }
 
     /** Lays out in a window `width` CSS px wide and follows the core. */
@@ -190,6 +207,8 @@ export class MonitorNotch {
     }
 
     stop(): void {
+        document.removeEventListener('keydown', this.onKeyDown);
+        window.removeEventListener('blur', this.onBlur);
         this.stopClock?.();
         this.settings.detach();
         this.media.detach();
@@ -230,6 +249,45 @@ export class MonitorNotch {
             this.notch.stopMotion();
             this.notch.setGlow(null);
         }
+    }
+
+    /**
+     * The open shortcut: opens the notch (home or the player, as hover
+     * would) with the keyboard and focuses the first button; pressed again
+     * while open, closes it.
+     */
+    toggleKeyboard(): void {
+        if (this.machine.held) {
+            this.machine.close();
+            return;
+        }
+        // A fullscreen app hides the notch: the keyboard goes back at once.
+        if (!fullscreenView(this.inFullscreen, this.alertOverFullscreen).visible) {
+            this.host.releaseKeyboard?.();
+            return;
+        }
+        this.keyboard = true;
+        this.machine.open(true);
+        this.focusView();
+    }
+
+    /** Held open: Escape closes, Tab and the arrows move the focus; Enter and Space are the button's. */
+    private onKey(event: KeyboardEvent): void {
+        if (!this.machine.held) return;
+        const action = keyActionOf(event);
+        if (action === null) return;
+        event.preventDefault();
+        const view = this.views[this.drawn];
+        if (action === 'close') this.machine.close();
+        else if (view) moveFocus(view, action);
+    }
+
+    /** Focuses the first button of the view that shows, unless the focus is in it already. */
+    private focusView(): void {
+        if (!this.keyboard || !this.machine.held) return;
+        const view = this.views[this.drawn];
+        if (!view || view.contains(document.activeElement)) return;
+        if (!focusFirst(view)) this.notch.element.focus();
     }
 
     /** A fullscreen app came over the monitor or went. */
@@ -400,6 +458,11 @@ export class MonitorNotch {
             this.homeOpen = false;
         }
         this.redraw();
+        if (this.keyboard && !this.machine.held) {
+            this.keyboard = false;
+            (document.activeElement as HTMLElement | null)?.blur();
+            this.host.releaseKeyboard?.();
+        }
     }
 
     private setHomeOpen(open: boolean): void {
@@ -464,6 +527,8 @@ export class MonitorNotch {
             this.tick();
         }
         this.updateTicker();
+        // The focus follows to the new view.
+        this.focusView();
     }
 
     /** Only the view on screen runs its equalizer. */

@@ -166,6 +166,10 @@ body.nokta-mock {
     pointer-events: none;
 }
 
+.nokta-notch:focus {
+    outline: none;
+}
+
 .nokta-button:focus-visible,
 .nokta-play:focus-visible {
     outline: none;

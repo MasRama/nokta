@@ -7,6 +7,8 @@ import type { Box } from './notch/notch.js';
 const POINTER_EVENT = 'nokta://pointer';
 /** The app's event for a fullscreen app on the window's monitor (desktop/src-tauri/src/win/fullscreen.rs). */
 const FULLSCREEN_EVENT = 'nokta://fullscreen';
+/** The app's event for the open shortcut (desktop/src-tauri/src/win/shortcut.rs). */
+const KEYBOARD_EVENT = 'nokta://keyboard';
 
 /** Whether the page runs in the Windows app, not in a plain browser (the mock). */
 export function inTauri(): boolean {
@@ -49,6 +51,16 @@ export function onFullscreen(cb: (fullscreen: boolean) => void): void {
     if (!inTauri()) return;
     void listen<boolean>(FULLSCREEN_EVENT, ({ payload }) => cb(payload));
     void invoke<boolean>('notch_fullscreen').then(cb);
+}
+
+/** Calls `cb` when the open shortcut is pressed for this window. A browser has none. */
+export function onKeyboard(cb: () => void): void {
+    if (inTauri()) void listen(KEYBOARD_EVENT, () => cb());
+}
+
+/** The notch the shortcut opened closed: the app gives the keyboard back. */
+export function releaseKeyboard(): void {
+    if (inTauri()) void invoke('release_keyboard');
 }
 
 /** A file as the page can load it: through the app's asset protocol, or as is in a browser. */
