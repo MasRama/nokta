@@ -92,6 +92,8 @@ const FOLDER = 'M1.75 4.25a1 1 0 0 1 1-1h3.5l1.5 1.5h5.5a1 1 0 0 1 1 1v6.5a1 1 0
  */
 const FILE_ICONS = new Map<string, string>([
     ['folder', lines(`<path d="${FOLDER}"/>`)],
+    ['folder-documents', lines(`<path d="${FOLDER}"/><path d="M5 8.5h6M5 10.75h4"/>`)],
+    ['folder-download', lines(`<path d="${FOLDER}"/><path d="M8 6.75v4.5M6 9.25l2 2 2-2"/>`)],
     ['application-x-generic', page()],
     ['text-x-generic', page('<path d="M6 8h4.5M6 10.25h4.5M6 12.5h3"/>')],
     ['x-office-document', page('<path d="M6 8.5h4.5M6 11h4.5"/>')],

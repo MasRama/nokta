@@ -753,8 +753,13 @@ WebView2 and runs the core's services itself, with no D-Bus.
   through; `nokta://drop` tells that notch to show its drop view. The page
   may `Add` only files the core announced, like a download. Dragging files
   out is Windows' own shell drag (`SHDoDragDrop` on a shell item array),
-  which copies them as Explorer would and leaves them on the shelf, as on
-  GNOME; while it runs, a drop back on the notch is ignored.
+  which copies them as Explorer would; once an app took them they leave
+  the shelf, as on GNOME. While it runs, a drop back on the notch is
+  ignored. The page draws the extension's shelf row in home and under the
+  open player (the stack, then the newest files that fit), the count in
+  the closed notch, and the drop area; a slot's own pointer events open,
+  remove or drag its file, as the GNOME helper window's presses do.
+  Keep on shelf in a download's preview adds it.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

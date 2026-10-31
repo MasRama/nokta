@@ -9,6 +9,7 @@ import { NotificationTimer } from '@ext/features/notifications/logic/timer.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeTile } from '@ext/features/panel/logic/layout.js';
+import { SHELF_ROW_HEIGHT } from '@ext/features/shelf/logic/layout.js';
 import { callDetail, callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
 import { dotsFor } from '@ext/features/privacy/logic/dots.js';
 import {
@@ -54,6 +55,7 @@ import { Lyrics, Media, nowUs } from './media.js';
 import { fileUrlOf, Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
+import { Shelf } from './shelf.js';
 import { System } from './system.js';
 import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
@@ -66,6 +68,7 @@ import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
+import { DropView, ShelfBadge, ShelfRow } from './views/shelf.js';
 import { CallLabel, PrivacyDots, type HomeCall } from './views/privacy.js';
 import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
@@ -93,6 +96,10 @@ export interface Host {
     openUri?(uri: string): void;
     /** Opens a file the core announced, or shows it in Explorer with `reveal`. */
     openFile?(uri: string, reveal: boolean): void;
+    /** Calls back when files are dragged over the notch, and when no longer; none in a browser. */
+    onDrop?(cb: (dropping: boolean) => void): void;
+    /** Drags files on the shelf out of the notch; done when they are dropped. */
+    dragFiles?(uris: string[]): Promise<void>;
 }
 
 /** What a home tile opens on Windows, for the tiles that open one of its panels (desktop/src-tauri/src/links.rs). */
@@ -112,6 +119,12 @@ type PageName = 'timer' | 'system';
 
 /** Each page's body height, for subPageHeight. */
 const PAGE_HEIGHTS: Record<PageName, number> = { timer: TimerPage.HEIGHT, system: SystemPage.HEIGHT };
+
+/** The shelf row under the player, with the open player's spacing, as the extension's. */
+const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
+
+/** Home's and the open player's padding at each side, as `.nokta-panel` and `.nokta-expanded` set it. */
+const SIDE_PADDING = 18;
 
 /** How often the open player moves its progress and its lyric on, and home its clocks. */
 const TICK_MS = 250;
@@ -139,6 +152,7 @@ export class MonitorNotch {
     readonly activities: Activities;
     readonly updates: Updates;
     readonly system: System;
+    readonly shelf: Shelf;
     private readonly downloads: Downloads;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
@@ -161,6 +175,13 @@ export class MonitorNotch {
     /** The focus timer or a clock, in the same two places. */
     private readonly timerLabels = { idle: new TimerLabel(), collapsed: new TimerLabel() };
     private readonly badges = { idle: new ActivityBadge(), collapsed: new ActivityBadge() };
+    private readonly shelfBadges = { idle: new ShelfBadge(), collapsed: new ShelfBadge() };
+    /** The shelf's row in home and under the open player. */
+    private readonly panelShelf: ShelfRow;
+    private readonly expandedShelf: ShelfRow;
+    private readonly dropView = new DropView();
+    /** Files are dragged over the notch. */
+    private dropping = false;
     private readonly timerPage: TimerPage;
     private readonly systemPage = new SystemPage();
     /** The pages home's tiles open, one shown at a time. */
@@ -222,6 +243,7 @@ export class MonitorNotch {
             () => this.onSystem(),
             (used, total, app) => this.onMemoryLow(used, total, app),
         );
+        this.shelf = new Shelf(bridge, () => this.onShelf());
         this.toggles = new Toggles(bridge, () => this.onToggles());
         this.timer = new Timer(
             bridge,
@@ -242,9 +264,19 @@ export class MonitorNotch {
             openTile: (which) => this.openTile(which),
             openRelease: () => this.openRelease(),
         });
+        const shelfHandlers = {
+            open: (uri: string) => this.host.openFile?.(uri, false),
+            remove: (uri: string) => this.shelf.remove(uri),
+            clear: () => this.shelf.clear(),
+            drag: (uris: string[]) => void this.host.dragFiles?.(uris),
+        };
+        this.panelShelf = new ShelfRow(shelfHandlers, fileUrlOf);
+        this.expandedShelf = new ShelfRow(shelfHandlers, fileUrlOf);
+        this.home.addRow(this.panelShelf.element);
         this.collapsed = new CollapsedView(() => this.media.levels());
         this.peek = new PeekView(() => this.media.levels());
         this.expanded = new ExpandedView(this.media, () => this.setHomeOpen(true));
+        this.expanded.addRow(this.expandedShelf.element);
         // What a preset starts shows in home, so it goes back there.
         this.timerPage = new TimerPage({
             countdown: (minutes) => {
@@ -272,6 +304,7 @@ export class MonitorNotch {
             page: this.pages,
             osd: this.osd.element,
             download: this.download.element,
+            drop: this.dropView.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
         this.notch.body.append(...Object.values(this.views), this.privacyDots.element, this.progress.element);
@@ -323,6 +356,7 @@ export class MonitorNotch {
         );
         host.onFullscreen?.((fullscreen) => this.setFullscreen(fullscreen));
         host.onKeyboard?.(() => this.toggleKeyboard());
+        host.onDrop?.((dropping) => this.setDropping(dropping));
         document.addEventListener('keydown', this.onKeyDown);
         window.addEventListener('blur', this.onBlur);
     }
@@ -345,6 +379,7 @@ export class MonitorNotch {
             this.activities.attach(),
             this.updates.attach(),
             this.system.attach(),
+            this.shelf.attach(),
         ]);
     }
 
@@ -377,6 +412,7 @@ export class MonitorNotch {
         this.activities.detach();
         this.updates.detach();
         this.system.detach();
+        this.shelf.detach();
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
@@ -474,8 +510,8 @@ export class MonitorNotch {
             this.applyFullscreen();
         }
         this.shownDownload = download;
-        // Keep on shelf comes with the shelf.
-        this.download.show(downloadPicture(download, fileUrlOf), download.name, download.size, downloadButtons(false));
+        const buttons = downloadButtons(this.settings.behavior.fileShelf);
+        this.download.show(downloadPicture(download, fileUrlOf), download.name, download.size, buttons);
         this.messageTimer.show(this.settings.notifications.durationMs);
         this.redraw();
         this.alert({ color: TONES.downloads }, 'kick');
@@ -483,9 +519,10 @@ export class MonitorNotch {
 
     private onDownloadPress(button: DownloadButton): void {
         const download = this.shownDownload;
-        if (!download || button === 'keep') return;
+        if (!download) return;
         this.messageTimer.hide();
-        this.host.openFile?.(download.uri, button === 'files');
+        if (button === 'keep') this.shelf.add([download.uri]);
+        else this.host.openFile?.(download.uri, button === 'files');
     }
 
     private onMessageTimer(): void {
@@ -566,6 +603,7 @@ export class MonitorNotch {
         this.timerPage.setColors(palette);
         this.systemPage.setColors(palette);
         this.download.setForeground(palette.foreground);
+        this.dropView.setForeground(palette.foreground);
         this.updateViews();
         this.applyProgress();
     }
@@ -577,6 +615,7 @@ export class MonitorNotch {
         this.tickClock(new Date());
         this.onPrivacy();
         this.onActivities();
+        this.onShelf();
         this.redraw(true);
     }
 
@@ -603,6 +642,7 @@ export class MonitorNotch {
             activities: this.liveActivities().length,
             clocks: clocks.length,
             update: this.updates.latest !== '',
+            shelf: this.shelfItems().length > 0,
         });
         if (rows.join() === this.homeRows.join()) return;
         this.homeRows = rows;
@@ -637,6 +677,33 @@ export class MonitorNotch {
         const { behavior, appearance } = this.settings;
         const request = endedRequest(ended, behavior, appearance.alertMotion);
         if (request) this.showOsd(request);
+    }
+
+    /** The parked files, none while `[behavior] file_shelf` is off. */
+    private shelfItems() {
+        return this.settings.behavior.fileShelf ? this.shelf.items : [];
+    }
+
+    /** The parked files changed, or the file_shelf setting or the notch's width. */
+    private onShelf(): void {
+        const items = this.shelfItems();
+        for (const badge of Object.values(this.shelfBadges)) badge.update(items.length);
+        const width = this.settings.appearance.expandedWidth - 2 * SIDE_PADDING;
+        this.panelShelf.show(items, width);
+        this.expandedShelf.show(items, width);
+        if (this.shownDownload) this.download.setButtons(downloadButtons(this.settings.behavior.fileShelf));
+        this.applyIndicator();
+        this.onHome();
+        // The open player grows and shrinks with the row.
+        if (this.drawn === 'expanded') this.notch.resizeTo(...this.sizeFor('expanded'), 'width');
+    }
+
+    /** Files are dragged over the notch, or no longer: the drop area shows over the rest. */
+    private setDropping(dropping: boolean): void {
+        const on = dropping && this.settings.behavior.fileShelf;
+        if (on === this.dropping) return;
+        this.dropping = on;
+        this.redraw();
     }
 
     /** The text of home's update row: the release's page. */
@@ -754,13 +821,14 @@ export class MonitorNotch {
             timer: snapshot.state !== 'idle',
             clock: clock !== null,
             activity: this.liveActivities().length > 0,
-            shelf: false,
+            shelf: this.shelfItems().length > 0,
         });
         this.indicator = indicator;
         const shown = (place: 'idle' | 'collapsed'): HTMLElement | null => {
             if (indicator === 'call') return this.calls[place].element;
             if (indicator === 'timer' || indicator === 'clock') return this.timerLabels[place].element;
             if (indicator === 'activity') return this.badges[place].element;
+            if (indicator === 'shelf') return this.shelfBadges[place].element;
             return null;
         };
         this.idle.setAside(shown('idle'));
@@ -947,7 +1015,8 @@ export class MonitorNotch {
             notificationButtons: false,
             panelHeight: panelHeight(appearance.height, this.homeRows),
             pageHeight: subPageHeight(PAGE_HEIGHTS[this.page ?? 'timer']),
-            expandedExtra: this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0,
+            expandedExtra:
+                (this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0) + (this.shelfItems().length > 0 ? EXPANDED_SHELF_EXTRA : 0),
         });
     }
 
@@ -955,7 +1024,7 @@ export class MonitorNotch {
     private redraw(jump = false): void {
         const previous = this.drawn;
         this.drawn = drawnView({
-            dropping: false,
+            dropping: this.dropping,
             osd: this.osdTimer.active,
             notification: this.messageTimer.active ? 'download' : null,
             mode: this.machine.mode,
