@@ -9,10 +9,13 @@ import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 
 const out = resolve(process.argv[2] ?? 'shots');
-const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'home-light', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player', 'call-home', 'activity', 'activity-home', 'activity-done', 'focus', 'focus-player', 'clocks', 'timer-page', 'focus-done', 'system-page', 'memory-low', 'download', 'download-photo', 'screenshot', 'notification', 'notification-stack', 'calendar-home', 'calendar-countdown', 'shelf', 'shelf-home', 'shelf-player', 'drop', 'clipboard-page', 'clipboard-search', 'clipboard-empty'];
+const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'home-light', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player', 'call-home', 'activity', 'activity-home', 'activity-done', 'focus', 'focus-player', 'clocks', 'timer-page', 'focus-done', 'system-page', 'memory-low', 'download', 'download-photo', 'screenshot', 'notification', 'notification-stack', 'calendar-home', 'calendar-countdown', 'shelf', 'shelf-home', 'shelf-player', 'drop', 'clipboard-page', 'clipboard-search', 'clipboard-empty', 'settings', 'settings-behavior', 'settings-home'];
 // The window's size for the default config (desktop/src-tauri/src/layout.rs).
 const WIDTH = 500;
 const HEIGHT = 452;
+/** The settings window's default size (desktop/src-tauri/src/win/settings_window.rs). */
+const SETTINGS_WIDTH = 960;
+const SETTINGS_HEIGHT = 720;
 const chrome = process.env.CHROME ?? 'google-chrome';
 
 function freePort() {
@@ -46,6 +49,12 @@ const server = spawn('npx', ['vite', 'preview', '--port', String(port), '--stric
 try {
     await waitFor(`http://localhost:${port}/`);
     for (const scene of scenes) {
+        // `settings-<page>` is the settings window on that page.
+        const settings = scene === 'settings' || scene.startsWith('settings-');
+        const url = settings
+            ? `http://localhost:${port}/settings.html?page=${scene.slice(9) || 'appearance'}`
+            : `http://localhost:${port}/?mock=${scene}`;
+        const size = settings ? `${SETTINGS_WIDTH},${SETTINGS_HEIGHT}` : `${WIDTH},${HEIGHT}`;
         for (const scale of [1, 1.5]) {
             const file = join(out, `${scene}@${scale}x.png`);
             const shot = spawnSync(chrome, [
@@ -53,10 +62,10 @@ try {
                 '--disable-gpu',
                 '--hide-scrollbars',
                 `--force-device-scale-factor=${scale}`,
-                `--window-size=${WIDTH},${HEIGHT}`,
+                `--window-size=${size}`,
                 '--virtual-time-budget=1500',
                 `--screenshot=${file}`,
-                `http://localhost:${port}/?mock=${scene}`,
+                url,
             ]);
             if (shot.status !== 0) throw new Error(`chrome failed on ${scene}: ${shot.stderr}`);
             console.log(file);

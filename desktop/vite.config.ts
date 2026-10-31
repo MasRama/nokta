@@ -11,7 +11,18 @@ export default defineConfig({
     // Tauri's dev server address (tauri.conf.json `devUrl`).
     server: { port: 1420, strictPort: true, fs: { allow: ['..'] } },
     // WebView2 is evergreen Chromium.
-    build: { target: 'chrome120', outDir: 'dist', emptyOutDir: true },
+    build: {
+        target: 'chrome120',
+        outDir: 'dist',
+        emptyOutDir: true,
+        // The notch's page and the settings window's.
+        rolldownOptions: {
+            input: {
+                notch: fileURLToPath(new URL('index.html', import.meta.url)),
+                settings: fileURLToPath(new URL('settings.html', import.meta.url)),
+            },
+        },
+    },
     clearScreen: false,
     test: { environment: 'happy-dom', include: ['tests/**/*.test.ts'] },
 });
