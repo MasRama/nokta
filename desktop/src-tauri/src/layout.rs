@@ -64,6 +64,20 @@ impl Default for NotchSizes {
     }
 }
 
+impl From<&nokta_core::features::settings::Appearance> for NotchSizes {
+    fn from(a: &nokta_core::features::settings::Appearance) -> Self {
+        Self {
+            height: a.height,
+            idle_width: a.idle_width,
+            playing_width: a.playing_width,
+            expanded_width: a.expanded_width,
+            osd_width: a.osd_width,
+            expanded_height: a.expanded_height,
+            ear_radius: a.ear_radius,
+        }
+    }
+}
+
 /// The window's size in logical px: the widest notch with its ears and the
 /// tallest view, with room for the glow.
 pub fn window_logical_size(sizes: &NotchSizes) -> (f64, f64) {
@@ -146,6 +160,12 @@ mod tests {
             window_logical_size(&tall),
             (700.0 + 16.0 + 64.0, 600.0 + 32.0)
         );
+    }
+
+    #[test]
+    fn the_default_sizes_are_the_default_configs() {
+        let config = nokta_core::features::settings::Config::default();
+        assert_eq!(NotchSizes::from(&config.appearance), NotchSizes::default());
     }
 
     #[test]
