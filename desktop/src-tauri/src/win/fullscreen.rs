@@ -53,6 +53,12 @@ pub fn is_covered(label: &str) -> bool {
     covered.iter().any(|(l, on)| l == label && *on)
 }
 
+/// The window `label` closed.
+pub fn forget(label: &str) {
+    let mut covered = COVERED.lock().unwrap_or_else(|e| e.into_inner());
+    covered.retain(|(l, _)| l != label);
+}
+
 /// Starts following the windows, once.
 pub fn start(app: AppHandle) {
     let spawned = std::thread::Builder::new()
