@@ -6,7 +6,7 @@ import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeTile } from '@ext/features/panel/logic/layout.js';
-import { callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
+import { callDetail, callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
 import { dotsFor } from '@ext/features/privacy/logic/dots.js';
 import {
     clockColor,
@@ -25,6 +25,7 @@ import { withAlpha } from '@ext/shared/logic/color.js';
 import { formatClock, uses24h } from '@ext/shared/logic/format.js';
 import { fullscreenView, showsOverFullscreen } from '@ext/shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from '@ext/shared/logic/glow.js';
+import { _ } from '@ext/shared/logic/i18n.js';
 import { chooseIndicator, type Indicator } from '@ext/shared/logic/indicator.js';
 import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/keyframes.js';
 import { NotchMachine } from '@ext/shared/logic/machine.js';
@@ -48,7 +49,7 @@ import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
-import { CallLabel, PrivacyDots } from './views/privacy.js';
+import { CallLabel, PrivacyDots, type HomeCall } from './views/privacy.js';
 import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
 import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
@@ -184,6 +185,11 @@ export class MonitorNotch {
             openPlayer: () => this.setHomeOpen(false),
             pauseClock: (id, pause) => this.timer.pauseClock(id, pause),
             removeClock: (id) => this.timer.removeClock(id),
+            toggleCallMute: () => this.privacy.toggleMute(),
+            hideCall: () => {
+                this.privacy.hideCall();
+                this.onPrivacy();
+            },
             toggle: (which) => this.toggles.toggle(which),
             openTile: (which) => this.openTile(which),
         });
@@ -473,19 +479,36 @@ export class MonitorNotch {
         const layout = windowsControls(this.settings.home);
         const { snapshot, clocks } = this.timer;
         this.home.setWeather(this.weather.line);
-        this.home.setClocks(this.homeClocks());
+        this.tickHome();
         this.home.setControls(layout, this.toggles.state, {
             focus: snapshot.state !== 'idle',
             timer: clocks.length > 0,
         });
         this.updateHomeTicker();
-        const rows = homeRows(layout, clocks.length);
+        const rows = homeRows(layout, { call: this.shownCall() !== null, clocks: clocks.length });
         if (rows.join() === this.homeRows.join()) return;
         this.homeRows = rows;
         if (this.drawn === 'panel') this.notch.resizeTo(...this.sizeFor('panel'), 'width');
     }
 
     /** The clocks as home's rows show them, newest first. */
+    /** The call, unless hidden or the call indicator is off. */
+    private shownCall() {
+        return this.settings.behavior.callIndicator ? this.privacy.currentCall() : null;
+    }
+
+    private homeCall(): HomeCall | null {
+        const call = this.shownCall();
+        if (!call) return null;
+        return { title: call.app || _('Microphone'), detail: callDetail(call.sinceUs, nowUs(), call.muted), muted: call.muted };
+    }
+
+    /** Home's rows that count on: the call's time and the clocks'. */
+    private tickHome(): void {
+        this.home.setCall(this.homeCall());
+        this.home.setClocks(this.homeClocks());
+    }
+
     private homeClocks(): HomeClock[] {
         const now = nowUs();
         const use24h = this.use24h();
@@ -503,9 +526,9 @@ export class MonitorNotch {
 
     /** Home moves its clocks on while it shows them. */
     private updateHomeTicker(): void {
-        const run = this.drawn === 'panel' && this.timer.clocks.length > 0;
+        const run = this.drawn === 'panel' && (this.timer.clocks.length > 0 || this.shownCall() !== null);
         if (run && !this.homeTicker) {
-            this.homeTicker = window.setInterval(() => this.home.setClocks(this.homeClocks()), TICK_MS);
+            this.homeTicker = window.setInterval(() => this.tickHome(), TICK_MS);
         } else if (!run && this.homeTicker) {
             window.clearInterval(this.homeTicker);
             this.homeTicker = 0;
@@ -559,6 +582,7 @@ export class MonitorNotch {
         this.peek.setInset(inset);
         this.showPrivacyDots();
         this.applyIndicator();
+        this.onHome();
     }
 
     /** The dots belong to the closed notch. */
@@ -576,7 +600,7 @@ export class MonitorNotch {
         window.clearTimeout(this.indicatorTimer);
         this.indicatorTimer = 0;
         const now = nowUs();
-        const call = this.settings.behavior.callIndicator ? this.privacy.currentCall() : null;
+        const call = this.shownCall();
         const { snapshot, clocks } = this.timer;
         const clock = indicatorClock(clocks, now);
         const indicator = chooseIndicator({

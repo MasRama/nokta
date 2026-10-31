@@ -173,6 +173,7 @@ export const SCENES: Record<string, Scene> = {
     'battery-low': { props: LINGER, signals: [['Devices1', 'Alert', 'battery-critical', '', 8]] },
     call: { props: call(false) },
     'call-muted': { props: call(true) },
+    'call-home': { props: { ...TIMER_HOME, ...call(true) }, open: true },
     'call-player': { props: { ...player(true), ...call(false) } },
     headphones: { props: { ...player(true), ...LINGER }, signals: [['Devices1', 'Alert', 'bluetooth-connected', 'WH-1000XM5', 80]] },
 };

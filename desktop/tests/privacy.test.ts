@@ -4,6 +4,7 @@ import type { Props } from '../src/bridge/bridge.js';
 import { MockBridge } from '../src/bridge/mock.js';
 import { MonitorNotch } from '../src/monitor-notch.js';
 import type { Frames } from '../src/notch/notch.js';
+import { homeRows } from '../src/views/home.js';
 
 /** Frames that never come: the springs stay put, the views still switch. */
 const STILL: Frames = { now: () => 0, request: () => 1, cancel: () => {} };
@@ -113,5 +114,52 @@ describe('the call', () => {
         const { bridge, notch } = await mount({ Privacy1: onCall() });
         notch.privacy.toggleMute();
         expect(bridge.calls).toContainEqual({ iface: 'Privacy1', method: 'ToggleMute', args: [] });
+    });
+});
+
+describe('the call on home', () => {
+    const row = (root: HTMLElement) => root.querySelector<HTMLElement>('.nokta-panel-call')!;
+
+    it('names the app with how long the microphone has been on', async () => {
+        const { notch, root } = await mount({ Privacy1: onCall() });
+        notch.open(true);
+        expect(row(root).hidden).toBe(false);
+        expect(row(root).querySelector('.nokta-panel-call-title')?.textContent).toBe('Zoom');
+        expect(row(root).querySelector('.nokta-panel-call-detail')?.textContent).toBe('Microphone · 1:05');
+    });
+
+    it('mutes through the core, and says so while muted', async () => {
+        const { bridge, notch, root } = await mount({ Privacy1: onCall() });
+        notch.open(true);
+        const [mute] = row(root).querySelectorAll('button');
+        mute.click();
+        expect(bridge.calls).toContainEqual({ iface: 'Privacy1', method: 'ToggleMute', args: [] });
+        bridge.set('Privacy1', { MicrophoneMuted: true });
+        expect(mute.getAttribute('aria-pressed')).toBe('true');
+        expect(row(root).querySelector('.nokta-panel-call-detail')?.textContent).toBe('Muted · 1:05');
+    });
+
+    it('hides the call from home and the closed notch until the microphone comes on again', async () => {
+        const { notch, root, call } = await mount({ Privacy1: onCall() });
+        notch.open(true);
+        const [, hide] = row(root).querySelectorAll('button');
+        hide.click();
+        expect(row(root).hidden).toBe(true);
+        expect(call('idle')).toBeNull();
+    });
+
+    it('is not there without a call, or with the call indicator off', async () => {
+        const { bridge, notch, root } = await mount();
+        notch.open(true);
+        expect(row(root).hidden).toBe(true);
+        bridge.set('Privacy1', onCall());
+        expect(row(root).hidden).toBe(false);
+        bridge.set('Settings1', { Behavior: { call_indicator: false } });
+        expect(row(root).hidden).toBe(true);
+    });
+
+    it('counts a row for the call above the clocks', () => {
+        const layout = { toggles: [], tiles: [] };
+        expect(homeRows(layout, { call: true, clocks: 1 })).toEqual(['date', 'call', 'clock']);
     });
 });

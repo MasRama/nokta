@@ -647,7 +647,9 @@ WebView2 and runs the core's services itself, with no D-Bus.
   use while an entry has started and not stopped (`privacy.rs`, tested
   everywhere). `win/privacy.rs` waits on Windows' change events for both
   keys and on the default microphone's mute, which `ToggleMute` flips.
-  Windows has no signal for a shared screen, so that dot never shows.
+  Windows has no signal for a shared screen, so that dot never shows. Home's call row names the app
+  (Windows gives no icon for it, so its chip is a microphone) and mutes
+  or hides the call, as the extension's.
 - A fullscreen app hides the notch on its monitor. `win/fullscreen.rs`
   follows Windows' window events (foreground, moved or resized,
   minimized), waits for them to settle and walks the app windows from the
