@@ -1,15 +1,19 @@
+import type { Activity } from '@ext/features/activities/logic/activities.js';
 import type { PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from '@ext/features/panel/logic/layout.js';
 import type { WeatherLine } from '@ext/features/weather/logic/weather.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
+import { ActivityRow, UpdateRow } from './activity.js';
 import { Tile, TogglePill, type ControlColors } from './controls.js';
 import { CallRow, type CallHandlers, type HomeCall } from './privacy.js';
 import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
 
 /** Home shows the newest clocks, at most this many, as the extension's. */
 export const MAX_HOME_CLOCKS = 3;
+/** And the newest activities. */
+export const MAX_HOME_ACTIVITIES = 3;
 
 /** Each toggle's icon, name and tone, as the extension's panel/view.ts. */
 const TOGGLES: Array<[QuickToggle, string, string, string]> = [
@@ -34,20 +38,28 @@ export interface HomeHandlers extends ClockHandlers, CallHandlers {
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
+    openRelease(): void;
 }
 
 /** What home lists above its controls. */
 export interface HomeContent {
     call?: boolean;
+    activities?: number;
     clocks?: number;
+    update?: boolean;
 }
 
 /** Home's rows for its content and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
-export function homeRows(layout: HomeLayout, { call = false, clocks = 0 }: HomeContent = {}): PanelRow[] {
+export function homeRows(
+    layout: HomeLayout,
+    { call = false, activities = 0, clocks = 0, update = false }: HomeContent = {},
+): PanelRow[] {
     return [
         'date',
         ...(call ? (['call'] as const) : []),
+        ...Array<PanelRow>(Math.min(activities, MAX_HOME_ACTIVITIES)).fill('activity'),
         ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
+        ...(update ? (['update'] as const) : []),
         ...(layout.toggles.length > 0 ? (['toggles'] as const) : []),
         ...(layout.tiles.length > 0 ? (['tiles'] as const) : []),
     ];
@@ -89,7 +101,8 @@ export type TileStates = Partial<Record<HomeTile, boolean>>;
 
 /**
  * Home, the open notch's other page: the weekday over the date with the
- * weather beside them, the way back to a player, the call, the clocks, then the
+ * weather beside them, the way back to a player, the call, the activities,
+ * the clocks, a newer Nokta, then the
  * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
  */
@@ -100,7 +113,9 @@ export class HomeView {
     private readonly weather = new WeatherBox();
     private readonly music: HTMLButtonElement;
     private readonly call: CallRow;
+    private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
+    private readonly updateRow: UpdateRow;
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
     private readonly pills: HTMLDivElement;
@@ -144,12 +159,18 @@ export class HomeView {
         this.controls.append(this.pills, this.tileRow);
         this.call = new CallRow(handlers);
         this.element.append(heading, this.call.element);
+        for (let i = 0; i < MAX_HOME_ACTIVITIES; i++) {
+            const row = new ActivityRow();
+            this.activities.push(row);
+            this.element.append(row.element);
+        }
         for (let i = 0; i < MAX_HOME_CLOCKS; i++) {
             const row = new ClockRow(handlers);
             this.clocks.push(row);
             this.element.append(row.element);
         }
-        this.element.append(this.controls);
+        this.updateRow = new UpdateRow(() => handlers.openRelease());
+        this.element.append(this.updateRow.element, this.controls);
     }
 
     /** The music button shows while a player is there. */
@@ -171,6 +192,16 @@ export class HomeView {
     /** Null hides the call's row. */
     setCall(call: HomeCall | null): void {
         this.call.show(call);
+    }
+
+    /** The newest activities, one row each; `nowUs` on the wall clock. */
+    setActivities(activities: readonly Activity[], nowUs: number): void {
+        this.activities.forEach((row, i) => row.show(activities[i], nowUs));
+    }
+
+    /** The newer version; empty hides its row. */
+    setUpdate(latest: string): void {
+        this.updateRow.show(latest);
     }
 
     /** The newest clocks, one row each. */
@@ -196,9 +227,10 @@ export class HomeView {
         this.controls.hidden = this.pills.hidden && this.tileRow.hidden;
     }
 
-    setColors(colors: ControlColors): void {
+    setColors(colors: ControlColors & { accent: string }): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
         for (const tile of this.tiles.values()) tile.setColors(colors);
-        for (const row of [...this.clocks, this.call]) row.chip.setLight(colors.light);
+        for (const row of this.activities) row.setColors(colors);
+        for (const row of [...this.clocks, this.call, this.updateRow]) row.chip.setLight(colors.light);
     }
 }

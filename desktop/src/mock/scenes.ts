@@ -135,6 +135,24 @@ function clocks(): Record<string, Props> {
 }
 
 /** The scenes `?mock=<name>` shows, for the shots and for working on the page. */
+/** A build 40 % done, 92 s in, and a sync of unknown progress. */
+function activities(): Record<string, Props> {
+    const now = Date.now() * 1000;
+    return {
+        Activities1: {
+            Activities: [
+                ['build', 'Build', 'cargo build --release', '', 0.4, now - 92_000_000],
+                ['sync', 'Sync', 'Photos', 'emblem-synchronizing-symbolic', -1, now - 12_000_000],
+            ],
+        },
+    };
+}
+
+/** A newer Nokta on GitHub. */
+const UPDATE: Record<string, Props> = {
+    Updates1: { Latest: '0.12.0', ReleaseUrl: 'https://github.com/MasRama/nokta/releases/tag/v0.12.0' },
+};
+
 /** Home with the timer's tiles. */
 const TIMER_HOME: Record<string, Props> = {
     ...HOME,
@@ -173,6 +191,9 @@ export const SCENES: Record<string, Scene> = {
     'battery-low': { props: LINGER, signals: [['Devices1', 'Alert', 'battery-critical', '', 8]] },
     call: { props: call(false) },
     'call-muted': { props: call(true) },
+    activity: { props: activities() },
+    'activity-home': { props: { ...TIMER_HOME, ...activities(), ...UPDATE }, open: true },
+    'activity-done': { props: LINGER, signals: [['Activities1', 'Ended', 'build', 'Build', true, '', 65_000_000]] },
     'call-home': { props: { ...TIMER_HOME, ...call(true) }, open: true },
     'call-player': { props: { ...player(true), ...call(false) } },
     headphones: { props: { ...player(true), ...LINGER }, signals: [['Devices1', 'Alert', 'bluetooth-connected', 'WH-1000XM5', 80]] },
