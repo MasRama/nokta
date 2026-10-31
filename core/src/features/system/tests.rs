@@ -283,3 +283,62 @@ mod service {
         assert!(handle.memory_low.try_recv().is_err());
     }
 }
+
+#[test]
+fn windows_kernel_time_holds_the_idle_time() {
+    let a = windows_cpu_times(100, 300, 100);
+    let b = windows_cpu_times(150, 400, 200);
+    assert_eq!(
+        a,
+        CpuTimes {
+            idle: 100,
+            total: 400
+        }
+    );
+    assert!((cpu_usage(&a, &b) - 0.75).abs() < 1e-9);
+}
+
+#[test]
+fn windows_network_counts_only_hardware_interfaces_that_are_up() {
+    let nic = Interface {
+        hardware: true,
+        up: true,
+        received: 1_000,
+        sent: 200,
+        ..Interface::default()
+    };
+    let interfaces = [
+        nic,
+        // The same adapter's filter repeats its bytes.
+        Interface {
+            filter: true,
+            ..nic
+        },
+        Interface { up: false, ..nic },
+        Interface {
+            hardware: false,
+            ..nic
+        },
+        Interface {
+            loopback: true,
+            ..nic
+        },
+        Interface {
+            received: 50,
+            sent: 5,
+            ..nic
+        },
+    ];
+    assert_eq!(windows_net(interfaces), (1_050, 205));
+}
+
+#[test]
+fn an_app_goes_by_its_executable_without_exe() {
+    assert_eq!(
+        app_name(r"C:\Program Files\Google\Chrome\chrome.exe"),
+        "chrome"
+    );
+    assert_eq!(app_name(r"C:\Windows\EXPLORER.EXE"), "EXPLORER");
+    assert_eq!(app_name("Code"), "Code");
+    assert_eq!(app_name("café"), "café");
+}

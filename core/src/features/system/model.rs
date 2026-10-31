@@ -107,6 +107,47 @@ pub fn parse_net_dev(text: &str) -> (u64, u64) {
     sum
 }
 
+/// The CPU's times from Windows' `GetSystemTimes`, in 100 ns units: its
+/// kernel time counts the idle time too.
+pub fn windows_cpu_times(idle: u64, kernel: u64, user: u64) -> CpuTimes {
+    CpuTimes {
+        idle,
+        total: kernel + user,
+    }
+}
+
+/// One network interface from Windows' `GetIfTable2`.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Interface {
+    /// A real adapter, not a filter or a tunnel that repeats its traffic.
+    pub hardware: bool,
+    pub filter: bool,
+    pub loopback: bool,
+    pub up: bool,
+    pub received: u64,
+    pub sent: u64,
+}
+
+/// Bytes received and sent by the hardware interfaces that are up; the
+/// filters stacked on them would count the same bytes again.
+pub fn windows_net(interfaces: impl IntoIterator<Item = Interface>) -> (u64, u64) {
+    interfaces
+        .into_iter()
+        .filter(|i| i.hardware && !i.filter && !i.loopback && i.up)
+        .fold((0, 0), |(rx, tx), i| (rx + i.received, tx + i.sent))
+}
+
+/// The name an app goes by from its executable's path, as `chrome` for
+/// `C:\...\chrome.exe`.
+pub fn app_name(path: &str) -> String {
+    let file = path.rsplit(['\\', '/']).next().unwrap_or(path);
+    let end = file.len().checked_sub(4).filter(|&end| {
+        file.get(end..)
+            .is_some_and(|ext| ext.eq_ignore_ascii_case(".exe"))
+    });
+    end.map_or(file, |end| &file[..end]).to_owned()
+}
+
 /// Bytes a second between two counters `secs` apart; zero when the counter
 /// went back.
 pub fn rate(prev: u64, now: u64, secs: f64) -> f64 {
