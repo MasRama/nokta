@@ -46,10 +46,21 @@ jobs:
           if (-not (Test-Path $exe)) { throw "not installed at $exe" }
           Start-Process $exe
           Start-Sleep -Seconds 10
-          ./tools/windows/shot.ps1 -Name idle
-          # Clicks reach the window under Nokta's, except over the notch.
+          # The first start shows the tour; Skip, at the bottom left of the
+          # default notch, ends it, kept in state.toml.
+          ./tools/windows/shot.ps1 -Name tour
           Add-Type -AssemblyName System.Windows.Forms
           $middle = [int]([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width / 2)
+          ./tools/windows/hit.ps1 -X ($middle - 175) -Y 129 -Expect nokta
+          ./tools/windows/shot.ps1 -Name tour-again
+          $state = "$env:APPDATA\nokta\state.toml"
+          $ended = { (Test-Path $state) -and (Select-String -Path $state -Pattern 'tour-shown = true' -Quiet) }
+          if (& $ended) { throw "the tour ended before anyone pressed Skip" }
+          ./tools/windows/click.ps1 -X ($middle - 175) -Y 129
+          Start-Sleep -Seconds 1
+          if (-not (& $ended)) { throw "Skip did not end the tour ($state)" }
+          ./tools/windows/shot.ps1 -Name idle
+          # Clicks reach the window under Nokta's, except over the notch.
           ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
           ./tools/windows/hit.ps1 -X $middle -Y 10 -Expect nokta
           # Resting on the notch opens home.

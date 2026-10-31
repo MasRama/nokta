@@ -13,7 +13,14 @@ Add-Type -Namespace Win32 -Name Hit -MemberDefinition @'
 [DllImport("user32.dll")] public static extern System.IntPtr WindowFromPoint(POINT point);
 [DllImport("user32.dll")] public static extern System.IntPtr GetAncestor(System.IntPtr hwnd, uint flags);
 [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr hwnd, out uint pid);
+[DllImport("user32.dll")] public static extern System.IntPtr GetForegroundWindow();
 '@
+
+function Get-ProcessName([System.IntPtr]$hwnd) {
+    $processId = 0
+    [Win32.Hit]::GetWindowThreadProcessId($hwnd, [ref]$processId) | Out-Null
+    if ($processId) { (Get-Process -Id $processId).ProcessName } else { '(none)' }
+}
 
 [Win32.Hit]::SetCursorPos($X, $Y) | Out-Null
 # The app follows the pointer about once a frame.
@@ -22,9 +29,8 @@ $point = New-Object Win32.Hit+POINT
 $point.X = $X
 $point.Y = $Y
 $root = [Win32.Hit]::GetAncestor([Win32.Hit]::WindowFromPoint($point), 2)
-$processId = 0
-[Win32.Hit]::GetWindowThreadProcessId($root, [ref]$processId) | Out-Null
-$name = if ($processId) { (Get-Process -Id $processId).ProcessName } else { '(none)' }
-Write-Output "($X, $Y) goes to $name"
+$name = Get-ProcessName $root
+$front = Get-ProcessName ([Win32.Hit]::GetForegroundWindow())
+Write-Output "($X, $Y) goes to $name; $front has the keyboard"
 $isNokta = $name -eq 'Nokta'
 if ($isNokta -ne ($Expect -eq 'nokta')) { throw "expected $Expect at ($X, $Y), got $name" }
