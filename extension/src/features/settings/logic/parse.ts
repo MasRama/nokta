@@ -217,6 +217,8 @@ export interface CalendarSettings {
     agendaSize: number;
     /** From the reminder, the closed notch counts the minutes to the start. */
     countdown: boolean;
+    /** Secret iCal addresses the Windows app reads; GNOME reads its own calendars. */
+    feeds: string[];
 }
 
 export const DEFAULT_CALENDAR: Readonly<CalendarSettings> = {
@@ -224,6 +226,7 @@ export const DEFAULT_CALENDAR: Readonly<CalendarSettings> = {
     reminderMinutes: 5,
     agendaSize: 3,
     countdown: true,
+    feeds: [],
 };
 
 /** io.nokta.Settings1.Clipboard in camelCase. */
@@ -357,7 +360,12 @@ export const timerFrom = (raw: unknown): TimerSettings => fromTable(raw, DEFAULT
 export const notificationsFrom = (raw: unknown): NotificationSettings => fromTable(raw, DEFAULT_NOTIFICATIONS);
 export const activitiesFrom = (raw: unknown): ActivitiesSettings => fromTable(raw, DEFAULT_ACTIVITIES);
 export const weatherFrom = (raw: unknown): WeatherSettings => fromTable(raw, DEFAULT_WEATHER);
-export const calendarFrom = (raw: unknown): CalendarSettings => fromTable(raw, DEFAULT_CALENDAR);
+export function calendarFrom(raw: unknown): CalendarSettings {
+    const calendar = fromTable(raw, DEFAULT_CALENDAR);
+    const feeds: unknown = calendar.feeds;
+    calendar.feeds = Array.isArray(feeds) ? feeds.filter((feed): feed is string => typeof feed === 'string') : [];
+    return calendar;
+}
 export const clipboardFrom = (raw: unknown): ClipboardSettings => fromTable(raw, DEFAULT_CLIPBOARD);
 export const downloadsFrom = (raw: unknown): DownloadsSettings => fromTable(raw, DEFAULT_DOWNLOADS);
 export const systemFrom = (raw: unknown): SystemSettings => fromTable(raw, DEFAULT_SYSTEM);

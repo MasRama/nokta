@@ -317,7 +317,13 @@ fn calendar_defaults_and_reminder_range() {
     keys.sort();
     assert_eq!(
         keys,
-        ["agenda_size", "countdown", "enabled", "reminder_minutes"]
+        [
+            "agenda_size",
+            "countdown",
+            "enabled",
+            "feeds",
+            "reminder_minutes"
+        ]
     );
     assert_eq!(map["reminder_minutes"], SettingValue::Uint(5));
 }
@@ -331,6 +337,27 @@ fn system_alerts_on_low_memory_by_default() {
     assert_eq!(map.keys().copied().collect::<Vec<_>>(), ["memory_alert"]);
     let c = parse("[home]\ntiles = [\"system\", \"focus\"]\n").unwrap();
     assert_eq!(c.home.tiles, ["system", "focus"]);
+}
+
+#[test]
+fn calendar_feeds_are_secret_ical_addresses() {
+    assert!(Config::default().calendar.feeds.is_empty());
+    let c = parse(
+        "[calendar]\nfeeds = [\"https://calendar.google.com/calendar/ical/x/private-y/basic.ics\", \"webcal://outlook.office365.com/owa/calendar/z/reachcalendar.ics\"]\n",
+    )
+    .unwrap();
+    assert_eq!(c.calendar.feeds.len(), 2);
+    for bad in [
+        "feeds = [\"http://example.com/a.ics\"]",
+        "feeds = [\"file:///C:/a.ics\"]",
+        "feeds = [\"https://\"]",
+        "feeds = [\"https://a/1\", \"https://a/2\", \"https://a/3\", \"https://a/4\", \"https://a/5\", \"https://a/6\"]",
+    ] {
+        let err = parse(&format!("[calendar]\n{bad}\n")).unwrap_err();
+        assert!(err.message.contains("calendar.feeds"), "{bad}: {err}");
+    }
+    let map = entries(Config::default().calendar.entries());
+    assert_eq!(map["feeds"], SettingValue::List(Vec::new()));
 }
 
 #[test]

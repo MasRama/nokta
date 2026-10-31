@@ -558,6 +558,7 @@ countdown.
 | `agenda_size` | `3` | How many events home lists, 1 to 5 |
 | `reminder_minutes` | `5` | How long before an event to show it, 0 to 60; `0` shows only the start, with no countdown |
 | `countdown` | `true` | Count down to the next event on the closed notch, from its reminder until 5 minutes after it starts |
+| `feeds` | `[]` | Windows only: the secret iCal addresses (`https://` or `webcal://`) of up to 5 calendars; on Linux Nokta reads GNOME's calendars |
 
 </details>
 

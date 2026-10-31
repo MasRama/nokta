@@ -92,6 +92,7 @@ enabled = true           # show the next event from GNOME's calendar when the no
 reminder_minutes = 5     # show an event this many minutes before it starts, 0 to 60; 0 = no reminder
 agenda_size = 3          # how many events home lists, 1 to 5
 countdown = true         # from the reminder, the closed notch counts the minutes to the start
+feeds = []               # Windows: secret iCal addresses (https:// or webcal://) of up to 5 calendars; Linux reads GNOME's
 
 [clipboard]
 enabled = true           # keep what you copy, text and pictures, in the open notch; in memory only

@@ -282,7 +282,13 @@ pub struct CalendarConfig {
     pub agenda_size: u32,
     /// The closed notch counts down from the reminder to the start.
     pub countdown: bool,
+    /// Secret iCal addresses of calendars, read on Windows, where there is
+    /// no system calendar to read; at most [`MAX_FEEDS`].
+    pub feeds: Vec<String>,
 }
+
+/// At most this many calendar feeds.
+pub const MAX_FEEDS: usize = 5;
 
 impl Default for CalendarConfig {
     fn default() -> Self {
@@ -291,6 +297,7 @@ impl Default for CalendarConfig {
             reminder_minutes: 5,
             agenda_size: 3,
             countdown: true,
+            feeds: Vec::new(),
         }
     }
 }
@@ -605,6 +612,7 @@ impl Config {
             60,
         )?;
         check_range("calendar.agenda_size", self.calendar.agenda_size, 1, 5)?;
+        check_feeds(&self.calendar.feeds)?;
         check_range("clipboard.max_items", self.clipboard.max_items, 5, 100)?;
         if !WEATHER_UNITS.contains(&self.weather.units.as_str()) {
             return Err(ConfigError::invalid(format!(
@@ -712,6 +720,29 @@ fn check_float(key: &str, value: f64, min: f64, max: f64) -> Result<(), ConfigEr
             "{key} must be between {min:.1} and {max:.1}, got {value}"
         )))
     }
+}
+
+/// At most [`MAX_FEEDS`] calendar addresses, each `https://` or `webcal://`
+/// with a host: a feed is fetched over TLS, never from a file.
+fn check_feeds(feeds: &[String]) -> Result<(), ConfigError> {
+    if feeds.len() > MAX_FEEDS {
+        return Err(ConfigError::invalid(format!(
+            "calendar.feeds takes at most {MAX_FEEDS} addresses, got {}",
+            feeds.len()
+        )));
+    }
+    for feed in feeds {
+        let fetched = url::Url::parse(feed).ok().filter(|url| {
+            matches!(url.scheme(), "https" | "webcal")
+                && url.host_str().is_some_and(|h| !h.is_empty())
+        });
+        if fetched.is_none() {
+            return Err(ConfigError::invalid(
+                "calendar.feeds takes https:// or webcal:// addresses".to_owned(),
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn check_range(key: &str, value: u32, min: u32, max: u32) -> Result<(), ConfigError> {
@@ -901,6 +932,7 @@ impl CalendarConfig {
             ("reminder_minutes", self.reminder_minutes.into()),
             ("agenda_size", self.agenda_size.into()),
             ("countdown", self.countdown.into()),
+            ("feeds", (&self.feeds).into()),
         ]
     }
 }
