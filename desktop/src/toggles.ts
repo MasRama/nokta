@@ -7,13 +7,13 @@ import { Follower } from './follower.js';
 const WINDOWS_TOGGLES: readonly QuickToggle[] = ['caffeine', 'dark_style'];
 
 /** The tiles whose page or panel the Windows app has so far. */
-const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'screenshot', 'system'];
+const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'clipboard', 'screenshot', 'system'];
 
-/** The layout's toggles and tiles the Windows app can offer, in its order. */
-export function windowsControls(layout: HomeLayout): HomeLayout {
+/** The layout's toggles and tiles the Windows app can offer, in its order; no clipboard tile while its history is off. */
+export function windowsControls(layout: HomeLayout, clipboard: boolean): HomeLayout {
     return {
         toggles: layout.toggles.filter((name) => WINDOWS_TOGGLES.includes(name)),
-        tiles: layout.tiles.filter((name) => WINDOWS_TILES.includes(name)),
+        tiles: layout.tiles.filter((name) => WINDOWS_TILES.includes(name) && (name !== 'clipboard' || clipboard)),
     };
 }
 

@@ -16,6 +16,7 @@ import {
     releaseKeyboard,
     setHitRegion,
     systemUses24h,
+    takeKeyboard,
 } from './platform.js';
 
 const app = inTauri();
@@ -36,6 +37,7 @@ const notch = new MonitorNotch(
         onFullscreen,
         onKeyboard,
         releaseKeyboard,
+        takeKeyboard,
         openUri,
         openFile,
         onDrop: app ? onDrop : (cb) => (mockDrop = cb),

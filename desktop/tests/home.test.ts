@@ -108,10 +108,17 @@ describe('home on Windows', () => {
 });
 
 describe('home controls', () => {
-    it('drops the toggles and tiles Windows has not', () => {
-        expect(
-            windowsControls({ toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system', 'clipboard'] }),
-        ).toEqual({ toggles: ['caffeine'], tiles: ['focus', 'notifications', 'system'] });
+    it('drops the toggles and tiles Windows has not, and the clipboard while its history is off', () => {
+        const layout = { toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system', 'clipboard', 'settings'] } as const;
+        expect(windowsControls({ toggles: [...layout.toggles], tiles: [...layout.tiles] }, true)).toEqual({
+            toggles: ['caffeine'],
+            tiles: ['focus', 'notifications', 'system', 'clipboard'],
+        });
+        expect(windowsControls({ toggles: [...layout.toggles], tiles: [...layout.tiles] }, false).tiles).toEqual([
+            'focus',
+            'notifications',
+            'system',
+        ]);
     });
 
     it('counts a row for the toggles and one for the tiles, only when there are some', () => {

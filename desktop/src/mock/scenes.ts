@@ -186,6 +186,27 @@ const SHELF: Record<string, Props> = {
     },
 };
 
+/** Home with the Clipboard tile, and a history of six copies, the third pinned and a picture. */
+function clipboard(): Record<string, Props> {
+    const now = Date.now() * 1000;
+    const minutes = (m: number) => now - m * 60_000_000;
+    return {
+        ...HOME,
+        Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['focus', 'timer', 'clipboard', 'notifications'] } },
+        Clipboard1: {
+            Items: [
+                ['6', 'text', 'https://github.com/MasRama/nokta/releases', '', false, minutes(0)],
+                ['5', 'text', 'Meeting moved to 3 pm, same room', '', false, minutes(4)],
+                ['4', 'image', '1920 × 1080', COVER, true, minutes(25)],
+                ['3', 'text', 'cargo build --release -p nokta-desktop', '', false, minutes(90)],
+                ['2', 'text', 'Jl. Sudirman No. 21, Jakarta', '', true, minutes(60 * 26)],
+                ['1', 'text', 'ren@example.com', '', false, minutes(60 * 50)],
+            ],
+            Paused: false,
+        },
+    };
+}
+
 /** A minute of CPU going up and down, 6.4 of 16 GB, no temperature, a download. */
 function samples(): Array<[string, Props]> {
     return Array.from({ length: 30 }, (_, i): [string, Props] => {
@@ -229,6 +250,17 @@ export const SCENES: Record<string, Scene> = {
     'shelf-player': { props: { ...player(true), ...SHELF }, open: true },
     drop: { props: SHELF, drop: true },
     'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
+    'clipboard-page': { props: clipboard(), open: true, click: ['[data-tile="clipboard"]'] },
+    'clipboard-search': {
+        props: clipboard(),
+        open: true,
+        click: ['[data-tile="clipboard"]', '.nokta-subpage-actions .nokta-clip-button'],
+    },
+    'clipboard-empty': {
+        props: { ...clipboard(), Clipboard1: { Items: [], Paused: true } },
+        open: true,
+        click: ['[data-tile="clipboard"]'],
+    },
     'timer-page': { props: TIMER_HOME, open: true, click: ['[data-tile="timer"]'] },
     'focus-done': { props: { ...LINGER, ...focus() }, signals: [['Timer1', 'Finished', 'focus']] },
     player: { props: player(true) },
