@@ -1,11 +1,12 @@
 import { MAX_BUTTONS } from '@ext/features/notifications/logic/actions.js';
 import { textOn, withAlpha } from '@ext/shared/logic/color.js';
 
-import { icon } from '../icons.js';
+import { icon, setIcon } from '../icons.js';
 
 /** The second line is dimmed next to the title, as in the extension. */
 const DETAIL_OPACITY = 180 / 255;
 const CLOSE_OPACITY = 150 / 255;
+const BELL = 'nokta-bell-symbolic';
 
 export interface NotificationHandlers {
     /** A click on the notification itself. */
@@ -20,8 +21,10 @@ export interface ShownNotification {
     title: string;
     /** The line under the title; none when empty. */
     detail: string;
-    /** The app's picture as a URL the page loads; null draws a bell on the accent. */
+    /** The app's picture as a URL the page loads; null draws `symbol` on the accent. */
     picture: string | null;
+    /** The icon drawn without a picture; a bell when not set. */
+    symbol?: string;
     /** The picture is cropped to a circle. */
     round: boolean;
     /** Its buttons' labels, at most MAX_BUTTONS show. */
@@ -60,7 +63,7 @@ export class NotificationView {
         this.square.className = 'nokta-notification-square';
         this.picture = document.createElement('span');
         this.picture.className = 'nokta-notification-picture';
-        this.bell = icon('nokta-bell-symbolic', 18);
+        this.bell = icon(BELL, 18);
         this.badge = document.createElement('span');
         this.badge.className = 'nokta-notification-badge';
         this.square.append(this.picture, this.bell, this.badge);
@@ -100,11 +103,12 @@ export class NotificationView {
         this.element.append(this.square, side, close);
     }
 
-    show({ title, detail, picture, round, buttons, badge }: ShownNotification): void {
+    show({ title, detail, picture, symbol = BELL, round, buttons, badge }: ShownNotification): void {
         this.picture.style.backgroundImage = picture ? `url("${picture}")` : '';
         this.picture.hidden = picture === null;
         this.picture.classList.toggle('nokta-notification-round', round);
         this.bell.hidden = picture !== null;
+        setIcon(this.bell, symbol, 18);
         // Without its own picture, a bell sits on the accent at 20 %, as a symbolic icon does on GNOME.
         this.square.style.backgroundColor = picture ? '' : withAlpha(this.accent, 0.2);
         this.square.classList.toggle('nokta-notification-symbolic', picture === null);
