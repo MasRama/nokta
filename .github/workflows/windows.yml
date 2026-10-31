@@ -52,6 +52,9 @@ jobs:
           $middle = [int]([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width / 2)
           ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
           ./tools/windows/hit.ps1 -X $middle -Y 10 -Expect nokta
+          # Resting on the notch opens home.
+          Start-Sleep -Seconds 1
+          ./tools/windows/shot.ps1 -Name home
           ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
           Start-Process $exe
           Start-Sleep -Seconds 5

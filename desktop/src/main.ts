@@ -1,16 +1,21 @@
-import { IdleNotch } from './notch/idle.js';
-import { inTauri, setHitRegion, systemUses24h } from './platform.js';
+import { TauriBridge } from './bridge/tauri.js';
+import { MockBridge } from './bridge/mock.js';
+import { sceneFor } from './mock/scenes.js';
+import { MonitorNotch } from './monitor-notch.js';
+import { setPictureUrl } from './notch/notch.js';
+import { fileUrl, inTauri, onPointer, setHitRegion, systemUses24h } from './platform.js';
 
-// The default config's closed notch, until the settings arrive from the core.
-const notch = new IdleNotch(
-    { width: 180, height: 32, radius: 14, ear: 8, background: '#000000', foreground: '#ffffff' },
-    systemUses24h,
-);
-document.body.append(notch.element);
+const app = inTauri();
+const scene = sceneFor(location.search);
 // Outside the app the page stands in for the desktop, so shots show the notch on a wallpaper.
-if (!inTauri()) document.body.classList.add('nokta-mock');
-notch.start();
+if (!app) document.body.classList.add('nokta-mock');
+setPictureUrl(fileUrl);
 
-const report = () => void setHitRegion(notch.rect());
-report();
-window.addEventListener('resize', report);
+const notch = new MonitorNotch(
+    app ? new TauriBridge() : new MockBridge(scene.props),
+    { systemUses24h, setHit: (hit) => void setHitRegion(hit), onPointer },
+    document.body,
+);
+window.addEventListener('resize', () => notch.setArea(window.innerWidth));
+await notch.start(window.innerWidth);
+if (!app && scene.open) notch.open(true);
