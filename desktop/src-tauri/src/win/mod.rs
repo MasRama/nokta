@@ -10,6 +10,7 @@ mod pointer;
 mod privacy;
 mod services;
 mod shortcut;
+mod toggles;
 mod topmost;
 mod tray;
 
