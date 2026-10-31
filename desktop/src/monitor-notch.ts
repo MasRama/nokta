@@ -5,6 +5,9 @@ import { romanize } from '@ext/features/lyrics/logic/romanize.js';
 import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { downloadButtons, type Download, type DownloadButton } from '@ext/features/downloads/logic/download.js';
+import { MAX_BUTTONS } from '@ext/features/notifications/logic/actions.js';
+import { notificationLines } from '@ext/features/notifications/logic/content.js';
+import { stackBadge, stackCount } from '@ext/features/notifications/logic/stack.js';
 import { NotificationTimer } from '@ext/features/notifications/logic/timer.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
@@ -54,6 +57,7 @@ import { Downloads } from './downloads.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
 import { fileUrlOf, Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
+import { asMarkup, Notifications, type Toast } from './notifications.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
 import { Shelf } from './shelf.js';
@@ -68,6 +72,7 @@ import { ExpandedView } from './views/expanded.js';
 import { HomeView, homeRows } from './views/home.js';
 import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
+import { NotificationView } from './views/notification.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
 import { DropView, ShelfBadge, ShelfRow } from './views/shelf.js';
@@ -157,6 +162,7 @@ export class MonitorNotch {
     readonly clipboard: Clipboard;
     private readonly downloads: Downloads;
     private readonly screenshots: Downloads;
+    private readonly notifications: Notifications;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -170,6 +176,16 @@ export class MonitorNotch {
     private readonly download = downloadPreview((button) => this.onDownloadPress(button));
     /** The download that shows. */
     private shownDownload: Download | null = null;
+    /** Another app's toast, timed the same way. */
+    private readonly notificationView = new NotificationView({
+        onClick: () => this.onNotificationPress(null),
+        onButton: (index) => this.onNotificationPress(index),
+        onClose: () => this.messageTimer.hide(),
+    });
+    /** The toast that shows, and how many from its app it stands for. */
+    private shownToast: { toast: Toast; count: number } | null = null;
+    /** Which message the message timer times. */
+    private message: 'download' | 'notification' = 'download';
     private readonly alerts: Alerts;
     private readonly privacyDots = new PrivacyDots();
     private readonly progress = new ProgressLine();
@@ -243,6 +259,7 @@ export class MonitorNotch {
         this.updates = new Updates(bridge, () => this.onHome());
         this.downloads = new Downloads(bridge, (download) => this.showDownload(download));
         this.screenshots = new Downloads(bridge, (shot) => this.showDownload(shot, true), 'Screenshots1', 'Taken');
+        this.notifications = new Notifications(bridge, (toast) => this.showToast(toast));
         this.system = new System(
             bridge,
             () => this.onSystem(),
@@ -325,6 +342,7 @@ export class MonitorNotch {
             page: this.pages,
             osd: this.osd.element,
             download: this.download.element,
+            notification: this.notificationView.element,
             drop: this.dropView.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
@@ -390,6 +408,7 @@ export class MonitorNotch {
         this.alerts.attach();
         this.downloads.attach();
         this.screenshots.attach();
+        this.notifications.attach();
         await Promise.all([
             this.settings.attach(),
             this.media.attach(),
@@ -442,6 +461,7 @@ export class MonitorNotch {
         this.alerts.detach();
         this.downloads.detach();
         this.screenshots.detach();
+        this.notifications.detach();
         this.osdTimer.destroy();
         this.messageTimer.destroy();
         this.machine.destroy();
@@ -535,6 +555,8 @@ export class MonitorNotch {
             this.applyFullscreen();
         }
         this.shownDownload = download;
+        this.shownToast = null;
+        this.message = 'download';
         const buttons = downloadButtons(this.settings.behavior.fileShelf);
         const picture = downloadPicture(download, fileUrlOf);
         // A screenshot is named by what it is, as GNOME's banner does, with the file under it.
@@ -553,13 +575,56 @@ export class MonitorNotch {
         else this.host.openFile?.(download.uri, button === 'files');
     }
 
+    /**
+     * Another app's toast, as the extension shows a GNOME banner, for as
+     * long as a notification. A new one from the app whose toast shows
+     * stacks on it; a new one replaces what shows.
+     */
+    private showToast(toast: Toast): void {
+        // Over a fullscreen app Windows holds its banner back, and so does the notch.
+        if (this.inFullscreen) return;
+        const { durationMs, showBody } = this.settings.notifications;
+        const text = { title: asMarkup(toast.title), body: asMarkup(toast.body), app: asMarkup(toast.app) };
+        const { title, detail } = notificationLines(text, showBody);
+        const shown = this.messageTimer.active && this.message === 'notification' ? this.shownToast : null;
+        const count = stackCount(
+            shown && { source: shown.toast.appId, notification: shown.toast.id, count: shown.count },
+            { source: toast.appId, notification: toast.id },
+        );
+        this.shownToast = { toast, count };
+        this.shownDownload = null;
+        this.message = 'notification';
+        this.notificationView.show({
+            title,
+            detail,
+            picture: toast.icon ? fileUrlOf(toast.icon) : null,
+            round: toast.round,
+            buttons: toast.buttons.slice(0, MAX_BUTTONS),
+            badge: stackBadge(count),
+        });
+        this.messageTimer.show(durationMs);
+        this.redraw();
+        this.alert('accent', 'kick');
+    }
+
+    /** A click on the toast, or on its button at `button`, opens what it opens and closes it. */
+    private onNotificationPress(button: number | null): void {
+        const shown = this.shownToast;
+        if (!shown) return;
+        this.messageTimer.hide();
+        this.notifications.activate(shown.toast.id, button);
+    }
+
     private onMessageTimer(): void {
         // A download let through over a fullscreen app goes with it.
         if (this.alertOverFullscreen && !this.messageTimer.active && !this.osdTimer.active) {
             this.alertOverFullscreen = false;
             this.applyFullscreen();
         }
-        if (!this.messageTimer.active) this.shownDownload = null;
+        if (!this.messageTimer.active) {
+            this.shownDownload = null;
+            this.shownToast = null;
+        }
         this.redraw();
     }
 
@@ -632,6 +697,7 @@ export class MonitorNotch {
         this.systemPage.setColors(palette);
         this.clipboardPage.setColors(palette);
         this.download.setForeground(palette.foreground);
+        this.notificationView.setColors(palette.foreground, palette.accent);
         this.dropView.setForeground(palette.foreground);
         this.updateViews();
         this.applyProgress();
@@ -1081,7 +1147,7 @@ export class MonitorNotch {
         const appearance = this.settings.appearance;
         return viewSize(drawn, {
             appearance,
-            notificationButtons: false,
+            notificationButtons: this.message === 'notification' && (this.shownToast?.toast.buttons.length ?? 0) > 0,
             panelHeight: panelHeight(appearance.height, this.homeRows),
             pageHeight: subPageHeight(this.pageBodyHeight()),
             expandedExtra:
@@ -1095,7 +1161,7 @@ export class MonitorNotch {
         this.drawn = drawnView({
             dropping: this.dropping,
             osd: this.osdTimer.active,
-            notification: this.messageTimer.active ? 'download' : null,
+            notification: this.messageTimer.active ? this.message : null,
             mode: this.machine.mode,
             peek: this.peekTimer !== 0,
             page: this.page !== null,
