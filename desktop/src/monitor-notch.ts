@@ -117,6 +117,8 @@ export interface Host {
     takeKeyboard?(): void;
     /** Opens one of Windows' panels or a web page. */
     openUri?(uri: string): void;
+    /** Opens the settings window. */
+    openSettings?(): void;
     /** Opens a file the core announced, or shows it in Explorer with `reveal`. */
     openFile?(uri: string, reveal: boolean): void;
     /** Calls back when files are dragged over the notch, and when no longer; none in a browser. */
@@ -1016,6 +1018,11 @@ export class MonitorNotch {
         }
         if (which === 'focus') {
             this.timer.toggleFocus();
+            return;
+        }
+        if (which === 'settings') {
+            this.machine.close();
+            this.host.openSettings?.();
             return;
         }
         const uri = TILE_URIS[which];

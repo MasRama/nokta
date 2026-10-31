@@ -820,8 +820,16 @@ WebView2 and runs the core's services itself, with no D-Bus.
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one
   linear CSS transition to its end and starts again on each change.
-- The tray icon stands in for the top bar (Quit). A second start leaves
-  the running one alone.
+- The settings window (`win/settings_window.rs`, page `settings.html`,
+  `src/prefs/`) is a second, ordinary window, one at a time, opened from
+  the tray, home's Settings tile or a second start. It draws every row of
+  the extension's `settings/logic/schema.ts`, less what only GNOME has,
+  with Windows' wording (`prefs/logic.ts`), plus the calendar feeds,
+  listed by host only since their address is a secret. Each change goes
+  to `Settings1.Set` a moment after the last one; a refused value shows
+  the core's message and its value again.
+- The tray icon stands in for the top bar (Settings, Quit). A second start
+  opens the settings and leaves the running Nokta alone.
 - The NSIS installer installs per user without admin rights, brings the
   WebView2 bootstrapper, and starts Nokta at login through the `Run` key
   (`installer.nsh`), which Task Manager's Startup apps can turn off.

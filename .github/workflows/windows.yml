@@ -36,7 +36,7 @@ jobs:
         working-directory: desktop
         run: npx tauri build --bundles nsis
       # The smoke: install as a user would, start it, start it again (the
-      # second must leave), and shoot the desktop.
+      # second must leave and open the settings), and shoot the desktop.
       - name: Install and start Nokta
         shell: pwsh
         run: |
@@ -64,8 +64,10 @@ jobs:
           Get-Content "$env:LOCALAPPDATA\nokta\nokta.log"
           # What Windows kept of it, for when the notch shows nothing.
           python -c "import os,sqlite3; db=os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db'); [print(r) for r in sqlite3.connect('file:'+db+'?mode=ro', uri=True).execute('select Id, Type, ArrivalTime from Notification order by ArrivalTime desc limit 3')]"
+          # A second start leaves, opening the running one's settings.
           Start-Process $exe
           Start-Sleep -Seconds 5
+          ./tools/windows/shot.ps1 -Name settings
           $running = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue).Count
           if ($running -ne 1) { throw "expected one Nokta, found $running" }
       - name: Upload the shots and the installer
