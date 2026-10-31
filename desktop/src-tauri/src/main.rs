@@ -9,6 +9,7 @@ mod fullscreen;
 mod layout;
 mod osd;
 mod privacy;
+mod shortcut;
 #[cfg(windows)]
 mod win;
 

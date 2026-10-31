@@ -8,6 +8,7 @@ mod osd;
 mod pointer;
 mod privacy;
 mod services;
+mod shortcut;
 mod topmost;
 mod tray;
 
@@ -23,6 +24,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             set_hit_region,
             notch_fullscreen,
+            release_keyboard,
             services::bridge_props,
             services::bridge_call
         ])
@@ -44,6 +46,7 @@ pub fn run() {
             topmost::install(&notches);
             pointer::start(app.handle().clone());
             fullscreen::start(app.handle().clone());
+            shortcut::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -98,4 +101,10 @@ fn set_hit_region(window: WebviewWindow, rect: CssRect) -> Result<(), String> {
 #[tauri::command]
 fn notch_fullscreen(window: WebviewWindow) -> bool {
     fullscreen::is_covered(window.label())
+}
+
+/// The notch that asks closed after the open shortcut opened it.
+#[tauri::command]
+fn release_keyboard(window: WebviewWindow) {
+    shortcut::release(window.label());
 }

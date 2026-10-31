@@ -120,6 +120,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         lyrics_props::INTERFACE,
         lyrics_props::props,
     );
+    super::shortcut::follow(services.config.clone());
     let privacy = super::privacy::spawn();
     forward(
         app.clone(),
