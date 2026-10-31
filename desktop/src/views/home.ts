@@ -5,6 +5,7 @@ import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
 import { Tile, TogglePill, type ControlColors } from './controls.js';
+import { CallRow, type CallHandlers, type HomeCall } from './privacy.js';
 import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
 
 /** Home shows the newest clocks, at most this many, as the extension's. */
@@ -29,16 +30,23 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['system', 'system', 'System', TONES.system],
 ];
 
-export interface HomeHandlers extends ClockHandlers {
+export interface HomeHandlers extends ClockHandlers, CallHandlers {
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
 }
 
-/** Home's rows for `clocks` clocks and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
-export function homeRows(layout: HomeLayout, clocks = 0): PanelRow[] {
+/** What home lists above its controls. */
+export interface HomeContent {
+    call?: boolean;
+    clocks?: number;
+}
+
+/** Home's rows for its content and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
+export function homeRows(layout: HomeLayout, { call = false, clocks = 0 }: HomeContent = {}): PanelRow[] {
     return [
         'date',
+        ...(call ? (['call'] as const) : []),
         ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
         ...(layout.toggles.length > 0 ? (['toggles'] as const) : []),
         ...(layout.tiles.length > 0 ? (['tiles'] as const) : []),
@@ -81,7 +89,7 @@ export type TileStates = Partial<Record<HomeTile, boolean>>;
 
 /**
  * Home, the open notch's other page: the weekday over the date with the
- * weather beside them, the way back to a player, the clocks, then the
+ * weather beside them, the way back to a player, the call, the clocks, then the
  * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
  */
@@ -91,6 +99,7 @@ export class HomeView {
     private readonly date: HTMLSpanElement;
     private readonly weather = new WeatherBox();
     private readonly music: HTMLButtonElement;
+    private readonly call: CallRow;
     private readonly clocks: ClockRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
@@ -133,7 +142,8 @@ export class HomeView {
         this.controls = document.createElement('div');
         this.controls.className = 'nokta-panel-controls';
         this.controls.append(this.pills, this.tileRow);
-        this.element.append(heading);
+        this.call = new CallRow(handlers);
+        this.element.append(heading, this.call.element);
         for (let i = 0; i < MAX_HOME_CLOCKS; i++) {
             const row = new ClockRow(handlers);
             this.clocks.push(row);
@@ -156,6 +166,11 @@ export class HomeView {
     /** Null hides the weather. */
     setWeather(weather: WeatherLine | null): void {
         this.weather.show(weather);
+    }
+
+    /** Null hides the call's row. */
+    setCall(call: HomeCall | null): void {
+        this.call.show(call);
     }
 
     /** The newest clocks, one row each. */
@@ -184,6 +199,6 @@ export class HomeView {
     setColors(colors: ControlColors): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
         for (const tile of this.tiles.values()) tile.setColors(colors);
-        for (const row of this.clocks) row.chip.setLight(colors.light);
+        for (const row of [...this.clocks, this.call]) row.chip.setLight(colors.light);
     }
 }

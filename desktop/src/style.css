@@ -718,7 +718,8 @@ body.nokta-mock {
 }
 
 /* A clock in home: chip, title, detail, time, pause and remove (views/timer.ts). */
-.nokta-panel-clock {
+.nokta-panel-clock,
+.nokta-panel-call {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -726,11 +727,13 @@ body.nokta-mock {
     height: 26px;
 }
 
-.nokta-panel-clock .nokta-button {
+.nokta-panel-clock .nokta-button,
+.nokta-panel-call .nokta-button {
     padding: 4px;
 }
 
-.nokta-panel-clock-title {
+.nokta-panel-clock-title,
+.nokta-panel-call-title {
     flex: none;
     max-width: 40%;
     overflow: hidden;
@@ -740,7 +743,8 @@ body.nokta-mock {
     font-weight: 600;
 }
 
-.nokta-panel-clock-detail {
+.nokta-panel-clock-detail,
+.nokta-panel-call-detail {
     flex: 1;
     min-width: 0;
     overflow: hidden;

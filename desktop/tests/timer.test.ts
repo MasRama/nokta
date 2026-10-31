@@ -149,7 +149,7 @@ describe('the timer on home', () => {
 
     it('counts a row for each clock, at most three', () => {
         const layout = { toggles: [], tiles: ['timer' as const] };
-        expect(homeRows(layout, 2)).toEqual(['date', 'clock', 'clock', 'tiles']);
-        expect(homeRows(layout, 5).filter((row) => row === 'clock')).toHaveLength(3);
+        expect(homeRows(layout, { clocks: 2 })).toEqual(['date', 'clock', 'clock', 'tiles']);
+        expect(homeRows(layout, { clocks: 5 }).filter((row) => row === 'clock')).toHaveLength(3);
     });
 });
