@@ -4,6 +4,7 @@
 // No console window behind the notch in a release build.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod bridge;
 mod layout;
 #[cfg(windows)]
 mod win;

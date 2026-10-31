@@ -2482,11 +2482,16 @@ dependencies = [
 name = "nokta-desktop"
 version = "0.10.0"
 dependencies = [
+ "nokta-core",
+ "quick-xml",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-single-instance",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
  "windows",
 ]
 

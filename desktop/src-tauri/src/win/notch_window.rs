@@ -27,7 +27,6 @@ pub fn create(
     monitor: &Monitor,
     logical: (f64, f64),
 ) -> tauri::Result<WebviewWindow> {
-    let rect = layout::window_rect(monitor, logical);
     let window = WebviewWindowBuilder::new(
         app,
         format!("notch-{index}"),
@@ -43,9 +42,7 @@ pub fn create(
     .focused(false)
     .visible(false)
     .build()?;
-    // Moving first lets Windows apply the monitor's scale before the size.
-    window.set_position(PhysicalPosition::new(rect.x, rect.y))?;
-    window.set_size(PhysicalSize::new(rect.width, rect.height))?;
+    place(&window, monitor, logical)?;
     let hwnd = window.hwnd()?;
     make_overlay(hwnd);
     set_region(
@@ -62,6 +59,14 @@ pub fn create(
         let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
     }
     Ok(window)
+}
+
+/// Moves and sizes `window` for `monitor`. Moving first lets Windows apply
+/// the monitor's scale before the size.
+pub fn place(window: &WebviewWindow, monitor: &Monitor, logical: (f64, f64)) -> tauri::Result<()> {
+    let rect = layout::window_rect(monitor, logical);
+    window.set_position(PhysicalPosition::new(rect.x, rect.y))?;
+    window.set_size(PhysicalSize::new(rect.width, rect.height))
 }
 
 /// The extended styles and subclass that keep the window an overlay.
