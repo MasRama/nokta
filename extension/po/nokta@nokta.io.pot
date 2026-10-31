@@ -7,7 +7,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/extension.ts src/features/panel/view.ts
+#: src/extension.ts src/features/panel/view.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/calendar.ts
 msgid "Join"
 msgstr ""
 
@@ -30,7 +30,7 @@ msgstr ""
 msgid "%d min %d s"
 msgstr ""
 
-#: src/features/activities/logic/activities.ts src/features/calendar/logic/events.ts src/features/clipboard/logic/entries.ts src/features/timer/logic/clocks.ts src/features/timer/logic/timer.ts src/features/timer/page.ts
+#: src/features/activities/logic/activities.ts src/features/calendar/logic/events.ts src/features/clipboard/logic/entries.ts src/features/timer/logic/clocks.ts src/features/timer/logic/timer.ts src/features/timer/page.ts ../desktop/src/views/timer.ts
 #, c-format
 msgid "%d min"
 msgstr ""
@@ -50,7 +50,7 @@ msgstr ""
 msgid "Failed after %s"
 msgstr ""
 
-#: src/features/calendar/logic/events.ts
+#: src/features/calendar/logic/events.ts ../desktop/src/calendar.ts
 msgid "Untitled event"
 msgstr ""
 
@@ -96,19 +96,19 @@ msgstr ""
 msgid "Picture · %s"
 msgstr ""
 
-#: src/features/clipboard/page.ts
+#: src/features/clipboard/page.ts ../desktop/src/views/clipboard.ts
 msgid "Search copies"
 msgstr ""
 
-#: src/features/clipboard/page.ts
+#: src/features/clipboard/page.ts ../desktop/src/views/clipboard.ts
 msgid "Paused: copies are not kept"
 msgstr ""
 
-#: src/features/clipboard/page.ts
+#: src/features/clipboard/page.ts ../desktop/src/views/clipboard.ts
 msgid "Nothing copied yet"
 msgstr ""
 
-#: src/features/clipboard/page.ts
+#: src/features/clipboard/page.ts ../desktop/src/views/clipboard.ts
 msgid "No match"
 msgstr ""
 
@@ -144,7 +144,7 @@ msgstr ""
 msgid "Fully charged"
 msgstr ""
 
-#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts
+#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts ../desktop/src/prefs/window.ts ../desktop/src/views/download.ts
 msgid "Open"
 msgstr ""
 
@@ -152,7 +152,7 @@ msgstr ""
 msgid "Show in Files"
 msgstr ""
 
-#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts
+#: src/features/downloads/view.ts src/features/notifications/screenshot-view.ts ../desktop/src/views/download.ts
 msgid "Keep on shelf"
 msgstr ""
 
@@ -226,15 +226,15 @@ msgstr ""
 msgid "Caffeine is on in Nokta"
 msgstr ""
 
-#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts
+#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts ../desktop/src/views/home.ts
 msgid "Settings"
 msgstr ""
 
-#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/menu.ts src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/views/home.ts
 msgid "Do Not Disturb"
 msgstr ""
 
-#: src/features/panel/menu.ts
+#: src/features/panel/menu.ts ../desktop/src/views/shelf.ts
 msgid "Clear shelf"
 msgstr ""
 
@@ -242,39 +242,39 @@ msgstr ""
 msgid "Pause clipboard"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/views/home.ts
 msgid "Caffeine"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/views/home.ts
 msgid "Dark Style"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/views/home.ts
 msgid "Night Light"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/views/home.ts
 msgid "Notifications"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/features/timer/toggle.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/features/timer/toggle.ts ../desktop/src/views/home.ts
 msgid "Focus"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/features/timer/logic/clocks.ts src/monitor-notch.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/features/timer/logic/clocks.ts src/monitor-notch.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/home.ts
 msgid "Timer"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/home.ts
 msgid "Clipboard"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/home.ts
 msgid "Screenshot"
 msgstr ""
 
-#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts
+#: src/features/panel/view.ts src/features/settings/logic/schema.ts src/monitor-notch.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/home.ts
 msgid "System"
 msgstr ""
 
@@ -286,7 +286,7 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
-#: src/features/privacy/logic/call.ts
+#: src/features/privacy/logic/call.ts ../desktop/src/monitor-notch.ts
 msgid "Microphone"
 msgstr ""
 
@@ -414,7 +414,7 @@ msgstr ""
 msgid "Blur"
 msgstr ""
 
-#: src/features/settings/logic/schema.ts
+#: src/features/settings/logic/schema.ts ../desktop/src/prefs/logic.ts
 msgid "Pixels"
 msgstr ""
 
@@ -902,7 +902,7 @@ msgstr ""
 msgid "Progress that apps show on the dock, and system updates"
 msgstr ""
 
-#: src/features/settings/logic/schema.ts
+#: src/features/settings/logic/schema.ts ../desktop/src/views/shelf.ts
 msgid "File shelf"
 msgstr ""
 
@@ -1046,7 +1046,7 @@ msgstr ""
 msgid "All settings"
 msgstr ""
 
-#: src/features/shelf/drop.ts
+#: src/features/shelf/drop.ts ../desktop/src/views/shelf.ts
 msgid "Drop to keep here"
 msgstr ""
 
@@ -1054,23 +1054,23 @@ msgstr ""
 msgid "Memory is almost full"
 msgstr ""
 
-#: src/features/system/page.ts
+#: src/features/system/page.ts ../desktop/src/views/system.ts
 msgid "CPU"
 msgstr ""
 
-#: src/features/system/page.ts
+#: src/features/system/page.ts ../desktop/src/views/system.ts
 msgid "Memory"
 msgstr ""
 
-#: src/features/system/page.ts
+#: src/features/system/page.ts ../desktop/src/views/system.ts
 msgid "Temperature"
 msgstr ""
 
-#: src/features/system/page.ts
+#: src/features/system/page.ts ../desktop/src/views/system.ts
 msgid "Network"
 msgstr ""
 
-#: src/features/timer/logic/clocks.ts src/features/timer/page.ts
+#: src/features/timer/logic/clocks.ts src/features/timer/page.ts ../desktop/src/views/timer.ts
 msgid "Stopwatch"
 msgstr ""
 
@@ -1137,11 +1137,11 @@ msgstr ""
 msgid "Ready to focus"
 msgstr ""
 
-#: src/features/timer/toggle.ts
+#: src/features/timer/toggle.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/expanded.ts ../desktop/src/views/timer.ts
 msgid "Pause"
 msgstr ""
 
-#: src/features/timer/toggle.ts
+#: src/features/timer/toggle.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/timer.ts
 msgid "Resume"
 msgstr ""
 
@@ -1226,16 +1226,16 @@ msgstr ""
 msgid "Log out and back in to finish updating Nokta"
 msgstr ""
 
-#: src/features/updates/logic/update.ts
+#: src/features/updates/logic/update.ts ../desktop/src/views/activity.ts
 #, c-format
 msgid "Nokta %s is available"
 msgstr ""
 
-#: src/prefs/rows.ts
+#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts
 msgid "Choose…"
 msgstr ""
 
-#: src/prefs/rows.ts
+#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/shelf.ts
 msgid "Remove"
 msgstr ""
 
@@ -1243,11 +1243,11 @@ msgstr ""
 msgid "Images"
 msgstr ""
 
-#: src/prefs/rows.ts
+#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts
 msgid "Move up"
 msgstr ""
 
-#: src/prefs/rows.ts
+#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts
 msgid "Move down"
 msgstr ""
 
@@ -1267,11 +1267,11 @@ msgstr ""
 msgid "Getting started"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Config file"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Open config.toml"
 msgstr ""
 
@@ -1291,27 +1291,27 @@ msgstr ""
 msgid "The tour shows in the notch"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Reset"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Reset all settings"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Replace config.toml with the default one"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Reset all settings?"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Every setting goes back to its default. config.toml is replaced, including any comments you added."
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Cancel"
 msgstr ""
 
@@ -1393,4 +1393,64 @@ msgstr ""
 
 #: src/shared/logic/daemon-strings.ts
 msgid "Updating Nokta"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Windows' own banners stay until you turn them off for each app"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Open a new screenshot, show it in Explorer or keep it on the shelf"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Open the file, show it in Explorer or keep it on the shelf"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "From the calendars below, when the notch opens"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Measures what plays, on this computer only"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Minutes; start it from home's Focus tile"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Follow Windows"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "Calendars"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "The secret iCal address of a Google, Outlook or iCloud calendar"
+msgstr ""
+
+#: ../desktop/src/prefs/rows.ts
+msgid "Add"
+msgstr ""
+
+#: ../desktop/src/views/download.ts
+msgid "Show in Explorer"
+msgstr ""
+
+#: ../desktop/src/views/expanded.ts
+msgid "Play"
+msgstr ""
+
+#: ../desktop/src/views/privacy.ts
+msgid "Hide"
+msgstr ""
+
+#: ../desktop/src/views/privacy.ts
+msgid "Unmute"
+msgstr ""
+
+#: ../desktop/src/views/privacy.ts
+msgid "Mute"
 msgstr ""

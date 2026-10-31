@@ -2,6 +2,7 @@
 // Finds the strings to translate and keeps the translations honest.
 //
 //   node scripts/i18n.mjs              write po/nokta@nokta.io.pot from src/
+//                                      and the Windows app's ../desktop/src/
 //   node scripts/i18n.mjs --check      fail when the template is stale, a call
 //                                      has a non-literal argument, or a
 //                                      translation is missing, fuzzy or drops a
@@ -23,6 +24,8 @@ const POT = join(ROOT, 'po', `${DOMAIN}.pot`);
 const PO_DIR = join(ROOT, 'po');
 /** Where `_`, `N_` and `ngettext` are defined, not called. */
 const DEFINITION = join('src', 'shared', 'logic', 'i18n.ts');
+/** The Windows app draws its own strings and takes the same translations. */
+const DESKTOP = join(ROOT, '..', 'desktop', 'src');
 
 function tsFiles(dir) {
     const files = [];
@@ -227,7 +230,8 @@ function main(args) {
         console.log(JSON.stringify(entries.map(({ msgid, plural }) => (plural === undefined ? { msgid } : { msgid, plural }))));
         return 0;
     }
-    const { entries, errors } = extract(tsFiles(join(ROOT, 'src')), ROOT);
+    const sources = [...tsFiles(join(ROOT, 'src')), ...(existsSync(DESKTOP) ? tsFiles(DESKTOP) : [])];
+    const { entries, errors } = extract(sources, ROOT);
     if (errors.length) {
         console.error(`Strings that are not literals (mark a daemon string's line with // i18n: runtime):\n${errors.join('\n')}`);
         return 1;

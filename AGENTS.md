@@ -42,7 +42,8 @@ unusable.
 - **Every string the user reads is translated.** Wrap it in `_('…')`, or
   `N_('…')` in a module-level table and `_(x) // i18n: runtime` where it is
   drawn; put numbers in with `format(_('%d min'), n)`, never by
-  concatenation. Then `npm run i18n` and add the Indonesian to
+  concatenation. The Windows app's page (`desktop/src`) shares the same
+  template. Then `npm run i18n` and add the Indonesian to
   `extension/po/id.po`; `npm run check` fails until it is there.
 - **Tests first.** Write the failing test, watch it fail, then fix. Extension
   decisions go in a `logic/` module so they can be tested with Node.

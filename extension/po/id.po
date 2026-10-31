@@ -1053,3 +1053,48 @@ msgstr "Notch mengajakmu berkeliling Nokta sekali lagi"
 
 msgid "The tour shows in the notch"
 msgstr "Tur tampil di notch"
+
+msgid "Windows' own banners stay until you turn them off for each app"
+msgstr "Banner Windows sendiri tetap muncul sampai kamu matikan per aplikasi"
+
+msgid "Open a new screenshot, show it in Explorer or keep it on the shelf"
+msgstr "Buka tangkapan layar baru, tampilkan di Explorer atau simpan di rak"
+
+msgid "Open the file, show it in Explorer or keep it on the shelf"
+msgstr "Buka berkasnya, tampilkan di Explorer atau simpan di rak"
+
+msgid "From the calendars below, when the notch opens"
+msgstr "Dari kalender di bawah, saat notch terbuka"
+
+msgid "Measures what plays, on this computer only"
+msgstr "Mengukur yang sedang diputar, hanya di komputer ini"
+
+msgid "Minutes; start it from home's Focus tile"
+msgstr "Menit; mulai dari tile Fokus di home"
+
+msgid "Follow Windows"
+msgstr "Ikuti Windows"
+
+msgid "Calendars"
+msgstr "Kalender"
+
+msgid "The secret iCal address of a Google, Outlook or iCloud calendar"
+msgstr "Alamat iCal rahasia dari kalender Google, Outlook atau iCloud"
+
+msgid "Add"
+msgstr "Tambah"
+
+msgid "Show in Explorer"
+msgstr "Tampilkan di Explorer"
+
+msgid "Hide"
+msgstr "Sembunyikan"
+
+msgid "Unmute"
+msgstr "Bunyikan"
+
+msgid "Mute"
+msgstr "Bisukan"
+
+msgid "Play"
+msgstr "Putar"
