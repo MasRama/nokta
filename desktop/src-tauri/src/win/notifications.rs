@@ -115,7 +115,10 @@ fn run(config: watch::Receiver<Config>, cache: PathBuf, tx: mpsc::Sender<Posted>
         let db = match &mut reader {
             Some(db) => db,
             None => match Reader::open(&folder.join("wpndatabase.db")) {
-                Ok(db) => reader.insert(db),
+                Ok(db) => {
+                    tracing::info!("reading Windows' notifications");
+                    reader.insert(db)
+                }
                 Err(err) => {
                     if !warned {
                         tracing::warn!("cannot read Windows' notifications: {err}");
@@ -133,7 +136,14 @@ fn run(config: watch::Receiver<Config>, cache: PathBuf, tx: mpsc::Sender<Posted>
                 continue;
             }
         };
-        if rows.is_empty() || quiet() {
+        if rows.is_empty() {
+            continue;
+        }
+        if let Some((state, focus)) = quiet() {
+            tracing::info!(
+                "held back {} notifications as Windows holds back its banners (state {state}, focus {focus})",
+                rows.len()
+            );
             continue;
         }
         let now = now_ms();
@@ -419,12 +429,14 @@ unsafe fn bitmap_png(bitmap: HBITMAP) -> Option<Vec<u8>> {
     toast::icon_png(width as u32, height as u32, &pixels)
 }
 
-/// Whether Windows holds its banners back now: the user is away or
-/// presenting, or Do not disturb is on.
-fn quiet() -> bool {
+/// Windows' user state and Do not disturb's profile while it holds its
+/// banners back (the user is away or presenting, or Do not disturb is on);
+/// None when it shows them.
+fn quiet() -> Option<(i32, u32)> {
     // SAFETY: plain queries.
     let state = unsafe { SHQueryUserNotificationState() }.map_or(5, |s| s.0);
-    toast::holds_back(state, focus_profile())
+    let focus = focus_profile();
+    toast::holds_back(state, focus).then_some((state, focus))
 }
 
 /// Do not disturb's profile, 0 when off. Windows has no public call for it;
