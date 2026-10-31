@@ -139,7 +139,7 @@ fn notch_fullscreen(window: WebviewWindow) -> bool {
 /// The notch that asks closed after the open shortcut opened it.
 #[tauri::command]
 fn release_keyboard(window: WebviewWindow) {
-    shortcut::release(window.label());
+    shortcut::release(&window);
 }
 
 /// A field to type in opened in the notch that asks: it takes the keyboard.
