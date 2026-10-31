@@ -10,6 +10,7 @@ mod notch_window;
 mod osd;
 mod pointer;
 mod privacy;
+mod screenshots;
 mod services;
 mod shelf;
 mod shortcut;

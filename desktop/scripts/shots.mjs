@@ -9,7 +9,7 @@ import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 
 const out = resolve(process.argv[2] ?? 'shots');
-const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'home-light', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player', 'call-home', 'activity', 'activity-home', 'activity-done', 'focus', 'focus-player', 'clocks', 'timer-page', 'focus-done', 'system-page', 'memory-low', 'download', 'download-photo', 'shelf', 'shelf-home', 'shelf-player', 'drop', 'clipboard-page', 'clipboard-search', 'clipboard-empty'];
+const scenes = process.argv.length > 3 ? process.argv.slice(3) : ['idle', 'home', 'home-light', 'glass', 'paper', 'custom', 'player', 'player-open', 'volume', 'charging', 'call', 'call-player', 'call-home', 'activity', 'activity-home', 'activity-done', 'focus', 'focus-player', 'clocks', 'timer-page', 'focus-done', 'system-page', 'memory-low', 'download', 'download-photo', 'screenshot', 'shelf', 'shelf-home', 'shelf-player', 'drop', 'clipboard-page', 'clipboard-search', 'clipboard-empty'];
 // The window's size for the default config (desktop/src-tauri/src/layout.rs).
 const WIDTH = 500;
 const HEIGHT = 452;

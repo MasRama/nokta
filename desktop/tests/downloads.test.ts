@@ -100,3 +100,25 @@ describe('a finished download', () => {
         expect(shown()?.classList).not.toContain('nokta-download');
     });
 });
+
+describe('a new screenshot', () => {
+    const SHOT = [
+        'file:///C:/Users/ren/Pictures/Screenshots/Screenshot%201.png',
+        'Screenshot 1.png',
+        'image-x-generic',
+        412_000,
+        'C:\\cache\\screenshots\\1.png',
+    ];
+
+    it('shows as a screenshot with its file under it, its picture and the same buttons', async () => {
+        const { bridge, shown, button, openFile } = await mount();
+        bridge.signal('Screenshots1', 'Taken', ...SHOT);
+        expect(shown()?.classList).toContain('nokta-download');
+        expect(shown()?.querySelector('.nokta-file-preview-title')?.textContent).toBe('Screenshot');
+        expect(shown()?.querySelector('.nokta-file-preview-detail')?.textContent).toBe('Screenshot 1.png');
+        expect(shown()!.querySelector<HTMLElement>('.nokta-file-preview-thumb')!.style.backgroundImage).toContain('1.png');
+        expect(button('Keep on shelf')?.hidden).toBe(false);
+        button('Open')!.click();
+        expect(openFile).toHaveBeenLastCalledWith(SHOT[0], false);
+    });
+});

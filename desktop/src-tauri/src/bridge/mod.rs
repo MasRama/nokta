@@ -14,6 +14,7 @@ pub mod media;
 pub mod nokta;
 pub mod osd;
 pub mod privacy;
+pub mod screenshots;
 pub mod settings;
 pub mod shelf;
 pub mod system;
