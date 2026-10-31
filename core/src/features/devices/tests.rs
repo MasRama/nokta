@@ -1,5 +1,6 @@
 use super::rules::{
-    is_audio, Alert, BatteryRules, BatterySample, BluetoothRules, DeviceChange, Kind, Step,
+    cod_class, is_audio, windows_battery, Alert, BatteryRules, BatterySample, BluetoothRules,
+    DeviceChange, Kind, Step,
 };
 
 fn sample(on_battery: bool, percentage: f64) -> BatterySample {
@@ -345,4 +346,53 @@ fn kinds_on_the_bus() {
     for (kind, name) in all {
         assert_eq!(kind.as_str(), name);
     }
+}
+
+#[test]
+fn windows_power_status_becomes_a_sample() {
+    // On AC, charging at 64 %.
+    let sample = windows_battery(1, 8, 64);
+    assert!(sample.present && !sample.on_battery && !sample.full);
+    assert_eq!(sample.percentage, 64.0);
+    // On battery.
+    assert!(windows_battery(0, 1, 80).on_battery);
+    // Full once on AC at 100 %, whether or not Windows still says charging.
+    assert!(windows_battery(1, 1, 100).full);
+    assert!(windows_battery(1, 9, 100).full);
+    assert!(!windows_battery(0, 1, 100).full);
+    // No system battery, or one Windows does not know.
+    assert!(!windows_battery(1, 128, 255).present);
+    assert!(!windows_battery(255, 255, 255).present);
+    assert!(!windows_battery(1, 1, 255).present);
+}
+
+#[test]
+fn windows_class_of_device_is_audio_for_audio_video() {
+    // Headphones: major class 4 (audio/video), minor 6.
+    assert!(is_audio("", cod_class(4, 6)));
+    // A phone (2) or a keyboard (5) is not.
+    assert!(!is_audio("", cod_class(2, 3)));
+    assert!(!is_audio("", cod_class(5, 16)));
+}
+
+#[test]
+fn windows_connect_alert_goes_at_once_without_battery() {
+    // Windows gives no Bluetooth battery: the wait ends as soon as it starts.
+    let mut rules = BluetoothRules::default();
+    rules.add(
+        "aep",
+        DeviceChange {
+            alias: Some("Buds".into()),
+            class: Some(cod_class(4, 6)),
+            connected: Some(false),
+            ..DeviceChange::default()
+        },
+    );
+    let Some(Step::Wait(wait)) = rules.change("aep", connected(true)) else {
+        panic!("expected a wait");
+    };
+    assert_eq!(
+        rules.wait_ended("aep", wait),
+        Some(Alert::device(Kind::BluetoothConnected, "Buds", -1))
+    );
 }

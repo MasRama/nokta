@@ -2481,6 +2481,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "windows",
+ "windows-collections",
  "wiremock",
  "zbus",
 ]

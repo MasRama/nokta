@@ -68,6 +68,26 @@ pub struct BatterySample {
     pub percentage: f64,
 }
 
+/// `SYSTEM_POWER_STATUS`'s `ACLineStatus` 0: on battery.
+const AC_OFFLINE: u8 = 0;
+/// `BatteryFlag` 128: no system battery; 255: unknown.
+const NO_BATTERY: u8 = 128;
+const UNKNOWN: u8 = 255;
+
+/// The laptop battery as Windows' `GetSystemPowerStatus` reports it. Full
+/// is on AC at 100 %: Windows may still say charging there, and says
+/// nothing more once it stops.
+pub fn windows_battery(ac_line: u8, flag: u8, percent: u8) -> BatterySample {
+    let present = flag != NO_BATTERY && flag != UNKNOWN && percent != UNKNOWN;
+    let on_battery = ac_line == AC_OFFLINE;
+    BatterySample {
+        present,
+        on_battery,
+        full: present && !on_battery && percent >= 100,
+        percentage: f64::from(percent.min(100)),
+    }
+}
+
 /// Turns successive battery samples into charger, low, critical and full
 /// alerts. The first sample only sets the starting point.
 #[derive(Debug, Default)]
@@ -133,6 +153,12 @@ impl BatteryRules {
 /// icon says `audio-...` or its class of device is Audio/Video.
 pub fn is_audio(icon: &str, class: u32) -> bool {
     icon.starts_with("audio-") || (class >> 8) & 0x1f == 4
+}
+
+/// A class of device from Windows' major and minor classes, laid out as
+/// BlueZ's `Class` so `is_audio` reads it.
+pub fn cod_class(major: u32, minor: u32) -> u32 {
+    ((major & 0x1f) << 8) | ((minor & 0x3f) << 2)
 }
 
 /// The `org.bluez.Device1` properties that changed; `None` means unchanged.
