@@ -3,6 +3,7 @@ import { loopIcon, nextLoopStatus, shuffleIcon, type LoopStatus, type ToggleIcon
 import { neighbour, playerLabels, scrollStep, type PlayerEntry } from '@ext/features/media/logic/players.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { mix } from '@ext/shared/logic/color.js';
+import { _ } from '@ext/shared/logic/i18n.js';
 
 import { icon, setIcon } from '../icons.js';
 import { Cover } from './cover.js';
@@ -139,7 +140,7 @@ export class ExpandedView {
         this.playerRow.hidden = !(this.players.length > 1 && index >= 0);
         if (!this.playerRow.hidden) this.playerLabel.textContent = playerLabels(this.players)[index];
         setIcon(this.playPause.firstElementChild as HTMLElement, this.playing ? 'media-playback-pause' : 'media-playback-start', 18);
-        this.playPause.setAttribute('aria-label', this.playing ? 'Pause' : 'Play');
+        this.playPause.setAttribute('aria-label', this.playing ? _('Pause') : _('Play'));
         this.previous.disabled = !snapshot.canGoPrevious;
         this.playPause.disabled = !snapshot.canPlayPause;
         this.next.disabled = !snapshot.canGoNext;
