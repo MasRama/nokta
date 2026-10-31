@@ -739,6 +739,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   and draws the CPU's last minute, the memory bar, the temperature and
   the network's speed; `MemoryLow` shows the extension's red alert under
   `[system] memory_alert`.
+- Downloads are the core's watcher on the Downloads folder, as noktad's;
+  `Finished` goes to the notch on the monitor in use. The page may open a
+  file or show it in Explorer (`open_file`) only when the core announced
+  it (`files.rs`, tested everywhere), so it can never start a program of
+  its own choosing.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

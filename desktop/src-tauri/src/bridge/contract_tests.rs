@@ -279,3 +279,21 @@ fn system_memory_low() {
         assert!(fits(signature, value), "{value} is not {signature}");
     }
 }
+
+#[test]
+fn downloads_finished() {
+    use nokta_core::features::downloads::service::Finished;
+    let file = Finished {
+        uri: "file:///C:/Users/ren/Downloads/report.pdf".into(),
+        name: "report.pdf".into(),
+        icon: "x-office-document".into(),
+        size: 2_400_000,
+        thumbnail: String::new(),
+    };
+    let types = signal_args(super::downloads::INTERFACE, super::downloads::FINISHED);
+    let args = super::downloads::finished_args(&file);
+    assert_eq!(types.len(), args.len(), "{types:?} and {args:?}");
+    for (signature, value) in types.iter().zip(&args) {
+        assert!(fits(signature, value), "{value} is not {signature}");
+    }
+}

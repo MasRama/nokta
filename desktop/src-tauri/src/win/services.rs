@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use nokta_core::app::{follow, OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
 use nokta_core::features::activities::model::Activity;
 use nokta_core::features::devices;
+use nokta_core::features::downloads::service::Finished;
 use nokta_core::features::lyrics::{self, LyricsState};
 use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
@@ -27,11 +28,12 @@ use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
-    activities as activities_props, devices as devices_bridge, lyrics as lyrics_props, media,
-    nokta, osd as osd_bridge, privacy as privacy_props, settings, system as system_props,
-    timer as timer_props, toggles as toggles_props, updates as updates_props,
-    weather as weather_props, Props,
+    activities as activities_props, devices as devices_bridge, downloads as downloads_bridge,
+    lyrics as lyrics_props, media, nokta, osd as osd_bridge, privacy as privacy_props, settings,
+    system as system_props, timer as timer_props, toggles as toggles_props,
+    updates as updates_props, weather as weather_props, Props,
 };
+use crate::files::KnownFiles;
 use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
 
@@ -84,6 +86,8 @@ pub struct Core {
     update_commands: mpsc::Sender<updates::service::Command>,
     usage: watch::Receiver<Usage>,
     system_commands: mpsc::Sender<system::service::Command>,
+    /// The files the page may open.
+    known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -92,6 +96,14 @@ impl Core {
     /// The config as it is now.
     pub fn config(&self) -> Config {
         self.config.borrow().clone()
+    }
+
+    /// The path of a file the core announced, else None.
+    pub fn file_path(&self, uri: &str) -> Option<std::path::PathBuf> {
+        self.known
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .path(uri)
     }
 }
 
@@ -275,6 +287,16 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         system_props::memory_low_args,
     );
     let _ = SYSTEM.set(counters.commands.clone());
+    let known = Arc::new(Mutex::new(KnownFiles::default()));
+    let downloads = std::mem::replace(&mut services.downloads, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        remembered(downloads, known.clone()),
+        To::Front,
+        downloads_bridge::INTERFACE,
+        downloads_bridge::FINISHED,
+        downloads_bridge::finished_args,
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -296,6 +318,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         update_commands: releases.commands,
         usage: counters.usage,
         system_commands: counters.commands,
+        known,
         _services: Mutex::new(services),
     }
 }
@@ -318,6 +341,27 @@ pub fn forget(label: &str) {
     if let Some(system) = SYSTEM.get() {
         let _ = system.try_send(system::service::Command::Gone(label.to_owned()));
     }
+}
+
+/// Remembers each finished download, so the page may open it, and passes
+/// it on.
+fn remembered(
+    mut downloads: mpsc::Receiver<Finished>,
+    known: Arc<Mutex<KnownFiles>>,
+) -> mpsc::Receiver<Finished> {
+    let (tx, rx) = mpsc::channel(8);
+    tauri::async_runtime::spawn(async move {
+        while let Some(file) = downloads.recv().await {
+            known
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .add_download(&file.uri);
+            if tx.send(file).await.is_err() {
+                break;
+            }
+        }
+    });
+    rx
 }
 
 /// Plays `sound`'s for each of `items` while `[timer] sound` is on, and
