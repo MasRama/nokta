@@ -468,7 +468,8 @@ How both sides stay honest:
   they arrive (`activitiesFrom`); `shared/logic/daemon-strings.ts` lists
   them, and a test keeps it in step with the Rust source. Song titles, app
   names and user text pass through untouched. `scripts/i18n.mjs` writes
-  `po/nokta@nokta.io.pot` and, inside `npm run check`, fails while `id.po`
+  `po/nokta@nokta.io.pot` from the extension's and the Windows app's
+  (`desktop/src`) strings and, inside `npm run check`, fails while `id.po`
   misses an entry; `pack.sh` compiles the `.po` files into the zip.
 - Text follows one type scale (caption 11, body 13, title 15, the sung
   lyric 17; semibold labels, bold digits). St CSS ignores `opacity`, so
@@ -828,6 +829,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   listed by host only since their address is a secret. Each change goes
   to `Settings1.Set` a moment after the last one; a refused value shows
   the core's message and its value again.
+- Words: the page bundles the extension's `.po` files and translates with
+  the same `_()` (`src/i18n.ts`) into the first of Windows' display
+  languages (`navigator.languages`, which WebView2 takes from Windows)
+  that Nokta has; English comes before any. The tray's two items stay
+  English.
 - The tray icon stands in for the top bar (Settings, Quit). A second start
   opens the settings and leaves the running Nokta alone.
 - The NSIS installer installs per user without admin rights, brings the
