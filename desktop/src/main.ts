@@ -7,6 +7,7 @@ import { setPictureUrl } from './notch/notch.js';
 import {
     dragFiles,
     fileUrl,
+    hideWebMenu,
     inTauri,
     onDrop,
     onFullscreen,
@@ -22,6 +23,7 @@ import {
 } from './platform.js';
 
 useSystemLanguage();
+hideWebMenu();
 const app = inTauri();
 const scene = sceneFor(location.search);
 // Outside the app the page stands in for the desktop, so shots show the notch on a wallpaper.
