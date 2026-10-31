@@ -5,6 +5,10 @@ import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
 import { Tile, TogglePill, type ControlColors } from './controls.js';
+import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
+
+/** Home shows the newest clocks, at most this many, as the extension's. */
+export const MAX_HOME_CLOCKS = 3;
 
 /** Each toggle's icon, name and tone, as the extension's panel/view.ts. */
 const TOGGLES: Array<[QuickToggle, string, string, string]> = [
@@ -25,16 +29,17 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['system', 'system', 'System', TONES.system],
 ];
 
-export interface HomeHandlers {
+export interface HomeHandlers extends ClockHandlers {
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
 }
 
-/** Home's rows for `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
-export function homeRows(layout: HomeLayout): PanelRow[] {
+/** Home's rows for `clocks` clocks and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
+export function homeRows(layout: HomeLayout, clocks = 0): PanelRow[] {
     return [
         'date',
+        ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
         ...(layout.toggles.length > 0 ? (['toggles'] as const) : []),
         ...(layout.tiles.length > 0 ? (['tiles'] as const) : []),
     ];
@@ -71,10 +76,13 @@ class WeatherBox {
     }
 }
 
+/** Which tiles show their feature on: a focus session, and clocks for the timer. */
+export type TileStates = Partial<Record<HomeTile, boolean>>;
+
 /**
  * Home, the open notch's other page: the weekday over the date with the
- * weather beside them, the way back to a player, then the quick toggles
- * and a row of tiles. The Windows twin of the extension's HomePanel, which
+ * weather beside them, the way back to a player, the clocks, then the
+ * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
  */
 export class HomeView {
@@ -83,6 +91,7 @@ export class HomeView {
     private readonly date: HTMLSpanElement;
     private readonly weather = new WeatherBox();
     private readonly music: HTMLButtonElement;
+    private readonly clocks: ClockRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
     private readonly pills: HTMLDivElement;
@@ -118,12 +127,19 @@ export class HomeView {
         this.tileRow.className = 'nokta-panel-tiles';
         for (const [which, name, label, tone] of TILES) {
             const tile = new Tile(name, label, tone, () => handlers.openTile(which));
+            tile.element.dataset.tile = which;
             this.tiles.set(which, tile);
         }
         this.controls = document.createElement('div');
         this.controls.className = 'nokta-panel-controls';
         this.controls.append(this.pills, this.tileRow);
-        this.element.append(heading, this.controls);
+        this.element.append(heading);
+        for (let i = 0; i < MAX_HOME_CLOCKS; i++) {
+            const row = new ClockRow(handlers);
+            this.clocks.push(row);
+            this.element.append(row.element);
+        }
+        this.element.append(this.controls);
     }
 
     /** The music button shows while a player is there. */
@@ -142,11 +158,16 @@ export class HomeView {
         this.weather.show(weather);
     }
 
+    /** The newest clocks, one row each. */
+    setClocks(clocks: readonly HomeClock[]): void {
+        this.clocks.forEach((row, i) => row.show(clocks[i]));
+    }
+
     /** Shows `layout`'s toggles and tiles in its order, each in its state; a row with none goes away. */
-    setControls(layout: HomeLayout, toggles: QuickToggles): void {
+    setControls(layout: HomeLayout, toggles: QuickToggles, tiles: TileStates = {}): void {
         for (const [which, pill] of this.toggles) pill.set(toggles[which] === true);
         // Windows does not say how many notifications wait.
-        this.tiles.get('notifications')?.set(false, null);
+        for (const [which, tile] of this.tiles) tile.set(tiles[which] === true, null);
         const place = <T extends string>(row: HTMLElement, controls: Map<T, { element: HTMLElement }>, shown: readonly T[]) => {
             const wanted = shown.flatMap((name) => controls.get(name)?.element ?? []);
             // Put back only on a new order, so a focused control keeps the focus.
@@ -163,5 +184,6 @@ export class HomeView {
     setColors(colors: ControlColors): void {
         for (const pill of this.toggles.values()) pill.setColors(colors);
         for (const tile of this.tiles.values()) tile.setColors(colors);
+        for (const row of this.clocks) row.chip.setLight(colors.light);
     }
 }

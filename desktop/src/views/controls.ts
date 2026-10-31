@@ -1,8 +1,8 @@
 import { POP, popsOn } from '@ext/features/panel/logic/motion.js';
 import { mix, withAlpha } from '@ext/shared/logic/color.js';
-import { onTone, toneOn } from '@ext/shared/logic/tones.js';
+import { onTone, toneChip, toneOn } from '@ext/shared/logic/tones.js';
 
-import { icon } from '../icons.js';
+import { icon, setIcon } from '../icons.js';
 
 const IDLE_ALPHA = 0.1;
 const HOVER_ALPHA = 0.18;
@@ -143,5 +143,38 @@ export class Tile extends Control {
 
     protected repaint(): void {
         this.paintOn(this.square, this.glyph);
+    }
+}
+
+/** A row's icon in home: drawn in its tone on a square of that tone at 20 %. */
+export class IconChip {
+    readonly element: HTMLSpanElement;
+    private readonly glyph: HTMLSpanElement;
+    private tone = '#ffffff';
+    private light = false;
+
+    constructor() {
+        this.element = document.createElement('span');
+        this.element.className = 'nokta-icon-chip';
+        this.glyph = icon('', 14);
+        this.element.append(this.glyph);
+        this.paint();
+    }
+
+    show(name: string, tone: string): void {
+        setIcon(this.glyph, name, 14);
+        this.tone = tone;
+        this.paint();
+    }
+
+    setLight(light: boolean): void {
+        this.light = light;
+        this.paint();
+    }
+
+    private paint(): void {
+        const { fill, icon: color } = toneChip(this.tone, this.light);
+        this.element.style.backgroundColor = fill;
+        this.glyph.style.color = color;
     }
 }

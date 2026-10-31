@@ -8,6 +8,8 @@ export interface Scene {
     props: Record<string, Props>;
     open?: boolean;
     signals?: SceneSignal[];
+    /** Elements clicked once the notch is open, like a home tile. */
+    click?: string[];
 }
 
 const appearance = (table: Props): Record<string, Props> => ({ Settings1: { Appearance: table } });
@@ -98,7 +100,47 @@ const HOME: Record<string, Props> = {
     Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['notifications', 'screenshot'] } },
 };
 
+/** A focus session 25 minutes long with 17:42 left, two done before it. */
+function focus(): Record<string, Props> {
+    return {
+        Timer1: {
+            State: 'running',
+            Phase: 'focus',
+            DurationUs: 1_500_000_000,
+            RemainingUs: 1_062_000_000,
+            TimestampUs: Date.now() * 1000,
+            Sessions: 2,
+            LongBreak: false,
+            Clocks: [],
+        },
+    };
+}
+
+/** A tea countdown, a paused stopwatch and an alarm at 7:30 tomorrow. */
+function clocks(): Record<string, Props> {
+    const now = Date.now() * 1000;
+    const alarm = new Date();
+    alarm.setDate(alarm.getDate() + 1);
+    alarm.setHours(7, 30, 0, 0);
+    return {
+        Timer1: {
+            State: 'idle',
+            Clocks: [
+                ['c3', 'countdown', 'Tea', true, 300_000_000, 184_000_000, now, 0],
+                ['c2', 'stopwatch', '', false, 0, 754_000_000, now, 0],
+                ['c1', 'alarm', 'Wake up', true, 0, alarm.getTime() * 1000 - now, now, alarm.getTime() * 1000],
+            ],
+        },
+    };
+}
+
 /** The scenes `?mock=<name>` shows, for the shots and for working on the page. */
+/** Home with the timer's tiles. */
+const TIMER_HOME: Record<string, Props> = {
+    ...HOME,
+    Settings1: { Home: { toggles: ['caffeine', 'dark_style'], tiles: ['focus', 'timer', 'notifications', 'screenshot'] } },
+};
+
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
     home: { props: HOME, open: true },
@@ -117,6 +159,11 @@ export const SCENES: Record<string, Scene> = {
         props: appearance({ theme: 'custom', background: '#1d2b53', gradient: 'diagonal', background_end: '#7e2553' }),
         open: true,
     },
+    focus: { props: focus() },
+    'focus-player': { props: { ...player(true), ...focus() } },
+    clocks: { props: { ...TIMER_HOME, ...clocks() }, open: true },
+    'timer-page': { props: TIMER_HOME, open: true, click: ['[data-tile="timer"]'] },
+    'focus-done': { props: { ...LINGER, ...focus() }, signals: [['Timer1', 'Finished', 'focus']] },
     player: { props: player(true) },
     'player-paused': { props: player(false) },
     'player-open': { props: player(true), open: true },

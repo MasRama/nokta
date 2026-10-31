@@ -96,6 +96,25 @@ body.nokta-mock {
     font-variant-numeric: tabular-nums;
 }
 
+/* The focus timer or a clock in the closed notch (views/timer.ts). */
+.nokta-timer-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nokta-timer-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.nokta-timer {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 /* Home; heights in the extension's features/panel/logic/height.ts. */
 .nokta-panel {
     display: flex;
@@ -696,4 +715,108 @@ body.nokta-mock {
     .nokta-lyric-moved {
         animation: none;
     }
+}
+
+/* A clock in home: chip, title, detail, time, pause and remove (views/timer.ts). */
+.nokta-panel-clock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    height: 26px;
+}
+
+.nokta-panel-clock .nokta-button {
+    padding: 4px;
+}
+
+.nokta-panel-clock-title {
+    flex: none;
+    max-width: 40%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-panel-clock-detail {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+    opacity: 0.59;
+}
+
+.nokta-panel-clock-time {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A row's icon in home, on a square of its tone (views/controls.ts IconChip). */
+.nokta-icon-chip {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+}
+
+/* A page a home tile opens; heights in panel/logic/height.ts subPageHeight. */
+.nokta-subpage {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 14px 18px;
+}
+
+.nokta-subpage-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+    height: 28px;
+}
+
+.nokta-subpage-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.nokta-timer-page {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 32px;
+    gap: 6px;
+}
+
+.nokta-timer-preset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+    border: 0;
+    border-radius: 10px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 150ms;
+}
+
+.nokta-timer-preset:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
 }
