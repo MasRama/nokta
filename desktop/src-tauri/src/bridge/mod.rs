@@ -12,6 +12,7 @@ pub mod downloads;
 pub mod lyrics;
 pub mod media;
 pub mod nokta;
+pub mod notifications;
 pub mod osd;
 pub mod privacy;
 pub mod screenshots;

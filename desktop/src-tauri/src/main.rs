@@ -14,6 +14,7 @@ mod monitors;
 mod osd;
 mod privacy;
 mod shortcut;
+mod toast;
 #[cfg(windows)]
 mod win;
 

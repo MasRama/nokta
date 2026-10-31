@@ -778,6 +778,19 @@ WebView2 and runs the core's services itself, with no D-Bus.
   `PNG` and `CF_DIB`. The Clipboard tile opens the extension's page
   (`views/clipboard.ts`); its search field takes the keyboard as the open
   shortcut does (`take_keyboard`), and gives it back when the notch closes.
+- Notifications come from Windows' own notification database, which
+  `win/notifications.rs` opens read only while `[notifications] in_notch`
+  is on: a change to its folder, or a look every 2 s, finds the toasts that
+  arrived since the last read. Each toast's XML (`src/toast.rs`, tested
+  everywhere) gives the title, the lines under it, the app's logo and the
+  buttons that open something (system and background buttons are left
+  out). The app's name and icon come from Windows' Apps folder, the logo
+  is copied to the cache for the page. Nothing shows while Windows holds
+  its banners back (away, presenting, Do not disturb). `Notifications1`
+  (bridge only) sends `Posted` to the notch on the monitor in use;
+  `Activate(id, button)` opens the toast's protocol URI, if it has one,
+  else its app. Windows still shows its own banner unless the user turns
+  them off per app.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

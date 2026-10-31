@@ -31,10 +31,11 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
     activities as activities_props, clipboard as clipboard_bridge, devices as devices_bridge,
-    downloads as downloads_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
-    privacy as privacy_props, screenshots as screenshots_bridge, settings, shelf as shelf_bridge,
-    system as system_props, timer as timer_props, toggles as toggles_props,
-    updates as updates_props, weather as weather_props, Props,
+    downloads as downloads_bridge, lyrics as lyrics_props, media, nokta,
+    notifications as notifications_bridge, osd as osd_bridge, privacy as privacy_props,
+    screenshots as screenshots_bridge, settings, shelf as shelf_bridge, system as system_props,
+    timer as timer_props, toggles as toggles_props, updates as updates_props,
+    weather as weather_props, Props,
 };
 use crate::files::KnownFiles;
 use crate::layout::{self, NotchSizes};
@@ -365,6 +366,14 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         services.config.clone(),
         services.clipboard.state.clone(),
     );
+    forward_signal(
+        app.clone(),
+        super::notifications::spawn(services.config.clone(), &paths.cache_dir),
+        To::Front,
+        notifications_bridge::INTERFACE,
+        notifications_bridge::POSTED,
+        notifications_bridge::posted_args,
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -682,6 +691,12 @@ pub async fn bridge_call(
         }
         (shelf_bridge::INTERFACE, method, args) => shelf_call(&core, method, args).await,
         (clipboard_bridge::INTERFACE, method, args) => clipboard_call(&core, method, args).await,
+        (notifications_bridge::INTERFACE, "Activate", args) => {
+            let (id, button) = notifications_bridge::activation(args)
+                .ok_or("Activate takes a notification and a button")?;
+            super::notifications::activate(id, button)?;
+            Ok(Value::Null)
+        }
         (privacy_props::INTERFACE, "ToggleMute", []) => {
             super::privacy::toggle_mute();
             Ok(Value::Null)
