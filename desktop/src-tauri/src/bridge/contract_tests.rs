@@ -84,3 +84,21 @@ fn settings() {
     let props = super::settings::props(&Config::default(), &Prepared::default());
     check(super::settings::INTERFACE, &props);
 }
+
+#[test]
+fn media() {
+    use nokta_core::features::media::MediaState;
+    check(
+        super::media::INTERFACE,
+        &super::media::props(&MediaState::default(), 0, 0),
+    );
+}
+
+#[test]
+fn lyrics() {
+    use nokta_core::features::lyrics::LyricsState;
+    check(
+        super::lyrics::INTERFACE,
+        &super::lyrics::props(&LyricsState::default()),
+    );
+}

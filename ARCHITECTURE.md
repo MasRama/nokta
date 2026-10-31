@@ -606,6 +606,13 @@ WebView2 and runs the core's services itself, with no D-Bus.
 - `src-tauri/src/win/services.rs` starts `app::Services` on Tauri's async
   runtime and forwards their changes; the log goes to
   `%LOCALAPPDATA%\nokta\nokta.log` (`NOKTA_LOG` sets the level).
+- The players come from Windows' media sessions (GSMTC, the ones the
+  system's own media flyout shows): `media/gsmtc.rs` in the core follows
+  them on a thread of its own and publishes the same `MediaState` the MPRIS
+  watcher does, with the cover as bytes kept by `ArtCache::store`; the
+  rules that need no Windows API (`media/session.rs`) are tested on every
+  system. `Media1` gives the page `PositionTimestampUs` on the wall clock
+  (`Date.now() * 1000`), as the page has no monotonic clock to match.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with
