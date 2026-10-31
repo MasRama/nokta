@@ -7,7 +7,7 @@ import { Follower } from './follower.js';
 const WINDOWS_TOGGLES: readonly QuickToggle[] = ['caffeine', 'dark_style'];
 
 /** The tiles whose page or panel the Windows app has so far. */
-const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'screenshot'];
+const WINDOWS_TILES: readonly HomeTile[] = ['notifications', 'focus', 'timer', 'screenshot', 'system'];
 
 /** The layout's toggles and tiles the Windows app can offer, in its order. */
 export function windowsControls(layout: HomeLayout): HomeLayout {

@@ -2,7 +2,8 @@ import { endedAlert } from '@ext/features/activities/logic/activities.js';
 import { deviceAlert, isBatteryWarning } from '@ext/features/devices/logic/alert.js';
 import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
-import type { Behavior, TimerSettings } from '@ext/features/settings/logic/parse.js';
+import type { Behavior, SystemSettings, TimerSettings } from '@ext/features/settings/logic/parse.js';
+import { memoryAlert } from '@ext/features/system/logic/format.js';
 import { clockColor, clockDoneAlert } from '@ext/features/timer/logic/clocks.js';
 import { breakAfterFocus, finishedAlert, phaseColor, type TimerSnapshot } from '@ext/features/timer/logic/timer.js';
 import { alertMotion, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
@@ -185,4 +186,25 @@ export class Alerts {
         this.stops.forEach((stop) => stop());
         this.stops = [];
     }
+}
+
+/** The alert for `System1.MemoryLow`, under `[system] memory_alert`. */
+export function memoryLowRequest(
+    used: number,
+    total: number,
+    app: string,
+    system: SystemSettings,
+    behavior: Behavior,
+    motions: boolean,
+): OsdRequest | null {
+    if (!system.memoryAlert || total <= 0) return null;
+    const { title, detail } = memoryAlert(used, total, app);
+    return {
+        content: { fraction: null, text: title, detail, urgent: true },
+        icon: 'nokta-system',
+        kind: 'memory',
+        durationMs: behavior.alertDurationMs,
+        tone: 'urgent',
+        motion: alertMotion('memory-low', motions),
+    };
 }

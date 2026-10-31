@@ -825,6 +825,69 @@ body.nokta-mock {
     box-shadow: inset 0 0 0 2px rgba(128, 128, 128, 0.85);
 }
 
+/* The System tile's page (views/system.ts): four rows 26 px high, 6 apart. */
+.nokta-system-page {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nokta-system-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 26px;
+}
+
+.nokta-system-name {
+    flex: none;
+    min-width: 92px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-system-middle {
+    flex: 1;
+    min-width: 0;
+}
+
+.nokta-system-value {
+    flex: none;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    /* The network's two rates keep their double space. */
+    white-space: pre;
+}
+
+/* The CPU's last minute: 30 bars 3 px wide, 1 apart, at the right. */
+.nokta-system-spark {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 1px;
+    height: 18px;
+}
+
+.nokta-system-spark-bar {
+    flex: none;
+    width: 3px;
+    border-radius: 1px;
+}
+
+.nokta-system-track {
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.nokta-system-fill {
+    height: 100%;
+    border-radius: 2px;
+    transform-origin: left center;
+    transition: transform 300ms ease-out;
+}
+
 /* The closed notch's progress line (views/progress-line.ts): the accent at 70 %. */
 .nokta-progress-line {
     position: absolute;

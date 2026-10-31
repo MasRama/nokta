@@ -735,6 +735,10 @@ WebView2 and runs the core's services itself, with no D-Bus.
   Windows' own `LowMemoryResourceNotification`; the alert names the
   process with the largest working set. A notch window watches as a D-Bus
   caller does, by its label, and a window that closes stops watching.
+  The System tile's page watches while it is open, as the extension's,
+  and draws the CPU's last minute, the memory bar, the temperature and
+  the network's speed; `MemoryLow` shows the extension's red alert under
+  `[system] memory_alert`.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one

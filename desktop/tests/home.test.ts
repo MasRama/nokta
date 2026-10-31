@@ -111,7 +111,7 @@ describe('home controls', () => {
     it('drops the toggles and tiles Windows has not', () => {
         expect(
             windowsControls({ toggles: ['do_not_disturb', 'caffeine'], tiles: ['focus', 'notifications', 'system', 'clipboard'] }),
-        ).toEqual({ toggles: ['caffeine'], tiles: ['focus', 'notifications'] });
+        ).toEqual({ toggles: ['caffeine'], tiles: ['focus', 'notifications', 'system'] });
     });
 
     it('counts a row for the toggles and one for the tiles, only when there are some', () => {
