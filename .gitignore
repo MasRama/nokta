@@ -8,3 +8,5 @@ node_modules/
 /docs/specs
 /docs/plans
 /docs/superpowers
+/desktop/dist
+/desktop/src-tauri/gen
