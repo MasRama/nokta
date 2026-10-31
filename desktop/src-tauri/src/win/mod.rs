@@ -3,6 +3,7 @@
 
 mod log;
 mod notch_window;
+mod pointer;
 mod services;
 mod topmost;
 mod tray;
@@ -37,6 +38,7 @@ pub fn run() {
                 notches.push(window.hwnd()?);
             }
             topmost::install(&notches);
+            pointer::start(app.handle().clone());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -69,7 +71,8 @@ fn fit_windows(app: &AppHandle, sizes: &NotchSizes) {
     }
 }
 
-/// The part of `window` that takes the pointer, in the page's CSS px.
+/// The part of `window` that takes clicks, in the page's CSS px: the notch,
+/// with room for its motion while it moves.
 #[tauri::command]
 fn set_hit_region(window: WebviewWindow, rect: CssRect) -> Result<(), String> {
     let error = |e: tauri::Error| e.to_string();
@@ -81,7 +84,7 @@ fn set_hit_region(window: WebviewWindow, rect: CssRect) -> Result<(), String> {
         width: size.width,
         height: size.height,
     };
-    let region = layout::region_rect(&frame, window.scale_factor().map_err(error)?, rect);
-    notch_window::set_region(window.hwnd().map_err(error)?, &region);
+    let hit = layout::hit_rect(&frame, window.scale_factor().map_err(error)?, rect);
+    pointer::set(window.label(), window.hwnd().map_err(error)?, hit);
     Ok(())
 }

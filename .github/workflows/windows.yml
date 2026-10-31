@@ -47,6 +47,12 @@ jobs:
           Start-Process $exe
           Start-Sleep -Seconds 10
           ./tools/windows/shot.ps1 -Name idle
+          # Clicks reach the window under Nokta's, except over the notch.
+          Add-Type -AssemblyName System.Windows.Forms
+          $middle = [int]([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width / 2)
+          ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
+          ./tools/windows/hit.ps1 -X $middle -Y 10 -Expect nokta
+          ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
           Start-Process $exe
           Start-Sleep -Seconds 5
           $running = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue).Count

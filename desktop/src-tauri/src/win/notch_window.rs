@@ -1,26 +1,26 @@
 //! A notch window: borderless, see-through, above other windows, never in
-//! Alt+Tab or the taskbar, never taking the focus from a click, and taking
-//! the pointer only inside the region the page reports.
+//! Alt+Tab or the taskbar, never taking the focus from a click, and letting
+//! clicks through except over the notch (see `pointer`).
 
 use tauri::{
     AppHandle, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
-use windows::Win32::Graphics::Gdi::{CreateRectRgn, SetWindowRgn};
 use windows::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetWindowLongPtrW, SetWindowLongPtrW, SetWindowPos, ShowWindow, GWL_EXSTYLE, HWND_TOPMOST,
     MA_NOACTIVATE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SW_SHOWNOACTIVATE,
-    WM_MOUSEACTIVATE, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WM_MOUSEACTIVATE, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_EX_TRANSPARENT,
 };
 
-use crate::layout::{self, Monitor, Rect};
+use crate::layout::{self, Monitor};
 
 /// Our subclass's id on the window ("NOKT"), apart from tao's own.
 const SUBCLASS_ID: usize = 0x4E4F_4B54;
 
 /// Opens the notch window for `monitor`, shown without taking the focus.
-/// Nothing takes the pointer until the page reports its region.
+/// Clicks go through it until the pointer comes over the notch.
 pub fn create(
     app: &AppHandle,
     index: usize,
@@ -45,15 +45,7 @@ pub fn create(
     place(&window, monitor, logical)?;
     let hwnd = window.hwnd()?;
     make_overlay(hwnd);
-    set_region(
-        hwnd,
-        &Rect {
-            x: 0,
-            y: 0,
-            width: 0,
-            height: 0,
-        },
-    );
+    set_click_through(hwnd, true);
     // SAFETY: `hwnd` is the window just built, alive on this thread.
     unsafe {
         let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
@@ -106,15 +98,16 @@ unsafe extern "system" fn no_activate(
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
 }
 
-/// Clips the window to `rect` (window px): only there does it take the
-/// pointer, and only there does it draw.
-pub fn set_region(hwnd: HWND, rect: &Rect) {
-    let right = rect.x + rect.width as i32;
-    let bottom = rect.y + rect.height as i32;
-    // SAFETY: the window takes ownership of the region it is given.
+/// Lets clicks through the whole window, or takes them. Tao's own
+/// `set_ignore_cursor_events` sets the same two bits but rewrites every
+/// extended style, which would drop `WS_EX_TOOLWINDOW`.
+pub fn set_click_through(hwnd: HWND, through: bool) {
+    let bits = (WS_EX_TRANSPARENT.0 | WS_EX_LAYERED.0) as isize;
+    // SAFETY: plain Win32 calls on a live window of this process.
     unsafe {
-        let region = CreateRectRgn(rect.x, rect.y, right, bottom);
-        SetWindowRgn(hwnd, Some(region), true);
+        let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        let style = if through { style | bits } else { style & !bits };
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style);
     }
 }
 
@@ -128,7 +121,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn an_overlay_stays_out_of_alt_tab_and_never_activates() {
+    fn an_overlay_stays_out_of_alt_tab_never_activates_and_lets_clicks_through() {
         // SAFETY: a throwaway window of the built-in STATIC class.
         unsafe {
             let hwnd = CreateWindowExW(
@@ -151,6 +144,14 @@ mod tests {
             assert!(style.contains(WS_EX_TOOLWINDOW));
             assert!(style.contains(WS_EX_NOACTIVATE));
             assert!(!style.contains(WS_EX_APPWINDOW));
+            set_click_through(hwnd, true);
+            let style = WINDOW_EX_STYLE(GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32);
+            assert!(style.contains(WS_EX_TRANSPARENT | WS_EX_LAYERED));
+            assert!(style.contains(WS_EX_TOOLWINDOW));
+            set_click_through(hwnd, false);
+            let style = WINDOW_EX_STYLE(GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32);
+            assert!(!style.contains(WS_EX_TRANSPARENT));
+            assert!(style.contains(WS_EX_NOACTIVATE));
             DestroyWindow(hwnd).expect("destroyed");
         }
     }

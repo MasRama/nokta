@@ -28,6 +28,18 @@ pub struct Rect {
     pub height: u32,
 }
 
+impl Rect {
+    /// Whether the point lies inside, the right and bottom edges excluded.
+    pub fn contains(&self, x: i32, y: i32) -> bool {
+        let (x, y) = (i64::from(x), i64::from(y));
+        let (left, top) = (i64::from(self.x), i64::from(self.y));
+        x >= left
+            && y >= top
+            && x < left + i64::from(self.width)
+            && y < top + i64::from(self.height)
+    }
+}
+
 /// A rectangle in the page's CSS px, as the UI reports it.
 #[derive(Debug, Clone, Copy, PartialEq, serde::Deserialize)]
 pub struct CssRect {
@@ -116,6 +128,7 @@ fn scaled(logical: f64, scale: f64) -> u32 {
 
 /// The part of `window` that takes the pointer: `css` scaled, rounded
 /// outward and kept inside the window, relative to the window.
+/// [`hit_rect`] gives it on the screen.
 pub fn region_rect(window: &Rect, scale: f64, css: CssRect) -> Rect {
     let clamp = |value: f64, max: u32| value.clamp(0.0, f64::from(max));
     let left = clamp((css.x * scale).floor(), window.width);
@@ -127,6 +140,16 @@ pub fn region_rect(window: &Rect, scale: f64, css: CssRect) -> Rect {
         y: top as i32,
         width: (right - left) as u32,
         height: (bottom - top) as u32,
+    }
+}
+
+/// The part of `window` that takes the pointer, in screen px.
+pub fn hit_rect(window: &Rect, scale: f64, css: CssRect) -> Rect {
+    let region = region_rect(window, scale, css);
+    Rect {
+        x: window.x + region.x,
+        y: window.y + region.y,
+        ..region
     }
 }
 
@@ -260,5 +283,36 @@ mod tests {
             height: 10.0,
         };
         assert_eq!(region_rect(&window, 1.0, gone).width, 0);
+    }
+
+    #[test]
+    fn the_hit_rect_lies_where_the_window_is() {
+        let window = Rect {
+            x: 2710,
+            y: -40,
+            width: 500,
+            height: 452,
+        };
+        let css = CssRect {
+            x: 152.0,
+            y: 0.0,
+            width: 196.0,
+            height: 32.0,
+        };
+        let hit = hit_rect(&window, 1.0, css);
+        assert_eq!(
+            hit,
+            Rect {
+                x: 2862,
+                y: -40,
+                width: 196,
+                height: 32
+            }
+        );
+        assert!(hit.contains(2862, -40));
+        assert!(hit.contains(3057, -9));
+        assert!(!hit.contains(3058, -20));
+        assert!(!hit.contains(2900, -8));
+        assert!(!hit.contains(2861, -20));
     }
 }
