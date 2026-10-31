@@ -9,6 +9,7 @@ import {
     onFullscreen,
     onKeyboard,
     onPointer,
+    openUri,
     releaseKeyboard,
     setHitRegion,
     systemUses24h,
@@ -30,6 +31,7 @@ const notch = new MonitorNotch(
         onFullscreen,
         onKeyboard,
         releaseKeyboard,
+        openUri,
     },
     document.body,
 );

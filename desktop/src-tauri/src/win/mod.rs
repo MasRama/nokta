@@ -29,6 +29,7 @@ pub fn run() {
             set_hit_region,
             notch_fullscreen,
             release_keyboard,
+            open_uri,
             services::bridge_props,
             services::bridge_call
         ])
@@ -106,4 +107,34 @@ fn notch_fullscreen(window: WebviewWindow) -> bool {
 #[tauri::command]
 fn release_keyboard(window: WebviewWindow) {
     shortcut::release(window.label());
+}
+
+/// Opens `uri` with Windows: one of its panels or a web page.
+#[tauri::command]
+fn open_uri(uri: String) -> Result<(), String> {
+    use windows::core::{w, HSTRING, PCWSTR};
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    if !crate::links::may_open(&uri) {
+        return Err(format!("Nokta does not open {uri}"));
+    }
+    let target = HSTRING::from(uri.as_str());
+    // SAFETY: `target` is a NUL-ended string that outlives the call.
+    let done = unsafe {
+        ShellExecuteW(
+            None,
+            w!("open"),
+            PCWSTR(target.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    // Above 32 is success, as ShellExecute has it.
+    if done.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(format!("Windows cannot open {uri}"))
+    }
 }
