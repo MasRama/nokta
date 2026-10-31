@@ -494,3 +494,8 @@ let pictureUrl = (path: string): string => path;
 export function setPictureUrl(convert: (path: string) => string): void {
     pictureUrl = convert;
 }
+
+/** A picture file of the core's, like a thumbnail, as the page can load it. */
+export function fileUrlOf(path: string): string {
+    return pictureUrl(path);
+}

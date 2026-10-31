@@ -30,6 +30,9 @@ const COVER =
             '<path d="M0 50 Q20 34 36 46 T64 42 V64 H0 Z" fill="#2a1240" opacity="0.8"/></svg>',
     );
 
+/** A download stays up long enough for a shot. */
+const LINGER_MESSAGE: Record<string, Props> = { Settings1: { Notifications: { duration_ms: 60_000 } } };
+
 /** A song playing in Spotify, two minutes in, with Chrome as a second player. */
 function player(playing: boolean): Record<string, Props> {
     return {
@@ -197,6 +200,14 @@ export const SCENES: Record<string, Scene> = {
     'focus-player': { props: { ...player(true), ...focus() } },
     clocks: { props: { ...TIMER_HOME, ...clocks() }, open: true },
     'system-page': { props: SYSTEM_HOME, open: true, click: ['[data-tile="system"]'], changes: samples() },
+    download: {
+        props: LINGER_MESSAGE,
+        signals: [['Downloads1', 'Finished', 'file:///C:/Users/ren/Downloads/Quarterly%20report.pdf', 'Quarterly report.pdf', 'x-office-document', 2_400_000, '']],
+    },
+    'download-photo': {
+        props: LINGER_MESSAGE,
+        signals: [['Downloads1', 'Finished', 'file:///C:/Users/ren/Downloads/sunset.png', 'sunset.png', 'image-x-generic', 830_000, COVER]],
+    },
     'memory-low': { props: LINGER, signals: [['System1', 'MemoryLow', 15.1e9, 16e9, 'chrome']] },
     'timer-page': { props: TIMER_HOME, open: true, click: ['[data-tile="timer"]'] },
     'focus-done': { props: { ...LINGER, ...focus() }, signals: [['Timer1', 'Finished', 'focus']] },

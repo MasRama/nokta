@@ -69,6 +69,11 @@ export function openUri(uri: string): void {
     else if (uri.startsWith('https://')) window.open(uri, '_blank', 'noopener');
 }
 
+/** Opens a file the core announced, or shows it in Explorer with `reveal`; a browser has none. */
+export function openFile(uri: string, reveal: boolean): void {
+    if (inTauri()) void invoke('open_file', { uri, reveal }).catch((err: unknown) => console.warn('open_file:', err));
+}
+
 /** A file as the page can load it: through the app's asset protocol, or as is in a browser. */
 export function fileUrl(path: string): string {
     return inTauri() ? convertFileSrc(path) : path;

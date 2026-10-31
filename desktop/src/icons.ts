@@ -81,8 +81,30 @@ const WEATHER = new Map<string, string>([
     ['weather-storm', lines(cloud(HIGH) + '<path d="M8.75 10.5 7 13h2.25L7.75 15.5"/>')],
 ]);
 
+/** A page with its corner folded, with `inside` drawn on it. */
+const page = (inside = ''): string => lines('<path d="M4 1.75h5.25L12.5 5v9.25H4z"/><path d="M9.25 1.75V5h3.25"/>' + inside);
+const FOLDER = 'M1.75 4.25a1 1 0 0 1 1-1h3.5l1.5 1.5h5.5a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z';
+
+/**
+ * The file kinds the core names (shared/fs.rs `icon_for`) and the file
+ * buttons: GNOME's icon theme draws them on Linux, so here the app draws
+ * its own. Pictures and music are Nokta's own icons.
+ */
+const FILE_ICONS = new Map<string, string>([
+    ['folder', lines(`<path d="${FOLDER}"/>`)],
+    ['application-x-generic', page()],
+    ['text-x-generic', page('<path d="M6 8h4.5M6 10.25h4.5M6 12.5h3"/>')],
+    ['x-office-document', page('<path d="M6 8.5h4.5M6 11h4.5"/>')],
+    ['x-office-spreadsheet', page('<path d="M6 8h4.5v4.5H6zM6 10.25h4.5M8.25 8v4.5"/>')],
+    ['x-office-presentation', page('<path d="M6 8.5h4.5v3H6z"/>')],
+    ['video-x-generic', page('<path d="M7 8.25v4l3.25-2z"/>')],
+    ['package-x-generic', lines('<path d="M2.5 5 8 2l5.5 3v6.5L8 14.5l-5.5-3zM2.5 5 8 8l5.5-3M8 8v6.5"/>')],
+    ['document-open', lines('<path d="M9.5 2.5h4v4M13.5 2.5 8 8M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>')],
+    ['folder-open', lines('<path d="M1.75 12.25v-8a1 1 0 0 1 1-1h3.5l1.5 1.5h4.5a1 1 0 0 1 1 1v1.5M1.75 12.25l2-5h10.5l-2 5z"/>')],
+]);
+
 /** The icons the app draws itself, beside Nokta's own. */
-const DRAWN = new Map<string, string>([...BATTERIES, ...WEATHER]);
+const DRAWN = new Map<string, string>([...BATTERIES, ...WEATHER, ...FILE_ICONS]);
 
 /**
  * Nokta's icon for `name` (its own, or the GNOME name the extension uses,

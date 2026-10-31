@@ -4,6 +4,8 @@ import { lineProgress, nextLyric } from '@ext/features/lyrics/logic/karaoke.js';
 import { romanize } from '@ext/features/lyrics/logic/romanize.js';
 import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
+import { downloadButtons, type Download, type DownloadButton } from '@ext/features/downloads/logic/download.js';
+import { NotificationTimer } from '@ext/features/notifications/logic/timer.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeTile } from '@ext/features/panel/logic/layout.js';
@@ -32,6 +34,7 @@ import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/ke
 import { NotchMachine } from '@ext/shared/logic/machine.js';
 import { progressLine, type Span } from '@ext/shared/logic/progress-line.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
+import { TONES } from '@ext/shared/logic/tones.js';
 
 import { Activities, type Ended } from './activities.js';
 import {
@@ -45,9 +48,10 @@ import {
     type OsdRequest,
 } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
+import { Downloads } from './downloads.js';
 import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
-import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
+import { fileUrlOf, Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
 import { System } from './system.js';
@@ -55,6 +59,7 @@ import { Timer } from './timer.js';
 import { Toggles, windowsControls } from './toggles.js';
 import { everyMinute } from './views/clock.js';
 import { CollapsedView } from './views/collapsed.js';
+import { downloadPicture, downloadPreview } from './views/download.js';
 import { ExpandedView } from './views/expanded.js';
 import { HomeView, homeRows } from './views/home.js';
 import { IdleView } from './views/idle.js';
@@ -86,6 +91,8 @@ export interface Host {
     releaseKeyboard?(): void;
     /** Opens one of Windows' panels or a web page. */
     openUri?(uri: string): void;
+    /** Opens a file the core announced, or shows it in Explorer with `reveal`. */
+    openFile?(uri: string, reveal: boolean): void;
 }
 
 /** What a home tile opens on Windows, for the tiles that open one of its panels (desktop/src-tauri/src/links.rs). */
@@ -132,6 +139,7 @@ export class MonitorNotch {
     readonly activities: Activities;
     readonly updates: Updates;
     readonly system: System;
+    private readonly downloads: Downloads;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -140,6 +148,11 @@ export class MonitorNotch {
     private readonly expanded: ExpandedView;
     private readonly osd = new OsdView();
     private readonly osdTimer: OsdTimer;
+    /** A finished download shows for as long as a notification, longer under the pointer. */
+    private readonly messageTimer: NotificationTimer;
+    private readonly download = downloadPreview((button) => this.onDownloadPress(button));
+    /** The download that shows. */
+    private shownDownload: Download | null = null;
     private readonly alerts: Alerts;
     private readonly privacyDots = new PrivacyDots();
     private readonly progress = new ProgressLine();
@@ -203,6 +216,7 @@ export class MonitorNotch {
             (ended) => this.onActivityEnded(ended),
         );
         this.updates = new Updates(bridge, () => this.onHome());
+        this.downloads = new Downloads(bridge, (download) => this.showDownload(download));
         this.system = new System(
             bridge,
             () => this.onSystem(),
@@ -257,6 +271,7 @@ export class MonitorNotch {
             panel: this.home.element,
             page: this.pages,
             osd: this.osd.element,
+            download: this.download.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
         this.notch.body.append(...Object.values(this.views), this.privacyDots.element, this.progress.element);
@@ -286,6 +301,13 @@ export class MonitorNotch {
             () => this.settings.behavior.osdDurationMs,
             (active) => this.onOsdTimer(active),
         );
+        this.messageTimer = new NotificationTimer(
+            (ms, fn) => {
+                const timer = window.setTimeout(fn, ms);
+                return () => window.clearTimeout(timer);
+            },
+            () => this.onMessageTimer(),
+        );
         this.alerts = new Alerts(
             bridge,
             () => ({ behavior: this.settings.behavior, motions: this.settings.appearance.alertMotion }),
@@ -294,6 +316,7 @@ export class MonitorNotch {
         host.onPointer(
             (inside) => {
                 this.pointerOver = inside;
+                this.messageTimer.pointer(this.pointerInside());
                 this.machine.pointer(this.pointerInside());
             },
             () => this.hit,
@@ -310,6 +333,7 @@ export class MonitorNotch {
         this.restyle();
         this.stopClock = everyMinute((now) => this.tickClock(now));
         this.alerts.attach();
+        this.downloads.attach();
         await Promise.all([
             this.settings.attach(),
             this.media.attach(),
@@ -356,7 +380,9 @@ export class MonitorNotch {
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
+        this.downloads.detach();
         this.osdTimer.destroy();
+        this.messageTimer.destroy();
         this.machine.destroy();
         window.clearTimeout(this.peekTimer);
         window.clearInterval(this.ticker);
@@ -437,8 +463,43 @@ export class MonitorNotch {
         this.applyFullscreen();
     }
 
+    /**
+     * A file finished downloading: its preview, for as long as a
+     * notification. A new one replaces what shows.
+     */
+    private showDownload(download: Download): void {
+        if (this.inFullscreen) {
+            if (!showsOverFullscreen('download', this.settings.behavior.fullscreenAlerts)) return;
+            this.alertOverFullscreen = true;
+            this.applyFullscreen();
+        }
+        this.shownDownload = download;
+        // Keep on shelf comes with the shelf.
+        this.download.show(downloadPicture(download, fileUrlOf), download.name, download.size, downloadButtons(false));
+        this.messageTimer.show(this.settings.notifications.durationMs);
+        this.redraw();
+        this.alert({ color: TONES.downloads }, 'kick');
+    }
+
+    private onDownloadPress(button: DownloadButton): void {
+        const download = this.shownDownload;
+        if (!download || button === 'keep') return;
+        this.messageTimer.hide();
+        this.host.openFile?.(download.uri, button === 'files');
+    }
+
+    private onMessageTimer(): void {
+        // A download let through over a fullscreen app goes with it.
+        if (this.alertOverFullscreen && !this.messageTimer.active && !this.osdTimer.active) {
+            this.alertOverFullscreen = false;
+            this.applyFullscreen();
+        }
+        if (!this.messageTimer.active) this.shownDownload = null;
+        this.redraw();
+    }
+
     private onOsdTimer(active: boolean): void {
-        if (!active) this.alertOverFullscreen = false;
+        if (!active && !this.messageTimer.active) this.alertOverFullscreen = false;
         // Over a fullscreen app it hides first, so the views settle at once.
         this.applyFullscreen();
         this.redraw();
@@ -504,6 +565,7 @@ export class MonitorNotch {
         this.home.setColors({ foreground: palette.foreground, light: palette.light, accent: palette.accent });
         this.timerPage.setColors(palette);
         this.systemPage.setColors(palette);
+        this.download.setForeground(palette.foreground);
         this.updateViews();
         this.applyProgress();
     }
@@ -895,7 +957,7 @@ export class MonitorNotch {
         this.drawn = drawnView({
             dropping: false,
             osd: this.osdTimer.active,
-            notification: null,
+            notification: this.messageTimer.active ? 'download' : null,
             mode: this.machine.mode,
             peek: this.peekTimer !== 0,
             page: this.page !== null,
