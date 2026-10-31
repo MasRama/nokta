@@ -190,9 +190,10 @@ fn tell(app: &AppHandle, label: &str) {
     }
 }
 
-/// The notch `label` closed: the window it took the keyboard from gets it
-/// back.
-pub fn release(label: &str) {
+/// The notch `window` closed: the window it took the keyboard from gets it
+/// back, unless the user went to another one meanwhile.
+pub fn release(window: &WebviewWindow) {
+    let label = window.label();
     let previous = {
         let mut holder = HOLDER.lock().unwrap_or_else(|e| e.into_inner());
         match holder.take() {
@@ -204,6 +205,11 @@ pub fn release(label: &str) {
         }
     };
     let previous = HWND(previous as *mut _);
+    // SAFETY: reads which window is in front.
+    let front = unsafe { GetForegroundWindow() };
+    if window.hwnd().is_ok_and(|own| own != front) {
+        return;
+    }
     // SAFETY: the window may have closed meanwhile; IsWindow says so.
     unsafe {
         if IsWindow(Some(previous)).as_bool() {
