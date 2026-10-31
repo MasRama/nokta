@@ -35,6 +35,28 @@ const COVER =
 /** A download stays up long enough for a shot. */
 const LINGER_MESSAGE: Record<string, Props> = { Settings1: { Notifications: { duration_ms: 60_000 } } };
 
+/** A stand-in avatar, cropped round in a toast. */
+const AVATAR =
+    'data:image/svg+xml,' +
+    encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#3d7bd9"/>' +
+            '<circle cx="32" cy="25" r="12" fill="#f2c9a5"/><path d="M8 64 Q32 30 56 64 Z" fill="#1f3f73"/></svg>',
+    );
+
+/** `Notifications1.Posted` from WhatsApp; `id` tells toasts apart. */
+const toast = (id: string, title: string, body: string, buttons: string[], icon = AVATAR): [string, string, ...unknown[]] => [
+    'Notifications1',
+    'Posted',
+    id,
+    '5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App',
+    'WhatsApp',
+    title,
+    body,
+    icon,
+    icon === AVATAR,
+    buttons,
+];
+
 /** A song playing in Spotify, two minutes in, with Chrome as a second player. */
 function player(playing: boolean): Record<string, Props> {
     return {
@@ -258,6 +280,14 @@ export const SCENES: Record<string, Scene> = {
                 COVER,
             ],
         ],
+    },
+    notification: {
+        props: LINGER_MESSAGE,
+        signals: [toast('41', 'Rani', 'Sudah sampai stasiun, nanti kabari ya kalau kamu sudah dekat', ['Reply', 'Mark as read'])],
+    },
+    'notification-stack': {
+        props: LINGER_MESSAGE,
+        signals: [toast('41', 'Rani', 'Sudah sampai', [], ''), toast('42', 'Bima', 'Otw 5 menit', [], '')],
     },
     shelf: { props: SHELF },
     'shelf-home': { props: { ...TIMER_HOME, ...SHELF }, open: true },

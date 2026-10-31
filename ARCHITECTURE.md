@@ -790,7 +790,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   (bridge only) sends `Posted` to the notch on the monitor in use;
   `Activate(id, button)` opens the toast's protocol URI, if it has one,
   else its app. Windows still shows its own banner unless the user turns
-  them off per app.
+  them off per app. The page (`views/notification.ts`) draws the
+  extension's notification: the picture (round for a person, a bell on the
+  accent without one), the stacked count, two lines from
+  `notificationLines`, up to three buttons and a close button, timed as a
+  download's preview, and never over a fullscreen app.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one
