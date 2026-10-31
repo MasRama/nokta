@@ -8,10 +8,13 @@ pub mod capture;
 pub mod control;
 #[cfg(target_os = "linux")]
 pub mod dbus;
+#[cfg(windows)]
+pub mod gsmtc;
 pub mod levels;
 #[cfg(target_os = "linux")]
 mod mpris;
 pub mod select;
+pub mod session;
 mod state;
 mod track;
 #[cfg(target_os = "linux")]
