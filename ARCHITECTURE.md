@@ -618,6 +618,14 @@ WebView2 and runs the core's services itself, with no D-Bus.
   WASAPI loopback on a thread of its own instead of `pw-record`, and
   `mix.rs` (tested everywhere) brings Windows' mix to 16 kHz mono. The
   levels reach the page as the `Media1.Levels` signal on `nokta://signal`.
+- What GNOME's OSD shows on Linux, the app hears from Windows and sends as
+  `Osd1.Show(kind, level, name)`, an interface of the bridge only (no
+  D-Bus contract): `volume`, `muted` and `brightness` with a level from 0
+  to 1, `caps-lock` and `num-lock` with 1 for on, and `layout` with the
+  new layout's name. Device alerts come as `Devices1.Alert`, as on D-Bus.
+  The page (`alerts.ts`) turns both into the extension's OSD content,
+  icon, glow and motion; Windows has no icon theme, so the page draws the
+  battery icons itself.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with

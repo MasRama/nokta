@@ -3,14 +3,19 @@ import { lineProgress, nextLyric } from '@ext/features/lyrics/logic/karaoke.js';
 import { romanize } from '@ext/features/lyrics/logic/romanize.js';
 import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/peek.js';
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
+import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight } from '@ext/features/panel/logic/height.js';
-import { drawnView, resizeKind, viewSize, type Drawn } from '@ext/logic/views.js';
+import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
+import { motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
 import { withAlpha } from '@ext/shared/logic/color.js';
 import { uses24h } from '@ext/shared/logic/format.js';
+import { glowColor, type AlertTone } from '@ext/shared/logic/glow.js';
+import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/keyframes.js';
 import { NotchMachine } from '@ext/shared/logic/machine.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
+import { Alerts, type OsdRequest } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
 import { Lyrics, Media } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
@@ -21,6 +26,7 @@ import { ExpandedView } from './views/expanded.js';
 import { HomeView } from './views/home.js';
 import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
+import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
@@ -32,6 +38,9 @@ export interface Host {
     /** Calls back when the pointer comes over the notch or leaves it. */
     onPointer(cb: (inside: boolean) => void, hit: () => Box | null): void;
 }
+
+/** An alert pushes the notch this much wider before it springs back. */
+const ALERT_KICK = 0.06;
 
 /** How often the open player moves its progress and its lyric on. */
 const TICK_MS = 250;
@@ -58,6 +67,9 @@ export class MonitorNotch {
     private readonly collapsed: CollapsedView;
     private readonly peek: PeekView;
     private readonly expanded: ExpandedView;
+    private readonly osd = new OsdView();
+    private readonly osdTimer: OsdTimer;
+    private readonly alerts: Alerts;
     private readonly views: Partial<Record<Drawn, HTMLElement>>;
     private drawn: Drawn = 'idle';
     private hit: Box | null = null;
@@ -87,6 +99,7 @@ export class MonitorNotch {
             peek: this.peek.element,
             expanded: this.expanded.element,
             panel: this.home.element,
+            osd: this.osd.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
         this.notch.body.append(...Object.values(this.views));
@@ -106,6 +119,19 @@ export class MonitorNotch {
         this.notch.body.addEventListener('click', (e) => {
             if (!(e.target as HTMLElement).closest('button, .nokta-progress-hit')) this.machine.click();
         });
+        this.osdTimer = new OsdTimer(
+            (ms, fn) => {
+                const timer = window.setTimeout(fn, ms);
+                return () => window.clearTimeout(timer);
+            },
+            () => this.settings.behavior.osdDurationMs,
+            () => this.redraw(),
+        );
+        this.alerts = new Alerts(
+            bridge,
+            () => ({ behavior: this.settings.behavior, motions: this.settings.appearance.alertMotion }),
+            (request) => this.showOsd(request),
+        );
         host.onPointer((inside) => this.machine.pointer(inside), () => this.hit);
     }
 
@@ -114,6 +140,7 @@ export class MonitorNotch {
         this.notch.setArea(width);
         this.restyle();
         this.stopClock = everyMinute((now) => this.tickClock(now));
+        this.alerts.attach();
         await Promise.all([this.settings.attach(), this.media.attach(), this.lyrics.attach()]);
     }
 
@@ -132,6 +159,8 @@ export class MonitorNotch {
         this.settings.detach();
         this.media.detach();
         this.lyrics.detach();
+        this.alerts.detach();
+        this.osdTimer.destroy();
         this.machine.destroy();
         window.clearTimeout(this.peekTimer);
         window.clearInterval(this.ticker);
@@ -139,6 +168,40 @@ export class MonitorNotch {
         this.peek.destroy();
         this.expanded.destroy();
         this.notch.destroy();
+    }
+
+    /**
+     * A volume, a key or an alert in place of what shows, until its time
+     * runs out. An alert (`tone` set) kicks the notch and glows; a volume or
+     * a key does not.
+     */
+    showOsd({ content, icon, durationMs, tone, motion = 'kick' }: OsdRequest): void {
+        window.clearTimeout(this.peekTimer);
+        this.peekTimer = 0;
+        const speed = this.settings.appearance.animationSpeed;
+        this.osd.show(content, icon, this.osdTimer.active, speed);
+        this.osdTimer.show(durationMs);
+        if (tone) {
+            this.osd.playMotion(motion, speed);
+            this.alert(tone, motion);
+        } else {
+            this.notch.stopMotion();
+            this.notch.setGlow(null);
+        }
+    }
+
+    /**
+     * The width overshoots and springs back, and the glow comes in the
+     * alert's colour. A low battery's glow beats instead of the kick, and a
+     * failure shakes the notch.
+     */
+    private alert(tone: AlertTone, motion: AlertMotion): void {
+        this.notch.stopMotion();
+        if (motionKicks(motion)) this.notch.kick(ALERT_KICK);
+        const { alertGlow, animationSpeed } = this.settings.appearance;
+        this.notch.setGlow(alertGlow ? glowColor(tone, this.shownPalette?.accent ?? '#ffffff') : null);
+        if (motion === 'pulse') this.notch.pulseGlow(PULSE.beats, PULSE.beatMs);
+        if (motion === 'shake') this.notch.shake(keyframeSteps(SHAKE, SHAKE_STEP_MS, animationSpeed));
     }
 
     private style(): NotchStyle {
@@ -164,6 +227,8 @@ export class MonitorNotch {
         this.notch.setPalette(palette);
         this.expanded.setPalette(palette);
         this.expanded.progress.setColors(palette.accent, withAlpha(palette.foreground, 0.25));
+        // The levels are the system's, not the song's: the bar takes the text color.
+        this.osd.setColors(palette.foreground, withAlpha(palette.foreground, 0.2));
         this.updateViews();
     }
 
@@ -260,7 +325,7 @@ export class MonitorNotch {
         const previous = this.drawn;
         this.drawn = drawnView({
             dropping: false,
-            osd: false,
+            osd: this.osdTimer.active,
             notification: null,
             mode: this.machine.mode,
             peek: this.peekTimer !== 0,
@@ -271,6 +336,11 @@ export class MonitorNotch {
         });
         // The open player may show the blurred cover.
         if (previous !== this.drawn) this.applyPalette();
+        // The glow goes with the alert.
+        if (!showsAlert(this.drawn)) {
+            this.notch.stopMotion();
+            this.notch.setGlow(null);
+        }
         for (const [drawn, element] of Object.entries(this.views)) {
             element.classList.toggle('nokta-shown', drawn === this.drawn);
         }

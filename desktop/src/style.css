@@ -406,12 +406,98 @@ body.nokta-mock {
     justify-content: space-between;
 }
 
+/* The OSD row: a volume, a key or an alert (views/osd.ts). */
+.nokta-osd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+}
+
+.nokta-osd-icon {
+    flex: none;
+}
+
+.nokta-osd-track {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.nokta-osd-fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    transform-origin: left center;
+}
+
+/* A device's battery: an outline 22 x 11 with a fill in the level's tone. */
+.nokta-osd-battery {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.nokta-osd-battery-case {
+    box-sizing: border-box;
+    width: 22px;
+    height: 11px;
+    border: 1px solid;
+    border-radius: 3.5px;
+    padding: 1px;
+}
+
+.nokta-osd-battery-fill {
+    height: 7px;
+    border-radius: 1.5px;
+    transform-origin: left center;
+}
+
+.nokta-osd-battery-nub {
+    width: 2px;
+    height: 4px;
+    border-radius: 0 1px 1px 0;
+}
+
+.nokta-osd-text {
+    min-width: 36px;
+    font-size: 13px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.nokta-osd-text-only {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.nokta-osd-detail {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    opacity: 0.71;
+}
+
+.nokta-osd-urgent .nokta-osd-icon,
+.nokta-osd-urgent .nokta-osd-text,
+.nokta-osd-urgent .nokta-osd-detail {
+    color: #ff453a;
+    opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .nokta-view,
     .nokta-view.nokta-shown,
     .nokta-cover,
     .nokta-button,
-    .nokta-play {
+    .nokta-play,
+    .nokta-osd-fill {
         transition: none;
     }
 
