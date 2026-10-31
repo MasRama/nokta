@@ -641,6 +641,13 @@ WebView2 and runs the core's services itself, with no D-Bus.
   just after a volume key, as Windows' own OSD does. The brightness comes
   from WMI's `WmiMonitorBrightnessEvent`, built-in displays only, and
   shows when it moves by a key's step, not the light sensor's drift.
+- The privacy dots and the call come from `Privacy1`, an interface of the
+  bridge only. Windows records each app's last use of the camera and the
+  microphone under `CapabilityAccessManager\ConsentStore`: a device is in
+  use while an entry has started and not stopped (`privacy.rs`, tested
+  everywhere). `win/privacy.rs` waits on Windows' change events for both
+  keys and on the default microphone's mute, which `ToggleMute` flips.
+  Windows has no signal for a shared screen, so that dot never shows.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with

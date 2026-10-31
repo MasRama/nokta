@@ -68,6 +68,20 @@ function player(playing: boolean): Record<string, Props> {
     };
 }
 
+/** Zoom on a call for 12 minutes, with the camera on; `muted` mutes it. */
+function call(muted: boolean): Record<string, Props> {
+    return {
+        Privacy1: {
+            Camera: true,
+            CameraApp: 'Zoom',
+            Microphone: true,
+            MicrophoneApp: 'Zoom',
+            MicrophoneSinceUs: Date.now() * 1000 - 723_000_000,
+            MicrophoneMuted: muted,
+        },
+    };
+}
+
 /** The scenes `?mock=<name>` shows, for the shots and for working on the page. */
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
@@ -86,6 +100,9 @@ export const SCENES: Record<string, Scene> = {
     'caps-lock': { props: LINGER, signals: [['Osd1', 'Show', 'caps-lock', 1, '']] },
     charging: { props: LINGER, signals: [['Devices1', 'Alert', 'charger-plugged', '', 64]] },
     'battery-low': { props: LINGER, signals: [['Devices1', 'Alert', 'battery-critical', '', 8]] },
+    call: { props: call(false) },
+    'call-muted': { props: call(true) },
+    'call-player': { props: { ...player(true), ...call(false) } },
     headphones: { props: { ...player(true), ...LINGER }, signals: [['Devices1', 'Alert', 'bluetooth-connected', 'WH-1000XM5', 80]] },
 };
 

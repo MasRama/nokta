@@ -5,6 +5,8 @@ import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/p
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight } from '@ext/features/panel/logic/height.js';
+import { callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
+import { dotsFor } from '@ext/features/privacy/logic/dots.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
 import { motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
@@ -17,8 +19,9 @@ import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/
 
 import { Alerts, type OsdRequest } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
-import { Lyrics, Media } from './media.js';
+import { Lyrics, Media, nowUs } from './media.js';
 import { Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
+import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
 import { everyMinute } from './views/clock.js';
 import { CollapsedView } from './views/collapsed.js';
@@ -28,6 +31,7 @@ import { IdleView } from './views/idle.js';
 import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
+import { CallLabel, PrivacyDots } from './views/privacy.js';
 
 /** What the page needs from where it runs: the app or the browser mock. */
 export interface Host {
@@ -61,6 +65,7 @@ export class MonitorNotch {
     readonly settings: Settings;
     readonly media: Media;
     readonly lyrics: Lyrics;
+    readonly privacy: Privacy;
     private readonly machine: NotchMachine;
     private readonly idle = new IdleView();
     private readonly home: HomeView;
@@ -70,6 +75,9 @@ export class MonitorNotch {
     private readonly osd = new OsdView();
     private readonly osdTimer: OsdTimer;
     private readonly alerts: Alerts;
+    private readonly privacyDots = new PrivacyDots();
+    /** The call in the idle view and in the collapsed one. */
+    private readonly calls = { idle: new CallLabel(), collapsed: new CallLabel() };
     private readonly views: Partial<Record<Drawn, HTMLElement>>;
     private drawn: Drawn = 'idle';
     private hit: Box | null = null;
@@ -79,6 +87,8 @@ export class MonitorNotch {
     private ticker = 0;
     private shownPalette: Palette | null = null;
     private stopClock: (() => void) | null = null;
+    private privacyCount = 0;
+    private callTimer = 0;
 
     constructor(
         bridge: Bridge,
@@ -89,6 +99,7 @@ export class MonitorNotch {
         this.settings = new Settings(bridge, () => this.restyle());
         this.media = new Media(bridge, () => this.onMedia());
         this.lyrics = new Lyrics(bridge, () => this.onLyrics());
+        this.privacy = new Privacy(bridge, () => this.onPrivacy());
         this.home = new HomeView(() => this.setHomeOpen(false));
         this.collapsed = new CollapsedView(() => this.media.levels());
         this.peek = new PeekView(() => this.media.levels());
@@ -102,7 +113,7 @@ export class MonitorNotch {
             osd: this.osd.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
-        this.notch.body.append(...Object.values(this.views));
+        this.notch.body.append(...Object.values(this.views), this.privacyDots.element);
         root.append(this.notch.element);
         this.machine = new NotchMachine(
             (ms, fn) => {
@@ -141,7 +152,12 @@ export class MonitorNotch {
         this.restyle();
         this.stopClock = everyMinute((now) => this.tickClock(now));
         this.alerts.attach();
-        await Promise.all([this.settings.attach(), this.media.attach(), this.lyrics.attach()]);
+        await Promise.all([
+            this.settings.attach(),
+            this.media.attach(),
+            this.lyrics.attach(),
+            this.privacy.attach(),
+        ]);
     }
 
     /** Opens the notch at once; `hold` keeps it open until it is closed. */
@@ -159,6 +175,8 @@ export class MonitorNotch {
         this.settings.detach();
         this.media.detach();
         this.lyrics.detach();
+        this.privacy.detach();
+        window.clearTimeout(this.callTimer);
         this.alerts.detach();
         this.osdTimer.destroy();
         this.machine.destroy();
@@ -237,7 +255,42 @@ export class MonitorNotch {
         this.shownPalette = null;
         this.applyPalette();
         this.tickClock(new Date());
+        this.onPrivacy();
         this.redraw(true);
+    }
+
+    /** The camera or the microphone came on or went off. */
+    private onPrivacy(): void {
+        const { appearance, behavior } = this.settings;
+        const dots = dotsFor(this.privacy.state, behavior.privacyDots);
+        this.privacyCount = dots.length;
+        const inset = this.privacyDots.update(dots, appearance.height, appearance.cornerRadius);
+        this.collapsed.setInset(inset);
+        this.peek.setInset(inset);
+        this.showPrivacyDots();
+        this.onCall();
+    }
+
+    /** The dots belong to the closed notch. */
+    private showPrivacyDots(): void {
+        const closed = this.drawn === 'idle' || this.drawn === 'collapsed' || this.drawn === 'peek';
+        this.privacyDots.setVisible(this.privacyCount > 0 && closed);
+    }
+
+    /** Shows the call in the closed notch, and counts its seconds. */
+    private onCall(): void {
+        window.clearTimeout(this.callTimer);
+        this.callTimer = 0;
+        const call = this.settings.behavior.callIndicator ? this.privacy.currentCall() : null;
+        this.idle.setAside(call ? this.calls.idle.element : null);
+        this.collapsed.setAside(call ? this.calls.collapsed.element : null);
+        this.setActive();
+        if (!call) return;
+        const now = nowUs();
+        const text = callText(call.sinceUs, now);
+        this.calls.idle.update(text, call.muted);
+        this.calls.collapsed.update(text, call.muted);
+        this.callTimer = window.setTimeout(() => this.onCall(), msUntilElapsedSecond(call.sinceUs, now));
     }
 
     private onMedia(): void {
@@ -344,6 +397,7 @@ export class MonitorNotch {
         for (const [drawn, element] of Object.entries(this.views)) {
             element.classList.toggle('nokta-shown', drawn === this.drawn);
         }
+        this.showPrivacyDots();
         const [width, height] = this.sizeFor(this.drawn);
         if (jump) this.notch.jumpTo(width, height);
         else this.notch.resizeTo(width, height, resizeKind(previous, this.drawn));
