@@ -1,7 +1,7 @@
 export interface Shown {
-    /** GNOME's source object, the app that sent it; compared by identity. */
-    source: object | null;
-    notification: object;
+    /** The app that sent it (GNOME's source object, or an app's id); compared by identity. */
+    source: unknown;
+    notification: unknown;
 }
 
 export interface Stacked extends Shown {
