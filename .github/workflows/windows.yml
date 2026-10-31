@@ -1,0 +1,62 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Windows app
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+          components: clippy
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      - run: cargo clippy -p nokta-desktop --all-targets --locked -- -D warnings
+      - run: cargo test -p nokta-desktop --locked
+      - name: Build the installer
+        working-directory: desktop
+        run: npx tauri build --bundles nsis
+      # The smoke: install as a user would, start it, start it again (the
+      # second must leave), and shoot the desktop.
+      - name: Install and start Nokta
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/S' -Wait
+          $exe = "$env:LOCALAPPDATA\Nokta\Nokta.exe"
+          if (-not (Test-Path $exe)) { throw "not installed at $exe" }
+          Start-Process $exe
+          Start-Sleep -Seconds 10
+          ./tools/windows/shot.ps1 -Name idle
+          Start-Process $exe
+          Start-Sleep -Seconds 5
+          $running = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue).Count
+          if ($running -ne 1) { throw "expected one Nokta, found $running" }
+      - name: Upload the shots and the installer
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-smoke
+          path: |
+            shots/
+            target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: warn
