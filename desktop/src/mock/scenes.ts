@@ -237,6 +237,29 @@ function samples(): Array<[string, Props]> {
     });
 }
 
+/** `Calendar1.Events` from a Google Calendar feed: a meeting soon, then the day's other events. */
+function agenda(): Record<string, Props> {
+    const now = Date.now();
+    const at = (minutes: number, length: number, uid: string, title: string, link = '', color = '') => {
+        const start = Math.ceil(now / 60_000) * 60_000 + minutes * 60_000;
+        return { id: `0\n${uid}\n${start}`, title, start, end: start + length * 60_000, link, color };
+    };
+    return {
+        ...HOME,
+        Settings1: {
+            ...HOME.Settings1,
+            Calendar: { feeds: ['https://calendar.google.com/calendar/ical/x/private-y/basic.ics'] },
+        },
+        Calendar1: {
+            Events: [
+                at(4, 30, 'standup', 'Standup produk', 'https://meet.google.com/abc-defg-hij', '#1badf8'),
+                at(95, 60, 'review', 'Review desain notch'),
+                at(240, 45, 'dentist', 'Dokter gigi', '', '#34c759'),
+            ],
+        },
+    };
+}
+
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
     home: { props: HOME, open: true },
@@ -281,6 +304,8 @@ export const SCENES: Record<string, Scene> = {
             ],
         ],
     },
+    'calendar-home': { props: agenda(), open: true },
+    'calendar-countdown': { props: agenda() },
     notification: {
         props: LINGER_MESSAGE,
         signals: [toast('41', 'Rani', 'Sudah sampai stasiun, nanti kabari ya kalau kamu sudah dekat', ['Reply', 'Mark as read'])],
