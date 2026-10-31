@@ -13,6 +13,7 @@ use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
+use nokta_core::features::system::{self, model::Usage};
 use nokta_core::features::timer::clocks::Kind;
 use nokta_core::features::timer::logic::Snapshot;
 use nokta_core::features::timer::service::{ClockCommand, ClocksSnapshot, Command};
@@ -22,13 +23,14 @@ use nokta_core::shared::clock::{monotonic_us, wall_us};
 use nokta_core::shared::http;
 use nokta_core::shared::paths::Paths;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, WebviewWindow};
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
     activities as activities_props, devices as devices_bridge, lyrics as lyrics_props, media,
-    nokta, osd as osd_bridge, privacy as privacy_props, settings, timer as timer_props,
-    toggles as toggles_props, updates as updates_props, weather as weather_props, Props,
+    nokta, osd as osd_bridge, privacy as privacy_props, settings, system as system_props,
+    timer as timer_props, toggles as toggles_props, updates as updates_props,
+    weather as weather_props, Props,
 };
 use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
@@ -44,6 +46,9 @@ static CLOCKS: OnceLock<mpsc::Sender<ClockCommand>> = OnceLock::new();
 
 /// Counts the system's wakes from sleep, for the update check.
 static RESUMES: OnceLock<watch::Sender<u64>> = OnceLock::new();
+
+/// The system counters' watches, for a notch window that closes.
+static SYSTEM: OnceLock<mpsc::Sender<system::service::Command>> = OnceLock::new();
 
 #[derive(Clone, serde::Serialize)]
 struct Signal {
@@ -77,6 +82,8 @@ pub struct Core {
     activities: watch::Receiver<Vec<Activity>>,
     updates: watch::Receiver<UpdateState>,
     update_commands: mpsc::Sender<updates::service::Command>,
+    usage: watch::Receiver<Usage>,
+    system_commands: mpsc::Sender<system::service::Command>,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -245,6 +252,29 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         updates_props::INTERFACE,
         updates_props::props,
     );
+    let mut counters = tauri::async_runtime::block_on(async {
+        system::service::spawn(
+            Arc::new(system::win::Win::new()),
+            follow(services.config.clone(), |c| c.system.clone()),
+            system::win::pressure(),
+        )
+    });
+    forward(
+        app.clone(),
+        counters.usage.clone(),
+        system_props::INTERFACE,
+        system_props::props,
+    );
+    let memory_low = std::mem::replace(&mut counters.memory_low, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        memory_low,
+        To::Front,
+        system_props::INTERFACE,
+        system_props::MEMORY_LOW,
+        system_props::memory_low_args,
+    );
+    let _ = SYSTEM.set(counters.commands.clone());
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -264,6 +294,8 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         activities: services.activities.state.clone(),
         updates: releases.state,
         update_commands: releases.commands,
+        usage: counters.usage,
+        system_commands: counters.commands,
         _services: Mutex::new(services),
     }
 }
@@ -277,6 +309,14 @@ pub fn woke() {
     }
     if let Some(resumes) = RESUMES.get() {
         resumes.send_modify(|count| *count += 1);
+    }
+}
+
+/// A notch window closed: its watches of the system counters end, as a
+/// D-Bus caller's do when it leaves the bus.
+pub fn forget(label: &str) {
+    if let Some(system) = SYSTEM.get() {
+        let _ = system.try_send(system::service::Command::Gone(label.to_owned()));
     }
 }
 
@@ -406,6 +446,7 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
             wall_us(),
         )),
         updates_props::INTERFACE => Ok(updates_props::props(&core.updates.borrow())),
+        system_props::INTERFACE => Ok(system_props::props(&core.usage.borrow())),
         timer_props::INTERFACE => {
             let (mono, wall) = (monotonic_us(), wall_us());
             let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
@@ -420,9 +461,11 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
     }
 }
 
-/// Calls `interface.method(args)`.
+/// Calls `interface.method(args)`; `window` is the caller, as a D-Bus
+/// sender.
 #[tauri::command]
 pub async fn bridge_call(
+    window: WebviewWindow,
     core: State<'_, Core>,
     interface: String,
     method: String,
@@ -480,6 +523,19 @@ pub async fn bridge_call(
             let _ = core
                 .update_commands
                 .try_send(updates::service::Command::Check);
+            Ok(Value::Null)
+        }
+        (system_props::INTERFACE, "Watch" | "Unwatch", []) => {
+            let label = window.label().to_owned();
+            let command = if method == "Watch" {
+                system::service::Command::Watch(label)
+            } else {
+                system::service::Command::Unwatch(label)
+            };
+            core.system_commands
+                .send(command)
+                .await
+                .map_err(|_| "the system counters have stopped".to_owned())?;
             Ok(Value::Null)
         }
         (privacy_props::INTERFACE, "ToggleMute", []) => {

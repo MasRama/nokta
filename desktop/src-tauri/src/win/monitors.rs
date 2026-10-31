@@ -13,7 +13,7 @@ use windows::Win32::Foundation::HWND;
 use windows::Win32::Graphics::Gdi::{MonitorFromWindow, MONITOR_DEFAULTTOPRIMARY};
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
-use super::{fullscreen, notch_window, pointer, shortcut, topmost};
+use super::{fullscreen, notch_window, pointer, services, shortcut, topmost};
 use crate::layout::{Monitor, Rect};
 use crate::monitors::{plan, PREFIX};
 
@@ -97,6 +97,7 @@ fn rebuild(app: &AppHandle) {
         pointer::forget(label);
         fullscreen::forget(label);
         shortcut::forget(label);
+        services::forget(label);
     }
     let mut now = Vec::new();
     for (label, index) in &plan.keep {

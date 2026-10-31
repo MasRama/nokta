@@ -82,7 +82,9 @@ fn fits(signature: &str, value: &Value) -> bool {
     match signature.as_bytes().first() {
         Some(b'b') => value.is_boolean(),
         Some(b's' | b'o') => value.is_string(),
-        Some(b'y' | b'n' | b'q' | b'i' | b'u' | b'x' | b't' | b'd') => value.is_number(),
+        Some(b'y' | b'n' | b'q' | b'i' | b'u' | b'x' | b't') => value.is_number(),
+        // JSON has no NaN, so a double that is not a number goes as null.
+        Some(b'd') => value.is_number() || value.is_null(),
         Some(b'a') if signature.starts_with("a{") => value.is_object(),
         Some(b'a' | b'(') => value.is_array(),
         _ => false,
@@ -251,4 +253,29 @@ fn updates() {
         super::updates::INTERFACE,
         &super::updates::props(&UpdateState::default()),
     );
+}
+
+#[test]
+fn system() {
+    use nokta_core::features::system::model::Usage;
+    check(
+        super::system::INTERFACE,
+        &super::system::props(&Usage::default()),
+    );
+}
+
+#[test]
+fn system_memory_low() {
+    use nokta_core::features::system::service::MemoryLow;
+    let low = MemoryLow {
+        used: 15,
+        total: 16,
+        app: "chrome".into(),
+    };
+    let types = signal_args(super::system::INTERFACE, super::system::MEMORY_LOW);
+    let args = super::system::memory_low_args(&low);
+    assert_eq!(types.len(), args.len(), "{types:?} and {args:?}");
+    for (signature, value) in types.iter().zip(&args) {
+        assert!(fits(signature, value), "{value} is not {signature}");
+    }
 }

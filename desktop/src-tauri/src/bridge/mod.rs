@@ -13,6 +13,7 @@ pub mod nokta;
 pub mod osd;
 pub mod privacy;
 pub mod settings;
+pub mod system;
 pub mod timer;
 pub mod toggles;
 pub mod updates;

@@ -727,6 +727,14 @@ WebView2 and runs the core's services itself, with no D-Bus.
   in the indicator's spot and on the progress line, up to three activity
   rows on home, and the update row, which opens the release page; it gets
   its Update button with the Windows update install.
+- The system counters (`System1`) are the core's service with a Windows
+  `Source` (`system/win.rs`): `GetSystemTimes`, `GlobalMemoryStatusEx`,
+  and `GetIfTable2`'s hardware adapters that are up, filters and loopback
+  left out. Windows gives the CPU's temperature to administrators only, so
+  it stays unknown, sent as null since JSON has no NaN. Low memory is
+  Windows' own `LowMemoryResourceNotification`; the alert names the
+  process with the largest working set. A notch window watches as a D-Bus
+  caller does, by its label, and a window that closes stops watching.
 - The closed notch's progress line (`[appearance] progress_line`) follows
   the extension's `progressLine`: the focus session or a countdown in the
   indicator's spot, else the song beside the cover. It fills with one
