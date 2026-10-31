@@ -12,6 +12,7 @@ use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
+use nokta_core::features::weather::WeatherState;
 use nokta_core::shared::clock::{monotonic_us, wall_us};
 use nokta_core::shared::http;
 use nokta_core::shared::paths::Paths;
@@ -21,7 +22,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::bridge::{
     devices as devices_bridge, lyrics as lyrics_props, media, nokta, osd as osd_bridge,
-    privacy as privacy_props, settings, Props,
+    privacy as privacy_props, settings, toggles as toggles_props, weather as weather_props, Props,
 };
 use crate::layout::{self, NotchSizes};
 use crate::privacy::PrivacyState;
@@ -54,6 +55,9 @@ pub struct Core {
     lyrics: watch::Receiver<LyricsState>,
     lyrics_commands: mpsc::Sender<lyrics::service::Command>,
     privacy: watch::Receiver<PrivacyState>,
+    weather: watch::Receiver<WeatherState>,
+    weather_refresh: mpsc::Sender<()>,
+    toggles: super::toggles::Toggles,
     /// Keeps the services and their watchers alive.
     _services: Mutex<Services>,
 }
@@ -135,6 +139,19 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         privacy_props::INTERFACE,
         privacy_props::props,
     );
+    forward(
+        app.clone(),
+        services.weather.state.clone(),
+        weather_props::INTERFACE,
+        weather_props::props,
+    );
+    let toggles = super::toggles::spawn();
+    forward(
+        app.clone(),
+        toggles.state.clone(),
+        toggles_props::INTERFACE,
+        toggles_props::props,
+    );
     Core {
         config: services.config.clone(),
         picture: services.picture.clone(),
@@ -144,6 +161,9 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         lyrics: services.lyrics.state.clone(),
         lyrics_commands: services.lyrics.commands.clone(),
         privacy,
+        weather: services.weather.state.clone(),
+        weather_refresh: services.weather.refresh.clone(),
+        toggles,
         _services: Mutex::new(services),
     }
 }
@@ -245,6 +265,8 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
         )),
         lyrics_props::INTERFACE => Ok(lyrics_props::props(&core.lyrics.borrow())),
         privacy_props::INTERFACE => Ok(privacy_props::props(&core.privacy.borrow())),
+        weather_props::INTERFACE => Ok(weather_props::props(&core.weather.borrow())),
+        toggles_props::INTERFACE => Ok(toggles_props::props(&core.toggles.state.borrow())),
         settings::INTERFACE => Ok(settings::props(
             &core.config.borrow(),
             &core.picture.borrow(),
@@ -293,6 +315,18 @@ pub async fn bridge_call(
             match answer.await.map_err(|_| stopped())? {
                 Ok(_) => Ok(Value::Null),
                 Err(_) => Err("no track to set the lyric timing for".into()),
+            }
+        }
+        (weather_props::INTERFACE, "Refresh", []) => {
+            // A full queue already holds a refresh.
+            let _ = core.weather_refresh.try_send(());
+            Ok(Value::Null)
+        }
+        (toggles_props::INTERFACE, "Set", [Value::String(name), Value::Bool(on)]) => {
+            if core.toggles.set(name, *on) {
+                Ok(Value::Null)
+            } else {
+                Err(format!("Windows has no toggle {name}"))
             }
         }
         (privacy_props::INTERFACE, "ToggleMute", []) => {

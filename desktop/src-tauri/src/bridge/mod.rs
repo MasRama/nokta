@@ -12,6 +12,8 @@ pub mod nokta;
 pub mod osd;
 pub mod privacy;
 pub mod settings;
+pub mod toggles;
+pub mod weather;
 
 #[cfg(test)]
 mod contract_tests;

@@ -150,3 +150,12 @@ fn devices_alert() {
         assert!(fits(signature, value), "{value} is not {signature}");
     }
 }
+
+#[test]
+fn weather() {
+    use nokta_core::features::weather::WeatherState;
+    check(
+        super::weather::INTERFACE,
+        &super::weather::props(&WeatherState::default()),
+    );
+}
