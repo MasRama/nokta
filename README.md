@@ -664,6 +664,8 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   measured, four levels 25 times a second, and never stored or sent. GNOME
   counts any recording as the microphone in use, so its indicator may show
   meanwhile; Nokta's own dots and call view leave it out.
+  On Windows Nokta does the same with Windows' own loopback recording of
+  the speakers.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.

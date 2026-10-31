@@ -11,6 +11,9 @@ pub mod dbus;
 #[cfg(windows)]
 pub mod gsmtc;
 pub mod levels;
+#[cfg(windows)]
+pub mod loopback;
+pub mod mix;
 #[cfg(target_os = "linux")]
 mod mpris;
 pub mod select;
