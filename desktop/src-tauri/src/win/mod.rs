@@ -2,6 +2,7 @@
 //! monitor, the tray icon, and the commands the page calls.
 
 mod clipboard;
+mod folders;
 mod fullscreen;
 mod log;
 mod monitors;
@@ -45,7 +46,9 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            let paths = Paths::from_env()?;
+            let mut paths = Paths::from_env()?;
+            // Where the user moved it, else %USERPROFILE%\Downloads.
+            paths.downloads_dir = folders::downloads().or(paths.downloads_dir);
             log::init(&paths);
             tracing::info!("Nokta {} starting", env!("CARGO_PKG_VERSION"));
             let core = services::start(app.handle(), &paths);
