@@ -69,6 +69,33 @@ body.nokta-mock {
     font-variant-numeric: tabular-nums;
 }
 
+/* The privacy dots at the closed notch's left, placed by dotsPlace. */
+.nokta-privacy-dots {
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    pointer-events: none;
+}
+
+.nokta-privacy-dot {
+    width: var(--nokta-dot);
+    height: var(--nokta-dot);
+    border-radius: 50%;
+}
+
+/* The call in the clock's or the equalizer's place. */
+.nokta-call {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nokta-call-time {
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
 /* Home; heights in the extension's features/panel/logic/height.ts. */
 .nokta-panel {
     padding: 14px 18px;

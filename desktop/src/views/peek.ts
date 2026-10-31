@@ -29,6 +29,11 @@ export class PeekView {
         this.element.append(this.cover.element, text, this.equalizer.element);
     }
 
+    /** Room at the left for the privacy dots. */
+    setInset(px: number): void {
+        this.element.style.paddingLeft = px > 0 ? `${px}px` : '';
+    }
+
     update(snapshot: MediaSnapshot, accent: string): void {
         this.cover.set(snapshot.artPath);
         this.title.textContent = snapshot.title;
