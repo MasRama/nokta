@@ -6,6 +6,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use futures_util::StreamExt;
 use image::{imageops::FilterType, DynamicImage, ImageFormat, ImageReader};
+use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
 
 use crate::shared::hash::sha256_hex;
@@ -47,6 +48,41 @@ impl ArtCache {
             "http" | "https" => self.resolve_http(url).await,
             _ => None,
         }
+    }
+
+    /// Keeps a cover the player handed over as bytes (Windows gives no URL),
+    /// once per picture, and derives its accent and backdrop.
+    pub async fn store(&self, bytes: &[u8]) -> Option<ArtInfo> {
+        if bytes.is_empty() || bytes.len() > MAX_DOWNLOAD_BYTES {
+            return None;
+        }
+        let path = self.dir.join(hex::encode(Sha256::digest(bytes)));
+        if tokio::fs::metadata(&path).await.is_err() {
+            tokio::fs::create_dir_all(&self.dir).await.ok()?;
+            let part = path.with_extension("part");
+            let written = async {
+                tokio::fs::write(&part, bytes).await?;
+                tokio::fs::rename(&part, &path).await
+            }
+            .await;
+            if let Err(err) = written {
+                tracing::debug!(%err, "cannot keep the cover");
+                let _ = tokio::fs::remove_file(&part).await;
+                return None;
+            }
+        }
+        let (accent, backdrop) = self
+            .derive(
+                &path,
+                &path.with_extension("accent"),
+                &path.with_extension("backdrop.png"),
+            )
+            .await;
+        Some(ArtInfo {
+            path,
+            accent,
+            backdrop,
+        })
     }
 
     async fn resolve_file(&self, url: &url::Url) -> Option<ArtInfo> {
@@ -277,6 +313,22 @@ mod tests {
             std::fs::metadata(&backdrop).unwrap().modified().unwrap(),
             written
         );
+    }
+
+    #[tokio::test]
+    async fn a_cover_given_as_bytes_is_kept_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut png = std::io::Cursor::new(Vec::new());
+        red_image().write_to(&mut png, ImageFormat::Png).unwrap();
+        let bytes = png.into_inner();
+        let art = cache(&dir);
+        let info = art.store(&bytes).await.unwrap();
+        assert!(info.path.starts_with(dir.path().join("cache").join("art")));
+        assert_eq!(std::fs::read(&info.path).unwrap(), bytes);
+        assert!(info.accent.is_some());
+        assert!(info.backdrop.is_some());
+        assert_eq!(art.store(&bytes).await.unwrap(), info);
+        assert_eq!(art.store(&[]).await, None);
     }
 
     #[tokio::test]
