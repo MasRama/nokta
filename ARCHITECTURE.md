@@ -613,6 +613,11 @@ WebView2 and runs the core's services itself, with no D-Bus.
   rules that need no Windows API (`media/session.rs`) are tested on every
   system. `Media1` gives the page `PositionTimestampUs` on the wall clock
   (`Date.now() * 1000`), as the page has no monotonic clock to match.
+- The bars follow the music the same way, with the same setting and the
+  same `levels.rs`: `media/loopback.rs` records the default output with
+  WASAPI loopback on a thread of its own instead of `pw-record`, and
+  `mix.rs` (tested everywhere) brings Windows' mix to 16 kHz mono. The
+  levels reach the page as the `Media1.Levels` signal on `nokta://signal`.
 - One window per monitor (`notch-<n>`) sits at the monitor's top centre,
   sized for the widest notch and the tallest view with room for the glow
   (`layout.rs`). It is borderless, see-through and topmost, with
