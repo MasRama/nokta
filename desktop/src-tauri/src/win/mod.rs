@@ -3,6 +3,7 @@
 
 mod log;
 mod notch_window;
+mod osd;
 mod pointer;
 mod services;
 mod topmost;
