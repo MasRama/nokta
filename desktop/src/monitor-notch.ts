@@ -13,6 +13,7 @@ import {
     clockDetail,
     clockText,
     clockTitle,
+    clockValueAt,
     indicatorClock,
     msUntilClockChange,
 } from '@ext/features/timer/logic/clocks.js';
@@ -24,9 +25,10 @@ import { withAlpha } from '@ext/shared/logic/color.js';
 import { formatClock, uses24h } from '@ext/shared/logic/format.js';
 import { fullscreenView, showsOverFullscreen } from '@ext/shared/logic/fullscreen.js';
 import { glowColor, type AlertTone } from '@ext/shared/logic/glow.js';
-import { chooseIndicator } from '@ext/shared/logic/indicator.js';
+import { chooseIndicator, type Indicator } from '@ext/shared/logic/indicator.js';
 import { keyframeSteps, PULSE, SHAKE, SHAKE_STEP_MS } from '@ext/shared/logic/keyframes.js';
 import { NotchMachine } from '@ext/shared/logic/machine.js';
+import { progressLine, type Span } from '@ext/shared/logic/progress-line.js';
 import { depthFor, paletteFor, themeFor, type Palette } from '@ext/shared/logic/theme.js';
 
 import { Alerts, CLOCK_ICON, clockDoneRequest, finishedRequest, TIMER_ICON, type OsdRequest } from './alerts.js';
@@ -47,6 +49,7 @@ import { LYRIC_ROW_EXTRA } from './views/lyric-line.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
 import { CallLabel, PrivacyDots } from './views/privacy.js';
+import { ProgressLine } from './views/progress-line.js';
 import { SubPage } from './views/subpage.js';
 import { TimerLabel, TimerPage, type HomeClock } from './views/timer.js';
 import { Weather } from './weather.js';
@@ -117,6 +120,7 @@ export class MonitorNotch {
     private readonly osdTimer: OsdTimer;
     private readonly alerts: Alerts;
     private readonly privacyDots = new PrivacyDots();
+    private readonly progress = new ProgressLine();
     /** The call in the idle view and in the collapsed one. */
     private readonly calls = { idle: new CallLabel(), collapsed: new CallLabel() };
     /** The focus timer or a clock, in the same two places. */
@@ -142,6 +146,8 @@ export class MonitorNotch {
     private privacyCount = 0;
     /** Until the closed notch's call, timer or clock shows its next second. */
     private indicatorTimer = 0;
+    /** What the closed notch's one spot shows. */
+    private indicator: Indicator | null = null;
     /** A fullscreen app covers the monitor: the notch hides. */
     private inFullscreen = false;
     /** An alert let through over the fullscreen app shows until it ends. */
@@ -209,7 +215,7 @@ export class MonitorNotch {
             osd: this.osd.element,
         };
         this.notch = new Notch(this.style(), this.palette(), (hit) => this.report(hit), frames);
-        this.notch.body.append(...Object.values(this.views), this.privacyDots.element);
+        this.notch.body.append(...Object.values(this.views), this.privacyDots.element, this.progress.element);
         // A view with no buttons leaves the focus on the notch.
         this.notch.element.tabIndex = -1;
         root.append(this.notch.element);
@@ -443,6 +449,7 @@ export class MonitorNotch {
         this.home.setColors({ foreground: palette.foreground, light: palette.light });
         this.timerPage.setColors(palette);
         this.updateViews();
+        this.applyProgress();
     }
 
     private restyle(): void {
@@ -580,6 +587,7 @@ export class MonitorNotch {
             activity: false,
             shelf: false,
         });
+        this.indicator = indicator;
         const shown = (place: 'idle' | 'collapsed'): HTMLElement | null => {
             if (indicator === 'call') return this.calls[place].element;
             if (indicator === 'timer' || indicator === 'clock') return this.timerLabels[place].element;
@@ -608,6 +616,41 @@ export class MonitorNotch {
         const wait = msUntilClockChange(clocks, now);
         if (wait !== null) waits.push(wait);
         if (waits.length > 0) this.indicatorTimer = window.setTimeout(() => this.applyIndicator(), Math.min(...waits));
+        this.applyProgress();
+    }
+
+    /** The line along the closed notch: the indicator's progress, else the song beside its cover. */
+    private applyProgress(): void {
+        const { appearance } = this.settings;
+        if (!appearance.progressLine || (this.drawn !== 'idle' && this.drawn !== 'collapsed')) {
+            this.progress.show(null, '', 0);
+            return;
+        }
+        const now = nowUs();
+        const { snapshot: focus, clocks } = this.timer;
+        const clock = indicatorClock(clocks, now);
+        const song = this.media.snapshot;
+        const span = (totalUs: number, leftUs: number, running: boolean, rate = 1): Span => ({
+            totalUs,
+            leftUs,
+            running,
+            rate,
+        });
+        const line = progressLine({
+            indicator: this.indicator,
+            collapsed: this.drawn === 'collapsed',
+            timer:
+                focus.state === 'idle'
+                    ? null
+                    : span(focus.durationUs, remainingAt(focus, now), focus.state === 'running'),
+            clock: clock?.kind === 'countdown' ? span(clock.durationUs, clockValueAt(clock, now), clock.running) : null,
+            activity: -1,
+            song:
+                song.lengthUs > 0
+                    ? span(song.lengthUs, song.lengthUs - this.media.positionNow(), song.playbackStatus === 'Playing', song.rate)
+                    : null,
+        });
+        this.progress.show(line, this.shownPalette?.accent ?? '#ffffff', appearance.cornerRadius);
     }
 
     private onMedia(): void {
@@ -737,6 +780,7 @@ export class MonitorNotch {
             element.classList.toggle('nokta-shown', drawn === this.drawn);
         }
         this.showPrivacyDots();
+        this.applyProgress();
         const [width, height] = this.sizeFor(this.drawn);
         if (jump) this.notch.jumpTo(width, height);
         else this.notch.resizeTo(width, height, resizeKind(previous, this.drawn));

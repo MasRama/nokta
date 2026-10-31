@@ -715,6 +715,10 @@ WebView2 and runs the core's services itself, with no D-Bus.
   (after a call, through `chooseIndicator`), up to three clock rows on
   home, the Focus tile, and the Timer tile's page of presets, a sub-page
   sized with the extension's `subPageHeight`.
+- The closed notch's progress line (`[appearance] progress_line`) follows
+  the extension's `progressLine`: the focus session or a countdown in the
+  indicator's spot, else the song beside the cover. It fills with one
+  linear CSS transition to its end and starts again on each change.
 - The tray icon stands in for the top bar (Quit). A second start leaves
   the running one alone.
 - The NSIS installer installs per user without admin rights, brings the
