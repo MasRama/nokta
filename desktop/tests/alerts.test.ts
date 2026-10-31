@@ -74,7 +74,7 @@ describe('deviceRequest', () => {
         expect(request?.content.urgent).toBe(true);
         expect(request?.tone).toBe('urgent');
         expect(request?.motion).toBe('pulse');
-        expect(request?.battery).toBe(true);
+        expect(request?.kind).toBe('battery');
     });
 
     it('kicks without the motions, and shows nothing with device alerts off', () => {
