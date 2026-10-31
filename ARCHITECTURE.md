@@ -66,6 +66,12 @@ extension/          GNOME Shell extension nokta@nokta.io
   tests/            Node tests for the pure logic modules
 packaging/          systemd user unit, D-Bus activation file, install scripts
 tools/devshell/     headless GNOME Shell for checking the UI
+desktop/            Nokta for Windows: a Tauri 2 app
+  src-tauri/        crate nokta-desktop: the windows, the tray, the commands
+  src/              the notch's page (TypeScript, Vite), sharing the extension's logic/
+  tests/            Vitest tests of the page's own modules
+  scripts/          screenshots of the page in Chrome
+tools/windows/      the Windows smoke's screenshot script
 docs/               manual test checklist, screenshots
 ```
 
@@ -369,7 +375,8 @@ the Linux adapters touch D-Bus:
 Those modules are declared with `#[cfg(target_os = "linux")]`, and `zbus`
 is a Linux-only dependency. `app::Services` starts the rest (settings,
 lyrics, timer, activities, weather, shelf, clipboard, downloads) on any system; `system` has only a Linux source and starts in `app/dbus.rs`. CI builds and tests the daemon on macOS and
-Windows, where `noktad` says it has no frontend yet. A new system adds its
+Windows, where `noktad` has no frontend; on Windows the app in `desktop/`
+is the frontend (see [The Windows app](#the-windows-app)). A new system adds its
 own sources and transport next to the Linux ones; nothing in a feature's
 model changes.
 
@@ -574,6 +581,42 @@ How both sides stay honest:
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source, ends the shelf's helper and puts the clock back.
 
+## The Windows app
+
+`desktop/` is Nokta for Windows: one Tauri 2 process that draws the notch in
+WebView2 and will run the core's services itself, with no D-Bus.
+
+- `src-tauri/` is the crate `nokta-desktop`. It is a workspace member but
+  not a default one, so `cargo test` at the root stays the core's; use
+  `-p nokta-desktop`. Tauri and the `windows` crate are Windows-only
+  dependencies: elsewhere the binary only says it runs on Windows, and its
+  pure modules (`layout.rs`) are tested on every system.
+- `src/` is the page, TypeScript built by Vite with no UI framework. It
+  imports the extension's pure `logic/` modules through the `@ext` alias
+  (`extension/src`), so a decision lives in one place for both; only the
+  drawing is new, DOM and SVG where the extension has St actors and a
+  shader (`notch/path.ts` draws the same silhouette).
+- One window per monitor (`notch-<n>`) sits at the monitor's top centre,
+  sized for the widest notch and the tallest view with room for the glow
+  (`layout.rs`). It is borderless, see-through and topmost, with
+  `WS_EX_TOOLWINDOW` (no taskbar button, not in Alt+Tab) and
+  `WS_EX_NOACTIVATE`, and a subclass answers `WM_MOUSEACTIVATE` with
+  `MA_NOACTIVATE`, so a click never takes the focus from the user's app.
+  The page reports the notch's rectangle (`set_hit_region`) and the window
+  is clipped to it with `SetWindowRgn`: only there does it take the
+  pointer, so a click beside the notch reaches the window under it. A
+  `SetWinEventHook` on `EVENT_SYSTEM_FOREGROUND` raises the notches again
+  whenever another window comes forward.
+- The tray icon stands in for the top bar (Quit). A second start leaves
+  the running one alone.
+- The NSIS installer installs per user without admin rights, brings the
+  WebView2 bootstrapper, and starts Nokta at login through the `Run` key
+  (`installer.nsh`), which Task Manager's Startup apps can turn off.
+- `npm run shots` shoots the page in Chrome on a stand-in desktop
+  (`?mock=<scene>`), the check that runs anywhere. `windows.yml` builds the
+  installer on `windows-latest`, installs and starts it, and uploads
+  screenshots of the real desktop (`tools/windows/shot.ps1`).
+
 ## Locked stack
 
 Changing anything in this table needs an issue and agreement first.
@@ -590,6 +633,8 @@ Changing anything in this table needs an issue and agreement first.
 | Extension language | TypeScript compiled by `tsc` to readable ES modules, no bundler or minifier |
 | Extension types | `@girs/*` packages for GNOME 46, the oldest supported |
 | Supported shell | GNOME Shell 46 to 51 |
+| Windows app | Tauri 2 (WebView2), the `windows` crate for Win32 |
+| Windows page | TypeScript built by Vite, no UI framework; Vitest with happy-dom |
 | License | GPL-3.0-or-later |
 
 A GNOME version is added to `shell-version` in `metadata.json` only after the
