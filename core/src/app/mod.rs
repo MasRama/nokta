@@ -10,7 +10,7 @@ mod services;
 
 use crate::features::weather;
 
-pub use services::{Services, Timer};
+pub use services::{follow, Services, Timer};
 
 pub const BUS_NAME: &str = "io.nokta.Nokta";
 pub const DEFAULT_LRCLIB_URL: &str = "https://lrclib.net";
