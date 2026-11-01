@@ -88,7 +88,8 @@ jobs:
           $userPath = (Get-Item HKCU:\Environment).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
           $bin = "$env:LOCALAPPDATA\Nokta\bin"
           if (($userPath -split ';') -notcontains $bin) { throw "$bin is not on the user's Path: $userPath" }
-          $env:Path = [Environment]::ExpandEnvironmentVariables($userPath) + ';' + $env:Path
+          # After the runner's own, whose python the user's Store alias would hide.
+          $env:Path = $env:Path + ';' + [Environment]::ExpandEnvironmentVariables($userPath)
           $version = nokta --version
           if ($version -notmatch '^nokta \d') { throw "bin\nokta.exe is not the nokta command: $version" }
           nokta activity set ci-build --title "Building Nokta" --detail "From CI" --progress 40
@@ -112,6 +113,50 @@ jobs:
           ./tools/windows/shot.ps1 -Name settings
           $running = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue).Count
           if ($running -ne 1) { throw "expected one Nokta, found $running" }
+          # nokta update against a fake GitHub whose latest release is this
+          # build as 99.0.0: its setup must match SHA256SUMS, close Nokta,
+          # install and start it again.
+          $fake = "$env:RUNNER_TEMP\fake-github"
+          New-Item -ItemType Directory -Force "$fake\repos\MasRama\nokta\releases", "$fake\download" | Out-Null
+          $name = 'Nokta_99.0.0_x64-setup.exe'
+          Copy-Item $setup.FullName "$fake\download\$name"
+          $sum = (Get-FileHash "$fake\download\$name" -Algorithm SHA256).Hash.ToLower()
+          [IO.File]::WriteAllText("$fake\download\SHA256SUMS", "$sum  $name`n")
+          $api = 'http://127.0.0.1:8765'
+          @{
+            tag_name = 'v99.0.0'
+            html_url = 'https://github.com/MasRama/nokta/releases/tag/v99.0.0'
+            assets = @(
+              @{ name = $name; browser_download_url = "$api/download/$name" },
+              @{ name = 'SHA256SUMS'; browser_download_url = "$api/download/SHA256SUMS" }
+            )
+          } | ConvertTo-Json -Depth 4 | Set-Content "$fake\repos\MasRama\nokta\releases\latest"
+          $server = Start-Process python -ArgumentList '-m', 'http.server', '8765', '--bind', '127.0.0.1', '--directory', $fake -PassThru -NoNewWindow
+          $up = $false
+          foreach ($i in 1..30) {
+            Start-Sleep -Seconds 1
+            try { Invoke-WebRequest "$api/repos/MasRama/nokta/releases/latest" -UseBasicParsing | Out-Null; $up = $true; break } catch {}
+          }
+          if (-not $up) { throw "the fake GitHub did not start (exited: $($server.HasExited))" }
+          $env:NOKTA_GITHUB_API_URL = $api
+          $said = nokta update --check
+          if ("$said" -notmatch 'Nokta 99\.0\.0 is available') { throw "update --check said: $said" }
+          $before = (Get-Process -Name Nokta).Id
+          nokta update --yes
+          if ($LASTEXITCODE -ne 0) { throw "nokta update failed" }
+          $restarted = $false
+          foreach ($i in 1..60) {
+            Start-Sleep -Seconds 1
+            $now = @(Get-Process -Name Nokta -ErrorAction SilentlyContinue)
+            if ($now.Count -eq 1 -and $now[0].Id -ne $before) { $restarted = $true; break }
+          }
+          Stop-Process -Id $server.Id
+          if (-not $restarted) { throw "Nokta did not start again after the update" }
+          Start-Sleep -Seconds 8
+          ./tools/windows/shot.ps1 -Name updated
+          nokta activity set ci-after --title "After the update"
+          if ($LASTEXITCODE -ne 0) { throw "the updated Nokta does not answer nokta" }
+          nokta activity end ci-after
       - name: Upload the shots and the installer
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
