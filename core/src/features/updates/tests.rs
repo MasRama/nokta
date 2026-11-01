@@ -8,7 +8,9 @@ use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use super::github::{Asset, Client, FetchError, Release};
-use super::model::{check_sum, newer, sum_for, tarball_name, SumError, DAY_US, FIRST_CHECK_US};
+use super::model::{
+    check_sum, newer, setup_name, sum_for, tarball_name, SumError, DAY_US, FIRST_CHECK_US,
+};
 use super::service::{self, Command, ReleaseSource};
 use super::UpdateState;
 use crate::features::settings::UpdatesConfig;
@@ -68,6 +70,11 @@ fn a_tarball_must_match_its_listed_sum() {
         check_sum(b"test", &sums, &tarball_name("0.12.0")),
         Err(SumError::NotListed)
     );
+}
+
+#[test]
+fn the_windows_setup_is_named_as_tauri_names_it() {
+    assert_eq!(setup_name("0.11.0"), "Nokta_0.11.0_x64-setup.exe");
 }
 
 #[tokio::test]

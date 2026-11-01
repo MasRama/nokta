@@ -35,6 +35,11 @@ pub fn tarball_name(version: &str) -> String {
     format!("noktad-{version}-x86_64-linux.tar.gz")
 }
 
+/// The Windows installer a release publishes for this version, as Tauri names it.
+pub fn setup_name(version: &str) -> String {
+    format!("Nokta_{version}_x64-setup.exe")
+}
+
 /// The SHA-256, in lowercase hex, that `sha256sum` output lists for `file`.
 pub fn sum_for(sums: &str, file: &str) -> Option<String> {
     sums.lines().find_map(|line| {

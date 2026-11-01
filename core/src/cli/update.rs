@@ -1,10 +1,12 @@
-//! `nokta update`: installs the latest release from GitHub. The tarball must
-//! match the release's SHA256SUMS before anything is unpacked; its own
-//! `install.sh` then replaces noktad, nokta and the extension and restarts
-//! noktad. The notch shows it as the activity `update:nokta` meanwhile.
+//! `nokta update`: installs the latest release from GitHub. Its download
+//! must match the release's SHA256SUMS before anything runs. On Linux the
+//! tarball's own `install.sh` then replaces noktad, nokta and the extension
+//! and restarts noktad; on Windows the setup closes Nokta, installs it and
+//! starts it again. The notch shows it as the activity `update:nokta`
+//! meanwhile.
 
 use std::io::{BufRead, IsTerminal, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, ExitCode};
 
 use futures_util::StreamExt;
@@ -12,7 +14,7 @@ use futures_util::StreamExt;
 use super::client::Client;
 use crate::app::USER_AGENT;
 use crate::features::updates::github::{self, checked, Release};
-use crate::features::updates::model::{check_sum, newer, tarball_name};
+use crate::features::updates::model::{check_sum, newer};
 use crate::shared::http;
 use crate::shared::paths::Paths;
 
@@ -76,13 +78,25 @@ pub async fn update(yes: bool, check_only: bool) -> ExitCode {
     }
     match result {
         Ok(()) => {
-            println!("Nokta {version} is installed. Log out and back in to finish.");
+            println!("{}", installed(&version));
             ExitCode::SUCCESS
         }
         Err(err) => fail(&err),
     }
 }
 
+#[cfg(target_os = "linux")]
+fn installed(version: &str) -> String {
+    format!("Nokta {version} is installed. Log out and back in to finish.")
+}
+
+#[cfg(windows)]
+fn installed(version: &str) -> String {
+    format!("Nokta {version} is installing; it starts again by itself.")
+}
+
+/// Unpacks the tarball and runs its `install.sh`.
+#[cfg(target_os = "linux")]
 async fn install<F, Fut>(
     release: &Release,
     version: &str,
@@ -93,9 +107,65 @@ where
     F: Fn(&'static str, f64) -> Fut,
     Fut: std::future::Future<Output = ()>,
 {
+    use crate::features::updates::model::tarball_name;
+
     let name = tarball_name(version);
-    let tarball = release
-        .asset(&name)
+    let path = fetch(release, &name, dir, say).await?;
+    say("Installing", -1.0).await;
+    run(Command::new("tar")
+        .arg("-xzf")
+        .arg(&path)
+        .arg("-C")
+        .arg(dir))?;
+    let installer = dir
+        .join(name.trim_end_matches(".tar.gz"))
+        .join("install.sh");
+    run(&mut Command::new(installer))
+}
+
+/// Starts the setup and leaves it running: it closes Nokta, replaces it,
+/// this nokta.exe too, and starts it again (`/R`).
+#[cfg(windows)]
+async fn install<F, Fut>(
+    release: &Release,
+    version: &str,
+    dir: &Path,
+    say: &F,
+) -> Result<(), String>
+where
+    F: Fn(&'static str, f64) -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    use std::os::windows::process::CommandExt;
+
+    use crate::features::updates::model::setup_name;
+
+    /// Not tied to this console, which may close first.
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    let name = setup_name(version);
+    let path = fetch(release, &name, dir, say).await?;
+    say("Installing", -1.0).await;
+    Command::new(&path)
+        .args(["/S", "/R"])
+        .creation_flags(DETACHED_PROCESS)
+        .spawn()
+        .map(drop)
+        .map_err(|err| format!("cannot run {name}: {err}"))
+}
+
+/// Downloads `name` from the release into `dir`, once it matches SHA256SUMS.
+async fn fetch<F, Fut>(
+    release: &Release,
+    name: &str,
+    dir: &Path,
+    say: &F,
+) -> Result<std::path::PathBuf, String>
+where
+    F: Fn(&'static str, f64) -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    let file = release
+        .asset(name)
         .ok_or_else(|| format!("the release has no {name}"))?;
     let sums = release.asset(SUMS).ok_or_else(|| {
         format!("the release has no {SUMS}, so its download cannot be checked; update by hand")
@@ -112,23 +182,13 @@ where
         .map_err(|err| format!("cannot download {SUMS}: {err}"))?;
     let sums = String::from_utf8_lossy(&sums).into_owned();
     println!("Downloading {name}");
-    let data = download(&http, &tarball.url, |done| say("Downloading", done))
+    let data = download(&http, &file.url, |done| say("Downloading", done))
         .await
         .map_err(|err| format!("cannot download {name}: {err}"))?;
-    check_sum(&data, &sums, &name).map_err(|err| format!("{name} was not installed: {err}"))?;
-    let path = dir.join(&name);
+    check_sum(&data, &sums, name).map_err(|err| format!("{name} was not installed: {err}"))?;
+    let path = dir.join(name);
     std::fs::write(&path, &data).map_err(|err| format!("cannot save {name}: {err}"))?;
-
-    say("Installing", -1.0).await;
-    run(Command::new("tar")
-        .arg("-xzf")
-        .arg(&path)
-        .arg("-C")
-        .arg(dir))?;
-    let installer: PathBuf = dir
-        .join(name.trim_end_matches(".tar.gz"))
-        .join("install.sh");
-    run(&mut Command::new(installer))
+    Ok(path)
 }
 
 /// The whole body of `url`, telling `progress` how much of it came (0 to 1).
@@ -157,6 +217,7 @@ where
     Ok(data)
 }
 
+#[cfg(target_os = "linux")]
 fn run(command: &mut Command) -> Result<(), String> {
     let program = command.get_program().to_string_lossy().into_owned();
     match command.status() {

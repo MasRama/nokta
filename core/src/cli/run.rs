@@ -49,20 +49,9 @@ pub async fn execute(cli: Cli) -> ExitCode {
         } => alarm(hour, minute, label).await,
         Cli::ClearClocks => call(|nokta| async move { nokta.clear_clocks().await }).await,
         Cli::Settings => settings().await,
-        Cli::Update { yes, check_only } => update(yes, check_only).await,
+        Cli::Update { yes, check_only } => super::update::update(yes, check_only).await,
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
     }
-}
-
-#[cfg(target_os = "linux")]
-async fn update(yes: bool, check_only: bool) -> ExitCode {
-    super::update::update(yes, check_only).await
-}
-
-#[cfg(windows)]
-async fn update(_yes: bool, _check_only: bool) -> ExitCode {
-    eprintln!("nokta: on Windows, update Nokta from its release page for now");
-    ExitCode::FAILURE
 }
 
 /// The app opens its settings window.
