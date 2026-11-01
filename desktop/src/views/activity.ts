@@ -1,6 +1,7 @@
 import { activityIcon, formatElapsed, progressLabel, type Activity } from '@ext/features/activities/logic/activities.js';
+import type { UpdateRow as UpdateRowModel } from '@ext/features/updates/logic/update.js';
 import { withAlpha } from '@ext/shared/logic/color.js';
-import { _, format } from '@ext/shared/logic/i18n.js';
+import { _ } from '@ext/shared/logic/i18n.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
 import { icon, setIcon } from '../icons.js';
@@ -91,28 +92,42 @@ export class ActivityRow {
 }
 
 /**
- * A newer Nokta: its chip and the text, which opens the release's page.
- * Installing it from here comes with the Windows update install.
+ * A newer Nokta: its chip, the text, which opens the release's page, and an
+ * Update button. As the extension's panel/view.ts.
  */
 export class UpdateRow {
-    readonly element: HTMLButtonElement;
+    readonly element: HTMLDivElement;
     readonly chip = new IconChip();
     private readonly title: HTMLSpanElement;
+    private readonly link: HTMLButtonElement;
+    private readonly install: HTMLButtonElement;
 
-    constructor(openRelease: () => void) {
+    constructor(handlers: { openRelease(): void; installUpdate(): void }) {
         this.chip.show('software-update-available-symbolic', TONES.update);
         this.title = document.createElement('span');
         this.title.className = 'nokta-panel-update-title';
-        this.element = document.createElement('button');
+        this.link = document.createElement('button');
+        this.link.className = 'nokta-panel-update-link';
+        this.link.append(this.title);
+        this.link.addEventListener('click', () => handlers.openRelease());
+        this.install = document.createElement('button');
+        this.install.className = 'nokta-button nokta-panel-join';
+        this.install.textContent = _('Update');
+        this.install.style.backgroundColor = withAlpha(TONES.update, 0.22);
+        this.install.style.color = TONES.update;
+        this.install.addEventListener('click', () => handlers.installUpdate());
+        this.element = document.createElement('div');
         this.element.className = 'nokta-panel-update';
         this.element.hidden = true;
-        this.element.append(this.chip.element, this.title);
-        this.element.addEventListener('click', () => openRelease());
+        this.element.append(this.chip.element, this.link, this.install);
     }
 
-    /** `latest` is the newer version; empty hides the row. */
-    show(latest: string): void {
-        this.element.hidden = latest === '';
-        this.title.textContent = latest ? format(_('Nokta %s is available'), latest) : '';
+    /** Null hides the row; while it installs, the row is only text. */
+    show(update: UpdateRowModel | null): void {
+        this.element.hidden = update === null;
+        if (!update) return;
+        this.title.textContent = update.text;
+        this.install.hidden = !update.canInstall;
+        this.link.disabled = !update.canInstall;
     }
 }

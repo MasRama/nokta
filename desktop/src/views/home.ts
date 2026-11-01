@@ -1,6 +1,7 @@
 import type { Activity } from '@ext/features/activities/logic/activities.js';
 import type { PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from '@ext/features/panel/logic/layout.js';
+import type { UpdateRow as UpdateRowModel } from '@ext/features/updates/logic/update.js';
 import type { WeatherLine } from '@ext/features/weather/logic/weather.js';
 import { _, N_ } from '@ext/shared/logic/i18n.js';
 import { TONES } from '@ext/shared/logic/tones.js';
@@ -43,6 +44,7 @@ export interface HomeHandlers extends ClockHandlers, CallHandlers, EventHandlers
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
     openRelease(): void;
+    installUpdate(): void;
 }
 
 /** What home lists above its controls. */
@@ -190,7 +192,7 @@ export class HomeView {
             this.clocks.push(row);
             this.element.append(row.element);
         }
-        this.updateRow = new UpdateRow(() => handlers.openRelease());
+        this.updateRow = new UpdateRow(handlers);
         this.element.append(this.updateRow.element, this.controls);
     }
 
@@ -231,9 +233,9 @@ export class HomeView {
         this.activities.forEach((row, i) => row.show(activities[i], nowUs));
     }
 
-    /** The newer version; empty hides its row. */
-    setUpdate(latest: string): void {
-        this.updateRow.show(latest);
+    /** The row about a newer Nokta; null hides it. */
+    setUpdate(update: UpdateRowModel | null): void {
+        this.updateRow.show(update);
     }
 
     /** The newest clocks, one row each. */
