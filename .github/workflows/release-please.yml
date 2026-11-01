@@ -25,9 +25,55 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  windows:
+    name: Windows installer
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.release-please.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: stable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        working-directory: desktop
+      # The installer carries the nokta command, copied out of
+      # target\release first, where the app's Nokta.exe would overwrite it.
+      - name: Build the nokta command
+        shell: pwsh
+        run: |
+          cargo build --release --locked -p nokta-core --bin nokta
+          New-Item -ItemType Directory -Force desktop/src-tauri/bin | Out-Null
+          Copy-Item target/release/nokta.exe desktop/src-tauri/bin/
+          $version = ./desktop/src-tauri/bin/nokta.exe --version
+          if ($version -ne "nokta $env:VERSION") { throw "built $version, not $env:VERSION" }
+      - name: Build the installer
+        working-directory: desktop
+        run: npx tauri build --bundles nsis
+      # `nokta update` looks for this name on the release.
+      - name: Check the installer's name
+        shell: pwsh
+        run: |
+          $setup = "target/release/bundle/nsis/Nokta_$($env:VERSION)_x64-setup.exe"
+          if (-not (Test-Path $setup)) { throw "no $setup" }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-installer
+          path: target/release/bundle/nsis/Nokta_${{ env.VERSION }}_x64-setup.exe
+          if-no-files-found: error
+
   artifacts:
     name: Release artifacts
-    needs: release-please
+    needs: [release-please, windows]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     runs-on: ubuntu-24.04
     permissions:
@@ -71,12 +117,17 @@ jobs:
           tar -C build -czf "build/$name.tar.gz" "$name"
           "build/$name/noktad" --version | grep -qx "noktad $VERSION"
           "build/$name/nokta" --version | grep -qx "nokta $VERSION"
-      # `nokta update` refuses a tarball whose sum is not listed here.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-installer
+          path: build
+      # `nokta update` refuses a download whose sum is not listed here.
       - name: Write the checksums
         working-directory: build
         run: |
           sha256sum "noktad-$VERSION-x86_64-linux.tar.gz" \
-            nokta@nokta.io.shell-extension.zip > SHA256SUMS
+            nokta@nokta.io.shell-extension.zip \
+            "Nokta_${VERSION}_x64-setup.exe" > SHA256SUMS
           sha256sum -c SHA256SUMS
       - name: Upload to the release
         env:
@@ -85,4 +136,5 @@ jobs:
           gh release upload "$TAG" --clobber \
             "build/noktad-$VERSION-x86_64-linux.tar.gz" \
             build/nokta@nokta.io.shell-extension.zip \
+            "build/Nokta_${VERSION}_x64-setup.exe" \
             build/SHA256SUMS
