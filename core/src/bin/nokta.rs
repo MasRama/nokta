@@ -18,7 +18,7 @@ Usage:
   nokta --version | --help
 
 run shows COMMAND in the notch while it runs, then how it ended, and exits
-with its exit code. It runs the command even when noktad is not there.
+with its exit code. It runs the command even when Nokta is not running.
 
 activity set starts or updates an activity; without --progress the progress
 is unknown. activity end removes it, as a success unless --failed is given.
@@ -59,7 +59,7 @@ fn main() -> ExitCode {
     }
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 fn execute(cli: Cli) -> ExitCode {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -68,7 +68,7 @@ fn execute(cli: Cli) -> ExitCode {
         .block_on(nokta_core::cli::run::execute(cli))
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", windows)))]
 fn execute(_cli: Cli) -> ExitCode {
     eprintln!("nokta: Nokta has no frontend on this system yet");
     ExitCode::FAILURE

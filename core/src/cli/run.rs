@@ -1,17 +1,17 @@
-//! `nokta`'s commands. `run` works without noktad: the activity is a bonus,
+//! `nokta`'s commands. `run` works without Nokta: the activity is a bonus,
 //! the command and its exit code are what the caller depends on.
 
-use std::os::unix::process::ExitStatusExt;
 use std::process::{Command, ExitCode, ExitStatus};
 use std::time::Duration;
 
 use super::args::Cli;
-use super::client::Client;
+use super::client::{CallError, Client};
 use super::local_time::next_time_of_day;
 
 /// Sent again this often while a command runs, so it never goes stale.
 const KEEP_ALIVE: Duration = Duration::from_secs(60);
 const RUN_ICON: &str = "utilities-terminal-symbolic";
+#[cfg(target_os = "linux")]
 const EXTENSION_UUID: &str = "nokta@nokta.io";
 
 pub async fn execute(cli: Cli) -> ExitCode {
@@ -23,58 +23,57 @@ pub async fn execute(cli: Cli) -> ExitCode {
             icon,
             progress,
         } => {
-            report(async {
-                Client::connect()
-                    .await?
-                    .set(&id, &title, &detail, &icon, progress)
-                    .await
-            })
-            .await
+            call(|nokta| async move { nokta.set(&id, &title, &detail, &icon, progress).await })
+                .await
         }
         Cli::End {
             id,
             success,
             message,
-        } => report(async { Client::connect().await?.end(&id, success, &message).await }).await,
+        } => call(|nokta| async move { nokta.end(&id, success, &message).await }).await,
         Cli::Run {
             title,
             icon,
             command,
         } => run(&title, &icon, &command).await,
         Cli::Countdown { duration_us, label } => {
-            clock(|timer| async move {
-                timer
-                    .call::<_, _, String>("AddCountdown", &(label, duration_us))
-                    .await
-                    .map(drop)
-            })
-            .await
+            call(|nokta| async move { nokta.add_countdown(&label, duration_us).await }).await
         }
         Cli::Stopwatch { label } => {
-            clock(|timer| async move {
-                timer
-                    .call::<_, _, String>("AddStopwatch", &(label,))
-                    .await
-                    .map(drop)
-            })
-            .await
+            call(|nokta| async move { nokta.add_stopwatch(&label).await }).await
         }
         Cli::Alarm {
             hour,
             minute,
             label,
         } => alarm(hour, minute, label).await,
-        Cli::ClearClocks => {
-            clock(|timer| async move { timer.call("ClearClocks", &()).await }).await
-        }
-        Cli::Settings => settings(),
-        Cli::Update { yes, check_only } => super::update::update(yes, check_only).await,
+        Cli::ClearClocks => call(|nokta| async move { nokta.clear_clocks().await }).await,
+        Cli::Settings => settings().await,
+        Cli::Update { yes, check_only } => update(yes, check_only).await,
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
     }
 }
 
+#[cfg(target_os = "linux")]
+async fn update(yes: bool, check_only: bool) -> ExitCode {
+    super::update::update(yes, check_only).await
+}
+
+#[cfg(windows)]
+async fn update(_yes: bool, _check_only: bool) -> ExitCode {
+    eprintln!("nokta: on Windows, update Nokta from its release page for now");
+    ExitCode::FAILURE
+}
+
+/// The app opens its settings window.
+#[cfg(windows)]
+async fn settings() -> ExitCode {
+    call(|nokta| async move { nokta.open_settings().await }).await
+}
+
 /// GNOME Shell opens the extension's settings window.
-fn settings() -> ExitCode {
+#[cfg(target_os = "linux")]
+async fn settings() -> ExitCode {
     match Command::new("gnome-extensions")
         .args(["prefs", EXTENSION_UUID])
         .status()
@@ -99,46 +98,23 @@ async fn alarm(hour: u8, minute: u8, label: String) -> ExitCode {
         eprintln!("nokta: {hour:02}:{minute:02} does not happen in the next day here");
         return ExitCode::FAILURE;
     };
-    clock(|timer| async move {
-        timer
-            .call::<_, _, String>("AddAlarm", &(label, at * 1_000_000))
-            .await
-            .map(drop)
-    })
-    .await
+    call(|nokta| async move { nokta.add_alarm(&label, at * 1_000_000).await }).await
 }
 
-/// Runs one call on the timer and reports a failure the way noktad words it.
-async fn clock<F, Fut>(call: F) -> ExitCode
+/// Makes one call and says why it failed, if it did.
+async fn call<F, Fut>(call: F) -> ExitCode
 where
-    F: FnOnce(zbus::Proxy<'static>) -> Fut,
-    Fut: std::future::Future<Output = zbus::Result<()>>,
+    F: FnOnce(Client) -> Fut,
+    Fut: std::future::Future<Output = Result<(), CallError>>,
 {
-    let timer = match Client::timer().await {
-        Ok(timer) => timer,
-        Err(err) => {
-            eprintln!("nokta: cannot reach noktad: {err}");
-            return ExitCode::FAILURE;
-        }
+    let result = match Client::connect().await {
+        Ok(nokta) => call(nokta).await,
+        Err(err) => Err(err),
     };
-    match call(timer).await {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(zbus::Error::MethodError(_, Some(message), _)) => {
-            eprintln!("nokta: {message}");
-            ExitCode::FAILURE
-        }
-        Err(err) => {
-            eprintln!("nokta: cannot reach noktad: {err}");
-            ExitCode::FAILURE
-        }
-    }
-}
-
-async fn report(call: impl std::future::Future<Output = zbus::Result<()>>) -> ExitCode {
-    match call.await {
+    match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("nokta: cannot reach noktad: {err}");
+            eprintln!("nokta: {err}");
             ExitCode::FAILURE
         }
     }
@@ -195,7 +171,10 @@ async fn run(title: &str, icon: &str, command: &[String]) -> ExitCode {
 }
 
 /// The exit code to pass on and the message for a failed activity.
+#[cfg(unix)]
 fn outcome(status: ExitStatus, interrupted: bool) -> (i32, String) {
+    use std::os::unix::process::ExitStatusExt;
+
     match (status.code(), status.signal()) {
         (Some(0), _) => (0, String::new()),
         (Some(code), _) if interrupted => (code, "Interrupted".into()),
@@ -203,5 +182,18 @@ fn outcome(status: ExitStatus, interrupted: bool) -> (i32, String) {
         (None, Some(signal)) if interrupted || signal == 2 => (128 + signal, "Interrupted".into()),
         (None, Some(signal)) => (128 + signal, format!("Stopped by signal {signal}")),
         (None, None) => (1, "Stopped".into()),
+    }
+}
+
+/// The exit code to pass on and the message for a failed activity. Ctrl-C
+/// ends a console program with STATUS_CONTROL_C_EXIT.
+#[cfg(windows)]
+fn outcome(status: ExitStatus, interrupted: bool) -> (i32, String) {
+    const CONTROL_C_EXIT: i32 = 0xC000_013A_u32 as i32;
+    match status.code() {
+        Some(0) => (0, String::new()),
+        Some(code) if interrupted || code == CONTROL_C_EXIT => (code, "Interrupted".into()),
+        Some(code) => (code, format!("Exit code {code}")),
+        None => (1, "Stopped".into()),
     }
 }
