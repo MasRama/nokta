@@ -212,4 +212,15 @@ describe('the settings window', () => {
         vi.advanceTimersByTime(SEND_DELAY_MS);
         expect(sets()).toEqual([['appearance', 'theme', 'paper']]);
     });
+
+    it("says when the core can't read the chosen picture", async () => {
+        const subtitle = (r: HTMLElement) => r.querySelector('.nokta-prefs-subtitle')!.textContent;
+        const unread = await mount({ Appearance: { picture: 'C:\\Users\\me\\broken.png' } });
+        expect(subtitle(unread.row('Picture'))).toBe("Can't read this picture");
+        windows.splice(0).forEach((prefs) => prefs.stop());
+        document.body.replaceChildren();
+        const read = await mount({ Appearance: { picture: 'C:\\Users\\me\\beach.jpg' }, PicturePath: 'C:\\cache\\picture.png' });
+        expect(subtitle(read.row('Picture'))).not.toBe("Can't read this picture");
+        expect(read.root.querySelector('.nokta-prefs-preview image')).toBeNull();
+    });
 });

@@ -529,3 +529,7 @@ button:disabled {
 .nokta-prefs-theme-chosen svg {
     box-shadow: 0 0 0 2px var(--ember);
 }
+
+.nokta-prefs-subtitle.nokta-prefs-warning {
+    color: var(--ember);
+}

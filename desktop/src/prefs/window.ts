@@ -197,6 +197,18 @@ export class SettingsWindow {
         this.gallery.update(appearance, appearance.theme, picture);
     }
 
+    /** A picture chosen but not prepared by the core could not be read: its row says so. */
+    private warnUnreadablePicture(): void {
+        const setting = this.rows.find((r) => nameOf(r.row) === 'appearance.picture');
+        const subtitle = setting?.element.querySelector<HTMLElement>('.nokta-prefs-subtitle');
+        if (!setting || !subtitle) return;
+        const chosen = rowValue(asRow(setting.row), this.settings.tables);
+        const unreadable = Boolean(chosen) && !this.settings.picture.path && !this.pending.has('appearance.picture');
+        subtitle.textContent = unreadable ? _("Can't read this picture") : _(setting.row.subtitle ?? ''); // i18n: runtime
+        subtitle.hidden = !subtitle.textContent;
+        subtitle.classList.toggle('nokta-prefs-warning', unreadable);
+    }
+
     /** Show the tour again. */
     private tourGroup(): HTMLElement {
         const group = element('div', 'nokta-prefs-group');
@@ -295,6 +307,7 @@ export class SettingsWindow {
             setting.setMin?.(rowMin(row, tables));
             if (!this.pending.has(nameOf(row))) setting.show(rowValue(row, tables));
         }
+        this.warnUnreadablePicture();
         this.showLook();
     }
 }
