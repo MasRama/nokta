@@ -1,11 +1,14 @@
+import { appearanceFrom } from '@ext/features/settings/logic/parse.js';
 import { rowMin, rowValue, type Row, type Table } from '@ext/features/settings/logic/schema.js';
-import { pageIcon } from '@ext/prefs/logic/look.js';
+import { pageIcon, previewModel } from '@ext/prefs/logic/look.js';
 import { _ } from '@ext/shared/logic/i18n.js';
+import type { PictureState } from '@ext/shared/logic/theme.js';
 
 import type { Bridge } from '../bridge/bridge.js';
 import { Follower } from '../follower.js';
 import { icon } from '../icons.js';
 import { windowsPages, type PrefPage, type PrefRow } from './logic.js';
+import { NotchPreview, ThemeGallery } from './look.js';
 import { buildRow, type RowHost, type SettingRow, type SettingValue } from './rows.js';
 import WORDMARK from '../../../extension/icons/nokta-wordmark-reverse.svg?raw';
 
@@ -19,6 +22,8 @@ export interface PrefsHost extends RowHost {
     openConfig(): void;
     /** Shows the first-run tour again in the primary monitor's notch. */
     showTour(): Promise<void>;
+    /** A file's path as a URL the page loads, for the picture theme's image. */
+    fileUrl(path: string): string;
 }
 
 const TABLES: Record<Table, string> = {
@@ -38,9 +43,10 @@ const TABLES: Record<Table, string> = {
     home: 'Home',
 };
 
-/** Settings1's tables, by their name in config.toml. */
+/** Settings1's tables, by their name in config.toml, and the picture the core prepared. */
 class SettingsTables extends Follower {
     tables: Partial<Record<Table, unknown>> = {};
+    picture = { path: '', color: '', tone: '' };
 
     constructor(bridge: Bridge, onChanged: () => void) {
         super(bridge, 'Settings1', onChanged);
@@ -50,10 +56,14 @@ class SettingsTables extends Follower {
         const tables: Partial<Record<Table, unknown>> = {};
         for (const [table, property] of Object.entries(TABLES) as [Table, string][]) tables[table] = this.props[property];
         this.tables = tables;
+        const text = (name: string): string => (typeof this.props[name] === 'string' ? this.props[name] : '');
+        this.picture = { path: text('PicturePath'), color: text('PictureColor'), tone: text('PictureTone') };
     }
 }
 
 const nameOf = (row: Pick<Row, 'table' | 'key'>) => `${row.table}.${row.key}`;
+/** The gallery picks the theme, so its row does not show, as in the extension's window. */
+const isTheme = (row: Pick<Row, 'table' | 'key'>) => nameOf(row) === 'appearance.theme';
 /** `rowValue` and `rowMin` read only a row's table, key and kind; a feeds row has no floor. */
 const asRow = (row: PrefRow): Row => (row.kind.type === 'feeds' ? { ...row, kind: { type: 'text' } } : (row as Row));
 
@@ -73,13 +83,16 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, className: strin
 export class SettingsWindow {
     private readonly settings: SettingsTables;
     private readonly rows: SettingRow[] = [];
-    private readonly pending = new Map<string, { timer: number; send: () => void }>();
+    /** Changes waiting to be sent, with their value: the preview shows them at once. */
+    private readonly pending = new Map<string, { timer: number; send: () => void; value: SettingValue }>();
     private readonly navs = new Map<string, HTMLButtonElement>();
     private readonly sections = new Map<string, HTMLElement>();
     private readonly heading: HTMLHeadingElement;
     private readonly content: HTMLElement;
     private readonly toasts: HTMLElement;
     private readonly confirm: HTMLElement;
+    private readonly preview: NotchPreview;
+    private readonly gallery: ThemeGallery;
 
     constructor(
         private readonly bridge: Bridge,
@@ -88,6 +101,10 @@ export class SettingsWindow {
         private readonly pages: readonly PrefPage[] = windowsPages(),
     ) {
         this.settings = new SettingsTables(bridge, () => this.showAll());
+        this.preview = new NotchPreview((path) => host.fileUrl(path));
+        const themeRow = pages.flatMap((page) => page.groups.flatMap((group) => group.rows)).find(isTheme);
+        const theme: SettingRow | null = themeRow ? { row: themeRow, element: document.body, show: () => this.showLook() } : null;
+        this.gallery = new ThemeGallery((name) => theme && this.queue(theme, name), (path) => host.fileUrl(path));
         const frame = element('div', 'nokta-prefs');
         const sidebar = element('nav', 'nokta-prefs-sidebar');
         const brand = element('div', 'nokta-prefs-brand');
@@ -104,6 +121,7 @@ export class SettingsWindow {
             sidebar.append(nav);
             this.navs.set(page.name, nav);
             const section = element('section', 'nokta-prefs-page');
+            if (page.name === 'appearance') section.append(this.lookGroup());
             for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
             if (page.name === 'behavior') section.append(this.tourGroup(), this.configGroup());
             this.content.append(section);
@@ -151,7 +169,7 @@ export class SettingsWindow {
         group.append(element('h2', 'nokta-prefs-group-title', _(title))); // i18n: runtime
         if (description) group.append(element('p', 'nokta-prefs-group-description', _(description))); // i18n: runtime
         const card = element('div', 'nokta-prefs-card');
-        for (const row of rows) {
+        for (const row of rows.filter((r) => !isTheme(r))) {
             const setting: SettingRow = buildRow(row, (value) => this.queue(setting, value), this.host);
             setting.show(rowValue(asRow(row), {}));
             this.rows.push(setting);
@@ -159,6 +177,24 @@ export class SettingsWindow {
         }
         group.append(card);
         return group;
+    }
+
+    /** The live preview over the theme gallery, first on Appearance. */
+    private lookGroup(): HTMLElement {
+        const group = element('div', 'nokta-prefs-group nokta-prefs-look');
+        group.append(this.preview.element, this.gallery.element);
+        this.showLook();
+        return group;
+    }
+
+    /** Draws the preview and the gallery from the core's appearance, with the changes not sent yet. */
+    private showLook(): void {
+        const raw: Record<string, unknown> = { ...((this.settings.tables.appearance as Record<string, unknown> | undefined) ?? {}) };
+        for (const [name, { value }] of this.pending) if (name.startsWith('appearance.')) raw[name.slice(11)] = value;
+        const appearance = appearanceFrom(raw);
+        const picture: PictureState = { ...this.settings.picture, darken: appearance.pictureDarken };
+        this.preview.update(previewModel(appearance, picture));
+        this.gallery.update(appearance, appearance.theme, picture);
     }
 
     /** Show the tour again. */
@@ -248,7 +284,8 @@ export class SettingsWindow {
         };
         const old = this.pending.get(name);
         if (old) window.clearTimeout(old.timer);
-        this.pending.set(name, { timer: window.setTimeout(send, SEND_DELAY_MS), send });
+        this.pending.set(name, { timer: window.setTimeout(send, SEND_DELAY_MS), send, value });
+        if (row.table === 'appearance') this.showLook();
     }
 
     private showAll(): void {
@@ -258,6 +295,7 @@ export class SettingsWindow {
             setting.setMin?.(rowMin(row, tables));
             if (!this.pending.has(nameOf(row))) setting.show(rowValue(row, tables));
         }
+        this.showLook();
     }
 }
 
