@@ -10,6 +10,7 @@ import { breakAfterFocus, finishedAlert, phaseColor, type TimerSnapshot } from '
 import { alertMotion, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import type { AlertKind } from '@ext/shared/logic/fullscreen.js';
 import type { AlertTone } from '@ext/shared/logic/glow.js';
+import { _ } from '@ext/shared/logic/i18n.js';
 import { TONES } from '@ext/shared/logic/tones.js';
 
 import type { Ended } from './activities.js';
@@ -165,6 +166,18 @@ export function endedRequest(ended: Ended, behavior: Behavior, motions: boolean)
         durationMs: behavior.alertDurationMs,
         tone: success ? 'success' : 'urgent',
         motion: alertMotion(success ? 'activity-done' : 'activity-failed', motions),
+    };
+}
+
+/** The update could not start, as the extension says it. */
+export function updateFailedRequest(behavior: Behavior, motions: boolean): OsdRequest {
+    return {
+        content: { fraction: null, text: _('Cannot update Nokta'), detail: '', urgent: true },
+        icon: 'software-update-available-symbolic',
+        kind: 'activity',
+        durationMs: behavior.alertDurationMs,
+        tone: 'urgent',
+        motion: alertMotion('activity-failed', motions),
     };
 }
 

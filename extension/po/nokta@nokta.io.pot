@@ -11,7 +11,7 @@ msgstr ""
 msgid "Join"
 msgstr ""
 
-#: src/extension.ts
+#: src/extension.ts ../desktop/src/alerts.ts
 msgid "Cannot update Nokta"
 msgstr ""
 
@@ -282,7 +282,7 @@ msgstr ""
 msgid "Screen recording"
 msgstr ""
 
-#: src/features/panel/view.ts
+#: src/features/panel/view.ts ../desktop/src/views/activity.ts
 msgid "Update"
 msgstr ""
 
@@ -1226,7 +1226,7 @@ msgstr ""
 msgid "Log out and back in to finish updating Nokta"
 msgstr ""
 
-#: src/features/updates/logic/update.ts ../desktop/src/views/activity.ts
+#: src/features/updates/logic/update.ts
 #, c-format
 msgid "Nokta %s is available"
 msgstr ""

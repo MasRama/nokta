@@ -1384,13 +1384,19 @@ body.nokta-mock {
     transform-origin: left;
 }
 
-/* A newer Nokta: one line that opens its release page. */
+/* A newer Nokta: a line that opens its release page, and Update. */
 .nokta-panel-update {
     display: flex;
     align-items: center;
     gap: 10px;
     flex: none;
     height: 26px;
+}
+
+.nokta-panel-update-link {
+    display: flex;
+    flex: 1;
+    min-width: 0;
     padding: 0;
     border: 0;
     background: none;
@@ -1398,6 +1404,10 @@ body.nokta-mock {
     font: inherit;
     text-align: left;
     cursor: pointer;
+}
+
+.nokta-panel-update-link:disabled {
+    cursor: default;
 }
 
 .nokta-panel-update-title {
@@ -1408,7 +1418,7 @@ body.nokta-mock {
     font-weight: 600;
 }
 
-.nokta-panel-update:hover .nokta-panel-update-title {
+.nokta-panel-update-link:enabled:hover .nokta-panel-update-title {
     text-decoration: underline;
 }
 

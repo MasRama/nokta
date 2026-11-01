@@ -108,9 +108,36 @@ describe('live activities and updates on home', () => {
         notch.open(true);
         const row = root.querySelector<HTMLElement>('.nokta-panel-update')!;
         expect(row.hidden).toBe(false);
-        expect(row.textContent?.trim()).toBe('Nokta 0.12.0 is available');
-        row.click();
+        expect(row.querySelector('.nokta-panel-update-link')?.textContent).toBe('Nokta 0.12.0 is available');
+        row.querySelector<HTMLElement>('.nokta-panel-update-link')!.click();
         expect(openUri).toHaveBeenCalledWith(url);
+    });
+
+    it('updates from its Update button, which stays away while it installs', async () => {
+        const { bridge, notch, root } = await mount({ Updates1: { Latest: '0.12.0', ReleaseUrl: '' } });
+        notch.open(true);
+        const install = root.querySelector<HTMLButtonElement>('.nokta-panel-update .nokta-panel-join')!;
+        expect(install.textContent).toBe('Update');
+        install.click();
+        expect(bridge.calls).toContainEqual({ iface: 'Updates1', method: 'Install', args: [] });
+        expect(root.querySelector('.nokta-panel')?.classList).not.toContain('nokta-shown');
+        expect(install.hidden).toBe(true);
+        expect(root.querySelector<HTMLButtonElement>('.nokta-panel-update-link')?.disabled).toBe(true);
+    });
+
+    it("alerts in red when the update can't start, and offers it again", async () => {
+        const { bridge, notch, root, shown } = await mount({ Updates1: { Latest: '0.12.0', ReleaseUrl: '' } });
+        const call = bridge.call.bind(bridge);
+        vi.spyOn(bridge, 'call').mockImplementation((iface, method, ...args) =>
+            method === 'Install' ? Promise.reject(new Error('bin\\nokta.exe is not there')) : call(iface, method, ...args),
+        );
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        notch.open(true);
+        const install = root.querySelector<HTMLButtonElement>('.nokta-panel-update .nokta-panel-join')!;
+        install.click();
+        await vi.waitFor(() => expect(shown()?.textContent).toContain('Cannot update Nokta'));
+        expect(shown()?.classList).toContain('nokta-osd-urgent');
+        expect(install.hidden).toBe(false);
     });
 
     it('has no update row while this one is the newest', async () => {

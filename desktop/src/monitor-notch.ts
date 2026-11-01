@@ -37,6 +37,7 @@ import {
 } from '@ext/features/timer/logic/clocks.js';
 import { formatRemaining, msUntilNextSecond, phaseColor, remainingAt } from '@ext/features/timer/logic/timer.js';
 import { tourAfter, tourStep } from '@ext/features/tour/logic/steps.js';
+import { updateRow } from '@ext/features/updates/logic/update.js';
 import { drawnView, resizeKind, showsAlert, viewSize, type Drawn } from '@ext/logic/views.js';
 import { alertMotion, motionKicks, type AlertMotion } from '@ext/shared/logic/alert-motion.js';
 import { backdropFor, backdropPalette } from '@ext/shared/logic/backdrop.js';
@@ -62,6 +63,7 @@ import {
     finishedRequest,
     memoryLowRequest,
     TIMER_ICON,
+    updateFailedRequest,
     type OsdRequest,
 } from './alerts.js';
 import type { Bridge } from './bridge/bridge.js';
@@ -343,6 +345,7 @@ export class MonitorNotch {
             toggle: (which) => this.toggles.toggle(which),
             openTile: (which) => this.openTile(which),
             openRelease: () => this.openRelease(),
+            installUpdate: () => this.installUpdate(),
             openEvent: (id) => this.openEvent(id),
             joinMeeting: (id) => this.joinMeeting(id),
         });
@@ -887,7 +890,8 @@ export class MonitorNotch {
             timer: clocks.length > 0,
         });
         this.updateHomeTicker();
-        this.home.setUpdate(this.updates.latest);
+        // One program, so the page and the core are always the same version.
+        this.home.setUpdate(updateRow(this.updates.latest, '', '', this.updates.installing));
         const events = this.homeEvents();
         this.home.setEvents(events);
         const rows = homeRows(layout, {
@@ -1063,6 +1067,21 @@ export class MonitorNotch {
         if (!this.updates.url) return;
         this.machine.close();
         this.host.openUri?.(this.updates.url);
+    }
+
+    /**
+     * Update in home: the core starts `nokta update`, which shows itself as
+     * an activity; the notch closes for it, or for why it could not start.
+     */
+    private installUpdate(): void {
+        this.machine.close();
+        this.updates.install((message) => {
+            console.warn(`Nokta: cannot update: ${message}`);
+            this.onHome();
+            const { behavior, appearance } = this.settings;
+            this.showOsd(updateFailedRequest(behavior, appearance.alertMotion));
+        });
+        this.onHome();
     }
 
     /** Home's rows that count on: the call's time, the activities' and the clocks'. */
