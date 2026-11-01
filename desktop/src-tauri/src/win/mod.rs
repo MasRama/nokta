@@ -22,6 +22,7 @@ mod toggles;
 mod topmost;
 mod tour;
 mod tray;
+mod update;
 
 use std::sync::Mutex;
 

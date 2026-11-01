@@ -857,7 +857,13 @@ WebView2 and runs the core's services itself, with no D-Bus.
   `\\.\pipe\nokta-<user SID>`, one JSON line each way (`cli/pipe.rs`),
   where Linux has D-Bus. The app answers in `win/cli.rs` with the calls the
   page makes. Windows' default rights on a pipe let only its owner write.
-  `nokta update` is not there yet.
+- Updates: home's Update calls `Updates1.Install`, which starts
+  `bin\nokta.exe update --yes` (`win/update.rs`) as noktad starts `nokta
+  update` on Linux. It downloads `Nokta_<version>_x64-setup.exe`, checks
+  it against `SHA256SUMS` and starts it with `/S /R`, detached, then
+  exits: the setup closes Nokta, replaces it and `nokta.exe` (which must
+  not be running then) and starts Nokta again. `windows.yml` runs it
+  against a fake GitHub serving the build it made.
 - The NSIS installer installs per user without admin rights, brings the
   WebView2 bootstrapper, and starts Nokta at login through the `Run` key
   (`installer.nsh`), which Task Manager's Startup apps can turn off. It puts

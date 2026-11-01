@@ -728,6 +728,10 @@ pub async fn bridge_call(
             }
         }
         (timer_props::INTERFACE, method, args) => timer_call(&core, method, args).await,
+        (updates_props::INTERFACE, "Install", []) => {
+            super::update::start()?;
+            Ok(Value::Null)
+        }
         (updates_props::INTERFACE, "Check", []) => {
             // A full queue already holds a check.
             let _ = core
