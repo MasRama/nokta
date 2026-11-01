@@ -595,8 +595,10 @@ body.nokta-mock {
     text-align: center;
 }
 
+/* A label may take its share of the gaps beside its tile: with six tiles,
+   "Notifications" is a little wider than one. */
 .nokta-tile-label {
-    max-width: 100%;
+    max-width: calc(100% + 8px);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
