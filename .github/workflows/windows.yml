@@ -30,6 +30,15 @@ jobs:
           cache-dependency-path: desktop/package-lock.json
       - run: npm ci
         working-directory: desktop
+      # The installer carries the nokta command; Tauri's build script wants
+      # it there before anything of the app compiles. It waits in bin\, as
+      # the app's Nokta.exe would overwrite it in target\release.
+      - name: Build the nokta command
+        shell: pwsh
+        run: |
+          cargo build --release --locked -p nokta-core --bin nokta
+          New-Item -ItemType Directory -Force desktop/src-tauri/bin | Out-Null
+          Copy-Item target/release/nokta.exe desktop/src-tauri/bin/
       - run: cargo clippy -p nokta-desktop --all-targets --locked -- -D warnings
       - run: cargo test -p nokta-desktop --locked
       - name: Build the installer
@@ -75,6 +84,28 @@ jobs:
           Get-Content "$env:LOCALAPPDATA\nokta\nokta.log"
           # What Windows kept of it, for when the notch shows nothing.
           python -c "import os,sqlite3; db=os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db'); [print(r) for r in sqlite3.connect('file:'+db+'?mode=ro', uri=True).execute('select Id, Type, ArrivalTime from Notification order by ArrivalTime desc limit 3')]"
+          # The nokta command, on the user's Path, reaches the app over its pipe.
+          $userPath = (Get-Item HKCU:\Environment).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+          $bin = "$env:LOCALAPPDATA\Nokta\bin"
+          if (($userPath -split ';') -notcontains $bin) { throw "$bin is not on the user's Path: $userPath" }
+          $env:Path = [Environment]::ExpandEnvironmentVariables($userPath) + ';' + $env:Path
+          $version = nokta --version
+          if ($version -notmatch '^nokta \d') { throw "bin\nokta.exe is not the nokta command: $version" }
+          nokta activity set ci-build --title "Building Nokta" --detail "From CI" --progress 40
+          if ($LASTEXITCODE -ne 0) { throw "nokta activity set failed" }
+          nokta activity set ci-build --title ""
+          if ($LASTEXITCODE -eq 0) { throw "an empty title was taken" }
+          # Home lists it.
+          ./tools/windows/hit.ps1 -X $middle -Y 10 -Expect nokta
+          Start-Sleep -Seconds 2
+          ./tools/windows/shot.ps1 -Name activity
+          nokta activity end ci-build
+          nokta run --title "Failing" -- cmd /c exit 3
+          if ($LASTEXITCODE -ne 3) { throw "nokta run gave $LASTEXITCODE, not the command's 3" }
+          nokta timer 5m Tea
+          nokta timer clear
+          if ($LASTEXITCODE -ne 0) { throw "nokta timer clear failed" }
+          ./tools/windows/hit.ps1 -X $middle -Y 200 -Expect other
           # A second start leaves, opening the running one's settings.
           Start-Process $exe
           Start-Sleep -Seconds 5

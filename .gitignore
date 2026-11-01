@@ -10,3 +10,5 @@ node_modules/
 /docs/superpowers
 /desktop/dist
 /desktop/src-tauri/gen
+# The nokta command the installer carries, copied there before a build.
+/desktop/src-tauri/bin
