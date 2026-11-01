@@ -6,7 +6,8 @@
 use std::sync::{Arc, Mutex, OnceLock};
 
 use nokta_core::app::{follow, OpenMeteoUrls, Services, DEFAULT_LRCLIB_URL, USER_AGENT};
-use nokta_core::features::activities::model::Activity;
+use nokta_core::features::activities::model::{Activity, Update};
+use nokta_core::features::activities::service::Command as ActivityCommand;
 use nokta_core::features::calendar::feeds::{self, HttpFeeds};
 use nokta_core::features::calendar::ics::Event;
 use nokta_core::features::clipboard::service::{Command as ClipCommand, Published};
@@ -89,6 +90,7 @@ pub struct Core {
     clocks: watch::Receiver<ClocksSnapshot>,
     clock_commands: mpsc::Sender<ClockCommand>,
     activities: watch::Receiver<Vec<Activity>>,
+    activity_commands: mpsc::Sender<ActivityCommand>,
     updates: watch::Receiver<UpdateState>,
     update_commands: mpsc::Sender<updates::service::Command>,
     usage: watch::Receiver<Usage>,
@@ -128,6 +130,42 @@ impl Core {
                 tracing::warn!("cannot take a dragged file off the shelf: {err}");
             }
         }
+    }
+
+    /// Starts or updates activity `id`, as `nokta activity set` asks.
+    pub async fn set_activity(&self, id: String, update: Update) -> Result<(), String> {
+        let stopped = || "the activities have stopped".to_owned();
+        let (reply, answer) = oneshot::channel();
+        self.activity_commands
+            .send(ActivityCommand::Set { id, update, reply })
+            .await
+            .map_err(|_| stopped())?;
+        answer
+            .await
+            .map_err(|_| stopped())?
+            .map_err(|err| err.to_string())
+    }
+
+    /// Ends activity `id`, as `nokta activity end` asks.
+    pub async fn end_activity(
+        &self,
+        id: String,
+        success: bool,
+        message: String,
+    ) -> Result<(), String> {
+        self.activity_commands
+            .send(ActivityCommand::End {
+                id,
+                success,
+                message,
+            })
+            .await
+            .map_err(|_| "the activities have stopped".to_owned())
+    }
+
+    /// Calls `Timer1.method(args)`, as the page does.
+    pub async fn timer(&self, method: &str, args: &[Value]) -> Result<Value, String> {
+        timer_call(self, method, args).await
     }
 
     /// Puts files dropped on the notch on the shelf.
@@ -410,6 +448,7 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         clocks: services.timer.clocks.state.clone(),
         clock_commands: services.timer.clocks.commands.clone(),
         activities: services.activities.state.clone(),
+        activity_commands: services.activities.commands.clone(),
         updates: releases.state,
         update_commands: releases.commands,
         usage: counters.usage,

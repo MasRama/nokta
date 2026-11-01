@@ -1,6 +1,7 @@
 //! The Windows app: the core in process, a notch window at the top of every
 //! monitor, the tray icon, and the commands the page calls.
 
+mod cli;
 mod clipboard;
 mod folders;
 mod fullscreen;
@@ -69,6 +70,7 @@ pub fn run() {
             let core = services::start(app.handle(), &paths);
             let sizes = NotchSizes::from(&core.config().appearance);
             app.manage(core);
+            cli::start(app.handle().clone());
             app.manage(settings_window::ConfigFile(paths.config_file.clone()));
             app.manage(tour::StateFile(
                 paths.config_file.with_file_name("state.toml"),

@@ -42,7 +42,7 @@ small public boundary, private internals, and a thin composition layer.
 contracts/          D-Bus interface XML, the single source of truth
 core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
-  src/cli/          the `nokta` command: arguments, and on Linux the Activities1 client
+  src/cli/          the `nokta` command: arguments, its client (D-Bus on Linux, a pipe on Windows)
   src/features/     media, lyrics, settings, devices, timer, activities, weather,
                     calendar, shelf, clipboard, downloads, system, updates
   src/shared/       paths, monotonic clock, hashing, atomic file writes, picture
@@ -249,7 +249,7 @@ docs/               manual test checklist, screenshots
   monotonic one, so time spent suspended counts; the task sleeps until the
   next one is due, and logind's `PrepareForSleep(false)` on the system bus
   wakes it after a resume. `nokta alarm HH:MM` turns the local time into a
-  Unix time in the CLI (`cli/local_time.rs`, libc's `mktime`).
+  Unix time in the CLI (`cli/local_time.rs`, jiff's system zone).
 - **activities** keeps the live activities that apps and scripts report
   (`Set`, `End`): at most 8, newest first. A pure `Activities` takes `now`;
   the task around it sleeps until the oldest one goes stale
@@ -852,9 +852,19 @@ WebView2 and runs the core's services itself, with no D-Bus.
   settings window's Show the tour again clears it and tells that notch.
 - The tray icon stands in for the top bar (Settings, Quit). A second start
   opens the settings and leaves the running Nokta alone.
+- The `nokta` command is the same program as on Linux; its client
+  (`cli/client/`) talks to the app over the named pipe
+  `\\.\pipe\nokta-<user SID>`, one JSON line each way (`cli/pipe.rs`),
+  where Linux has D-Bus. The app answers in `win/cli.rs` with the calls the
+  page makes. Windows' default rights on a pipe let only its owner write.
+  `nokta update` is not there yet.
 - The NSIS installer installs per user without admin rights, brings the
   WebView2 bootstrapper, and starts Nokta at login through the `Run` key
-  (`installer.nsh`), which Task Manager's Startup apps can turn off.
+  (`installer.nsh`), which Task Manager's Startup apps can turn off. It puts
+  `nokta.exe` in `bin\` (beside `Nokta.exe` it would clash, as Windows
+  ignores case) and that folder on the user's `Path`. For the same reason
+  a build copies it to `src-tauri/bin\` first: the app's `Nokta.exe`
+  overwrites it in `target\release`.
 - `npm run shots` shoots the page in Chrome on a stand-in desktop
   (`?mock=<scene>`), the check that runs anywhere. `windows.yml` builds the
   installer on `windows-latest`, installs and starts it, checks that a
