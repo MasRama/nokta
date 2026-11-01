@@ -13,5 +13,5 @@
   "url": "https://github.com/MasRama/nokta",
   "settings-schema": "org.gnome.shell.extensions.nokta",
   "gettext-domain": "nokta@nokta.io",
-  "version-name": "0.10.0"
+  "version-name": "0.11.0"
 }
