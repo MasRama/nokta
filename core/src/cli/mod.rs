@@ -10,7 +10,7 @@ mod local_time;
 pub mod pipe;
 #[cfg(any(target_os = "linux", windows))]
 pub mod run;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", windows))]
 mod update;
 
 #[cfg(test)]
