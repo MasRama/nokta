@@ -7,8 +7,9 @@
 
 A dynamic island for the desktop: one small notch at the top of your screen
 for what's happening now, out of the way until you need it. Open source.
-GNOME today, Windows and macOS next. Hover over it to open it, or press
-<kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>.
+GNOME and Windows today, macOS next. Hover over it to open it, or press
+<kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd> (<kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>N</kbd>
+on Windows).
 
 <p align="center">
   <img src="docs/images/player.png" width="49%" alt="The open notch playing a song, with its lyric line">
@@ -148,6 +149,8 @@ GNOME today, Windows and macOS next. Hover over it to open it, or press
 
 ## Install
 
+### Linux (GNOME)
+
 You need:
 
 - GNOME Shell 46 to 51: Ubuntu 24.04 and 26.04, Zorin OS 18, Debian 13,
@@ -195,6 +198,59 @@ the top bar so the notch does not cover it. When Just Perfection is
 enabled, Nokta leaves the clock alone so the two don't fight over it. Set
 Just Perfection's **Clock Menu Position** to **Right** instead.
 
+### Windows
+
+You need Windows 10 or 11, 64-bit (x64).
+
+1. Download `Nokta_<version>_x64-setup.exe` and `SHA256SUMS` from the
+   [latest release](https://github.com/MasRama/nokta/releases/latest).
+   To check the download, run this in PowerShell in that folder; it prints
+   `True`:
+
+   ```powershell
+   $setup = Get-Item .\Nokta_*_x64-setup.exe
+   (Select-String -SimpleMatch $setup.Name .\SHA256SUMS).Line.Split(' ')[0] -eq (Get-FileHash $setup).Hash
+   ```
+
+2. Run the setup. It is not signed yet, so SmartScreen may say *Windows
+   protected your PC*: click **More info**, then **Run anyway**. It installs
+   for your user only, without admin rights, into `%LOCALAPPDATA%\Nokta`,
+   brings Microsoft's WebView2 if Windows lacks it, starts Nokta at login
+   (Task Manager's **Startup apps** can turn that off) and puts the `nokta`
+   command on your `Path` for new terminals.
+3. Nokta starts at once and opens on the same tour as on GNOME. The tray
+   icon has **Settings** and **Quit Nokta**; starting Nokta again also opens
+   the settings.
+
+Windows keeps showing its own banner for a notification that Nokta shows
+too. To have only Nokta's, open Windows' **Settings → System →
+Notifications**, pick the app and turn off **Show notification banners**;
+its notifications stay in Windows' notification centre.
+
+Windows has no system calendar Nokta can read, so give it the calendars
+yourself: in the settings window's **Behavior** page, under **Calendar**,
+add up to five secret iCal addresses. In Google Calendar it is in the
+calendar's settings under **Integrate calendar → Secret address in iCal
+format**; in Outlook, **Settings → Calendar → Shared calendars → Publish a
+calendar**, the ICS link; in iCloud, share the calendar as a public
+calendar. Treat the address like a password: anyone who has it can read
+the calendar. Nokta reads it every 15 minutes and shows only its host.
+
+Most of Nokta works the same on Windows. What differs, as Windows offers no
+way to do it:
+
+- No Do Not Disturb or Night Light toggles, and a shared screen gets no
+  privacy dot.
+- Windows 11's own volume and brightness popup still shows beside the
+  notch's.
+- A call shows no app icon, Bluetooth devices show no battery, and the
+  System page shows no CPU temperature (Windows gives it to administrators
+  only).
+- Activities come only from the `nokta` command; nothing starts one by
+  itself, as system updates or apps do on GNOME.
+- Clicking a notification opens its app or its link, not the exact item.
+- The tray's items stay in English.
+
 ## Updating
 
 From 0.11 on, `noktad` asks GitHub once a day whether a newer Nokta is out
@@ -221,6 +277,12 @@ source. `[updates] check = false` stops the daily check; home's button and
 
 From 0.10 or older, update by hand once: download the new release and run
 its `install.sh` as in [Install](#install).
+
+On Windows, home's **Update** and `nokta update` work the same way. They
+download `Nokta_<version>_x64-setup.exe` and `SHA256SUMS` into
+`%LOCALAPPDATA%\nokta\cache\update\`, check the setup's SHA-256 and run it
+quietly: Nokta closes, updates and starts again by itself a few seconds
+later, with no logging out. Running a newer setup by hand does the same.
 
 ## Using Nokta
 
@@ -267,6 +329,11 @@ also call `io.nokta.Activities1` on the session bus (see
 [ARCHITECTURE.md](ARCHITECTURE.md)). The newest activity shows in the
 closed notch, with its percentage when it reports one. Hover to see up to
 three.
+
+On Windows the same `nokta` works in PowerShell or Command Prompt and
+talks to the running Nokta. `nokta run` starts programs, not scripts: run a
+`.cmd` or `.bat` file through `cmd /c` (`nokta run -- cmd /c build.cmd`)
+and a PowerShell script through `powershell -File`.
 
 Apps that show progress on the dock (Firefox and Chromium-based browsers
 downloading, Files copying, and others) show it in the notch on their own,
@@ -641,7 +708,14 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 - **Calendar.** To find an event's meeting link, `noktad` reads that one
   event from Evolution Data Server on your computer, and its calendar's
   color from the calendar's settings there. It sends nothing anywhere; the
-  link opens only when you press Join.
+  link opens only when you press Join. On Windows, Nokta downloads the
+  calendars you gave it from their addresses every 15 minutes and sends
+  nothing with the request; the addresses stay in your config and never
+  show in full or go to the log.
+- **Notifications on Windows.** While `[notifications] in_notch` is on,
+  Nokta reads Windows' own notification database on your computer, read
+  only, to show new notifications. It keeps only the app logos it shows,
+  in its cache, and sends nothing.
 - **Clipboard.** The history never leaves your computer and is never
   written to disk, except small thumbnails of copied pictures in
   `$XDG_RUNTIME_DIR/nokta/clipboard/` (memory, readable only by you,
@@ -696,12 +770,17 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 
 ## Uninstall
 
-From the unpacked release folder:
+On Linux, from the unpacked release folder:
 
 ```sh
 ./uninstall.sh          # keeps ~/.config/nokta and ~/.cache/nokta
 ./uninstall.sh --purge  # removes them too
 ```
+
+On Windows, uninstall Nokta from **Settings → Apps → Installed apps**. It
+also stops Nokta starting at login and takes the `nokta` command off your
+`Path`. Your settings in `%APPDATA%\nokta` and the cache in
+`%LOCALAPPDATA%\nokta` stay; delete those folders to remove them too.
 
 ## Build from source
 
@@ -731,7 +810,10 @@ Nokta has two parts:
   Bluetooth (BlueZ) and system updates (PackageKit), runs the focus timer, keeps the shelf and the
   clipboard history, and reads your settings.
 - **A frontend** that draws the notch and talks to the daemon. On Linux it
-  is a GNOME Shell extension, and they talk over D-Bus.
+  is a GNOME Shell extension, and they talk over D-Bus. On Windows it is
+  one app, Nokta.exe, that draws the notch in WebView2 and runs the
+  daemon's core inside itself, with Windows' own media, device and
+  notification sources.
 
 The daemon does the work so the shell stays fast. It uses no CPU while
 nothing plays and about 10 MB of memory.
@@ -741,13 +823,13 @@ nothing plays and about 10 MB of memory.
 |---|---|
 | Linux, GNOME 46 to 51 | Works (47 is untested: no supported distribution ships it) |
 | Linux, KDE Plasma, Hyprland, Sway | Planned |
-| Windows | Planned: the daemon's core builds and passes its tests there |
+| Windows 10 and 11 (x64) | Works, with the differences listed under [Install](#windows) |
 | macOS | Planned: the daemon's core builds and passes its tests there |
 
-The plan is one daemon for every platform, with a small frontend for each
-desktop that draws the notch. Today the only frontend, and the only media
-and device sources, are on Linux. CI builds and tests the rest of the
-daemon on macOS and Windows on every change.
+The plan is one core for every platform, with a small frontend for each
+desktop that draws the notch. Today there are frontends for GNOME and
+Windows. CI builds and tests the core on Linux, macOS and Windows on every
+change, and installs and starts the Windows app on a real Windows.
 
 ## Contributing
 
