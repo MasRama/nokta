@@ -826,7 +826,9 @@ WebView2 and runs the core's services itself, with no D-Bus.
   the tray, home's Settings tile or a second start. It draws every row of
   the extension's `settings/logic/schema.ts`, less what only GNOME has,
   with Windows' wording (`prefs/logic.ts`), plus the calendar feeds,
-  listed by host only since their address is a secret. Each change goes
+  listed by host only since their address is a secret. Appearance opens
+  on the extension's live preview and theme gallery, drawn as SVG
+  (`prefs/look.ts`); they show a change before it is sent. Each change goes
   to `Settings1.Set` a moment after the last one; a refused value shows
   the core's message and its value again.
 - Words: the page bundles the extension's `.po` files and translates with

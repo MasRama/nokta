@@ -23,7 +23,7 @@ async function mount(settings: Props = {}) {
     const showTour = vi.fn(() => Promise.resolve());
     const root = document.createElement('div');
     document.body.append(root);
-    const prefs = new SettingsWindow(bridge, { pickPicture, openConfig, showTour }, root);
+    const prefs = new SettingsWindow(bridge, { pickPicture, openConfig, showTour, fileUrl: (path: string) => path }, root);
     windows.push(prefs);
     await prefs.start();
     /** The row titled `title` on any page. */
@@ -192,5 +192,24 @@ describe('the settings window', () => {
         showTour.mockRejectedValueOnce(new Error('no notch shows'));
         row('Show the tour again').querySelector<HTMLElement>('button')!.click();
         await vi.waitFor(() => expect(toasts().at(-1)).toBe('no notch shows'));
+    });
+
+    it('opens Appearance on a preview, and its gallery picks the theme at once', async () => {
+        const { root, row, sets } = await mount();
+        expect(row('Theme')).toBeUndefined();
+        expect(row('Theme in light style')).toBeDefined();
+        const cards = () => [...root.querySelectorAll<HTMLElement>('.nokta-prefs-theme')];
+        const chosen = () => cards().find((card) => card.getAttribute('aria-checked') === 'true')?.textContent;
+        expect(cards().map((card) => card.textContent)).toContain('Paper');
+        expect(chosen()).toBe('Midnight');
+        // The sky's gradient, then the notch's.
+        const body = () => root.querySelectorAll('.nokta-prefs-preview linearGradient')[1]?.querySelector('stop')?.getAttribute('stop-color');
+        const before = body();
+        cards().find((card) => card.textContent === 'Paper')!.click();
+        expect(chosen()).toBe('Paper');
+        expect(body()).not.toBe(before);
+        expect(sets()).toEqual([]);
+        vi.advanceTimersByTime(SEND_DELAY_MS);
+        expect(sets()).toEqual([['appearance', 'theme', 'paper']]);
     });
 });

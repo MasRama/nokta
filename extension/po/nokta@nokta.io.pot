@@ -1251,7 +1251,7 @@ msgstr ""
 msgid "Move down"
 msgstr ""
 
-#: src/prefs/window.ts
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Can't read this picture"
 msgstr ""
 

@@ -468,3 +468,64 @@ button:disabled {
     justify-content: flex-end;
     gap: 8px;
 }
+
+/* Appearance opens on a live preview over the theme gallery (look.ts) */
+
+.nokta-prefs-look {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.nokta-prefs-preview svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    font-family: inherit;
+}
+
+.nokta-prefs-themes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 6px;
+}
+
+.nokta-prefs-theme {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 8px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--dim);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: default;
+}
+
+.nokta-prefs-theme svg {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--line);
+}
+
+.nokta-prefs-theme:hover {
+    background: var(--card);
+}
+
+.nokta-prefs-theme:focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: -2px;
+}
+
+.nokta-prefs-theme-chosen {
+    color: var(--text);
+}
+
+.nokta-prefs-theme-chosen svg {
+    box-shadow: 0 0 0 2px var(--ember);
+}
