@@ -6,5 +6,6 @@ pub mod dbus;
 pub mod fs;
 pub mod hash;
 pub mod http;
+pub mod memory;
 pub mod paths;
 pub mod picture;
