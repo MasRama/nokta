@@ -6,6 +6,9 @@
 pub fn client(
     configure: impl Fn(reqwest::ClientBuilder) -> reqwest::ClientBuilder,
 ) -> reqwest::Client {
+    // TLS runs on ring, a few MB smaller than rustls' default aws-lc. Only
+    // the first call installs it; the later ones find it there.
+    let _ = rustls::crypto::ring::default_provider().install_default();
     match configure(reqwest::Client::builder()).build() {
         Ok(client) => client,
         Err(err) => {
