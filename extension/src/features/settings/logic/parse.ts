@@ -132,7 +132,7 @@ export const DEFAULT_APPEARANCE: Readonly<Appearance> = {
     alertGlow: true,
     alertMotion: true,
     morph: true,
-    depth: true,
+    depth: false,
     gradient: 'none',
     backgroundEnd: '#1c1c1e',
     followSystemStyle: false,

@@ -89,6 +89,11 @@ test('appearance_from_full_table', () => {
     });
 });
 
+test('the notch has no shadow or rim by default', () => {
+    assert.equal(DEFAULT_APPEARANCE.depth, false);
+    assert.equal(appearanceFrom({ depth: true }).depth, true);
+});
+
 test('the custom gradient is flat by default, and an unknown one is flat', () => {
     assert.equal(DEFAULT_APPEARANCE.gradient, 'none');
     assert.equal(DEFAULT_APPEARANCE.backgroundEnd, '#1c1c1e');
