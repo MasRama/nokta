@@ -38,7 +38,7 @@ tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "
 toml = "1.1.8"
 toml_edit = "0.25.17"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-subscriber = "0.3.23"
 url = "2.5.8"
 
 # D-Bus serves Nokta and reads the players and devices on Linux only.
