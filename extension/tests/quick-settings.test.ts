@@ -65,6 +65,9 @@ test('aurora is tinted even without a cover, so its swatch never looks like midn
     const aurora = swatches.find((s) => s.theme === 'aurora')!;
     const midnight = swatches.find((s) => s.theme === 'midnight')!;
     assert.notEqual(aurora.top, midnight.top);
+    // The daemon sends no cover as an empty color.
+    const empty = themeSwatches(colors, '');
+    assert.equal(empty.find((s) => s.theme === 'aurora')!.top, aurora.top);
     // With a cover it takes that cover's tint.
     assert.equal(themeSwatches(colors, '#30a050').find((s) => s.theme === 'aurora')!.top, paletteFor('aurora', colors, '#30a050').background);
 });
