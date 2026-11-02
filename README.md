@@ -135,9 +135,9 @@ on Windows).
   Choose all alerts or none with `fullscreen_alerts`.
 - **Themes.** Midnight, graphite, glass, aurora (tinted with the cover's
   color), paper, a picture of your own, or your own colors. The song's
-  cover, blurred, can sit behind the open player in any of them. A soft
-  shadow and a light rim along the edge lift the notch off the wallpaper,
-  and its buttons press in and spring back. Between views the song's cover
+  cover, blurred, can sit behind the open player in any of them. The
+  notch sits flat on the wallpaper; `depth` adds a soft shadow and a light
+  rim along its edge. Its buttons press in and spring back. Between views the song's cover
   flies from the closed notch into the open player and back, a running
   timer or activity flies into its row in home, and an opening view's rows
   come in one after the other.
@@ -501,7 +501,7 @@ Every key, by table:
 | `progress_line` | `true` | A thin line along the bottom of the closed notch for the focus timer, a countdown, an activity's progress or the song |
 | `alert_glow` | `true` | A glow under the notch in an alert's color; the bounce stays either way, unless GNOME's animations are off |
 | `alert_motion` | `true` | Each alert moves its own way (a timer rings, a failed activity shakes); `false` gives every alert the bounce |
-| `depth` | `true` | A soft shadow under the notch and a light rim along its bottom edge |
+| `depth` | `false` | A soft shadow under the notch and a light rim along its bottom edge |
 
 </details>
 

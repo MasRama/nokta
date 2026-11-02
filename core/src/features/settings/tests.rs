@@ -34,7 +34,7 @@ fn defaults_match_spec() {
     assert_eq!(a.theme, "midnight");
     assert!(a.progress_line);
     assert!(a.alert_glow);
-    assert!(a.depth);
+    assert!(!a.depth);
     assert!(a.alert_motion);
     assert!(a.morph);
     assert!(!a.cover_backdrop);

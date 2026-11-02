@@ -95,7 +95,7 @@ impl Default for Appearance {
             alert_glow: true,
             alert_motion: true,
             morph: true,
-            depth: true,
+            depth: false,
             gradient: "none".into(),
             background_end: "#1c1c1e".into(),
             follow_system_style: false,
