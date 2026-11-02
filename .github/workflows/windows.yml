@@ -16,6 +16,9 @@ jobs:
   app:
     name: Windows app
     runs-on: windows-latest
+    env:
+      # The release profile aborts on a panic for noktad; the app unwinds.
+      CARGO_PROFILE_RELEASE_PANIC: unwind
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
