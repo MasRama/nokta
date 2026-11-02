@@ -47,7 +47,8 @@ const SAMPLE_COVER = '#c2477f';
  */
 export function themeSwatches(colors: ThemeColors, cover: string | null, picture: PictureState | null = null): ThemeSwatch[] {
     return THEMES.map((theme) => {
-        const palette = paletteFor(theme, colors, cover ?? SAMPLE_COVER, picture);
+        // No cover comes from the daemon as an empty color.
+        const palette = paletteFor(theme, colors, cover || SAMPLE_COVER, picture);
         return {
             theme,
             label: _(THEME_LABELS[theme]), // i18n: runtime
