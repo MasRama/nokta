@@ -17,6 +17,10 @@ strip = true
 # Sized for memory: noktad is idle nearly always, and the kernel maps most of
 # its code around the pages it runs, so smaller code is a smaller RSS.
 opt-level = "s"
+# Without unwinding noktad loses its unwind tables and landing pads, about
+# 1 MB; a panic stops it and systemd starts it again. The Windows app has no
+# such keeper, so its CI builds set CARGO_PROFILE_RELEASE_PANIC=unwind.
+panic = "abort"
 
 # Covers and pictures still decode at full speed.
 [profile.release.package]
