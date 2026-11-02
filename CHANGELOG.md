@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.1](https://github.com/MasRama/nokta/compare/v0.11.0...v0.11.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* **extension:** tint aurora's swatch when nothing is playing ([99f2964](https://github.com/MasRama/nokta/commit/99f29647f4e4dd4fc8be7c56a2fde78be7a8bca2))
+
+
+### Performance Improvements
+
+* abort noktad on a panic and let systemd start it again ([d8ec58d](https://github.com/MasRama/nokta/commit/d8ec58d0887e6c101329452e471b878927fd49f7))
+* **core:** filter noktad's log with Targets instead of EnvFilter ([43787bf](https://github.com/MasRama/nokta/commit/43787bf8165b658a98ce3a58fab1b096bc81a6c6))
+* **core:** give decoded images' memory back to the system ([bfe2937](https://github.com/MasRama/nokta/commit/bfe293747b2c70480f65e3a84bf69b141159e4ef))
+* **core:** run TLS on ring instead of aws-lc ([f186820](https://github.com/MasRama/nokta/commit/f1868206da2e1a7a918b3d6503d0837a5b20d3ee))
+* **core:** speak HTTP/1.1 only ([e46a201](https://github.com/MasRama/nokta/commit/e46a201e6955de9e29e2366a5bf1f683c6f46a6b))
+* optimize release builds for size ([8329afc](https://github.com/MasRama/nokta/commit/8329afc5bc91372d48f6bbda7e0b42fc59d19e58))
+
 ## [0.11.0](https://github.com/MasRama/nokta/compare/v0.10.0...v0.11.0) (2026-11-01)
 
 
