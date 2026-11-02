@@ -6,7 +6,8 @@ use std::process::ExitCode;
 use nokta_core::app::{self, OpenMeteoUrls, RunOptions, DEFAULT_LRCLIB_URL};
 use nokta_core::features::updates::github::DEFAULT_API_URL;
 use nokta_core::shared::paths::Paths;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::filter::Targets;
+use tracing_subscriber::prelude::*;
 
 const USAGE: &str = "\
 Usage: noktad [--version | --help]
@@ -42,10 +43,19 @@ fn main() -> ExitCode {
         }
     }
 
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_env("NOKTA_LOG").unwrap_or_else(|_| "info".into()))
-        .with_writer(std::io::stderr)
-        .with_ansi(std::io::stderr().is_terminal())
+    // Targets reads the same `NOKTA_LOG` as EnvFilter without its regex engine.
+    let filter = std::env::var("NOKTA_LOG")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .and_then(|value| value.parse::<Targets>().ok())
+        .unwrap_or_else(|| Targets::new().with_default(tracing::Level::INFO));
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(std::io::stderr)
+                .with_ansi(std::io::stderr().is_terminal()),
+        )
+        .with(filter)
         .init();
 
     match run() {
