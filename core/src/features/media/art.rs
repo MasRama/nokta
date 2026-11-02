@@ -266,7 +266,7 @@ mod tests {
     }
 
     fn cache(dir: &tempfile::TempDir) -> ArtCache {
-        ArtCache::new(dir.path().join("cache"), reqwest::Client::new())
+        ArtCache::new(dir.path().join("cache"), crate::shared::http::client(|b| b))
     }
 
     #[tokio::test]

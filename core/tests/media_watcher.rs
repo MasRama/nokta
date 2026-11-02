@@ -16,7 +16,10 @@ async fn start_watcher(
     tokio::sync::watch::Receiver<nokta_core::features::media::MediaState>,
     nokta_core::features::media::control::Controller,
 ) {
-    let art = ArtCache::new(cache.path().to_owned(), reqwest::Client::new());
+    let art = ArtCache::new(
+        cache.path().to_owned(),
+        nokta_core::shared::http::client(|b| b),
+    );
     watcher::spawn(bus.connect().await, art)
 }
 
