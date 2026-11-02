@@ -14,3 +14,14 @@ repository = "https://github.com/MasRama/nokta"
 lto = "thin"
 codegen-units = 1
 strip = true
+# Sized for memory: noktad is idle nearly always, and the kernel maps most of
+# its code around the pages it runs, so smaller code is a smaller RSS.
+opt-level = "s"
+
+# Covers and pictures still decode at full speed.
+[profile.release.package]
+image = { opt-level = 3 }
+image-webp = { opt-level = 3 }
+png = { opt-level = 3 }
+zune-jpeg = { opt-level = 3 }
+fdeflate = { opt-level = 3 }
