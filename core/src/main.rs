@@ -25,6 +25,7 @@ Environment:
                                   (default: https://api.github.com)";
 
 fn main() -> ExitCode {
+    nokta_core::shared::memory::tune_allocator();
     match std::env::args().nth(1).as_deref() {
         None => {}
         Some("--version" | "-V") => {
