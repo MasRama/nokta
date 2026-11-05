@@ -2,8 +2,9 @@
 
 use crate::shared::hash::sha256_hex;
 
-/// Bumped when lookups get better, so old "not found" answers are asked again.
-const VERSION: u32 = 2;
+/// Bumped when lookups get better, so old "not found" answers are asked
+/// again: 2 cleaned up browser titles, 3 finds covers.
+const VERSION: u32 = 3;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TrackKey {

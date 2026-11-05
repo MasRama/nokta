@@ -96,6 +96,51 @@ pub fn candidates(artist: &str, title: &str) -> Vec<Candidate> {
     out
 }
 
+/// The song titles among `candidates` worth searching without an artist,
+/// best first: each once, and not an `Artist - Song` pair.
+pub fn song_titles(candidates: &[Candidate]) -> Vec<&str> {
+    let mut out: Vec<&str> = Vec::new();
+    for c in candidates {
+        let title = c.title.as_str();
+        if split_dash(title).is_none() && !out.iter().any(|t| normalized(t) == normalized(title)) {
+            out.push(title);
+        }
+    }
+    out
+}
+
+/// Whether an LRCLIB record titled `record_title` is the song `song`. Some
+/// records carry a whole video title, `TULUS - Hati-Hati di Jalan (Official
+/// Music Video)`.
+pub fn names_song(record_title: &str, song: &str) -> bool {
+    let want = normalized(song);
+    if want.is_empty() {
+        return false;
+    }
+    let cleaned = clean_title(record_title);
+    normalized(record_title) == want
+        || normalized(&cleaned) == want
+        || split_dash(&cleaned).is_some_and(|(_, right)| normalized(right) == want)
+}
+
+/// Whether `artist` (as LRCLIB names it, maybe `A, B` or `A & B`) is named
+/// in `text`, as whole words.
+pub fn names_artist(text: &str, artist: &str) -> bool {
+    let text = format!(" {} ", normalized(text));
+    artist
+        .split([',', '&', '/'])
+        .flat_map(|a| a.split(" feat"))
+        .map(normalized)
+        .any(|a| !a.is_empty() && text.contains(&format!(" {a} ")))
+}
+
+/// Whether a title says it is someone else singing the song.
+pub fn is_cover(title: &str) -> bool {
+    words(title)
+        .iter()
+        .any(|w| ["cover", "covered", "karaoke", "akustik"].contains(&w.as_str()))
+}
+
 /// The parts of a `A | B | C` title that may name the song: those with an
 /// `Artist - Song` dash first, then the first part.
 fn song_parts(title: &str) -> Vec<&str> {
@@ -402,6 +447,47 @@ mod tests {
             pairs("Channel", "Bruce Springsteen - Cover Me")[0],
             pair("Bruce Springsteen", "Cover Me")
         );
+    }
+
+    #[test]
+    fn song_titles_are_each_side_of_the_dash_once() {
+        let c = candidates(
+            "Tami Aulia",
+            "Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)",
+        );
+        assert_eq!(song_titles(&c), ["Tulus", "Hati-Hati di Jalan"]);
+        assert_eq!(
+            song_titles(&candidates("Daft Punk", "Get Lucky")),
+            ["Get Lucky"]
+        );
+    }
+
+    #[test]
+    fn a_record_with_a_video_title_names_the_song() {
+        let video = "TULUS - Hati-Hati di Jalan (Official Music Video)";
+        assert!(names_song(video, "Hati-Hati di Jalan"));
+        assert!(names_song("Hati‐Hati di Jalan", "hati-hati di jalan"));
+        assert!(!names_song(video, "Tulus"));
+        assert!(!names_song("Get Lucky Tonight", "Get Lucky"));
+        assert!(!names_song("Sial", ""));
+    }
+
+    #[test]
+    fn an_artist_is_named_as_whole_words() {
+        let title = "Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)";
+        assert!(names_artist(title, "Tulus"));
+        assert!(names_artist(title, "Song, Tulus"));
+        assert!(!names_artist(title, "Radja"));
+        assert!(!names_artist("Tulusan", "Tulus"));
+        assert!(!names_artist(title, ""));
+    }
+
+    #[test]
+    fn a_cover_says_so() {
+        assert!(is_cover("Sial (Cover)"));
+        assert!(is_cover("Hati-Hati di Jalan - Tulus | Akustik"));
+        assert!(!is_cover("Get Lucky"));
+        assert!(!is_cover("Coverage"));
     }
 
     #[test]
