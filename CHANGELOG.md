@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.12.0](https://github.com/MasRama/nokta/compare/v0.11.1...v0.12.0) (2026-11-05)
+
+
+### Features
+
+* **cli:** nokta plugin catalog, install by id and update ([4ece6dd](https://github.com/MasRama/nokta/commit/4ece6ddfb049362e947de1cdfd3728402e0e3f0a))
+* **cli:** nokta plugin creator and nokta plugin create ([7e96f3b](https://github.com/MasRama/nokta/commit/7e96f3bc99d6dd8e28e5284cc4c3c41afbe77a12))
+* **cli:** nokta plugin lists, installs, removes, turns on and runs plugins ([6ec8c73](https://github.com/MasRama/nokta/commit/6ec8c73e262665be7f561b5cafb840d6b715ea7f))
+* **desktop:** Creator Mode in the Windows app ([f9ff791](https://github.com/MasRama/nokta/commit/f9ff791d1aeee8fc0f0655a97980de3331ad9b44))
+* **desktop:** the Windows app installs plugins from the catalog ([2f45020](https://github.com/MasRama/nokta/commit/2f45020474e231478d3edbf441128972ec42cb46))
+* **desktop:** the Windows app runs add-on plugins and answers nokta plugin ([d3c2c2a](https://github.com/MasRama/nokta/commit/d3c2c2a7aeca11e4f69a9a87849575a599dca040))
+* **desktop:** the Windows notch shows plugins' cards, badges and alerts ([d35fcce](https://github.com/MasRama/nokta/commit/d35fccec33399aa9f539c09b28514bf793f2a46e))
+* **extension:** icons for plugins, weather, downloads, the shelf, activities and privacy ([bf74690](https://github.com/MasRama/nokta/commit/bf74690187773fe2aace29b0a0fd9d035cde3f38))
+* **extension:** the notch shows add-on plugins' cards, badges and alerts ([73b05ca](https://github.com/MasRama/nokta/commit/73b05ca0e2cdf39eb16e74b9655252e58bd542b1))
+* **plugins:** Creator Mode writes a plugin from a sentence and installs it off ([c9ddecf](https://github.com/MasRama/nokta/commit/c9ddecf8a0bf66d162171ae2b31a29b04d397494))
+* **plugins:** give each plugin a data folder that outlives its updates ([5f6c959](https://github.com/MasRama/nokta/commit/5f6c959a5fc9bc70b745da4a4398ada197a27628))
+* **plugins:** noktad installs plugins from the catalog, each file checked ([1a702d5](https://github.com/MasRama/nokta/commit/1a702d5c5d0a3f7f8ddffe2f4485e65240632286))
+* **plugins:** noktad runs add-on plugins from their own folders ([c301977](https://github.com/MasRama/nokta/commit/c301977e10471f4a3d7be789e3a6c092a7e78d45))
+* **settings:** a Plugins page that lists the built-ins, each with its own switch ([e892844](https://github.com/MasRama/nokta/commit/e89284406d5836203b02ab82883acf811be88724))
+* **settings:** add plugins from a folder, set their options and remove them ([6de6112](https://github.com/MasRama/nokta/commit/6de611273baeefb38be3a253243c5e0623a756c9))
+* **settings:** add, set and remove plugins in the Windows settings ([8206899](https://github.com/MasRama/nokta/commit/8206899ddb2ab6fbec37b6d728b892945bc59ec3))
+* **settings:** browse the plugin catalog and install from it on GNOME ([a71caea](https://github.com/MasRama/nokta/commit/a71caea8a6568e0a8594578d1ed0fae16805844b))
+* **settings:** browse the plugin catalog on Windows ([510a85c](https://github.com/MasRama/nokta/commit/510a85cdb6dbe5d4f52ff15557b42495f9302723))
+* **settings:** create a plugin with AI on GNOME ([31636dc](https://github.com/MasRama/nokta/commit/31636dc4bb8284d632ac5b39336c4cac0c40a3dd))
+* **settings:** create a plugin with AI on Windows ([d76d910](https://github.com/MasRama/nokta/commit/d76d910a4d1c71d9cd086856aa298fd87161a5a0))
+
+
+### Bug Fixes
+
+* **settings:** turn the notch's shadow and rim off by default ([99848f6](https://github.com/MasRama/nokta/commit/99848f695b9e273a8a57bc003f74d1f32b0163d9))
+
 ## [0.11.1](https://github.com/MasRama/nokta/compare/v0.11.0...v0.11.1) (2026-11-02)
 
 
