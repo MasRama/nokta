@@ -46,6 +46,17 @@ pub enum Command {
     },
 }
 
+/// Sends the command `make` builds and waits for its answer.
+pub async fn ask<T>(
+    commands: &mpsc::Sender<Command>,
+    make: impl FnOnce(Reply<T>) -> Command,
+) -> Result<T, String> {
+    let stopped = || "the plugins service has stopped".to_owned();
+    let (reply, answer) = oneshot::channel();
+    commands.send(make(reply)).await.map_err(|_| stopped())?;
+    answer.await.map_err(|_| stopped())?
+}
+
 pub struct Handle {
     pub commands: mpsc::Sender<Command>,
     pub state: watch::Receiver<PluginsState>,
