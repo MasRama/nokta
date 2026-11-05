@@ -286,6 +286,32 @@ msgstr ""
 msgid "Update"
 msgstr ""
 
+#: src/features/plugins/logic/plugins.ts
+msgid "Does not run on this system"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+#, c-format
+msgid "Cannot load: %s"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+#, c-format
+msgid "Failed: %s"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Starting…"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Running"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Off"
+msgstr ""
+
 #: src/features/privacy/logic/call.ts ../desktop/src/monitor-notch.ts
 msgid "Microphone"
 msgstr ""
@@ -1295,12 +1321,76 @@ msgstr ""
 msgid "Nokta %s is available"
 msgstr ""
 
-#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts
-msgid "Choose…"
+#: src/prefs/plugins.ts
+msgid "Nokta is not running"
 msgstr ""
 
-#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/shelf.ts
+#: src/prefs/plugins.ts
+msgid "Added"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Plugins run as you and can read your files: only add ones you trust. A new one starts off."
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Open the plugins folder"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Add from Folder…"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Add a Plugin"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Added. Turn it on when you are ready."
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "No plugins added yet"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Nokta's service is not running"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Add one from a folder, or write your own: see the examples"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Version"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "About"
+msgstr ""
+
+#: src/prefs/plugins.ts src/prefs/rows.ts ../desktop/src/prefs/rows.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/shelf.ts
 msgid "Remove"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Remove this plugin"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Deletes its folder and its settings"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Remove this plugin?"
+msgstr ""
+
+#: src/prefs/plugins.ts src/prefs/window.ts ../desktop/src/prefs/window.ts
+msgid "Cancel"
+msgstr ""
+
+#: src/prefs/rows.ts ../desktop/src/prefs/rows.ts
+msgid "Choose…"
 msgstr ""
 
 #: src/prefs/rows.ts
@@ -1381,10 +1471,6 @@ msgstr ""
 
 #: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Every setting goes back to its default. config.toml is replaced, including any comments you added."
-msgstr ""
-
-#: src/prefs/window.ts ../desktop/src/prefs/window.ts
-msgid "Cancel"
 msgstr ""
 
 #: src/shared/logic/daemon-strings.ts

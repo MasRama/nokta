@@ -8,6 +8,7 @@ import { appearanceFrom, rowMin, rowValue, SETTINGS_PAGES, type Group, type Row 
 import { pageIcon, previewModel } from './logic/look.js';
 import { BRAND_LOGO, brandCss, PREFS_CLASS, PREFS_CSS } from './logic/style.js';
 import { NotchPreview } from './preview.js';
+import { installedGroup, type InstalledGroup } from './plugins.js';
 import { buildRow, type SettingRow } from './rows.js';
 import { errorMessage, SettingsService } from './service.js';
 import { ThemeGallery } from './themes.js';
@@ -114,6 +115,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
         pending.set(name, { source, send });
     };
 
+    let installed: InstalledGroup | null = null;
     const stack = new Gtk.Stack({ transition_type: Gtk.StackTransitionType.CROSSFADE });
     for (const spec of SETTINGS_PAGES) {
         const page = new Adw.PreferencesPage({ name: spec.name, title: _(spec.title) }); // i18n: runtime
@@ -160,6 +162,13 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
                 group.add(widget);
             }
             page.add(group);
+            installed = installedGroup(window, {
+                path,
+                toast,
+                errorMessage,
+                openUri: (uri) => openUri(window, uri, toast),
+            });
+            page.add(installed.group);
             stack.add_named(page, spec.name);
             continue;
         }
@@ -218,6 +227,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
             send();
         }
         service.destroy();
+        installed?.destroy();
         unstyle();
         return false;
     });
