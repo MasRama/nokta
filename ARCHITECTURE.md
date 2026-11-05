@@ -214,9 +214,16 @@ examples/plugins/   plugins to copy: hello, site-status, water
 - **lyrics** looks up synced lyrics when the track changes: the user's own
   `.lrc` file (next to a local song, or `Artist - Title.lrc` in the lyrics
   folder), then the cache, then LRCLIB. `clean.rs` turns browser and YouTube
-  titles into up to three candidates, and a search result counts only when
-  its title and artist match. LRCLIB results are cached per track; "not
-  found" for 7 days, errors not at all. The user's timing per track
+  titles, covers included (`Song - Artist (Cover by X)`, `X | Song -
+  Artist`), into up to four candidates, and a search result counts only
+  when its title and artist match and its length is within 2 s. Failing
+  that, the closest record of the song is taken: by an artist the title
+  names, within half the track's length, or, for a cover that names no
+  artist, within 15 s; synced lyrics first, then the nearest length. It
+  reuses the records the exact searches found and searches at most two
+  titles without an artist, since LRCLIB rate-limits. Such a match can be
+  off in time; the user's offset fixes that. LRCLIB results are cached per
+  track; "not found" for 7 days, errors not at all. The user's timing per track
   (`SetOffset`, from the lyrics view) is kept in `lyrics-offsets.toml` next
   to the lyrics folder (`$XDG_DATA_HOME/nokta/`, `Application Support` on
   macOS, `%APPDATA%` on Windows), keyed by a hash of the track that does

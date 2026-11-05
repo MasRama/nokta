@@ -181,6 +181,10 @@ must curve inward, the notch must be centered, and no text may be clipped.
       before the track starts, or test a track LRCLIB does not know)
       *(real session)*: the lyric row is gone and the view still looks
       complete.
+- [ ] A cover from YouTube in a browser *(real session)*, for example
+      `Hati-Hati di Jalan - Tulus (Cover by …)` from the singer's channel:
+      the original song's synced lyrics show; the lyrics view's `−` and
+      `+` line them up when the cover's timing differs.
 - [ ] Synced lyrics: the line lights up from left to right and ends lit
       when the next line starts; the next line shows dimmed under it. A new
       line slides up and fades in. The intro and empty lines show `♪`, fully
