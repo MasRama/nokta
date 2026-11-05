@@ -1,8 +1,12 @@
 import {
+    CATALOG_URL,
+    catalogFrom,
+    catalogState,
     optionText,
     PLUGIN_ICON,
     pluginsFrom,
     statusText,
+    type CatalogPlugin,
     type Plugin,
     type PluginOption,
 } from '@ext/features/plugins/logic/plugins.js';
@@ -50,11 +54,19 @@ interface Shown {
  * The Plugins page's added plugins, as the extension's prefs/plugins.ts:
  * each with its switch, what it is doing or why it failed, its options,
  * where it is from and a button to remove it; Add from Folder copies one
- * in, off.
+ * in, off. Under it, the catalog's plugins, asked for only on Browse.
  */
 export class AddedPlugins extends Follower {
     readonly element: HTMLElement;
+    /** The catalog's group, shown under this one. */
+    readonly catalogElement: HTMLElement;
     private readonly card: HTMLElement;
+    private readonly catalogCard: HTMLElement;
+    private readonly browseButton: HTMLButtonElement;
+    /** The catalog's plugins once Browse was pressed. */
+    private listings: CatalogPlugin[] | null = null;
+    /** The ones being installed. */
+    private readonly busy = new Set<string>();
     private list: Plugin[] = [];
     private shape = '';
     private readonly shown = new Map<string, Shown>();
@@ -85,6 +97,23 @@ export class AddedPlugins extends Follower {
         );
         this.card = element('div', 'nokta-prefs-card');
         this.element.append(this.card);
+
+        this.catalogElement = element('div', 'nokta-prefs-group nokta-prefs-catalog');
+        const catalogHead = element('div', 'nokta-prefs-group-head');
+        const catalogActions = element('div', 'nokta-prefs-group-actions');
+        this.browseButton = button(_('Browse'), () => void this.browse());
+        catalogActions.append(this.browseButton);
+        catalogHead.append(element('h2', 'nokta-prefs-group-title', _('Catalog')), catalogActions);
+        this.catalogCard = element('div', 'nokta-prefs-card');
+        this.catalogElement.append(
+            catalogHead,
+            element(
+                'p',
+                'nokta-prefs-group-description',
+                _('Plugins shared on github.com/MasRama/nokta-plugins. Nokta checks every file against the catalog before it installs one.'),
+            ),
+            this.catalogCard,
+        );
         this.show();
     }
 
@@ -112,7 +141,93 @@ export class AddedPlugins extends Follower {
         });
     }
 
+    private async browse(): Promise<void> {
+        this.browseButton.disabled = true;
+        try {
+            const json = await this.bridge.call('Plugins1', 'Catalog');
+            this.listings = catalogFrom(typeof json === 'string' ? json : '[]');
+            this.browseButton.textContent = _('Refresh');
+            this.showCatalog();
+        } catch (error) {
+            this.toast(message(error));
+        } finally {
+            this.browseButton.disabled = false;
+        }
+    }
+
+    private async install(listing: CatalogPlugin, update: boolean): Promise<void> {
+        this.busy.add(listing.id);
+        this.showCatalog();
+        try {
+            await this.bridge.call('Plugins1', 'InstallFromCatalog', listing.id);
+            this.toast(update ? _('Updated') : _('Added. Turn it on when you are ready.'));
+        } catch (error) {
+            this.toast(message(error));
+        } finally {
+            this.busy.delete(listing.id);
+            this.showCatalog();
+        }
+    }
+
+    private showCatalog(): void {
+        const listings = this.listings;
+        if (listings === null) {
+            this.catalogCard.replaceChildren(
+                this.infoRow(_('Press Browse to see the plugins'), _('Nokta asks the catalog only then')),
+            );
+            return;
+        }
+        if (listings.length === 0) {
+            const row = this.infoRow(_('The catalog has no plugins yet'), '');
+            row.querySelector('.nokta-prefs-control')?.append(button(_('Website'), () => this.host.openUri(CATALOG_URL)));
+            this.catalogCard.replaceChildren(row);
+            return;
+        }
+        this.catalogCard.replaceChildren(...listings.map((listing) => this.catalogRow(listing)));
+    }
+
+    private infoRow(title: string, subtitle: string): HTMLElement {
+        const row = element('div', 'nokta-prefs-row');
+        const label = element('div', 'nokta-prefs-label');
+        label.append(element('span', 'nokta-prefs-title', title));
+        if (subtitle) label.append(element('span', 'nokta-prefs-subtitle', subtitle));
+        row.append(label, element('div', 'nokta-prefs-control'));
+        return row;
+    }
+
+    private catalogRow(listing: CatalogPlugin): HTMLElement {
+        const row = element('div', 'nokta-prefs-row nokta-prefs-catalog-row');
+        row.dataset.plugin = listing.id;
+        const chip = element('span', 'nokta-prefs-plugin-icon');
+        chip.append(icon(hasIcon(listing.icon) ? listing.icon : PLUGIN_ICON, 18));
+        const about = [listing.description, listing.version && `${_('Version')} ${listing.version}`, listing.author];
+        const label = element('div', 'nokta-prefs-label');
+        label.append(
+            element('span', 'nokta-prefs-title', listing.name),
+            element('span', 'nokta-prefs-subtitle', about.filter(Boolean).join(' · ')),
+        );
+        const control = element('div', 'nokta-prefs-control');
+        const state = catalogState(listing, this.list);
+        if (state === 'installed' || state === 'unsupported') {
+            const text = state === 'installed' ? _('Installed') : _('Not for this system');
+            control.append(element('span', 'nokta-prefs-dim', text));
+        } else {
+            const update = state === 'update';
+            const action = button(
+                update ? _('Update') : _('Install'),
+                () => void this.install(listing, update),
+                update ? ' nokta-prefs-suggested' : '',
+            );
+            action.disabled = this.busy.has(listing.id);
+            control.append(action);
+        }
+        row.append(chip, label, control);
+        return row;
+    }
+
     private show(): void {
+        this.browseButton.disabled = this.props.Plugins === undefined;
+        this.showCatalog();
         const shape = shapeOf(this.list);
         if (shape !== this.shape) {
             this.shape = shape;

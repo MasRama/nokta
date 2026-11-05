@@ -30,9 +30,20 @@ const mock = new MockBridge({
         ],
         Cards: [],
     },
+}, {
+    'Plugins1.Catalog': JSON.stringify([
+        { id: 'site-status', name: 'Site status', description: 'Checks that a website answers', version: '1.1.0', author: 'Nokta', icon: 'nokta-link', runs_here: true },
+        { id: 'water', name: 'Water', description: 'Counts the glasses you drink', version: '1.0.0', author: 'Nokta', runs_here: true },
+        { id: 'days-until', name: 'Days until', description: 'Counts down the days to a date', version: '1.0.0', author: 'Nokta', icon: 'nokta-calendar', runs_here: true },
+        { id: 'mac-battery', name: 'Mac battery', description: 'Your MacBook battery health', version: '0.2.0', author: 'Someone', runs_here: false },
+    ]),
 });
 const prefs = new SettingsWindow(app ? new TauriBridge() : mock, { openConfig, pickPicture, showTour, fileUrl, pickPluginFolder, openPluginsFolder, openUri }, document.body);
 const page = new URLSearchParams(location.search).get('page');
 if (page) prefs.show(page);
 window.addEventListener('pagehide', () => prefs.stop());
 await prefs.start();
+// `?browse` presses the catalog's Browse, for a shot of it.
+if (!app && new URLSearchParams(location.search).has('browse')) {
+    document.querySelector<HTMLButtonElement>('.nokta-prefs-catalog .nokta-prefs-button')?.click();
+}
