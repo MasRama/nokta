@@ -4,7 +4,7 @@
 use std::process::{Command, ExitCode, ExitStatus};
 use std::time::Duration;
 
-use super::args::Cli;
+use super::args::{Cli, PluginCli};
 use super::client::{CallError, Client};
 use super::local_time::next_time_of_day;
 
@@ -50,6 +50,7 @@ pub async fn execute(cli: Cli) -> ExitCode {
         Cli::ClearClocks => call(|nokta| async move { nokta.clear_clocks().await }).await,
         Cli::Settings => settings().await,
         Cli::Update { yes, check_only } => super::update::update(yes, check_only).await,
+        Cli::Plugin(command) => plugin(command).await,
         Cli::Help | Cli::Version => ExitCode::SUCCESS,
     }
 }
@@ -75,6 +76,42 @@ async fn settings() -> ExitCode {
         Err(err) => {
             eprintln!("nokta: cannot run gnome-extensions: {err}");
             ExitCode::FAILURE
+        }
+    }
+}
+
+async fn plugin(command: PluginCli) -> ExitCode {
+    match command {
+        PluginCli::List => {
+            call(|nokta| async move {
+                print!("{}", super::plugin::table(&nokta.plugin_list().await?));
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Install { path } => {
+            // Nokta runs in a folder of its own.
+            let absolute = std::path::absolute(&path).ok();
+            let Some(path) = absolute.as_deref().and_then(|p| p.to_str()) else {
+                eprintln!("nokta: cannot read the path {path:?}");
+                return ExitCode::FAILURE;
+            };
+            let path = path.to_owned();
+            call(|nokta| async move {
+                let id = nokta.plugin_install(&path).await?;
+                println!("Installed {id}. It is off; turn it on with: nokta plugin enable {id}");
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Remove { id } => {
+            call(|nokta| async move { nokta.plugin_remove(&id).await }).await
+        }
+        PluginCli::Enable { id, enabled } => {
+            call(|nokta| async move { nokta.plugin_enable(&id, enabled).await }).await
+        }
+        PluginCli::Run { id, action } => {
+            call(|nokta| async move { nokta.plugin_run(&id, &action).await }).await
         }
     }
 }

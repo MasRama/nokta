@@ -13,6 +13,8 @@ pub use bus::{Client, NAME};
 #[cfg(windows)]
 pub use pipe::{Client, NAME};
 
+pub use super::plugin::PluginRow;
+
 #[derive(Debug)]
 pub enum CallError {
     /// Nokta is not there, or the way to it broke.

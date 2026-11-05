@@ -208,3 +208,89 @@ fn update_asks_installs_or_only_checks() {
     assert!(parse(&args("update --now")).unwrap_err().contains("--now"));
     assert!(parse(&args("update --yes --check")).is_err());
 }
+
+#[test]
+fn plugin_commands_name_a_plugin_or_a_folder() {
+    use super::args::PluginCli;
+
+    let plugin = |line: &str| match parse(&args(line)) {
+        Ok(Cli::Plugin(command)) => Ok(command),
+        Ok(other) => panic!("{line} parsed as {other:?}"),
+        Err(err) => Err(err),
+    };
+    assert_eq!(plugin("plugin list"), Ok(PluginCli::List));
+    assert_eq!(
+        plugin("plugin install ./hello"),
+        Ok(PluginCli::Install {
+            path: "./hello".into()
+        })
+    );
+    assert_eq!(
+        plugin("plugin remove hello"),
+        Ok(PluginCli::Remove { id: "hello".into() })
+    );
+    assert_eq!(
+        plugin("plugin enable hello"),
+        Ok(PluginCli::Enable {
+            id: "hello".into(),
+            enabled: true
+        })
+    );
+    assert_eq!(
+        plugin("plugin disable hello"),
+        Ok(PluginCli::Enable {
+            id: "hello".into(),
+            enabled: false
+        })
+    );
+    assert_eq!(
+        plugin("plugin run water --action drink"),
+        Ok(PluginCli::Run {
+            id: "water".into(),
+            action: "drink".into()
+        })
+    );
+    assert_eq!(
+        plugin("plugin run water"),
+        Ok(PluginCli::Run {
+            id: "water".into(),
+            action: String::new()
+        })
+    );
+    assert!(plugin("plugin install").unwrap_err().contains("folder"));
+    assert!(plugin("plugin enable").unwrap_err().contains("plugin id"));
+    assert!(plugin("plugin run --action x").is_err());
+    assert!(plugin("plugin run water --what x").is_err());
+    assert!(plugin("plugin").unwrap_err().contains("list"));
+    assert!(plugin("plugin dance").is_err());
+}
+
+#[test]
+fn plugin_list_lines_up_and_says_why_one_failed() {
+    use super::plugin::table;
+
+    let row = |id: &str, on: bool, status: &str, message: &str, info: &str| {
+        (
+            id.to_owned(),
+            on,
+            status.to_owned(),
+            message.to_owned(),
+            info.to_owned(),
+        )
+    };
+    assert_eq!(
+        table(&[
+            row("hello", true, "ok", "", r#"{"name":"Hello"}"#),
+            row("site-status", false, "off", "", r#"{"name":"Site status"}"#),
+            row("water", true, "error", "exited with 1", "{}"),
+            row("bad", false, "broken", "no plugin.toml", "not json"),
+        ]),
+        "\
+hello        on   ok           Hello
+site-status  off  off          Site status
+water        on   error        exited with 1
+bad          off  broken       no plugin.toml
+"
+    );
+    assert!(table(&[]).contains("nokta plugin install"));
+}

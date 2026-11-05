@@ -44,6 +44,29 @@ pub enum Cli {
         yes: bool,
         check_only: bool,
     },
+    Plugin(PluginCli),
+}
+
+/// `nokta plugin …`: the add-on plugins, as Settings → Plugins has them.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PluginCli {
+    List,
+    /// Copies a plugin folder in; it starts off.
+    Install {
+        path: String,
+    },
+    Remove {
+        id: String,
+    },
+    Enable {
+        id: String,
+        enabled: bool,
+    },
+    /// Runs it now, telling it `action` when one is given.
+    Run {
+        id: String,
+        action: String,
+    },
 }
 
 pub fn parse(args: &[String]) -> Result<Cli, String> {
@@ -133,7 +156,47 @@ pub fn parse(args: &[String]) -> Result<Cli, String> {
             }
             Ok(Cli::Update { yes, check_only })
         }
+        ["plugin", rest @ ..] => parse_plugin(rest).map(Cli::Plugin),
         [first, ..] => Err(format!("unknown command {first:?}")),
+    }
+}
+
+fn parse_plugin(words: &[&str]) -> Result<PluginCli, String> {
+    let id = |id: &str| {
+        if id.starts_with('-') {
+            Err(format!("a plugin id does not start with -, got {id:?}"))
+        } else {
+            Ok(id.to_owned())
+        }
+    };
+    match words {
+        ["list"] => Ok(PluginCli::List),
+        ["install", path] => Ok(PluginCli::Install {
+            path: (*path).to_owned(),
+        }),
+        ["remove", plugin] => Ok(PluginCli::Remove { id: id(plugin)? }),
+        ["enable", plugin] => Ok(PluginCli::Enable {
+            id: id(plugin)?,
+            enabled: true,
+        }),
+        ["disable", plugin] => Ok(PluginCli::Enable {
+            id: id(plugin)?,
+            enabled: false,
+        }),
+        ["run", plugin, rest @ ..] => {
+            let mut o = Options::read(rest, &["--action"], &[])?;
+            Ok(PluginCli::Run {
+                id: id(plugin)?,
+                action: o.take("--action").unwrap_or_default(),
+            })
+        }
+        ["install", ..] => {
+            Err("plugin install needs one folder, like: nokta plugin install ./hello".into())
+        }
+        [verb @ ("remove" | "enable" | "disable" | "run"), ..] => Err(format!(
+            "plugin {verb} needs one plugin id, like: nokta plugin {verb} hello"
+        )),
+        _ => Err("plugin takes list, install, remove, enable, disable or run".into()),
     }
 }
 

@@ -290,3 +290,55 @@ async fn update_stops_when_the_release_has_no_sums() {
     assert!(err.contains("SHA256SUMS"), "{err}");
     assert!(!home.path().join("installed").exists());
 }
+
+#[tokio::test]
+async fn plugins_are_installed_from_a_relative_folder_listed_and_removed() {
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, "http://127.0.0.1:9").await;
+    let work = tempfile::tempdir().unwrap();
+    let source = work.path().join("hello");
+    std::fs::create_dir(&source).unwrap();
+    std::fs::write(
+        source.join("plugin.toml"),
+        "api = 1\nid = \"hello\"\nname = \"Hello\"\n[run]\ncommand = [\"./hello.sh\"]\nevery = 60\n",
+    )
+    .unwrap();
+    let in_work = |args: &[&str]| {
+        let (address, dir) = (bus.address().to_owned(), work.path().to_owned());
+        let args: Vec<String> = args.iter().map(|a| (*a).to_owned()).collect();
+        tokio::task::spawn_blocking(move || {
+            Command::new(NOKTA)
+                .args(args)
+                .current_dir(dir)
+                .env("DBUS_SESSION_BUS_ADDRESS", address)
+                .output()
+                .unwrap()
+        })
+    };
+
+    let out = in_work(&["plugin", "install", "hello"]).await.unwrap();
+    assert!(out.status.success(), "{out:?}");
+    assert!(String::from_utf8_lossy(&out.stdout).contains("nokta plugin enable hello"));
+    assert!(daemon
+        .paths()
+        .plugins_dir
+        .join("hello/plugin.toml")
+        .exists());
+
+    let out = in_work(&["plugin", "list"]).await.unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "hello  off  off          Hello\n"
+    );
+
+    let out = in_work(&["plugin", "enable", "nope"]).await.unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("nope"),
+        "{out:?}"
+    );
+
+    let out = in_work(&["plugin", "remove", "hello"]).await.unwrap();
+    assert!(out.status.success(), "{out:?}");
+    assert!(!daemon.paths().plugins_dir.join("hello").exists());
+}

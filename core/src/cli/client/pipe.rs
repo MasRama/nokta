@@ -7,7 +7,7 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 use tokio::sync::Mutex;
 
-use super::CallError;
+use super::{CallError, PluginRow};
 use crate::cli::pipe::{self, Answer, Request, MAX_LINE};
 
 /// What the errors say Nokta is.
@@ -97,7 +97,51 @@ impl Client {
         self.call(Request::Settings).await
     }
 
+    pub async fn plugin_list(&self) -> Result<Vec<PluginRow>, CallError> {
+        let value = self.ask(Request::PluginList).await?;
+        serde_json::from_value(value.unwrap_or_default())
+            .map_err(|err| CallError::Unreachable(format!("its list does not read: {err}")))
+    }
+
+    /// Answers the new plugin's id.
+    pub async fn plugin_install(&self, path: &str) -> Result<String, CallError> {
+        match self
+            .ask(Request::PluginInstall { path: path.into() })
+            .await?
+        {
+            Some(serde_json::Value::String(id)) => Ok(id),
+            _ => Err(CallError::Unreachable(
+                "it did not say the plugin's id".into(),
+            )),
+        }
+    }
+
+    pub async fn plugin_remove(&self, id: &str) -> Result<(), CallError> {
+        self.call(Request::PluginRemove { id: id.into() }).await
+    }
+
+    pub async fn plugin_enable(&self, id: &str, enabled: bool) -> Result<(), CallError> {
+        self.call(Request::PluginEnable {
+            id: id.into(),
+            enabled,
+        })
+        .await
+    }
+
+    pub async fn plugin_run(&self, id: &str, action: &str) -> Result<(), CallError> {
+        self.call(Request::PluginRun {
+            id: id.into(),
+            action: action.into(),
+        })
+        .await
+    }
+
     async fn call(&self, request: Request) -> Result<(), CallError> {
+        self.ask(request).await.map(drop)
+    }
+
+    /// Sends `request`; answers what the app answered with, if anything.
+    async fn ask(&self, request: Request) -> Result<Option<serde_json::Value>, CallError> {
         let mut pipe = self.pipe.lock().await;
         pipe.get_mut()
             .write_all(pipe::line(&request).as_bytes())
@@ -109,9 +153,10 @@ impl Client {
         }
         let answer: Answer = serde_json::from_str(line.trim_end())
             .map_err(|err| CallError::Unreachable(format!("its answer does not read: {err}")))?;
-        answer
-            .error
-            .map_or(Ok(()), |message| Err(CallError::Refused(message)))
+        match answer.error {
+            Some(message) => Err(CallError::Refused(message)),
+            None => Ok(answer.value),
+        }
     }
 }
 
