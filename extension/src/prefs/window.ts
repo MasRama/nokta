@@ -169,6 +169,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
                 openUri: (uri) => openUri(window, uri, toast),
             });
             page.add(installed.group);
+            page.add(installed.catalog);
             stack.add_named(page, spec.name);
             continue;
         }

@@ -1221,3 +1221,40 @@ msgstr "Contoh"
 
 msgid "Website"
 msgstr "Situs web"
+
+msgid "Catalog"
+msgstr "Katalog"
+
+msgid "Browse"
+msgstr "Lihat"
+
+msgid "Refresh"
+msgstr "Muat ulang"
+
+msgid "Install"
+msgstr "Pasang"
+
+msgid "Installed"
+msgstr "Terpasang"
+
+msgid "Updated"
+msgstr "Diperbarui"
+
+msgid "Not for this system"
+msgstr "Bukan untuk sistem ini"
+
+msgid "The catalog has no plugins yet"
+msgstr "Katalog belum punya plugin"
+
+msgid "Press Browse to see the plugins"
+msgstr "Tekan Lihat untuk melihat plugin-nya"
+
+msgid "Nokta asks the catalog only then"
+msgstr "Nokta baru menghubungi katalog saat itu"
+
+msgid ""
+"Plugins shared on github.com/MasRama/nokta-plugins. Nokta checks every file "
+"against the catalog before it installs one."
+msgstr ""
+"Plugin yang dibagikan di github.com/MasRama/nokta-plugins. Nokta mencocokkan "
+"setiap file dengan katalog sebelum memasangnya."

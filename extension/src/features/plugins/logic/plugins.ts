@@ -282,3 +282,70 @@ export function statusText(plugin: Plugin): string {
             return plugin.description || _('Off');
     }
 }
+
+/** One plugin of the catalog, as `Plugins1.Catalog` lists it. */
+export interface CatalogPlugin {
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    author: string;
+    homepage: string;
+    icon: string;
+    /** It has a command for this system. */
+    runsHere: boolean;
+}
+
+/** What a catalog plugin's button does: install it, nothing (it is in), update it, or nothing (not here). */
+export type CatalogState = 'install' | 'installed' | 'update' | 'unsupported';
+
+/** The JSON `Plugins1.Catalog` answers; entries of the wrong shape are left out. */
+export function catalogFrom(json: string): CatalogPlugin[] {
+    let raw: unknown;
+    try {
+        raw = JSON.parse(json);
+    } catch {
+        return [];
+    }
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(isObject).flatMap((entry) => {
+        const id = text(entry, 'id');
+        const name = text(entry, 'name');
+        if (!id || !name) return [];
+        return [{
+            id,
+            name,
+            description: text(entry, 'description'),
+            version: text(entry, 'version'),
+            author: text(entry, 'author'),
+            homepage: text(entry, 'homepage'),
+            icon: text(entry, 'icon'),
+            runsHere: entry.runs_here === true,
+        }];
+    });
+}
+
+/**
+ * Whether `available` is a newer version than `installed`: dotted numbers
+ * compared one by one, anything after them ignored (as `nokta plugin catalog`).
+ */
+export function newerVersion(installed: string, available: string): boolean {
+    const numbers = (version: string) =>
+        version.replace(/^v/, '').split(/[-+]/)[0].split('.').map((n) => Number.parseInt(n, 10) || 0);
+    const [a, b] = [numbers(installed), numbers(available)];
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const [x, y] = [a[i] ?? 0, b[i] ?? 0];
+        if (x !== y) return y > x;
+    }
+    return false;
+}
+
+/** What a catalog plugin's row offers, given the installed plugins. */
+export function catalogState(listing: CatalogPlugin, installed: readonly Plugin[]): CatalogState {
+    const have = installed.find((p) => p.id === listing.id);
+    if (have) return newerVersion(have.version, listing.version) ? 'update' : 'installed';
+    return listing.runsHere ? 'install' : 'unsupported';
+}
+
+/** The catalog's address, for its rows' link and the empty state. */
+export const CATALOG_URL = 'https://github.com/MasRama/nokta-plugins';

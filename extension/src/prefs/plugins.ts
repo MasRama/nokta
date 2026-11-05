@@ -4,9 +4,13 @@ import GLib from 'gi://GLib';
 import Gtk from 'gi://Gtk';
 
 import {
+    CATALOG_URL,
+    catalogFrom,
+    catalogState,
     optionText,
     pluginsFrom,
     statusText,
+    type CatalogPlugin,
     type Plugin,
     type PluginOption,
 } from '../features/plugins/logic/plugins.js';
@@ -65,6 +69,17 @@ class PluginsService {
         return this.call('Remove', new GLib.Variant('(s)', [id]));
     }
 
+    /** The catalog's plugins; asks the catalog each time. */
+    async catalog(): Promise<CatalogPlugin[]> {
+        const answer = await this.call('Catalog', null);
+        const [json] = (answer as GLib.Variant).deepUnpack() as [string];
+        return catalogFrom(json);
+    }
+
+    installFromCatalog(id: string): Promise<unknown> {
+        return this.call('InstallFromCatalog', new GLib.Variant('(s)', [id]));
+    }
+
     destroy(): void {
         this.cancellable.cancel();
         for (const id of this.ids) this.proxy?.disconnect(id);
@@ -81,7 +96,7 @@ class PluginsService {
         this.onChanged();
     }
 
-    private call(method: string, params: GLib.Variant): Promise<unknown> {
+    private call(method: string, params: GLib.Variant | null): Promise<unknown> {
         const proxy = this.proxy;
         if (!proxy) return Promise.reject(new Error(_('Nokta is not running')));
         return new Promise((resolve, reject) => {
@@ -98,6 +113,8 @@ class PluginsService {
 
 export interface InstalledGroup {
     readonly group: Adw.PreferencesGroup;
+    /** The catalog's plugins, under the added ones. */
+    readonly catalog: Adw.PreferencesGroup;
     destroy(): void;
 }
 
@@ -157,9 +174,11 @@ export function installedGroup(window: Gtk.Window, hooks: Hooks): InstalledGroup
     const byId = new Map<string, PluginRow>();
     const expanded = new Set<string>();
     let built = '';
+    let catalog: CatalogGroup | null = null;
 
     const service = new PluginsService(() => {
         install.sensitive = service.available;
+        catalog?.update();
         const next = shape(service.plugins);
         if (next !== built) {
             built = next;
@@ -203,7 +222,103 @@ export function installedGroup(window: Gtk.Window, hooks: Hooks): InstalledGroup
                 .catch((error) => hooks.toast(hooks.errorMessage(error)));
         });
     });
-    return { group, destroy: () => service.destroy() };
+    catalog = catalogGroup(service, hooks);
+    return { group, catalog: catalog.group, destroy: () => service.destroy() };
+}
+
+interface CatalogGroup {
+    group: Adw.PreferencesGroup;
+    /** Shows the rows again for the installed plugins. */
+    update(): void;
+}
+
+/**
+ * The catalog's plugins, each with Install, Update or why it cannot be
+ * installed. Nothing is asked of the catalog until Browse is pressed.
+ */
+function catalogGroup(service: PluginsService, hooks: Hooks): CatalogGroup {
+    const group = new Adw.PreferencesGroup({
+        title: _('Catalog'),
+        description: _('Plugins shared on github.com/MasRama/nokta-plugins. Nokta checks every file against the catalog before it installs one.'),
+    });
+    const browse = new Gtk.Button({ label: _('Browse'), valign: Gtk.Align.CENTER });
+    group.header_suffix = browse;
+    let listings: CatalogPlugin[] | null = null;
+    const busy = new Set<string>();
+    let rows: Gtk.Widget[] = [];
+
+    const show = () => {
+        for (const row of rows) group.remove(row);
+        rows = [];
+        if (listings === null) {
+            const row = new Adw.ActionRow({
+                title: _('Press Browse to see the plugins'),
+                subtitle: _('Nokta asks the catalog only then'),
+            });
+            rows.push(row);
+        } else if (listings.length === 0) {
+            const row = new Adw.ActionRow({ title: _('The catalog has no plugins yet'), activatable: true });
+            row.add_suffix(new Gtk.Image({ icon_name: 'adw-external-link-symbolic' }));
+            row.connect('activated', () => hooks.openUri(CATALOG_URL));
+            rows.push(row);
+        }
+        for (const listing of listings ?? []) rows.push(catalogRow(listing));
+        for (const row of rows) group.add(row);
+    };
+
+    const catalogRow = (listing: CatalogPlugin): Adw.ActionRow => {
+        const about = [listing.description, listing.version && `${_('Version')} ${listing.version}`, listing.author];
+        const row = new Adw.ActionRow({ title: listing.name, subtitle: about.filter(Boolean).join(' · ') });
+        row.add_prefix(pluginIcon(listing, hooks.path));
+        const state = catalogState(listing, service.plugins);
+        if (state === 'installed' || state === 'unsupported') {
+            const label = state === 'installed' ? _('Installed') : _('Not for this system');
+            row.add_suffix(new Gtk.Label({ label, css_classes: ['dim-label'] }));
+            return row;
+        }
+        const button = new Gtk.Button({
+            label: state === 'update' ? _('Update') : _('Install'),
+            valign: Gtk.Align.CENTER,
+            sensitive: !busy.has(listing.id),
+            css_classes: state === 'update' ? ['suggested-action'] : [],
+        });
+        button.connect('clicked', () => {
+            busy.add(listing.id);
+            button.sensitive = false;
+            service
+                .installFromCatalog(listing.id)
+                .then(() => hooks.toast(state === 'update' ? _('Updated') : _('Added. Turn it on when you are ready.')))
+                .catch((error) => hooks.toast(hooks.errorMessage(error)))
+                .finally(() => {
+                    busy.delete(listing.id);
+                    show();
+                });
+        });
+        row.add_suffix(button);
+        row.activatable_widget = button;
+        return row;
+    };
+
+    browse.connect('clicked', () => {
+        browse.sensitive = false;
+        service
+            .catalog()
+            .then((found) => {
+                listings = found;
+                browse.label = _('Refresh');
+                show();
+            })
+            .catch((error) => hooks.toast(hooks.errorMessage(error)))
+            .finally(() => (browse.sensitive = true));
+    });
+    show();
+    return {
+        group,
+        update: () => {
+            browse.sensitive = service.available;
+            if (listings !== null) show();
+        },
+    };
 }
 
 /** The folder picked, or null when the dialog was cancelled. */
@@ -226,7 +341,7 @@ function emptyRow(hooks: Hooks, available: boolean): Adw.ActionRow {
     return row;
 }
 
-function pluginIcon(plugin: Plugin, path: string): Gtk.Image {
+function pluginIcon(plugin: Pick<Plugin, 'icon'>, path: string): Gtk.Image {
     const own = noktaIconName(plugin.icon || 'nokta-plugin');
     if (own === null) return new Gtk.Image({ icon_name: plugin.icon });
     const file = Gio.File.new_for_path(GLib.build_filenamev([path, 'icons', `nokta-${own}-symbolic.svg`]));

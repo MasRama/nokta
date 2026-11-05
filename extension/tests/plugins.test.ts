@@ -5,8 +5,11 @@ import { anchorRow } from '../src/features/panel/logic/anchor.js';
 import { panelHeight } from '../src/features/panel/logic/height.js';
 import {
     badgeCard,
+    catalogFrom,
+    catalogState,
     cardsFrom,
     homeCards,
+    newerVersion,
     optionText,
     PLUGIN_TONES,
     pluginAlert,
@@ -148,4 +151,38 @@ test('the settings window says what a plugin is doing', () => {
     assert.equal(statusText({ ...plugin, status: 'unsupported' }), 'Does not run on this system');
     assert.equal(optionText(4.6), '5');
     assert.equal(optionText(true), 'true');
+});
+
+test('the catalog is read from its JSON, and each row knows what it offers', () => {
+    const catalog = catalogFrom(
+        JSON.stringify([
+            { id: 'github', name: 'GitHub', version: '1.1.0', runs_here: true },
+            { id: 'water', name: 'Water', version: '1.0.0', runs_here: true, author: 'Nokta' },
+            { id: 'mac', name: 'Mac only', version: '1.0.0', runs_here: false },
+            { id: 'site', name: 'Site', version: '2.0.0', runs_here: true },
+            { name: 'No id' },
+            'nope',
+        ]),
+    );
+    assert.deepEqual(catalog.map((c) => c.id), ['github', 'water', 'mac', 'site']);
+    assert.equal(catalog[1].author, 'Nokta');
+    assert.deepEqual(catalogFrom('not json'), []);
+    assert.deepEqual(catalogFrom('{}'), []);
+
+    // GitHub 1.0.0 is installed.
+    const installed = pluginsFrom([['github', true, 'ok', '', INFO]]);
+    assert.deepEqual(
+        catalog.map((c) => catalogState(c, installed)),
+        ['update', 'install', 'unsupported', 'install'],
+    );
+    assert.equal(catalogState({ ...catalog[0], version: '1.0.0' }, installed), 'installed');
+});
+
+test('a version is newer by its numbers, one by one', () => {
+    assert.ok(newerVersion('1.0.0', '1.0.1'));
+    assert.ok(newerVersion('1.9', '1.10'));
+    assert.ok(newerVersion('v1.0', '2'));
+    assert.ok(!newerVersion('1.0.0', '1.0'));
+    assert.ok(!newerVersion('1.2.0', '1.1.9'));
+    assert.ok(!newerVersion('1.0.0', '1.0.0-beta'));
 });
