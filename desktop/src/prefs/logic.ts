@@ -32,7 +32,6 @@ const HIDDEN = new Set([
     'behavior.move_clock',
     'behavior.all_monitors',
     'behavior.gestures',
-    'timer.quiet_notifications',
     'activities.auto_progress',
 ]);
 
@@ -46,6 +45,7 @@ const SUBTITLES: Record<string, string> = {
     'calendar.enabled': N_('From the calendars below, when the notch opens'),
     'media.real_equalizer': N_('Measures what plays, on this computer only'),
     'timer.focus_minutes': N_("Minutes; start it from home's Focus tile"),
+    'timer.quiet_notifications': N_('The notch holds notifications while you focus and sums them up after'),
 };
 
 /** Choices whose label names GNOME. */
