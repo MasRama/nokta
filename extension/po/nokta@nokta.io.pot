@@ -312,6 +312,22 @@ msgstr ""
 msgid "Off"
 msgstr ""
 
+#: src/features/plugins/logic/plugins.ts
+msgid "OpenAI-compatible"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Needs an API key"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Needs the address of the service"
+msgstr ""
+
+#: src/features/plugins/logic/plugins.ts
+msgid "Needs a model"
+msgstr ""
+
 #: src/features/privacy/logic/call.ts ../desktop/src/monitor-notch.ts
 msgid "Microphone"
 msgstr ""
@@ -1395,6 +1411,80 @@ msgstr ""
 
 #: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Refresh"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Create with AI"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Describe a plugin and the AI service you pick writes it. Your words and Nokta's plugin guide go to that service. What it writes starts off: read it before you turn it on."
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "AI service"
+msgstr ""
+
+#: src/prefs/plugins.ts
+msgid "Service"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Model"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Address"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "API key"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "The key is kept on this computer, readable only by you"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Save"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "What should the plugin show?"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Create"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+#, c-format
+msgid "Model (empty: %s)"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Address (empty: Anthropic)"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Address, like https://api.openai.com/v1"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "API key (empty: keep the saved one)"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Saved"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Writing…"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+#, c-format
+msgid "Created %s. Read it, then turn it on."
 msgstr ""
 
 #: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts

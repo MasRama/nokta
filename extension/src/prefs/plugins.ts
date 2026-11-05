@@ -7,10 +7,14 @@ import {
     CATALOG_URL,
     catalogFrom,
     catalogState,
+    CREATOR_PROVIDERS,
+    creatorFrom,
+    creatorSummary,
     optionText,
     pluginsFrom,
     statusText,
     type CatalogPlugin,
+    type CreatorSettings,
     type Plugin,
     type PluginOption,
 } from '../features/plugins/logic/plugins.js';
@@ -18,11 +22,13 @@ import { PLUGINS1_XML } from '../generated/contracts.js';
 import { BUS_NAME, PATHS } from '../shared/contracts.js';
 import { newProxy } from '../shared/dbus.js';
 import { noktaIconName } from '../shared/logic/icon-names.js';
-import { _ } from '../shared/logic/i18n.js';
+import { _, format } from '../shared/logic/i18n.js';
 
 /** Where noktad keeps the plugins on Linux. */
 const PLUGINS_DIR = GLib.build_filenamev([GLib.get_user_data_dir(), 'nokta', 'plugins']);
 const PLUGINS_DOCS = 'https://github.com/MasRama/nokta/tree/main/examples/plugins';
+/** How long Create may take: noktad gives the AI service five minutes. */
+const CREATE_TIMEOUT_MS = 330_000;
 
 /** io.nokta.Plugins1 for the settings window; `onChanged` runs when the plugins or the daemon change. */
 class PluginsService {
@@ -80,6 +86,24 @@ class PluginsService {
         return this.call('InstallFromCatalog', new GLib.Variant('(s)', [id]));
     }
 
+    /** Creator Mode's AI service. */
+    async creator(): Promise<CreatorSettings> {
+        const answer = await this.call('Creator', null);
+        const [json] = (answer as GLib.Variant).deepUnpack() as [string];
+        return creatorFrom(json);
+    }
+
+    setCreator(provider: string, model: string, baseUrl: string, apiKey: string): Promise<unknown> {
+        return this.call('SetCreator', new GLib.Variant('(ssss)', [provider, model, baseUrl, apiKey]));
+    }
+
+    /** Has the AI service write the plugin `request` describes; answers its id. */
+    async create(request: string): Promise<string> {
+        const answer = await this.call('Create', new GLib.Variant('(s)', [request]), CREATE_TIMEOUT_MS);
+        const [id] = (answer as GLib.Variant).deepUnpack() as [string];
+        return id;
+    }
+
     destroy(): void {
         this.cancellable.cancel();
         for (const id of this.ids) this.proxy?.disconnect(id);
@@ -96,11 +120,11 @@ class PluginsService {
         this.onChanged();
     }
 
-    private call(method: string, params: GLib.Variant | null): Promise<unknown> {
+    private call(method: string, params: GLib.Variant | null, timeoutMs = -1): Promise<unknown> {
         const proxy = this.proxy;
         if (!proxy) return Promise.reject(new Error(_('Nokta is not running')));
         return new Promise((resolve, reject) => {
-            proxy.call(method, params, Gio.DBusCallFlags.NONE, -1, null, (source, result) => {
+            proxy.call(method, params, Gio.DBusCallFlags.NONE, timeoutMs, null, (source, result) => {
                 try {
                     resolve(source?.call_finish(result));
                 } catch (error) {
@@ -115,6 +139,8 @@ export interface InstalledGroup {
     readonly group: Adw.PreferencesGroup;
     /** The catalog's plugins, under the added ones. */
     readonly catalog: Adw.PreferencesGroup;
+    /** Creator Mode: a plugin written by an AI service from a sentence. */
+    readonly creator: Adw.PreferencesGroup;
     destroy(): void;
 }
 
@@ -175,10 +201,12 @@ export function installedGroup(window: Gtk.Window, hooks: Hooks): InstalledGroup
     const expanded = new Set<string>();
     let built = '';
     let catalog: CatalogGroup | null = null;
+    let creator: CatalogGroup | null = null;
 
     const service = new PluginsService(() => {
         install.sensitive = service.available;
         catalog?.update();
+        creator?.update();
         const next = shape(service.plugins);
         if (next !== built) {
             built = next;
@@ -223,7 +251,8 @@ export function installedGroup(window: Gtk.Window, hooks: Hooks): InstalledGroup
         });
     });
     catalog = catalogGroup(service, hooks);
-    return { group, catalog: catalog.group, destroy: () => service.destroy() };
+    creator = creatorGroup(service, hooks);
+    return { group, catalog: catalog.group, creator: creator.group, destroy: () => service.destroy() };
 }
 
 interface CatalogGroup {
@@ -317,6 +346,118 @@ function catalogGroup(service: PluginsService, hooks: Hooks): CatalogGroup {
         update: () => {
             browse.sensitive = service.available;
             if (listings !== null) show();
+        },
+    };
+}
+
+/**
+ * Creator Mode: the AI service (provider, model, address and key, saved by
+ * noktad) and a sentence it turns into a plugin, installed off.
+ */
+function creatorGroup(service: PluginsService, hooks: Hooks): CatalogGroup {
+    const group = new Adw.PreferencesGroup({
+        title: _('Create with AI'),
+        description: _(
+            "Describe a plugin and the AI service you pick writes it. Your words and Nokta's plugin guide go to that service. What it writes starts off: read it before you turn it on.",
+        ),
+    });
+    const serviceRow = new Adw.ExpanderRow({ title: _('AI service') });
+    const provider = new Adw.ComboRow({
+        title: _('Service'),
+        model: Gtk.StringList.new(CREATOR_PROVIDERS.map(([, name]) => _(name))), // i18n: runtime
+    });
+    const model = new Adw.EntryRow({ title: _('Model') });
+    const address = new Adw.EntryRow({ title: _('Address') });
+    const key = new Adw.PasswordEntryRow({ title: _('API key') });
+    const saveRow = new Adw.ActionRow({ subtitle: _('The key is kept on this computer, readable only by you') });
+    const save = new Gtk.Button({ label: _('Save'), valign: Gtk.Align.CENTER });
+    saveRow.add_suffix(save);
+    for (const row of [provider, model, address, key, saveRow]) serviceRow.add_row(row);
+    group.add(serviceRow);
+
+    const request = new Adw.EntryRow({ title: _('What should the plugin show?') });
+    const create = new Gtk.Button({ label: _('Create'), valign: Gtk.Align.CENTER, css_classes: ['suggested-action'] });
+    request.add_suffix(create);
+    group.add(request);
+
+    let settings: CreatorSettings | null = null;
+    let busy = false;
+    const providerKey = () => CREATOR_PROVIDERS[provider.selected]?.[0] ?? 'anthropic';
+    // Titles say what an empty field means for the service picked.
+    const titles = () => {
+        const anthropic = providerKey() === 'anthropic';
+        const defaultModel = anthropic ? settings?.defaultModel ?? '' : '';
+        model.title = defaultModel ? format(_('Model (empty: %s)'), defaultModel) : _('Model');
+        address.title = anthropic ? _('Address (empty: Anthropic)') : _('Address, like https://api.openai.com/v1');
+        key.title = settings?.hasKey ? _('API key (empty: keep the saved one)') : _('API key');
+    };
+    const sensitive = () => {
+        create.sensitive = service.available && !busy && settings?.ready === true && request.text.trim() !== '';
+        request.sensitive = service.available && !busy;
+        save.sensitive = service.available && !busy;
+    };
+    const show = (next: CreatorSettings) => {
+        settings = next;
+        provider.selected = Math.max(0, CREATOR_PROVIDERS.findIndex(([k]) => k === next.provider));
+        model.text = next.model;
+        address.text = next.baseUrl;
+        key.text = '';
+        serviceRow.subtitle = creatorSummary(next);
+        serviceRow.expanded ||= !next.ready;
+        titles();
+        sensitive();
+    };
+    let loaded = false;
+    const load = () => {
+        service
+            .creator()
+            .then(show)
+            .catch((error) => hooks.toast(hooks.errorMessage(error)));
+    };
+    provider.connect('notify::selected', titles);
+    save.connect('clicked', () => {
+        save.sensitive = false;
+        service
+            .setCreator(providerKey(), model.text.trim(), address.text.trim(), key.text.trim())
+            .then(() => {
+                hooks.toast(_('Saved'));
+                load();
+            })
+            .catch((error) => hooks.toast(hooks.errorMessage(error)))
+            .finally(sensitive);
+    });
+    const start = () => {
+        const text = request.text.trim();
+        if (!text || !create.sensitive) return;
+        busy = true;
+        create.label = _('Writing…');
+        sensitive();
+        service
+            .create(text)
+            .then((id) => {
+                request.text = '';
+                hooks.toast(format(_('Created %s. Read it, then turn it on.'), id));
+            })
+            .catch((error) => hooks.toast(hooks.errorMessage(error)))
+            .finally(() => {
+                busy = false;
+                create.label = _('Create');
+                sensitive();
+            });
+    };
+    request.connect('changed', sensitive);
+    create.connect('clicked', start);
+    request.connect('entry-activated', start);
+    sensitive();
+    return {
+        group,
+        update: () => {
+            if (service.available && !loaded) {
+                loaded = true;
+                load();
+            }
+            if (!service.available) loaded = false;
+            sensitive();
         },
     };
 }

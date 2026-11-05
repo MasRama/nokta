@@ -3,7 +3,7 @@
  * with their options, and the cards of the ones that run.
  */
 
-import { _, format } from '../../../shared/logic/i18n.js';
+import { _, format, N_ } from '../../../shared/logic/i18n.js';
 
 /** A plugin's own icon when it names none. */
 export const PLUGIN_ICON = 'nokta-plugin';
@@ -349,3 +349,51 @@ export function catalogState(listing: CatalogPlugin, installed: readonly Plugin[
 
 /** The catalog's address, for its rows' link and the empty state. */
 export const CATALOG_URL = 'https://github.com/MasRama/nokta-plugins';
+
+/** The AI services Creator Mode can ask: the provider's key and its name (N_: translate where drawn). */
+export const CREATOR_PROVIDERS: readonly (readonly [string, string])[] = [
+    ['anthropic', 'Anthropic'],
+    ['openai', N_('OpenAI-compatible')],
+];
+
+/** Creator Mode's AI service, as `Plugins1.Creator` answers it; the key itself never comes. */
+export interface CreatorSettings {
+    provider: string;
+    /** Empty for the provider's default. */
+    model: string;
+    defaultModel: string;
+    /** Empty for the provider's default. */
+    baseUrl: string;
+    hasKey: boolean;
+    ready: boolean;
+}
+
+/** The JSON `Plugins1.Creator` answers; anything missing reads as not set. */
+export function creatorFrom(json: string): CreatorSettings {
+    let raw: unknown;
+    try {
+        raw = JSON.parse(json);
+    } catch {
+        raw = {};
+    }
+    const entry = isObject(raw) ? raw : {};
+    const provider = text(entry, 'provider');
+    return {
+        provider: CREATOR_PROVIDERS.some(([key]) => key === provider) ? provider : 'anthropic',
+        model: text(entry, 'model'),
+        defaultModel: text(entry, 'default_model'),
+        baseUrl: text(entry, 'base_url'),
+        hasKey: entry.has_key === true,
+        ready: entry.ready === true,
+    };
+}
+
+/** The service in a few words: its name and model, or what it still needs. */
+export function creatorSummary(creator: CreatorSettings): string {
+    if (!creator.hasKey) return _('Needs an API key');
+    if (creator.provider === 'openai' && !creator.baseUrl) return _('Needs the address of the service');
+    const model = creator.model || creator.defaultModel;
+    if (!model) return _('Needs a model');
+    const name = creator.provider === 'openai' ? _('OpenAI-compatible') : 'Anthropic';
+    return `${name} · ${model}`;
+}

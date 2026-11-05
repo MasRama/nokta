@@ -1258,3 +1258,75 @@ msgid ""
 msgstr ""
 "Plugin yang dibagikan di github.com/MasRama/nokta-plugins. Nokta mencocokkan "
 "setiap file dengan katalog sebelum memasangnya."
+
+msgid "OpenAI-compatible"
+msgstr "Kompatibel OpenAI"
+
+msgid "Needs an API key"
+msgstr "Perlu API key"
+
+msgid "Needs the address of the service"
+msgstr "Perlu alamat layanannya"
+
+msgid "Needs a model"
+msgstr "Perlu model"
+
+msgid "Create with AI"
+msgstr "Buat dengan AI"
+
+msgid ""
+"Describe a plugin and the AI service you pick writes it. Your words and "
+"Nokta's plugin guide go to that service. What it writes starts off: read it "
+"before you turn it on."
+msgstr ""
+"Jelaskan plugin yang kamu mau, lalu layanan AI pilihanmu yang menulisnya. "
+"Kalimatmu dan panduan plugin Nokta dikirim ke layanan itu. Hasilnya mulai "
+"dalam keadaan mati: baca dulu sebelum kamu nyalakan."
+
+msgid "AI service"
+msgstr "Layanan AI"
+
+msgid "Service"
+msgstr "Layanan"
+
+msgid "Model"
+msgstr "Model"
+
+msgid "Address"
+msgstr "Alamat"
+
+msgid "API key"
+msgstr "API key"
+
+msgid "The key is kept on this computer, readable only by you"
+msgstr "Key disimpan di komputer ini, hanya bisa dibaca olehmu"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "What should the plugin show?"
+msgstr "Plugin-nya mau menampilkan apa?"
+
+msgid "Create"
+msgstr "Buat"
+
+msgid "Model (empty: %s)"
+msgstr "Model (kosong: %s)"
+
+msgid "Address (empty: Anthropic)"
+msgstr "Alamat (kosong: Anthropic)"
+
+msgid "Address, like https://api.openai.com/v1"
+msgstr "Alamat, misalnya https://api.openai.com/v1"
+
+msgid "API key (empty: keep the saved one)"
+msgstr "API key (kosong: pakai yang tersimpan)"
+
+msgid "Saved"
+msgstr "Tersimpan"
+
+msgid "Writing…"
+msgstr "Menulis…"
+
+msgid "Created %s. Read it, then turn it on."
+msgstr "%s sudah dibuat. Baca dulu, lalu nyalakan."
