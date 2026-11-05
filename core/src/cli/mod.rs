@@ -8,6 +8,7 @@ mod client;
 #[cfg(any(target_os = "linux", windows))]
 mod local_time;
 pub mod pipe;
+pub mod plugin;
 #[cfg(any(target_os = "linux", windows))]
 pub mod run;
 #[cfg(any(target_os = "linux", windows))]

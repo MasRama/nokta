@@ -13,6 +13,10 @@ Usage:
   nokta timer clear
   nokta stopwatch [LABEL...]
   nokta alarm HH:MM [LABEL...]
+  nokta plugin list
+  nokta plugin install FOLDER
+  nokta plugin enable | disable | remove ID
+  nokta plugin run ID [--action NAME]
   nokta settings
   nokta update [--yes | --check]
   nokta --version | --help
@@ -28,6 +32,10 @@ timer starts a countdown, like 10m, 1h30m or 45s (a bare number is
 minutes); timer clear removes every countdown, stopwatch and alarm.
 stopwatch starts a stopwatch. alarm rings at the next HH:MM on the local
 24-hour clock, today or tomorrow. The notch shows them all, at most 6.
+
+plugin installs and runs add-on plugins (docs/plugins.md). install copies
+a plugin's folder in, off; enable turns it on. run runs it now, telling it
+--action as if its button was pressed. list says what each one is doing.
 
 settings opens Nokta's settings window.
 

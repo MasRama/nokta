@@ -2,6 +2,7 @@
 //! line each way, a request and then its answer.
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// The longest line either end reads; a longer one is cut there and fails.
 pub const MAX_LINE: u64 = 64 * 1024;
@@ -37,19 +38,48 @@ pub enum Request {
     ClearClocks,
     /// Opens the settings window.
     Settings,
+    /// Answers the installed plugins, as rows of `Plugins1.Plugins`.
+    PluginList,
+    /// Answers the new plugin's id.
+    PluginInstall {
+        path: String,
+    },
+    PluginRemove {
+        id: String,
+    },
+    PluginEnable {
+        id: String,
+        enabled: bool,
+    },
+    PluginRun {
+        id: String,
+        action: String,
+    },
 }
 
-/// The app's answer: nothing when it did it, else why not.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// The app's answer: nothing, or what was asked for, when it did it, else
+/// why not.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Answer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value: Option<Value>,
 }
 
 impl Answer {
-    pub fn from_result(result: Result<(), String>) -> Answer {
-        Answer {
-            error: result.err(),
+    /// A `Null` value is no value.
+    pub fn from_result(result: Result<Value, String>) -> Answer {
+        match result {
+            Ok(Value::Null) => Answer::default(),
+            Ok(value) => Answer {
+                error: None,
+                value: Some(value),
+            },
+            Err(error) => Answer {
+                error: Some(error),
+                value: None,
+            },
         }
     }
 }
@@ -111,6 +141,8 @@ pub fn user_sid() -> std::io::Result<String> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::Value;
+
     use super::{line, name, Answer, Request};
 
     #[test]
@@ -127,6 +159,7 @@ mod tests {
             "{\"call\":\"activity-set\",\"id\":\"build\",\"title\":\"Building\",\"detail\":\"\",\"icon\":\"\",\"progress\":0.4}\n"
         );
         assert_eq!(line(&Request::Settings), "{\"call\":\"settings\"}\n");
+        assert_eq!(line(&Request::PluginList), "{\"call\":\"plugin-list\"}\n");
         for request in [
             set,
             Request::ActivityEnd {
@@ -147,6 +180,19 @@ mod tests {
             },
             Request::ClearClocks,
             Request::Settings,
+            Request::PluginList,
+            Request::PluginInstall {
+                path: r"C:\Users\ren\hello".into(),
+            },
+            Request::PluginRemove { id: "hello".into() },
+            Request::PluginEnable {
+                id: "hello".into(),
+                enabled: false,
+            },
+            Request::PluginRun {
+                id: "water".into(),
+                action: "drink".into(),
+            },
         ] {
             let read: Request = serde_json::from_str(line(&request).trim_end()).unwrap();
             assert_eq!(read, request);
@@ -155,7 +201,11 @@ mod tests {
 
     #[test]
     fn an_answer_says_only_what_went_wrong() {
-        assert_eq!(line(&Answer::from_result(Ok(()))), "{}\n");
+        assert_eq!(line(&Answer::from_result(Ok(Value::Null))), "{}\n");
+        assert_eq!(
+            line(&Answer::from_result(Ok(Value::from("hello")))),
+            "{\"value\":\"hello\"}\n"
+        );
         let failed = Answer::from_result(Err("the title must not be empty".into()));
         assert_eq!(
             line(&failed),
