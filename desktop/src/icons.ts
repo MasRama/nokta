@@ -120,11 +120,21 @@ export function icon(name: NoktaIcon | string, size: number): HTMLSpanElement {
     return span;
 }
 
+/** The key `name` is drawn by: Nokta's own icon or one the app draws; null for none. */
+function iconKey(name: string): string | null {
+    const own = noktaIconName(name) ?? noktaIconName(`nokta-${name}`);
+    if (own) return own;
+    const bare = name.replace(/-symbolic$/, '');
+    return DRAWN.has(bare) ? bare : null;
+}
+
+/** Whether the app draws `name`; a plugin may name one only GNOME has. */
+export const hasIcon = (name: string): boolean => iconKey(name) !== null;
+
 /** Draws `name` in an element made by `icon`. */
 export function setIcon(span: HTMLElement, name: NoktaIcon | string, size: number): void {
-    const own = noktaIconName(name) ?? noktaIconName(`nokta-${name}`);
-    const bare = name.replace(/-symbolic$/, '');
-    const key = own ?? (DRAWN.has(bare) ? bare : null);
+    const key = iconKey(name);
+    const own = key !== null && SOURCES.has(key) ? key : null;
     if (span.dataset.icon === (key ?? '')) return;
     span.dataset.icon = key ?? '';
     span.innerHTML = (own ? SOURCES.get(own) : key && DRAWN.get(key)) ?? '';

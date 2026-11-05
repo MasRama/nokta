@@ -23,6 +23,7 @@ import { NotificationTimer } from '@ext/features/notifications/logic/timer.js';
 import { OsdTimer } from '@ext/features/osd/logic/timer.js';
 import { panelHeight, subPageHeight, type PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeTile } from '@ext/features/panel/logic/layout.js';
+import { badgeCard, homeCards, type PluginAlert } from '@ext/features/plugins/logic/plugins.js';
 import { SHELF_ROW_HEIGHT } from '@ext/features/shelf/logic/layout.js';
 import { callDetail, callText, msUntilElapsedSecond } from '@ext/features/privacy/logic/call.js';
 import { dotsFor } from '@ext/features/privacy/logic/dots.js';
@@ -62,6 +63,7 @@ import {
     endedRequest,
     finishedRequest,
     memoryLowRequest,
+    pluginRequest,
     TIMER_ICON,
     updateFailedRequest,
     type OsdRequest,
@@ -74,6 +76,7 @@ import { focusFirst, keyActionOf, moveFocus } from './focus.js';
 import { Lyrics, Media, nowUs } from './media.js';
 import { fileUrlOf, Notch, type Box, type Frames, type NotchStyle } from './notch/notch.js';
 import { asMarkup, Notifications, type Toast } from './notifications.js';
+import { Plugins } from './plugins.js';
 import { Privacy } from './privacy.js';
 import { Settings } from './settings.js';
 import { Shelf } from './shelf.js';
@@ -93,6 +96,7 @@ import { NotchMenu } from './views/menu.js';
 import { NotificationView } from './views/notification.js';
 import { OsdView } from './views/osd.js';
 import { PeekView } from './views/peek.js';
+import { PluginBadge, PluginPage } from './views/plugin.js';
 import { DropView, ShelfBadge, ShelfRow } from './views/shelf.js';
 import { CallLabel, PrivacyDots, type HomeCall } from './views/privacy.js';
 import { ProgressLine } from './views/progress-line.js';
@@ -150,8 +154,8 @@ const NO_HIT: Box = { x: 0, y: 0, width: 0, height: 0 };
 /** An alert pushes the notch this much wider before it springs back. */
 const ALERT_KICK = 0.06;
 
-/** A page a home tile opens. */
-type PageName = 'timer' | 'system' | 'clipboard';
+/** A page a home tile opens, or a plugin's card. */
+type PageName = 'timer' | 'system' | 'clipboard' | 'plugin';
 
 /** The shelf row under the player, with the open player's spacing, as the extension's. */
 const EXPANDED_SHELF_EXTRA = SHELF_ROW_HEIGHT + 8;
@@ -189,6 +193,7 @@ export class MonitorNotch {
     readonly system: System;
     readonly shelf: Shelf;
     readonly clipboard: Clipboard;
+    readonly plugins: Plugins;
     private readonly downloads: Downloads;
     private readonly screenshots: Downloads;
     private readonly notifications: Notifications;
@@ -227,6 +232,7 @@ export class MonitorNotch {
     private readonly badges = { idle: new ActivityBadge(), collapsed: new ActivityBadge() };
     private readonly shelfBadges = { idle: new ShelfBadge(), collapsed: new ShelfBadge() };
     private readonly countdowns = { idle: new CountdownBadge(), collapsed: new CountdownBadge() };
+    private readonly pluginBadges = { idle: new PluginBadge(), collapsed: new PluginBadge() };
     /** The meetings joined from the notch: their countdown ends. */
     private readonly dismissedCountdowns = new Set<string>();
     /** The shelf's row in home and under the open player. */
@@ -238,6 +244,10 @@ export class MonitorNotch {
     private readonly timerPage: TimerPage;
     private readonly systemPage = new SystemPage();
     private readonly clipboardPage: ClipboardPage;
+    private readonly pluginPage: PluginPage;
+    private readonly pluginSubPage: SubPage;
+    /** The plugin whose items the plugin page lists. */
+    private pluginId: string | null = null;
     /** The pages home's tiles open, one shown at a time. */
     private readonly pages: HTMLDivElement;
     private readonly subPages: Record<PageName, HTMLElement>;
@@ -326,6 +336,11 @@ export class MonitorNotch {
         );
         this.shelf = new Shelf(bridge, () => this.onShelf());
         this.clipboard = new Clipboard(bridge, () => this.onClipboard());
+        this.plugins = new Plugins(
+            bridge,
+            () => this.onPlugins(),
+            (alert) => this.onPluginAlert(alert),
+        );
         this.toggles = new Toggles(bridge, () => this.onToggles());
         this.timer = new Timer(
             bridge,
@@ -348,6 +363,8 @@ export class MonitorNotch {
             installUpdate: () => this.installUpdate(),
             openEvent: (id) => this.openEvent(id),
             joinMeeting: (id) => this.joinMeeting(id),
+            openPlugin: (id) => this.openPlugin(id),
+            pluginAction: (id, index) => this.onPluginAction(id, index),
         });
         const shelfHandlers = {
             open: (uri: string) => this.host.openFile?.(uri, false),
@@ -387,7 +404,13 @@ export class MonitorNotch {
             fileUrlOf,
         );
         const back = () => this.setPage(null);
+        this.pluginPage = new PluginPage((uri) => {
+            this.machine.close();
+            this.host.openUri?.(uri);
+        });
+        this.pluginSubPage = new SubPage('', this.pluginPage.element, back);
         this.subPages = {
+            plugin: this.pluginSubPage.element,
             timer: new SubPage(_('Timer'), this.timerPage.element, back).element,
             system: new SubPage(_('System'), this.systemPage.element, back).element,
             clipboard: new SubPage(_('Clipboard'), this.clipboardPage.element, back, this.clipboardPage.actions).element,
@@ -510,6 +533,7 @@ export class MonitorNotch {
             this.system.attach(),
             this.shelf.attach(),
             this.clipboard.attach(),
+            this.plugins.attach(),
         ]);
     }
 
@@ -547,6 +571,7 @@ export class MonitorNotch {
         this.system.detach();
         this.shelf.detach();
         this.clipboard.detach();
+        this.plugins.detach();
         window.clearTimeout(this.indicatorTimer);
         window.clearInterval(this.homeTicker);
         this.alerts.detach();
@@ -894,12 +919,15 @@ export class MonitorNotch {
         this.home.setUpdate(updateRow(this.updates.latest, '', '', this.updates.installing));
         const events = this.homeEvents();
         this.home.setEvents(events);
+        const cards = homeCards(this.plugins.cards);
+        this.home.setPlugins(cards);
         const rows = homeRows(layout, {
             events: events.length,
             call: this.shownCall() !== null,
             activities: this.liveActivities().length,
             clocks: clocks.length,
             update: this.updates.latest !== '',
+            plugins: cards.length,
             shelf: this.shelfItems().length > 0,
         });
         if (rows.join() === this.homeRows.join()) return;
@@ -935,6 +963,57 @@ export class MonitorNotch {
         const { behavior, appearance } = this.settings;
         const request = endedRequest(ended, behavior, appearance.alertMotion);
         if (request) this.showOsd(request);
+    }
+
+    /** The plugins' cards changed: home, the closed notch's badge and an open card's page show them. */
+    private onPlugins(): void {
+        const badged = badgeCard(this.plugins.cards);
+        if (badged) for (const badge of Object.values(this.pluginBadges)) badge.update(badged);
+        if (this.page === 'plugin') {
+            const card = this.plugins.cards.find((c) => c.id === this.pluginId);
+            if (card && card.items.length > 0) {
+                this.showPluginCard(card.id);
+            } else {
+                this.setPage(null);
+            }
+        }
+        this.applyIndicator();
+        this.onHome();
+    }
+
+    /** A plugin's card opens its items as a page. */
+    private openPlugin(id: string): void {
+        if (!this.showPluginCard(id)) return;
+        this.setPage('plugin');
+    }
+
+    /** Fills the plugin page with card `id`'s items; false for a card with none. */
+    private showPluginCard(id: string): boolean {
+        const card = this.plugins.cards.find((c) => c.id === id);
+        if (!card || card.items.length === 0) return false;
+        this.pluginId = id;
+        this.pluginSubPage.setTitle(card.name);
+        const before = this.pluginPage.height;
+        this.pluginPage.show(card);
+        if (this.pluginPage.height !== before) this.resizePage();
+        return true;
+    }
+
+    /** A card's button: it opens its address, or runs the plugin with its action. */
+    private onPluginAction(id: string, index: number): void {
+        const action = this.plugins.cards.find((c) => c.id === id)?.actions[index];
+        if (!action) return;
+        if (action.open) {
+            this.machine.close();
+            this.host.openUri?.(action.open);
+        } else {
+            this.plugins.run(id, action.run);
+        }
+    }
+
+    private onPluginAlert(alert: PluginAlert): void {
+        const { behavior, appearance } = this.settings;
+        this.showOsd(pluginRequest(alert, behavior, appearance.alertMotion));
     }
 
     /** The parked files, none while `[behavior] file_shelf` is off. */
@@ -1200,6 +1279,7 @@ export class MonitorNotch {
             clock: clock !== null,
             activity: this.liveActivities().length > 0,
             meeting: meeting !== null,
+            plugin: badgeCard(this.plugins.cards) !== null,
             shelf: this.shelfItems().length > 0,
         });
         this.indicator = indicator;
@@ -1209,6 +1289,7 @@ export class MonitorNotch {
             if (indicator === 'activity') return this.badges[place].element;
             if (indicator === 'shelf') return this.shelfBadges[place].element;
             if (indicator === 'meeting') return this.countdowns[place].element;
+            if (indicator === 'plugin') return this.pluginBadges[place].element;
             return null;
         };
         this.idle.setAside(shown('idle'));
@@ -1398,6 +1479,7 @@ export class MonitorNotch {
     /** The open page's body height, for subPageHeight. */
     private pageBodyHeight(): number {
         if (this.page === 'clipboard') return this.clipboardPage.height;
+        if (this.page === 'plugin') return this.pluginPage.height;
         return this.page === 'system' ? SystemPage.HEIGHT : TimerPage.HEIGHT;
     }
 

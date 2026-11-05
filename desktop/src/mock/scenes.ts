@@ -264,6 +264,47 @@ function agenda(): Record<string, Props> {
     };
 }
 
+/** Two plugins: pull requests with a badge and a list, and a deploy with progress and a button. */
+function plugins(): Record<string, Props> {
+    const info = (name: string, icon: string) =>
+        JSON.stringify({ name, description: '', version: '1.0.0', icon, every: 60, runs_here: true, options: [] });
+    return {
+        Plugins1: {
+            Plugins: [
+                ['pulls', true, 'ok', '', info('Pull requests', 'nokta-link')],
+                ['deploy', true, 'ok', '', info('Deploy', 'nokta-plugin')],
+            ],
+            Cards: [
+                [
+                    'pulls',
+                    JSON.stringify({
+                        title: '3 open pull requests',
+                        detail: 'nokta · 1 needs your review',
+                        tone: 'blue',
+                        badge: '3',
+                        items: [
+                            { title: 'Fix the shelf on a second monitor', detail: '#142 · Ren', open: 'https://example.com/142' },
+                            { title: 'Plugins: a data folder per plugin', detail: '#141 · Ren', open: 'https://example.com/141' },
+                            { title: 'Translate the plugin page', detail: '#139 · Ayu', open: 'https://example.com/139' },
+                        ],
+                        actions: [{ label: 'Open', open: 'https://example.com/pulls' }],
+                    }),
+                ],
+                [
+                    'deploy',
+                    JSON.stringify({
+                        title: 'Deploying site',
+                        detail: 'step 3 of 5',
+                        tone: 'green',
+                        progress: 0.6,
+                        actions: [{ label: 'Stop', run: 'stop' }],
+                    }),
+                ],
+            ],
+        },
+    };
+}
+
 export const SCENES: Record<string, Scene> = {
     idle: { props: {} },
     home: { props: HOME, open: true },
@@ -352,6 +393,13 @@ export const SCENES: Record<string, Scene> = {
     'activity-home': { props: { ...TIMER_HOME, ...activities(), ...UPDATE }, open: true },
     'activity-done': { props: LINGER, signals: [['Activities1', 'Ended', 'build', 'Build', true, '', 65_000_000]] },
     'call-home': { props: { ...TIMER_HOME, ...call(true) }, open: true },
+    'plugin-home': { props: { ...TIMER_HOME, ...plugins() }, open: true },
+    'plugin-badge': { props: plugins() },
+    'plugin-page': { props: { ...TIMER_HOME, ...plugins() }, open: true, click: ['.nokta-panel-plugin-body'] },
+    'plugin-alert': {
+        props: { ...LINGER, ...plugins() },
+        signals: [['Plugins1', 'Alert', 'pulls', 'Site is down', 'example.com answers 503', '', '', true]],
+    },
     'call-player': { props: { ...player(true), ...call(false) } },
     headphones: { props: { ...player(true), ...LINGER }, signals: [['Devices1', 'Alert', 'bluetooth-connected', 'WH-1000XM5', 80]] },
 };
