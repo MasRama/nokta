@@ -62,6 +62,10 @@ Tick what works. For anything that does not, see
       back to your app.
 - [ ] <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd> starts a focus session;
       again stops it.
+- [ ] With **Notifications in the notch** on, messages during a focus
+      session do not show in the notch; after it stops, the notch says how
+      many came and from which apps, and **Show** opens Windows'
+      notification center.
 
 ### Music
 

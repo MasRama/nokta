@@ -90,7 +90,9 @@ on Windows).
   reply, so neither does the notch.
 - **Focus timer.** Start it from Quick Settings or with
   <kbd>Super</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>. It counts down in the notch
-  and starts a break when the session ends.
+  and starts a break when the session ends. Notifications stay quiet while
+  you focus, and the notch sums them up after: how many came, and from
+  which apps.
 - **[Timers, stopwatches and alarms](#timers-stopwatches-and-alarms).**
   Start one from home or with `nokta timer 10m Tea`; it counts in the
   notch and rings when it is done.
@@ -639,7 +641,7 @@ locked.
 | `long_break_minutes` | `15` | Long break, 1 to 60 |
 | `sessions_before_long_break` | `4` | Focus sessions before a long break, 0 to 12; `0` means never |
 | `sound` | `true` | Play a sound when a focus session, a break, a countdown or an alarm ends |
-| `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list. Banners you had turned off stay off |
+| `quiet_notifications` | `true` | Show no notification banners while a focus session runs; they still go to the message list, and when it ends the notch says how many came and from which apps. Banners you had turned off stay off. On Windows the notch holds them back; Windows' own banners are its own |
 | `shortcut` | `"<Super><Alt>f"` | Keys that start focus or stop the timer, written like GNOME's keyboard shortcuts (`<Control><Shift>F12`); `""` means no shortcut |
 
 </details>
