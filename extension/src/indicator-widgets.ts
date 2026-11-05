@@ -2,6 +2,7 @@ import type Clutter from 'gi://Clutter';
 
 import { ActivityBadge } from './features/activities/index.js';
 import { CountdownBadge } from './features/calendar/index.js';
+import { PluginBadge } from './features/plugins/index.js';
 import { CallLabel, RecordingLabel } from './features/privacy/index.js';
 import { ShelfBadge } from './features/shelf/index.js';
 import { TimerLabel } from './features/timer/index.js';
@@ -13,6 +14,7 @@ export interface IndicatorSet {
     call: CallLabel;
     timer: TimerLabel;
     badge: ActivityBadge;
+    plugin: PluginBadge;
     shelf: ShelfBadge;
     countdown: CountdownBadge;
 }
@@ -23,6 +25,7 @@ function newSet(): IndicatorSet {
         call: new CallLabel(),
         timer: new TimerLabel(),
         badge: new ActivityBadge(),
+        plugin: new PluginBadge(),
         shelf: new ShelfBadge(),
         countdown: new CountdownBadge(),
     };

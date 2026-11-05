@@ -22,6 +22,7 @@ export const PATHS = {
     Shelf1: '/io/nokta/Shelf',
     Clipboard1: '/io/nokta/Clipboard',
     Downloads1: '/io/nokta/Downloads',
+    Plugins1: '/io/nokta/Plugins',
     System1: '/io/nokta/System',
     Updates1: '/io/nokta/Updates',
 } as const;
@@ -261,4 +262,25 @@ export interface UpdatesProps {
 export const UPDATES_METHODS = {
     Check: '',
     Install: '',
+} as const;
+
+export interface PluginsProps {
+    /** id, enabled, status, message and info (a JSON object) of each installed plugin, by name. */
+    Plugins: Array<[string, boolean, string, string, string]>;
+    /** id and card (a JSON object) of each running plugin that shows something. */
+    Cards: Array<[string, string]>;
+}
+
+/** io.nokta.Plugins1 methods and the D-Bus signature of their arguments. */
+export const PLUGINS_METHODS = {
+    SetEnabled: 'sb',
+    SetOption: 'sss',
+    Run: 'ss',
+    Install: 's',
+    Remove: 's',
+} as const;
+
+/** io.nokta.Plugins1 signals and the D-Bus signature of their arguments. */
+export const PLUGINS_SIGNALS = {
+    Alert: 'sssssb',
 } as const;

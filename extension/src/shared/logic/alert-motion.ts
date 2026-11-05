@@ -12,11 +12,13 @@ const MOTIONS: Readonly<Record<string, AlertMotion>> = {
     'activity-done': 'pop',
     'activity-failed': 'shake',
     'memory-low': 'shake',
+    'plugin-important': 'pulse',
 };
 
 /**
  * The motion for an alert: a device alert's kind, `timer-done`,
- * `clock-done`, `activity-done`, `activity-failed`, `memory-low` or `calendar`. With
+ * `clock-done`, `activity-done`, `activity-failed`, `memory-low`,
+ * `plugin-important` or `calendar`. With
  * `[appearance] alert_motion` off, and for any other alert, the kick.
  */
 export function alertMotion(event: string, enabled: boolean): AlertMotion {
