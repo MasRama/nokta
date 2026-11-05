@@ -50,6 +50,19 @@ pub enum Request {
     PluginInstallFromCatalog {
         id: String,
     },
+    /// Answers Creator Mode's service, as `Plugins1.Creator` gives it.
+    PluginCreator,
+    /// An empty `api_key` keeps the saved one.
+    PluginSetCreator {
+        provider: String,
+        model: String,
+        base_url: String,
+        api_key: String,
+    },
+    /// Answers the new plugin's id.
+    PluginCreate {
+        request: String,
+    },
     PluginRemove {
         id: String,
     },
