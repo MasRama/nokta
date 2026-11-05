@@ -446,6 +446,24 @@ button:disabled {
     border-top: 1px solid var(--line);
 }
 
+/* A group's title with buttons at its right, like the added plugins'. */
+.nokta-prefs-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.nokta-prefs-group-head .nokta-prefs-group-title {
+    margin-bottom: 0;
+}
+
+.nokta-prefs-group-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* Messages and the reset dialog */
 
 .nokta-prefs-toasts {

@@ -23,7 +23,14 @@ async function mount(settings: Props = {}) {
     const showTour = vi.fn(() => Promise.resolve());
     const root = document.createElement('div');
     document.body.append(root);
-    const prefs = new SettingsWindow(bridge, { pickPicture, openConfig, showTour, fileUrl: (path: string) => path }, root);
+    const pickPluginFolder = vi.fn(() => Promise.resolve<string | null>('C:\\Users\\me\\hello'));
+    const openPluginsFolder = vi.fn();
+    const openUri = vi.fn();
+    const prefs = new SettingsWindow(
+        bridge,
+        { pickPicture, openConfig, showTour, fileUrl: (path: string) => path, pickPluginFolder, openPluginsFolder, openUri },
+        root,
+    );
     windows.push(prefs);
     await prefs.start();
     /** The row titled `title` on any page. */
@@ -32,7 +39,7 @@ async function mount(settings: Props = {}) {
             (r) => r.querySelector('.nokta-prefs-title')?.textContent === title,
         )!;
     const sets = () => bridge.calls.filter((c) => c.method === 'Set').map((c) => c.args);
-    return { bridge, root, prefs, row, sets, pickPicture, openConfig, showTour };
+    return { bridge, root, prefs, row, sets, pickPicture, openConfig, showTour, pickPluginFolder, openPluginsFolder, openUri };
 }
 
 afterEach(() => {
@@ -247,5 +254,88 @@ describe('the settings window', () => {
         const read = await mount({ Appearance: { picture: 'C:\\Users\\me\\beach.jpg' }, PicturePath: 'C:\\cache\\picture.png' });
         expect(subtitle(read.row('Picture'))).not.toBe("Can't read this picture");
         expect(read.root.querySelector('.nokta-prefs-preview image')).toBeNull();
+    });
+});
+
+describe('added plugins on Windows', () => {
+    const info = JSON.stringify({
+        name: 'Site status',
+        version: '1.0.0',
+        author: 'Ren',
+        homepage: 'https://example.com/site',
+        runs_here: true,
+        options: [
+            { key: 'url', title: 'Address', type: 'text', value: 'https://example.com' },
+            { key: 'every', title: 'Minutes', type: 'int', min: 1, max: 60, value: 5 },
+            { key: 'badge', title: 'Badge', type: 'bool', value: false },
+        ],
+    });
+    const plugins = (enabled: boolean, status = 'off', message = ''): Props => ({
+        Plugins: [['site-status', enabled, status, message, info]],
+        Cards: [],
+    });
+
+    async function mountPlugins(props: Props) {
+        const mounted = await mount();
+        mounted.bridge.set('Plugins1', props);
+        const item = () => mounted.root.querySelector<HTMLElement>('[data-plugin="site-status"]')!;
+        const pluginCalls = () => mounted.bridge.calls.filter((c) => c.iface === 'Plugins1').map((c) => [c.method, ...c.args]);
+        return { ...mounted, item, pluginCalls };
+    }
+
+    it('says what each one is doing, and turns it on with its switch', async () => {
+        const { item, bridge, pluginCalls } = await mountPlugins(plugins(false));
+        expect(item().querySelector('.nokta-prefs-title')?.textContent).toBe('Site status');
+        const sw = item().querySelector<HTMLButtonElement>('.nokta-prefs-plugin-head .nokta-prefs-switch')!;
+        expect(sw.getAttribute('aria-checked')).toBe('false');
+        sw.click();
+        expect(pluginCalls()).toContainEqual(['SetEnabled', 'site-status', true]);
+        // The details stay closed: the switch is not the row.
+        expect(item().querySelector<HTMLElement>('.nokta-prefs-plugin-details')?.hidden).toBe(true);
+        bridge.set('Plugins1', plugins(true, 'error', 'exited with 1'));
+        const subtitle = item().querySelector('.nokta-prefs-plugin-head .nokta-prefs-subtitle');
+        expect(subtitle?.textContent).toBe('Failed: exited with 1');
+        expect(subtitle?.classList).toContain('nokta-prefs-warning');
+    });
+
+    it('sends an option once typing stops, and a switch at once', async () => {
+        const { item, pluginCalls } = await mountPlugins(plugins(false));
+        item().querySelector<HTMLElement>('.nokta-prefs-plugin-head')!.click();
+        expect(item().querySelector<HTMLElement>('.nokta-prefs-plugin-details')?.hidden).toBe(false);
+        const text = item().querySelector<HTMLInputElement>('.nokta-prefs-text')!;
+        expect(text.value).toBe('https://example.com');
+        text.value = 'https://nokta.io';
+        text.dispatchEvent(new Event('input'));
+        expect(pluginCalls()).toEqual([]);
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(pluginCalls()).toContainEqual(['SetOption', 'site-status', 'url', 'https://nokta.io']);
+        item().querySelector<HTMLButtonElement>('.nokta-prefs-plugin-details .nokta-prefs-switch')!.click();
+        expect(pluginCalls()).toContainEqual(['SetOption', 'site-status', 'badge', 'true']);
+        expect(item().querySelector<HTMLInputElement>('.nokta-prefs-number')?.value).toBe('5');
+    });
+
+    it('adds one from a folder and removes one after asking', async () => {
+        const { root, item, pickPluginFolder, openPluginsFolder, pluginCalls } = await mountPlugins(plugins(false));
+        const button = (text: string) =>
+            [...root.querySelectorAll<HTMLButtonElement>('.nokta-prefs-button')].find((b) => b.textContent === text)!;
+        button('Add from Folder…').click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(pickPluginFolder).toHaveBeenCalled();
+        expect(pluginCalls()).toContainEqual(['Install', 'C:\\Users\\me\\hello']);
+        button('Open the plugins folder').click();
+        expect(openPluginsFolder).toHaveBeenCalled();
+        item().querySelector<HTMLElement>('.nokta-prefs-plugin-head')!.click();
+        [...item().querySelectorAll<HTMLButtonElement>('.nokta-prefs-destructive')][0].click();
+        expect(pluginCalls().some(([method]) => method === 'Remove')).toBe(false);
+        const dialog = root.querySelector<HTMLElement>('.nokta-prefs-dialog')!;
+        [...dialog.querySelectorAll<HTMLButtonElement>('.nokta-prefs-destructive')][0].click();
+        expect(pluginCalls()).toContainEqual(['Remove', 'site-status']);
+    });
+
+    it('points to the examples when none is added', async () => {
+        const { root, openUri } = await mountPlugins({ Plugins: [], Cards: [] });
+        const examples = [...root.querySelectorAll<HTMLButtonElement>('.nokta-prefs-button')].find((b) => b.textContent === 'Examples')!;
+        examples.click();
+        expect(openUri).toHaveBeenCalledWith(expect.stringContaining('examples/plugins'));
     });
 });

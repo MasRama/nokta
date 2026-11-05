@@ -15,6 +15,9 @@ pub const LABEL: &str = "settings";
 /// Where config.toml is, for Open config.toml.
 pub struct ConfigFile(pub PathBuf);
 
+/// Where the add-on plugins are, for Open Folder.
+pub struct PluginsFolder(pub PathBuf);
+
 /// Opens the settings window, or brings it to the front.
 pub fn open(app: &AppHandle) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window(LABEL) {
@@ -74,4 +77,26 @@ pub async fn pick_picture(app: AppHandle) -> Option<String> {
     });
     let path = picked.await.ok()??.into_path().ok()?;
     Some(path.to_string_lossy().into_owned())
+}
+
+/// Asks for a plugin's folder, to add it; None when cancelled.
+#[tauri::command]
+pub async fn pick_plugin_folder(app: AppHandle) -> Option<String> {
+    let (done, picked) = oneshot::channel();
+    let mut dialog = app.dialog().file();
+    if let Some(window) = app.get_webview_window(LABEL) {
+        dialog = dialog.set_parent(&window);
+    }
+    dialog.pick_folder(move |folder| {
+        let _ = done.send(folder);
+    });
+    let path = picked.await.ok()??.into_path().ok()?;
+    Some(path.to_string_lossy().into_owned())
+}
+
+/// Opens the plugins folder in Explorer, made first if no plugin is there yet.
+#[tauri::command]
+pub fn open_plugins_folder(folder: State<'_, PluginsFolder>) -> Result<(), String> {
+    std::fs::create_dir_all(&folder.0).map_err(|err| err.to_string())?;
+    super::shell_open(&folder.0.to_string_lossy())
 }

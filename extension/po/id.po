@@ -1215,3 +1215,9 @@ msgstr "Menghapus folder dan pengaturannya"
 
 msgid "Remove this plugin?"
 msgstr "Hapus plugin ini?"
+
+msgid "Examples"
+msgstr "Contoh"
+
+msgid "Website"
+msgstr "Situs web"
