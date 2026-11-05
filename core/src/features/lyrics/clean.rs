@@ -1,6 +1,8 @@
 //! Turns what a player reports into what LRCLIB knows. Browsers playing
 //! YouTube report the video title and the channel, for example
-//! `TULUS - Hati-Hati di Jalan (Official Music Video)` by `TULUS Official`.
+//! `TULUS - Hati-Hati di Jalan (Official Music Video)` by `TULUS Official`,
+//! or for a cover `Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)` by
+//! `Tami Aulia`: the song can sit on either side of the dash.
 
 /// One way to ask LRCLIB for the playing track.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -34,6 +36,10 @@ const NOISE: &[&str] = &[
     "acoustic",
     "version",
     "explicit",
+    "cover",
+    "covered",
+    "akustik",
+    "karaoke",
 ];
 
 /// Words after a dash that name a version rather than another song.
@@ -57,19 +63,58 @@ const VERSIONS: &[&str] = &[
 /// Channel words that are not part of an artist's name.
 const CHANNEL: &[&str] = &["official", "music", "channel", "tv", "ofc"];
 
-/// Up to three `(artist, title)` pairs to search, best first.
+/// The most `(artist, title)` pairs [`candidates`] gives.
+pub const MAX_CANDIDATES: usize = 4;
+
+/// Phrases after which a title names who sings the cover, not the song.
+const COVER_BY: &[&str] = &[" cover by ", " covered by ", " cover oleh "];
+
+/// Up to [`MAX_CANDIDATES`] `(artist, title)` pairs to search, best first.
 pub fn candidates(artist: &str, title: &str) -> Vec<Candidate> {
     let artist_clean = clean_artist(artist);
-    let mut title_clean = clean_title(title);
-    if normalized(&title_clean).is_empty() {
-        title_clean = title.trim().to_owned();
-    }
     let mut out = Vec::new();
-    if let Some((left, right)) = split_dash(&title_clean) {
-        push(&mut out, left, right);
+    for part in song_parts(title) {
+        let cleaned = clean_title(part);
+        if normalized(&cleaned).is_empty() {
+            continue;
+        }
+        if let Some((left, right)) = split_dash(&cleaned) {
+            push(&mut out, left, right);
+            push(&mut out, &artist_clean, &cleaned);
+            // A cover often names the song first: `Song - Artist`.
+            push(&mut out, right, left);
+        } else {
+            push(&mut out, &artist_clean, &cleaned);
+            // `Sial (Mahalini)`: what is left in brackets is not the song.
+            push(&mut out, &artist_clean, &strip_all_brackets(&cleaned));
+        }
     }
-    push(&mut out, &artist_clean, &title_clean);
-    out.truncate(3);
+    if out.is_empty() {
+        push(&mut out, &artist_clean, title.trim());
+    }
+    out.truncate(MAX_CANDIDATES);
+    out
+}
+
+/// The parts of a `A | B | C` title that may name the song: those with an
+/// `Artist - Song` dash first, then the first part.
+fn song_parts(title: &str) -> Vec<&str> {
+    let parts: Vec<&str> = title
+        .split(" | ")
+        .flat_map(|p| p.split(" // "))
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .collect();
+    let mut out: Vec<&str> = parts
+        .iter()
+        .copied()
+        .filter(|p| split_dash(p).is_some())
+        .collect();
+    if let Some(first) = parts.first() {
+        if !out.contains(first) {
+            out.push(first);
+        }
+    }
     out
 }
 
@@ -119,22 +164,34 @@ fn clean_artist(artist: &str) -> String {
 }
 
 fn clean_title(title: &str) -> String {
-    let mut t = title.split(" | ").next().unwrap_or_default().to_owned();
-    t = strip_brackets(&t);
-    for marker in [" feat. ", " feat ", " ft. ", " ft ", " featuring "] {
+    let mut t = strip_brackets(title);
+    for marker in [" feat. ", " feat ", " ft. ", " ft ", " featuring "]
+        .iter()
+        .chain(COVER_BY)
+    {
         if let Some(at) = t.to_lowercase().find(marker) {
             t.truncate(at);
         }
     }
-    let t: Vec<&str> = t
+    let mut t: Vec<&str> = t
         .split_whitespace()
         .filter(|w| !w.starts_with('#'))
         .collect();
+    // `Sial Cover`, `Sial Akustik Cover`
+    while t.len() > 1
+        && ["cover", "akustik", "acoustic"].contains(&normalized(t[t.len() - 1]).as_str())
+    {
+        t.pop();
+    }
     let mut t = t.join(" ");
     if let Some((left, right)) = split_dash(&t) {
-        if words(right)
+        let right_words = words(right);
+        let decoration = |w: &String| NOISE.contains(&w.as_str()) || VERSIONS.contains(&w.as_str());
+        // `Cover Me` is a song; `Cover` and `Akustik Cover` are not.
+        if right_words
             .first()
             .is_some_and(|w| VERSIONS.contains(&w.as_str()))
+            || right_words.iter().all(decoration)
         {
             t = left.to_owned();
         }
@@ -164,6 +221,21 @@ fn strip_brackets(title: &str) -> String {
         rest = &rest[open + len + close.len_utf8()..];
     }
     out.push_str(rest);
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The title without any bracketed part.
+fn strip_all_brackets(title: &str) -> String {
+    let mut out = String::new();
+    let mut depth = 0usize;
+    for c in title.chars() {
+        match c {
+            '(' | '[' | '【' => depth += 1,
+            ')' | ']' | '】' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => out.push(c),
+            _ => {}
+        }
+    }
     out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -270,7 +342,66 @@ mod tests {
         let got = pairs("Lagu Hits", "Artist - Song (Official Video)");
         assert_eq!(got[0], pair("Artist", "Song"));
         assert!(got.contains(&pair("Lagu Hits", "Artist - Song")), "{got:?}");
-        assert!(got.len() <= 3);
+        assert!(got.len() <= MAX_CANDIDATES);
+    }
+
+    #[test]
+    fn a_cover_is_asked_as_the_song_it_covers() {
+        let got = pairs(
+            "Tami Aulia",
+            "Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)",
+        );
+        // Either side of the dash can be the artist.
+        assert!(
+            got.contains(&pair("Tulus", "Hati-Hati di Jalan")),
+            "{got:?}"
+        );
+        assert!(
+            got.contains(&pair("Hati-Hati di Jalan", "Tulus")),
+            "{got:?}"
+        );
+        assert_eq!(
+            pairs("Nabila Maharani", "Mahalini - Sial (Acoustic Cover)")[0],
+            pair("Mahalini", "Sial")
+        );
+        assert_eq!(
+            pairs(
+                "Nabila Maharani",
+                "Mahalini - Sial Cover by Nabila Maharani"
+            )[0],
+            pair("Mahalini", "Sial")
+        );
+        assert_eq!(
+            pairs("Nabila Maharani", "Sial - Cover")[0],
+            pair("Nabila Maharani", "Sial")
+        );
+    }
+
+    #[test]
+    fn the_part_of_a_piped_title_that_names_the_song_is_used() {
+        let got = pairs("Tami Aulia", "TAMI AULIA | HATI-HATI DI JALAN - TULUS");
+        assert_eq!(got[0], pair("HATI-HATI DI JALAN", "TULUS"));
+        assert!(
+            got.contains(&pair("TULUS", "HATI-HATI DI JALAN")),
+            "{got:?}"
+        );
+        let got = pairs("Nabila Maharani", "Sial (Mahalini) | Cover Lagu");
+        assert!(
+            got.iter().any(|(_, title)| title == "Sial"),
+            "the song without the artist in brackets: {got:?}"
+        );
+    }
+
+    #[test]
+    fn a_song_named_cover_keeps_its_name() {
+        assert_eq!(
+            pairs("Bruce Springsteen", "Cover Me")[0],
+            pair("Bruce Springsteen", "Cover Me")
+        );
+        assert_eq!(
+            pairs("Channel", "Bruce Springsteen - Cover Me")[0],
+            pair("Bruce Springsteen", "Cover Me")
+        );
     }
 
     #[test]
