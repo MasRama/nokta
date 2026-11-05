@@ -103,7 +103,13 @@ fn copy_dir(from: &Path, to: &Path, budget: &mut (usize, u64)) -> Result<(), Str
     Ok(())
 }
 
-/// Deletes the plugin `id` from `plugins_dir`.
+/// Where the plugin `id` keeps its own files: in `plugins_dir`, out of the
+/// way of its folder being replaced by an update.
+pub fn data_dir(id: &str, plugins_dir: &Path) -> PathBuf {
+    plugins_dir.join(".data").join(id)
+}
+
+/// Deletes the plugin `id` and what it kept from `plugins_dir`.
 pub fn remove(id: &str, plugins_dir: &Path) -> Result<(), String> {
     if !manifest::valid_id(id) {
         return Err(format!("no plugin {id}"));
@@ -112,5 +118,7 @@ pub fn remove(id: &str, plugins_dir: &Path) -> Result<(), String> {
     if !dir.is_dir() {
         return Err(format!("no plugin {id}"));
     }
-    fs::remove_dir_all(&dir).map_err(|err| format!("cannot remove {}: {err}", dir.display()))
+    fs::remove_dir_all(&dir).map_err(|err| format!("cannot remove {}: {err}", dir.display()))?;
+    let _ = fs::remove_dir_all(data_dir(id, plugins_dir));
+    Ok(())
 }

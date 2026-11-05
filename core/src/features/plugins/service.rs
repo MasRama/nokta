@@ -244,6 +244,7 @@ impl Service {
             id: id.to_owned(),
             dir: entry.dir.clone(),
             argv,
+            data: install::data_dir(id, &self.dirs.plugins_dir),
             every: manifest.run.every,
             timeout: manifest.run.timeout,
             env,

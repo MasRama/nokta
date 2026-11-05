@@ -231,6 +231,7 @@ mod unix {
             id: "hello".into(),
             dir: dir.to_owned(),
             argv: vec!["./hello.sh".into()],
+            data: dir.join("data"),
             every,
             timeout: 5,
             env: vec![("NOKTA_OPTION_NAME".into(), "Ren".into())],
@@ -243,7 +244,8 @@ mod unix {
         script(
             dir.path(),
             "hello.sh",
-            r#"printf '{"title":"Hello %s","detail":"%s %s"}' "$NOKTA_OPTION_NAME" "$NOKTA_PLUGIN" "${NOKTA_ACTION:-none}""#,
+            r#"test -d "$NOKTA_PLUGIN_DATA" || exit 9
+printf '{"title":"Hello %s","detail":"%s %s"}' "$NOKTA_OPTION_NAME" "$NOKTA_PLUGIN" "${NOKTA_ACTION:-none}""#,
         );
         let card = runner::run_once(&spec(dir.path(), 60), None).await.unwrap();
         assert_eq!(card.title, "Hello Ren");
@@ -401,6 +403,10 @@ done"#,
         assert_eq!(cards[0].0, "hello");
         assert!(cards[0].1.contains("\"title\":\"Hello Ren\""));
         assert_eq!(handle.state.borrow().plugins[0].status, "ok");
+        assert!(
+            dirs.plugins_dir.join(".data/hello").is_dir(),
+            "its data folder is made"
+        );
 
         // The same alert id does not show again.
         ask(&commands, |reply| Command::Run {
@@ -427,6 +433,10 @@ done"#,
         .await
         .unwrap();
         assert!(!dirs.plugins_dir.join("hello").exists());
+        assert!(
+            !dirs.plugins_dir.join(".data/hello").exists(),
+            "what it kept goes too"
+        );
         assert!(handle.state.borrow().plugins.is_empty());
         assert!(handle.state.borrow().cards.is_empty());
         assert!(!std::fs::read_to_string(&dirs.saved_file)
