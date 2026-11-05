@@ -31,6 +31,8 @@ pub struct Spec {
     pub id: String,
     pub dir: PathBuf,
     pub argv: Vec<String>,
+    /// Its own folder for what it keeps, which outlives an update; made before it runs.
+    pub data: PathBuf,
     pub every: u32,
     pub timeout: u32,
     /// `NOKTA_OPTION_<KEY>` and the like.
@@ -79,12 +81,16 @@ fn program(dir: &Path, name: &str) -> PathBuf {
 }
 
 fn command(spec: &Spec, action: Option<&str>) -> Command {
+    if let Err(err) = std::fs::create_dir_all(&spec.data) {
+        tracing::warn!(plugin = %spec.id, "cannot make {}: {err}", spec.data.display());
+    }
     let mut cmd = Command::new(program(&spec.dir, &spec.argv[0]));
     cmd.args(&spec.argv[1..])
         .current_dir(&spec.dir)
         .env("NOKTA_API", super::manifest::API.to_string())
         .env("NOKTA_PLUGIN", &spec.id)
         .env("NOKTA_PLUGIN_DIR", &spec.dir)
+        .env("NOKTA_PLUGIN_DATA", &spec.data)
         .envs(spec.env.iter().map(|(k, v)| (k, v)))
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
