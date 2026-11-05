@@ -96,7 +96,7 @@ Tick what works. For anything that does not, see
 
 ### Calendar
 
-- [ ] Settings → Behavior → Calendar: add a calendar's secret iCal
+- [ ] Settings → Plugins → Calendar: add a calendar's secret iCal
       address. The list shows only its host, never the whole address.
 - [ ] Home lists the next events in the calendar's color within a minute;
       clicking an event opens the calendar on the web.

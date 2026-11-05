@@ -714,9 +714,6 @@ msgstr "Audio Bluetooth, pengisi daya dan baterai"
 msgid "Milliseconds"
 msgstr "Milidetik"
 
-msgid "Privacy"
-msgstr "Privasi"
-
 msgid "Privacy dots"
 msgstr "Titik privasi"
 
@@ -1098,3 +1095,60 @@ msgstr "Bisukan"
 
 msgid "Play"
 msgstr "Putar"
+
+msgid "Plugins"
+msgstr "Plugin"
+
+msgid "The weather next to the date when the notch opens"
+msgstr "Cuaca di sebelah tanggal saat notch dibuka"
+
+msgid "Your next events and a reminder before they start"
+msgstr "Acara berikutnya dan pengingat sebelum mulai"
+
+msgid "Focus sessions with breaks, countdowns, stopwatches and alarms"
+msgstr "Sesi fokus dengan jeda, hitung mundur, stopwatch dan alarm"
+
+msgid "What you copy, to paste again from the notch"
+msgstr "Yang kamu salin, untuk ditempel lagi dari notch"
+
+msgid "Lyrics"
+msgstr "Lirik"
+
+msgid "Synced lyrics under the playing song"
+msgstr "Lirik yang ikut lagu yang sedang diputar"
+
+msgid "Banners in the notch, with their buttons"
+msgstr "Banner di notch, lengkap dengan tombolnya"
+
+msgid "A file that finishes downloading, ready to open"
+msgstr "File yang selesai diunduh, siap dibuka"
+
+msgid "Park files on the notch and drag them out again"
+msgstr "Taruh file di notch, lalu seret keluar lagi"
+
+msgid "Builds, downloads and updates while they run"
+msgstr "Build, unduhan dan pembaruan selama berjalan"
+
+msgid "Volume, brightness and keyboard changes"
+msgstr "Perubahan volume, kecerahan dan keyboard"
+
+msgid "A dot while the camera, microphone or screen is in use"
+msgstr "Titik saat kamera, mikrofon atau layar dipakai"
+
+msgid "The app and the time while the microphone is on"
+msgstr "Aplikasi dan durasinya saat mikrofon menyala"
+
+msgid "Memory alert"
+msgstr "Peringatan memori"
+
+msgid "A warning when memory is almost full"
+msgstr "Peringatan saat memori hampir penuh"
+
+msgid "Tells you when a new Nokta is out"
+msgstr "Kasih tahu saat ada Nokta versi baru"
+
+msgid "Built in"
+msgstr "Bawaan"
+
+msgid "Part of Nokta. Turn off what you do not use; open one for its settings."
+msgstr "Bagian dari Nokta. Matikan yang tidak kamu pakai; buka salah satu untuk pengaturannya."

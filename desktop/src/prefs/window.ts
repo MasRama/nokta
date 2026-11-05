@@ -7,7 +7,7 @@ import type { PictureState } from '@ext/shared/logic/theme.js';
 import type { Bridge } from '../bridge/bridge.js';
 import { Follower } from '../follower.js';
 import { icon } from '../icons.js';
-import { windowsPages, type PrefPage, type PrefRow } from './logic.js';
+import { windowsPages, type PrefGroup, type PrefPage, type PrefRow } from './logic.js';
 import { NotchPreview, ThemeGallery } from './look.js';
 import { buildRow, type RowHost, type SettingRow, type SettingValue } from './rows.js';
 import WORDMARK from '../../../extension/icons/nokta-wordmark-reverse.svg?raw';
@@ -122,7 +122,8 @@ export class SettingsWindow {
             this.navs.set(page.name, nav);
             const section = element('section', 'nokta-prefs-page');
             if (page.name === 'appearance') section.append(this.lookGroup());
-            for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
+            if (page.name === 'plugins') section.append(this.builtIns(page.groups));
+            else for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
             if (page.name === 'behavior') section.append(this.tourGroup(), this.configGroup());
             this.content.append(section);
             this.sections.set(page.name, section);
@@ -174,6 +175,88 @@ export class SettingsWindow {
             setting.show(rowValue(asRow(row), {}));
             this.rows.push(setting);
             card.append(setting.element);
+        }
+        group.append(card);
+        return group;
+    }
+
+    /**
+     * The Plugins page's built-ins, one card: each one's icon, name and what
+     * it does with its on/off switch, and its settings under it, shown while
+     * it is on and opened.
+     */
+    private builtIns(groups: readonly PrefGroup[]): HTMLElement {
+        const group = element('div', 'nokta-prefs-group');
+        group.append(
+            element('h2', 'nokta-prefs-group-title', _('Built in')),
+            element('p', 'nokta-prefs-group-description', _('Part of Nokta. Turn off what you do not use; open one for its settings.')),
+        );
+        const card = element('div', 'nokta-prefs-card');
+        for (const spec of groups) {
+            const item = element('div', 'nokta-prefs-plugin');
+            const head = element('div', 'nokta-prefs-row nokta-prefs-plugin-head nokta-prefs-clickable');
+            const label = element('div', 'nokta-prefs-label');
+            label.append(
+                element('span', 'nokta-prefs-title', _(spec.title)), // i18n: runtime
+                element('span', 'nokta-prefs-subtitle', _(spec.description ?? '')), // i18n: runtime
+            );
+            const chip = element('span', 'nokta-prefs-plugin-icon');
+            chip.append(icon(spec.icon ?? 'settings', 18));
+            const control = element('div', 'nokta-prefs-control');
+            const chevron = icon('chevron-down', 16);
+            chevron.classList.add('nokta-prefs-plugin-chevron');
+            head.append(chip, label, control);
+            const details = element('div', 'nokta-prefs-plugin-details');
+            details.hidden = true;
+            let on = true;
+            const fold = () => {
+                details.hidden = !on || !item.classList.contains('nokta-prefs-plugin-open');
+                head.setAttribute('aria-expanded', String(!details.hidden));
+            };
+            const [first, ...others] = spec.rows;
+            const rest = spec.master ? others : spec.rows;
+            if (spec.master) {
+                const master = buildRow(first, (value) => this.queue(setting, value), this.host);
+                const setting: SettingRow = {
+                    row: first,
+                    element: master.element,
+                    show: (value) => {
+                        master.show(value);
+                        on = value === true;
+                        item.classList.toggle('nokta-prefs-plugin-off', !on);
+                        fold();
+                    },
+                };
+                const sw = master.element.querySelector('.nokta-prefs-switch');
+                if (sw) {
+                    sw.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        on = sw.getAttribute('aria-checked') === 'true';
+                        item.classList.toggle('nokta-prefs-plugin-off', !on);
+                        fold();
+                    });
+                    sw.setAttribute('aria-label', _(spec.title)); // i18n: runtime
+                    control.append(sw);
+                }
+                setting.show(rowValue(asRow(first), {}));
+                this.rows.push(setting);
+            }
+            if (rest.length) {
+                control.prepend(chevron);
+                head.addEventListener('click', () => {
+                    item.classList.toggle('nokta-prefs-plugin-open');
+                    fold();
+                });
+            } else head.classList.remove('nokta-prefs-clickable');
+            for (const row of rest) {
+                const setting: SettingRow = buildRow(row, (value) => this.queue(setting, value), this.host);
+                setting.show(rowValue(asRow(row), {}));
+                this.rows.push(setting);
+                details.append(setting.element);
+            }
+            fold();
+            item.append(head, details);
+            card.append(item);
         }
         group.append(card);
         return group;

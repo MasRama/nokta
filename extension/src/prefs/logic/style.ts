@@ -111,6 +111,10 @@ export const PREFS_CSS = `
     background-color: rgba(255, 255, 255, 0.16);
 }
 
+.${PREFS_CLASS} row.expander:checked image.expander-row-arrow {
+    color: ${EMBER};
+}
+
 .${PREFS_CLASS} switch:checked {
     background-image: none;
     background-color: ${EMBER};

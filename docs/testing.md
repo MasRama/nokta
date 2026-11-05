@@ -410,7 +410,7 @@ build/devshell/bus)`), `target/release/nokta` drives them like a user would.
       `noktad.log` shows no request.
 - [ ] With the fake server stopped, a refresh more than 30 minutes later
       fails and the last reading stays.
-- [ ] The Weather group in the settings window changes all three.
+- [ ] The Weather built-in on the settings window's Plugins page changes all three.
 - [ ] A real city in a real session *(real session)*.
 
 ### Calendar
@@ -742,8 +742,12 @@ banner for a fake file.
 
 ### Settings window
 
-- [ ] `prefs.sh`: three pages, Appearance, Behavior and Home, with the values of
-      `config.toml`; no banner.
+- [ ] `prefs.sh`: four pages, Appearance, Behavior, Plugins and Home, with
+      the values of `config.toml`; no banner.
+- [ ] Plugins lists every built-in with its icon. Its switch turns the
+      feature off in `config.toml`; one with settings opens on them while
+      it is on and folds while it is off. File shelf, Privacy dots, Calls,
+      Memory alert and Updates are plain switches.
 - [ ] Change a switch and a number (`click.sh`; the first click may only
       focus the window): `config.toml` changes with its comments kept, the
       notch follows, and `noktad.log` shows one `set` per change even after

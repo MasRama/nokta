@@ -17,6 +17,7 @@ import {
     MAX_HOME_TOGGLES,
 } from './parse.js';
 import type { OrderOption } from './order.js';
+import type { NoktaIcon } from '../../../shared/logic/icon-names.js';
 import { N_ } from '../../../shared/logic/i18n.js';
 
 /**
@@ -66,6 +67,12 @@ export interface Row {
 export interface Group {
     title: string;
     description?: string;
+    /**
+     * On the Plugins page: the built-in's icon, one of Nokta's own
+     * (`NoktaIcon`), and whether its first row is its on/off switch.
+     */
+    icon?: NoktaIcon;
+    master?: boolean;
     rows: readonly Row[];
 }
 
@@ -374,7 +381,29 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('Music'),
+                rows: [
+                    {
+                        table: 'media',
+                        key: 'real_equalizer',
+                        title: N_('Bars that follow the music'),
+                        subtitle: N_('Records what plays to measure it; GNOME may show its microphone indicator meanwhile'),
+                        kind: bool(),
+                    },
+                ],
+            },
+        ],
+    },
+    {
+        name: 'plugins',
+        title: N_('Plugins'),
+        icon: 'application-x-addon-symbolic',
+        groups: [
+            {
                 title: N_('Weather'),
+                description: N_('The weather next to the date when the notch opens'),
+                icon: 'weather',
+                master: true,
                 rows: [
                     weather('enabled', N_('Show the weather'), bool(), N_('Next to the date when the notch opens')),
                     weather(
@@ -394,6 +423,9 @@ export const SETTINGS_PAGES: readonly Page[] = [
             },
             {
                 title: N_('Calendar'),
+                description: N_('Your next events and a reminder before they start'),
+                icon: 'calendar',
+                master: true,
                 rows: [
                     calendar('enabled', N_('Show events'), bool(), N_("From GNOME's calendar, when the notch opens")),
                     calendar('reminder_minutes', N_('Remind before'), int(0, 60), N_('Minutes before it starts; 0 for no reminder')),
@@ -407,14 +439,39 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('Focus timer'),
+                description: N_('Focus sessions with breaks, countdowns, stopwatches and alarms'),
+                icon: 'focus',
+                rows: [
+                    timer('focus_minutes', N_('Focus length'), int(1, 180), N_('Minutes; start it from Quick Settings')),
+                    timer('break_minutes', N_('Break length'), int(0, 60), N_('Minutes after each focus session; 0 for none')),
+                    timer('long_break_minutes', N_('Long break length'), int(1, 60), N_('Minutes')),
+                    timer(
+                        'sessions_before_long_break',
+                        N_('Sessions before a long break'),
+                        int(0, 12),
+                        N_('Focus sessions; 0 for no long breaks'),
+                    ),
+                    timer('sound', N_('Play a sound'), bool(), N_('When a focus session, a break, a countdown or an alarm ends')),
+                    timer('quiet_notifications', N_('Quiet notifications'), bool(), N_('No banners while you focus')),
+                    timer('shortcut', N_('Shortcut'), text(), N_('Starts focus or stops the timer, like <Super><Alt>f; empty for none')),
+                ],
+            },
+            {
                 title: N_('Clipboard'),
+                description: N_('What you copy, to paste again from the notch'),
+                icon: 'clipboard',
+                master: true,
                 rows: [
                     clipboard('enabled', N_('Keep a clipboard history'), bool(), N_('Text and pictures you copy, in memory only')),
                     clipboard('max_items', N_('Entries to keep'), int(5, 100), N_('Besides the pinned ones')),
                 ],
             },
             {
-                title: N_('Music'),
+                title: N_('Lyrics'),
+                description: N_('Synced lyrics under the playing song'),
+                icon: 'music',
+                master: true,
                 rows: [
                     behavior('show_lyrics', N_('Show lyrics'), bool()),
                     {
@@ -431,27 +488,13 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         subtitle: N_('A line in Latin letters under Korean and Japanese lines'),
                         kind: bool(),
                     },
-                    {
-                        table: 'media',
-                        key: 'real_equalizer',
-                        title: N_('Bars that follow the music'),
-                        subtitle: N_('Records what plays to measure it; GNOME may show its microphone indicator meanwhile'),
-                        kind: bool(),
-                    },
-                ],
-            },
-            {
-                title: N_('System popups'),
-                rows: [
-                    behavior('replace_osd', N_('Volume and brightness in the notch'), bool(), N_("Instead of GNOME's popup")),
-                    behavior('osd_duration_ms', N_('How long'), int(200, 10000, 100), N_('Milliseconds after the last change')),
-                    behavior('show_caps_lock', N_('Caps Lock'), bool()),
-                    behavior('show_num_lock', N_('Num Lock'), bool()),
-                    behavior('show_input_source', N_('Keyboard layout'), bool(), N_('The new layout when you switch')),
                 ],
             },
             {
                 title: N_('Notifications'),
+                description: N_('Banners in the notch, with their buttons'),
+                icon: 'bell',
+                master: true,
                 rows: [
                     notifications('in_notch', N_('Notifications in the notch'), bool(), N_("Instead of GNOME's banner")),
                     notifications('duration_ms', N_('How long'), int(1000, 30000, 500), N_('Milliseconds; hovering keeps it open')),
@@ -466,6 +509,9 @@ export const SETTINGS_PAGES: readonly Page[] = [
             },
             {
                 title: N_('Downloads'),
+                description: N_('A file that finishes downloading, ready to open'),
+                icon: 'download',
+                master: true,
                 rows: [
                     downloads(
                         'enabled',
@@ -477,19 +523,24 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
-                title: N_('System'),
+                title: N_('File shelf'),
+                description: N_('Park files on the notch and drag them out again'),
+                icon: 'shelf',
+                master: true,
                 rows: [
-                    {
-                        table: 'system',
-                        key: 'memory_alert',
-                        title: N_('Warn when memory is almost full'),
-                        subtitle: N_('Names the app that uses the most'),
-                        kind: bool(),
-                    },
+                    behavior(
+                        'file_shelf',
+                        N_('Keep files on the notch'),
+                        bool(),
+                        N_('Drop files on the notch, then drag them out again into any app'),
+                    ),
                 ],
             },
             {
                 title: N_('Live activities'),
+                description: N_('Builds, downloads and updates while they run'),
+                icon: 'activity',
+                master: true,
                 rows: [
                     behavior(
                         'live_activities',
@@ -514,25 +565,33 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
-                title: N_('File shelf'),
+                title: N_('System popups'),
+                description: N_('Volume, brightness and keyboard changes'),
+                icon: 'volume-3',
+                master: true,
                 rows: [
-                    behavior(
-                        'file_shelf',
-                        N_('Keep files on the notch'),
-                        bool(),
-                        N_('Drop files on the notch, then drag them out again into any app'),
-                    ),
+                    behavior('replace_osd', N_('Volume and brightness in the notch'), bool(), N_("Instead of GNOME's popup")),
+                    behavior('osd_duration_ms', N_('How long'), int(200, 10000, 100), N_('Milliseconds after the last change')),
+                    behavior('show_caps_lock', N_('Caps Lock'), bool()),
+                    behavior('show_num_lock', N_('Num Lock'), bool()),
+                    behavior('show_input_source', N_('Keyboard layout'), bool(), N_('The new layout when you switch')),
                 ],
             },
             {
                 title: N_('Device alerts'),
+                description: N_('Bluetooth audio, charger and battery'),
+                icon: 'headphones',
+                master: true,
                 rows: [
                     behavior('device_alerts', N_('Show device alerts'), bool(), N_('Bluetooth audio, charger and battery')),
                     behavior('alert_duration_ms', N_('How long'), int(500, 15000, 500), N_('Milliseconds')),
                 ],
             },
             {
-                title: N_('Privacy'),
+                title: N_('Privacy dots'),
+                description: N_('A dot while the camera, microphone or screen is in use'),
+                icon: 'eye',
+                master: true,
                 rows: [
                     behavior(
                         'privacy_dots',
@@ -540,6 +599,14 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         bool(),
                         N_('Green while the camera is on, orange while the microphone or screen is used'),
                     ),
+                ],
+            },
+            {
+                title: N_('Calls'),
+                description: N_('The app and the time while the microphone is on'),
+                icon: 'mic',
+                master: true,
+                rows: [
                     behavior(
                         'call_indicator',
                         N_('Calls'),
@@ -549,7 +616,25 @@ export const SETTINGS_PAGES: readonly Page[] = [
                 ],
             },
             {
+                title: N_('Memory alert'),
+                description: N_('A warning when memory is almost full'),
+                icon: 'system',
+                master: true,
+                rows: [
+                    {
+                        table: 'system',
+                        key: 'memory_alert',
+                        title: N_('Warn when memory is almost full'),
+                        subtitle: N_('Names the app that uses the most'),
+                        kind: bool(),
+                    },
+                ],
+            },
+            {
                 title: N_('Updates'),
+                description: N_('Tells you when a new Nokta is out'),
+                icon: 'update',
+                master: true,
                 rows: [
                     {
                         table: 'updates',
@@ -558,23 +643,6 @@ export const SETTINGS_PAGES: readonly Page[] = [
                         subtitle: N_('Asks github.com once a day and sends nothing else'),
                         kind: bool(),
                     },
-                ],
-            },
-            {
-                title: N_('Focus timer'),
-                rows: [
-                    timer('focus_minutes', N_('Focus length'), int(1, 180), N_('Minutes; start it from Quick Settings')),
-                    timer('break_minutes', N_('Break length'), int(0, 60), N_('Minutes after each focus session; 0 for none')),
-                    timer('long_break_minutes', N_('Long break length'), int(1, 60), N_('Minutes')),
-                    timer(
-                        'sessions_before_long_break',
-                        N_('Sessions before a long break'),
-                        int(0, 12),
-                        N_('Focus sessions; 0 for no long breaks'),
-                    ),
-                    timer('sound', N_('Play a sound'), bool(), N_('When a focus session, a break, a countdown or an alarm ends')),
-                    timer('quiet_notifications', N_('Quiet notifications'), bool(), N_('No banners while you focus')),
-                    timer('shortcut', N_('Shortcut'), text(), N_('Starts focus or stops the timer, like <Super><Alt>f; empty for none')),
                 ],
             },
         ],

@@ -18,6 +18,7 @@ import {
     DEFAULT_WEATHER,
 } from '../src/features/settings/logic/parse.js';
 import { allRows, rowMin, rowValue, SETTINGS_PAGES, variantType } from '../src/features/settings/logic/schema.js';
+import { NOKTA_ICONS } from '../src/shared/logic/icon-names.js';
 
 const camel = (key: string): string => key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 const DEFAULTS: Record<string, Record<string, unknown>> = {
@@ -92,7 +93,7 @@ test('the picture is chosen as an image file, and every theme can be picked', ()
 test('pages_have_titles_and_groups', () => {
     assert.deepEqual(
         SETTINGS_PAGES.map((p) => p.name),
-        ['appearance', 'behavior', 'home'],
+        ['appearance', 'behavior', 'plugins', 'home'],
     );
     for (const page of SETTINGS_PAGES) {
         assert.ok(page.title && page.icon && page.groups.length > 0, page.name);
@@ -158,4 +159,22 @@ test('a width cannot go below the height, as the daemon checks', () => {
     assert.equal(rowMin(row('height'), tables), 16);
     // Before the daemon answers, the floor is the default height.
     assert.equal(rowMin(row('idle_width'), {}), DEFAULT_APPEARANCE.height);
+});
+
+test('every built-in on the Plugins page has an icon, and a master group starts with its switch', () => {
+    const page = SETTINGS_PAGES.find((p) => p.name === 'plugins');
+    assert.ok(page);
+    for (const group of page.groups) {
+        assert.ok(group.icon && NOKTA_ICONS.includes(group.icon), group.title);
+        assert.ok(group.description, group.title);
+        if (group.master) assert.equal(group.rows[0].kind.type, 'bool', group.title);
+    }
+    const masters = page.groups.filter((g) => g.master).map((g) => `${g.rows[0].table}.${g.rows[0].key}`);
+    for (const key of ['weather.enabled', 'calendar.enabled', 'clipboard.enabled', 'downloads.enabled', 'behavior.show_lyrics'])
+        assert.ok(masters.includes(key), key);
+});
+
+test('only the Plugins page has icons or master switches on its groups', () => {
+    for (const page of SETTINGS_PAGES.filter((p) => p.name !== 'plugins'))
+        for (const group of page.groups) assert.ok(!group.icon && !group.master, group.title);
 });

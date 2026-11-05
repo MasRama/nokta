@@ -167,7 +167,11 @@ docs/               manual test checklist, screenshots
   follows its imports to check. So `features/settings/index.ts` exports no
   actors, and the notch imports the settings page from `settings/page.ts`
   itself. Its rows come from
-  `features/settings/logic/schema.ts`, one line per setting. The window
+  `features/settings/logic/schema.ts`, one line per setting. The Plugins
+  page lists the built-ins: each `Group` there has an icon and, with
+  `master`, its first row is the feature's on/off switch, drawn as the
+  switch of an `Adw.ExpanderRow` that holds the other rows (a plain switch
+  row when there are none); config.toml keeps its tables. The window
   replaces the content GNOME's dialog gives it with its own: a sidebar of
   pages with Nokta's icons (`prefs/logic/look.ts`), and Appearance opening
   on a drawn preview of the notch with a sample song (`prefs/preview.ts`)

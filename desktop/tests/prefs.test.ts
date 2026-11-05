@@ -74,7 +74,7 @@ describe('the settings window', () => {
     it("lists Nokta's pages and shows the core's values", async () => {
         const { root, row } = await mount({ Behavior: { open_on: 'click', track_peek: false } });
         const navs = [...root.querySelectorAll('.nokta-prefs-nav span:not(.nokta-icon)')].map((n) => n.textContent);
-        expect(navs).toEqual(['Appearance', 'Behavior', 'Home']);
+        expect(navs).toEqual(['Appearance', 'Behavior', 'Plugins', 'Home']);
         expect(row('Open on').querySelector('select')!.value).toBe('click');
         expect(row('Show a new song').querySelector('[role=switch]')!.getAttribute('aria-checked')).toBe('false');
         expect(row('Show the clock').querySelector('[role=switch]')!.getAttribute('aria-checked')).toBe('true');
@@ -83,6 +83,31 @@ describe('the settings window', () => {
         expect(root.querySelector('.nokta-prefs-heading')!.textContent).toBe('Behavior');
         const shown = [...root.querySelectorAll<HTMLElement>('.nokta-prefs-page')].filter((p) => !p.hidden);
         expect(shown).toHaveLength(1);
+    });
+
+    it("lists the built-ins with their switch, and opens one's settings while it is on", async () => {
+        const { root, sets } = await mount({ Weather: { enabled: false } });
+        const plugin = (title: string) =>
+            [...root.querySelectorAll<HTMLElement>('.nokta-prefs-plugin')].find(
+                (p) => p.querySelector('.nokta-prefs-plugin-head .nokta-prefs-title')!.textContent === title,
+            )!;
+        const weather = plugin('Weather');
+        const details = weather.querySelector<HTMLElement>('.nokta-prefs-plugin-details')!;
+        const sw = weather.querySelector<HTMLElement>('.nokta-prefs-plugin-head [role=switch]')!;
+        expect(sw.getAttribute('aria-checked')).toBe('false');
+        weather.querySelector<HTMLElement>('.nokta-prefs-plugin-head')!.click();
+        expect(details.hidden).toBe(true);
+
+        sw.click();
+        expect(details.hidden).toBe(false);
+        expect(details.textContent).toContain('Location');
+        vi.advanceTimersByTime(SEND_DELAY_MS);
+        expect(sets().at(-1)).toEqual(['weather', 'enabled', true]);
+
+        // The focus timer has no switch, only its settings.
+        const focus = plugin('Focus timer');
+        expect(focus.querySelector('.nokta-prefs-plugin-head [role=switch]')).toBeNull();
+        expect(focus.textContent).toContain('Focus length');
     });
 
     it('sends a change once the user stops changing it', async () => {
