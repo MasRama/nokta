@@ -1,0 +1,23 @@
+api = 1
+id = "water"
+name = "Water"
+description = "Counts the glasses you drink today; one keeps running and hears its buttons"
+version = "1.0.0"
+author = "Nokta"
+homepage = "https://github.com/MasRama/nokta/tree/main/examples/plugins/water"
+icon = "nokta-plugin"
+
+[run]
+# every = 0 keeps one process running: it prints a card per line and gets
+# each button as a {"action": "..."} line on its standard input.
+command = ["python3", "water.py"]
+windows = ["python", "water.py"]
+every = 0
+
+[[options]]
+key = "goal"
+title = "Glasses a day"
+type = "int"
+min = 1
+max = 20
+default = 8

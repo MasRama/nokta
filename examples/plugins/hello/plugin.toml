@@ -1,0 +1,25 @@
+api = 1
+id = "hello"
+name = "Hello"
+description = "Greets you and lists a few links"
+version = "1.0.0"
+author = "Nokta"
+homepage = "https://github.com/MasRama/nokta/tree/main/examples/plugins/hello"
+icon = "nokta-plugin"
+
+[run]
+command = ["./hello.sh"]
+windows = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "hello.ps1"]
+every = 600
+
+[[options]]
+key = "name"
+title = "Your name"
+type = "text"
+default = "there"
+
+[[options]]
+key = "tone"
+title = "Color"
+type = "choice"
+choices = ["purple", "blue", "green", "orange"]

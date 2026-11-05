@@ -1,0 +1,27 @@
+api = 1
+id = "site-status"
+name = "Site status"
+description = "Checks that a website answers, and says when it goes down"
+version = "1.0.0"
+author = "Nokta"
+homepage = "https://github.com/MasRama/nokta/tree/main/examples/plugins/site-status"
+icon = "nokta-link"
+
+[run]
+command = ["./check.sh"]
+windows = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "check.ps1"]
+every = 120
+timeout = 15
+
+[[options]]
+key = "url"
+title = "Address"
+subtitle = "The page to check, like https://example.com"
+type = "text"
+default = "https://example.com"
+
+[[options]]
+key = "badge"
+title = "Show in the closed notch while down"
+type = "bool"
+default = true
