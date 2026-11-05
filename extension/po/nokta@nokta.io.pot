@@ -7,6 +7,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#: src/extension.ts src/prefs/window.ts ../desktop/src/monitor-notch.ts ../desktop/src/prefs/window.ts
+msgid "Show"
+msgstr ""
+
 #: src/extension.ts src/features/panel/view.ts ../desktop/src/monitor-notch.ts ../desktop/src/views/calendar.ts
 msgid "Join"
 msgstr ""
@@ -189,6 +193,24 @@ msgstr ""
 #: src/features/media/logic/players.ts
 msgid "Player"
 msgstr ""
+
+#: src/features/notifications/logic/digest.ts
+msgid "Other apps"
+msgstr ""
+
+#: src/features/notifications/logic/digest.ts
+#, c-format
+msgid "%d notification while you focused"
+msgid_plural "%d notifications while you focused"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/features/notifications/logic/digest.ts
+#, c-format
+msgid "%d more"
+msgid_plural "%d more"
+msgstr[0] ""
+msgstr[1] ""
 
 #: src/features/osd/logic/content.ts
 msgid "Microphone off"
@@ -853,7 +875,7 @@ msgid "Quiet notifications"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
-msgid "No banners while you focus"
+msgid "No banners while you focus, and a summary of them after"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
@@ -1572,10 +1594,6 @@ msgid "Open config.toml"
 msgstr ""
 
 #: src/prefs/window.ts ../desktop/src/prefs/window.ts
-msgid "Show"
-msgstr ""
-
-#: src/prefs/window.ts ../desktop/src/prefs/window.ts
 msgid "Show the tour again"
 msgstr ""
 
@@ -1709,6 +1727,10 @@ msgstr ""
 
 #: ../desktop/src/prefs/logic.ts
 msgid "Minutes; start it from home's Focus tile"
+msgstr ""
+
+#: ../desktop/src/prefs/logic.ts
+msgid "The notch holds notifications while you focus and sums them up after"
 msgstr ""
 
 #: ../desktop/src/prefs/logic.ts

@@ -34,7 +34,10 @@ import { UpdatesClient, updateRow } from './features/updates/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
 import { AudioOutputs, MediaClient } from './features/media/index.js';
 import {
+    arrivedSince,
     bannerShape,
+    digestLines,
+    FocusDigest,
     isRecordingBanner,
     isScreenshotBanner,
     notificationButtons,
@@ -47,6 +50,7 @@ import {
     stackCount,
     takeOverBanners,
     takesBanner,
+    trayNotifications,
     watchScreenshots,
     type ScreenshotButton,
     type TrayNotification,
@@ -124,6 +128,9 @@ const CLOCK_ALERT_FACTOR = 2;
 const SCREENSHOT_DELAY_MS = 400;
 /** The first-run tour opens this long after the extension starts, once the shell has settled. */
 const TOUR_DELAY_MS = 2000;
+/** The focus digest waits this long past the alert duration, for the timer's own alert to go first. */
+const DIGEST_DELAY_MS = 300;
+const DIGEST_ICON = 'nokta-bell';
 const NIGHT_LIGHT_SCHEMA = 'org.gnome.settings-daemon.plugins.color';
 const NIGHT_LIGHT_KEY = 'night-light-enabled';
 
@@ -190,6 +197,10 @@ class Session {
     private readonly caffeine = new Caffeine(sessionInhibitor(), () => this.notches.forEach((n) => n.onPanelContent()));
     private readonly focusToggle: FocusToggle;
     private readonly quietBanners = new QuietBanners(gnomeBanners());
+    private readonly focusDigest = new FocusDigest();
+    /** The unread notifications when quiet focus started; null outside it. */
+    private notificationsBefore: Set<unknown> | null = null;
+    private digestId = 0;
     private readonly focusShortcut: Keybinding;
     /** Opens the focused monitor's notch for the keyboard. */
     private readonly openShortcut: Keybinding;
@@ -430,6 +441,8 @@ class Session {
         this.updates.destroy();
         this.focusToggle.destroy();
         this.quietBanners.release();
+        if (this.digestId) GLib.source_remove(this.digestId);
+        this.digestId = 0;
         this.caffeine.release();
         for (const [settings, id] of this.togglesIds) settings.disconnect(id);
         if (this.screenshotId) GLib.source_remove(this.screenshotId);
@@ -535,7 +548,9 @@ class Session {
         const snapshot = this.timer.snapshot();
         const now = GLib.get_monotonic_time();
         this.focusToggle.update(snapshot, now, this.settings.timer);
-        this.quietBanners.update(wantsQuiet(snapshot, this.settings.timer.quietNotifications));
+        const quiet = wantsQuiet(snapshot, this.settings.timer.quietNotifications);
+        this.quietBanners.update(quiet);
+        this.onQuietFocus(quiet);
         this.notches.forEach((n) => n.onTimer());
         const delays = [msUntilNextSecond(snapshot, now), msUntilClockChange(this.timer.clocks(), now)];
         const waits = delays.filter((d): d is number => d !== null);
@@ -546,6 +561,46 @@ class Session {
             this.onTimer();
             return GLib.SOURCE_REMOVE;
         });
+    }
+
+    /**
+     * Notes the unread notifications when quiet focus starts; when it ends,
+     * sums up those that came since, after the timer's own alert.
+     */
+    private onQuietFocus(quiet: boolean): void {
+        const edge = this.focusDigest.update(quiet);
+        if (edge === 'start') this.notificationsBefore = new Set(trayNotifications().map((n) => n.item));
+        if (edge !== 'end' || !this.notificationsBefore) return;
+        const lines = digestLines(arrivedSince(this.notificationsBefore, trayNotifications()));
+        this.notificationsBefore = null;
+        if (!lines) return;
+        if (this.digestId) GLib.source_remove(this.digestId);
+        const delay = this.settings.behavior.alertDurationMs + DIGEST_DELAY_MS;
+        this.digestId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this.digestId = 0;
+            this.showDigest(lines);
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    /** The focus digest, as a notification whose click opens the message list. */
+    private showDigest(lines: { title: string; detail: string }): void {
+        const { notch } = this.routeMessage(-1);
+        if (!notch) return;
+        if (this.shownNotification) {
+            this.shownNotification.notch.hideNotification();
+            this.releaseNotification();
+        }
+        const open = () => this.panel.openNotifications();
+        const digest = {
+            ...lines,
+            icon: iconFor(DIGEST_ICON),
+            buttons: [_('Show')],
+            badge: null,
+            onClick: open,
+            onButton: open,
+        };
+        notch.showNotification(digest, this.settings.notifications.durationMs);
     }
 
     private stopTimerTick(): void {

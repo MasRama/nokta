@@ -759,8 +759,8 @@ msgstr "Saat sesi fokus, istirahat, hitung mundur atau alarm berakhir"
 msgid "Quiet notifications"
 msgstr "Senyapkan notifikasi"
 
-msgid "No banners while you focus"
-msgstr "Tanpa banner selama kamu fokus"
+msgid "No banners while you focus, and a summary of them after"
+msgstr "Tanpa banner selama kamu fokus, lalu ringkasannya setelah selesai"
 
 msgid "Starts focus or stops the timer, like <Super><Alt>f; empty for none"
 msgstr "Memulai fokus atau menghentikan timer, misalnya <Super><Alt>f; kosongkan jika tidak perlu"
@@ -1330,3 +1330,17 @@ msgstr "Menulis…"
 
 msgid "Created %s. Read it, then turn it on."
 msgstr "%s sudah dibuat. Baca dulu, lalu nyalakan."
+
+msgid "Other apps"
+msgstr "Aplikasi lain"
+
+msgid "%d notification while you focused"
+msgid_plural "%d notifications while you focused"
+msgstr[0] "%d notifikasi selama kamu fokus"
+
+msgid "%d more"
+msgid_plural "%d more"
+msgstr[0] "%d lainnya"
+
+msgid "The notch holds notifications while you focus and sums them up after"
+msgstr "Notch menahan notifikasi selama kamu fokus, lalu menampilkan ringkasannya setelah selesai"

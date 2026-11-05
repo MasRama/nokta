@@ -76,6 +76,25 @@ export function notificationCount(): number | null {
     return count;
 }
 
+/**
+ * Each unread notification in GNOME's message list with its app's name,
+ * oldest app first; empty when this GNOME does not say.
+ */
+export function trayNotifications(): Array<{ item: unknown; app: string }> {
+    const tray = Main.messageTray as unknown as {
+        getSources?: () => Array<{ title?: string | null; notifications?: unknown }>;
+    };
+    if (typeof tray.getSources !== 'function') return [];
+    const found: Array<{ item: unknown; app: string }> = [];
+    for (const source of tray.getSources()) {
+        if (!Array.isArray(source.notifications)) continue;
+        for (const item of source.notifications as Array<{ acknowledged?: boolean }>) {
+            if (!item.acknowledged) found.push({ item, app: source.title ?? '' });
+        }
+    }
+    return found;
+}
+
 /** The parts of ui/popupMenu.js PopupMenu used here. */
 interface DateMenu {
     sourceActor: Clutter.Actor;
