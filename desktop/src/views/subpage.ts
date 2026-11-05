@@ -6,6 +6,7 @@ import { icon } from '../icons.js';
  */
 export class SubPage {
     readonly element: HTMLDivElement;
+    private readonly label: HTMLSpanElement;
 
     constructor(title: string, body: HTMLElement, onBack: () => void, actions: readonly HTMLElement[] = []) {
         this.element = document.createElement('div');
@@ -17,6 +18,7 @@ export class SubPage {
         const label = document.createElement('span');
         label.className = 'nokta-subpage-title';
         label.textContent = title;
+        this.label = label;
         const header = document.createElement('div');
         header.className = 'nokta-subpage-header';
         // Buttons at the header's right end, like the clipboard's.
@@ -25,5 +27,10 @@ export class SubPage {
         end.append(...actions);
         header.append(back, label, end);
         this.element.append(header, body);
+    }
+
+    /** A page that shows one of several things names the one it shows. */
+    setTitle(title: string): void {
+        this.label.textContent = title;
     }
 }

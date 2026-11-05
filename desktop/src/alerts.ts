@@ -4,6 +4,7 @@ import { deviceAlert, isBatteryWarning } from '@ext/features/devices/logic/alert
 import { batteryLevel } from '@ext/features/devices/logic/battery.js';
 import { lockKeyContent, osdContent, type OsdContent } from '@ext/features/osd/logic/content.js';
 import type { Behavior, SystemSettings, TimerSettings } from '@ext/features/settings/logic/parse.js';
+import { PLUGIN_ICON, type PluginAlert } from '@ext/features/plugins/logic/plugins.js';
 import { memoryAlert } from '@ext/features/system/logic/format.js';
 import { clockColor, clockDoneAlert } from '@ext/features/timer/logic/clocks.js';
 import { breakAfterFocus, finishedAlert, phaseColor, type TimerSnapshot } from '@ext/features/timer/logic/timer.js';
@@ -15,6 +16,7 @@ import { TONES } from '@ext/shared/logic/tones.js';
 
 import type { Ended } from './activities.js';
 import type { Bridge } from './bridge/bridge.js';
+import { hasIcon } from './icons.js';
 
 /** What the notch shows for an OSD key or an alert. */
 export interface OsdRequest {
@@ -166,6 +168,20 @@ export function endedRequest(ended: Ended, behavior: Behavior, motions: boolean)
         durationMs: behavior.alertDurationMs,
         tone: success ? 'success' : 'urgent',
         motion: alertMotion(success ? 'activity-done' : 'activity-failed', motions),
+    };
+}
+
+/** A plugin's alert, in its tone; an important one also shows over a fullscreen app and pulses. */
+export function pluginRequest(alert: PluginAlert, behavior: Behavior, motions: boolean): OsdRequest {
+    const kind = alert.important ? 'plugin-important' : 'plugin';
+    return {
+        content: { fraction: null, text: alert.title, detail: alert.detail, urgent: false },
+        // A plugin may name an icon only GNOME draws.
+        icon: hasIcon(alert.icon) ? alert.icon : PLUGIN_ICON,
+        kind,
+        durationMs: behavior.alertDurationMs,
+        tone: { color: alert.color },
+        motion: alertMotion(kind, motions),
     };
 }
 

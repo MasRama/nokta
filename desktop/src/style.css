@@ -1703,3 +1703,117 @@ body.nokta-mock {
 .nokta-tour .nokta-tour-next:focus-visible {
     box-shadow: inset 0 0 0 3px rgba(128, 128, 128, 0.85);
 }
+
+/* A plugin's card in home: as an activity's row, with a badge and up to two buttons (views/plugin.ts). */
+.nokta-panel-plugin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    height: 36px;
+}
+
+.nokta-panel-plugin-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.nokta-panel-plugin-body:enabled:hover .nokta-panel-activity-title {
+    text-decoration: underline;
+}
+
+.nokta-panel-plugin-badge {
+    flex: none;
+    font-weight: 700;
+}
+
+.nokta-panel-plugin [hidden] {
+    display: none;
+}
+
+/* The first card with a badge, in the closed notch. */
+.nokta-plugin-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.nokta-plugin-badge-label {
+    max-width: 64px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A plugin's items: 36 px rows, 4 apart (views/plugin.ts PluginPage). */
+.nokta-plugin-page {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nokta-plugin-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    height: 36px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+.nokta-plugin-item[hidden] {
+    display: none;
+}
+
+.nokta-plugin-item:enabled:hover,
+.nokta-plugin-item:focus-visible {
+    outline: none;
+    background-color: rgba(128, 128, 128, 0.18);
+}
+
+.nokta-light .nokta-plugin-item:enabled:hover,
+.nokta-light .nokta-plugin-item:focus-visible {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.nokta-plugin-item-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nokta-plugin-item-title,
+.nokta-plugin-item-detail {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.nokta-plugin-item-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-plugin-item-detail {
+    font-size: 11px;
+    opacity: 0.59;
+}

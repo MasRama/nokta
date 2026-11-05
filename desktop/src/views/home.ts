@@ -1,4 +1,5 @@
 import type { Activity } from '@ext/features/activities/logic/activities.js';
+import type { PluginCard } from '@ext/features/plugins/logic/plugins.js';
 import type { PanelRow } from '@ext/features/panel/logic/height.js';
 import type { HomeLayout, HomeTile, QuickToggle, QuickToggles } from '@ext/features/panel/logic/layout.js';
 import type { UpdateRow as UpdateRowModel } from '@ext/features/updates/logic/update.js';
@@ -10,6 +11,7 @@ import { icon, setIcon } from '../icons.js';
 import { ActivityRow, UpdateRow } from './activity.js';
 import { EventRow, type EventHandlers, type HomeEvent } from './calendar.js';
 import { Tile, TogglePill, type ControlColors } from './controls.js';
+import { PluginRow, type PluginRowHandlers } from './plugin.js';
 import { CallRow, type CallHandlers, type HomeCall } from './privacy.js';
 import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
 
@@ -17,6 +19,8 @@ import { ClockRow, type ClockHandlers, type HomeClock } from './timer.js';
 export const MAX_HOME_CLOCKS = 3;
 /** And the newest activities. */
 export const MAX_HOME_ACTIVITIES = 3;
+/** And the first plugins' cards, as the extension's MAX_PANEL_PLUGINS. */
+export const MAX_HOME_PLUGINS = 3;
 /** And the soonest events, at most `[calendar] agenda_size`. */
 export const MAX_HOME_EVENTS = 5;
 
@@ -39,7 +43,7 @@ const TILES: Array<[HomeTile, string, string, string]> = [
     ['system', 'system', N_('System'), TONES.system],
 ];
 
-export interface HomeHandlers extends ClockHandlers, CallHandlers, EventHandlers {
+export interface HomeHandlers extends ClockHandlers, CallHandlers, EventHandlers, PluginRowHandlers {
     openPlayer(): void;
     toggle(which: QuickToggle): void;
     openTile(which: HomeTile): void;
@@ -55,6 +59,8 @@ export interface HomeContent {
     activities?: number;
     clocks?: number;
     update?: boolean;
+    /** Plugins' cards with a title. */
+    plugins?: number;
     /** The shelf has files. */
     shelf?: boolean;
 }
@@ -62,7 +68,7 @@ export interface HomeContent {
 /** Home's rows for its content and `layout`'s controls, top to bottom, as panel/logic/height.ts counts them. */
 export function homeRows(
     layout: HomeLayout,
-    { events = 0, call = false, activities = 0, clocks = 0, update = false, shelf = false }: HomeContent = {},
+    { events = 0, call = false, activities = 0, clocks = 0, update = false, plugins = 0, shelf = false }: HomeContent = {},
 ): PanelRow[] {
     const shown = Math.min(events, MAX_HOME_EVENTS);
     return [
@@ -72,6 +78,7 @@ export function homeRows(
         ...Array<PanelRow>(Math.min(activities, MAX_HOME_ACTIVITIES)).fill('activity'),
         ...Array<PanelRow>(Math.min(clocks, MAX_HOME_CLOCKS)).fill('clock'),
         ...(update ? (['update'] as const) : []),
+        ...Array<PanelRow>(Math.min(plugins, MAX_HOME_PLUGINS)).fill('plugin'),
         ...(shelf ? (['shelf'] as const) : []),
         ...(layout.toggles.length > 0 ? (['toggles'] as const) : []),
         ...(layout.tiles.length > 0 ? (['tiles'] as const) : []),
@@ -115,7 +122,7 @@ export type TileStates = Partial<Record<HomeTile, boolean>>;
 /**
  * Home, the open notch's other page: the weekday over the date with the
  * weather beside them, the way back to a player, the agenda, the call, the activities,
- * the clocks, a newer Nokta, the shelf, then the
+ * the clocks, a newer Nokta, plugins' cards, the shelf, then the
  * quick toggles and a row of tiles. The Windows twin of the extension's HomePanel, which
  * it grows into part by part.
  */
@@ -131,6 +138,7 @@ export class HomeView {
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
     private readonly updateRow: UpdateRow;
+    private readonly plugins: PluginRow[] = [];
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
     private readonly pills: HTMLDivElement;
@@ -193,7 +201,13 @@ export class HomeView {
             this.element.append(row.element);
         }
         this.updateRow = new UpdateRow(handlers);
-        this.element.append(this.updateRow.element, this.controls);
+        this.element.append(this.updateRow.element);
+        for (let i = 0; i < MAX_HOME_PLUGINS; i++) {
+            const row = new PluginRow(handlers);
+            this.plugins.push(row);
+            this.element.append(row.element);
+        }
+        this.element.append(this.controls);
     }
 
     /** Puts `row` above the controls, like the shelf's. */
@@ -238,6 +252,11 @@ export class HomeView {
         this.updateRow.show(update);
     }
 
+    /** Plugins' cards with a title, one row each. */
+    setPlugins(cards: readonly PluginCard[]): void {
+        this.plugins.forEach((row, i) => row.show(cards[i]));
+    }
+
     /** The newest clocks, one row each. */
     setClocks(clocks: readonly HomeClock[]): void {
         this.clocks.forEach((row, i) => row.show(clocks[i]));
@@ -265,6 +284,6 @@ export class HomeView {
         for (const pill of this.toggles.values()) pill.setColors(colors);
         for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setColors(colors);
-        for (const row of [...this.clocks, this.call, this.updateRow]) row.chip.setLight(colors.light);
+        for (const row of [...this.clocks, ...this.plugins, this.call, this.updateRow]) row.chip.setLight(colors.light);
     }
 }
