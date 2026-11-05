@@ -1152,3 +1152,66 @@ msgstr "Bawaan"
 
 msgid "Part of Nokta. Turn off what you do not use; open one for its settings."
 msgstr "Bagian dari Nokta. Matikan yang tidak kamu pakai; buka salah satu untuk pengaturannya."
+
+msgid "Does not run on this system"
+msgstr "Tidak jalan di sistem ini"
+
+msgid "Cannot load: %s"
+msgstr "Tidak bisa dimuat: %s"
+
+msgid "Failed: %s"
+msgstr "Gagal: %s"
+
+msgid "Starting…"
+msgstr "Memulai…"
+
+msgid "Running"
+msgstr "Berjalan"
+
+msgid "Off"
+msgstr "Mati"
+
+msgid "Nokta is not running"
+msgstr "Nokta tidak berjalan"
+
+msgid "Added"
+msgstr "Tambahan"
+
+msgid "Plugins run as you and can read your files: only add ones you trust. A new one starts off."
+msgstr "Plugin berjalan sebagai kamu dan bisa membaca file-mu: tambahkan hanya yang kamu percaya. Plugin baru mulai dalam keadaan mati."
+
+msgid "Open the plugins folder"
+msgstr "Buka folder plugin"
+
+msgid "Add from Folder…"
+msgstr "Tambah dari Folder…"
+
+msgid "Add a Plugin"
+msgstr "Tambah Plugin"
+
+msgid "Added. Turn it on when you are ready."
+msgstr "Sudah ditambahkan. Nyalakan kalau sudah siap."
+
+msgid "No plugins added yet"
+msgstr "Belum ada plugin tambahan"
+
+msgid "Nokta's service is not running"
+msgstr "Layanan Nokta tidak berjalan"
+
+msgid "Add one from a folder, or write your own: see the examples"
+msgstr "Tambahkan dari folder, atau buat sendiri: lihat contohnya"
+
+msgid "Version"
+msgstr "Versi"
+
+msgid "About"
+msgstr "Tentang"
+
+msgid "Remove this plugin"
+msgstr "Hapus plugin ini"
+
+msgid "Deletes its folder and its settings"
+msgstr "Menghapus folder dan pengaturannya"
+
+msgid "Remove this plugin?"
+msgstr "Hapus plugin ini?"
