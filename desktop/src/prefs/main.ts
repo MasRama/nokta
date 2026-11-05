@@ -37,6 +37,8 @@ const mock = new MockBridge({
         { id: 'days-until', name: 'Days until', description: 'Counts down the days to a date', version: '1.0.0', author: 'Nokta', icon: 'nokta-calendar', runs_here: true },
         { id: 'mac-battery', name: 'Mac battery', description: 'Your MacBook battery health', version: '0.2.0', author: 'Someone', runs_here: false },
     ]),
+    'Plugins1.Creator': JSON.stringify({ provider: 'anthropic', model: '', default_model: 'claude-opus-5-5', base_url: '', has_key: true, ready: true }),
+    'Plugins1.Create': 'my-plugin',
 });
 const prefs = new SettingsWindow(app ? new TauriBridge() : mock, { openConfig, pickPicture, showTour, fileUrl, pickPluginFolder, openPluginsFolder, openUri }, document.body);
 const page = new URLSearchParams(location.search).get('page');

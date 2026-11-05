@@ -2,15 +2,19 @@ import {
     CATALOG_URL,
     catalogFrom,
     catalogState,
+    CREATOR_PROVIDERS,
+    creatorFrom,
+    creatorSummary,
     optionText,
     PLUGIN_ICON,
     pluginsFrom,
     statusText,
     type CatalogPlugin,
+    type CreatorSettings,
     type Plugin,
     type PluginOption,
 } from '@ext/features/plugins/logic/plugins.js';
-import { _ } from '@ext/shared/logic/i18n.js';
+import { _, format } from '@ext/shared/logic/i18n.js';
 
 import type { Bridge } from '../bridge/bridge.js';
 import { Follower } from '../follower.js';
@@ -60,6 +64,9 @@ export class AddedPlugins extends Follower {
     readonly element: HTMLElement;
     /** The catalog's group, shown under this one. */
     readonly catalogElement: HTMLElement;
+    /** Creator Mode's group, under the catalog. */
+    readonly creatorElement: HTMLElement;
+    private readonly creator: CreatorGroup;
     private readonly card: HTMLElement;
     private readonly catalogCard: HTMLElement;
     private readonly browseButton: HTMLButtonElement;
@@ -114,6 +121,8 @@ export class AddedPlugins extends Follower {
             ),
             this.catalogCard,
         );
+        this.creator = new CreatorGroup(bridge, toast);
+        this.creatorElement = this.creator.element;
         this.show();
     }
 
@@ -227,6 +236,8 @@ export class AddedPlugins extends Follower {
 
     private show(): void {
         this.browseButton.disabled = this.props.Plugins === undefined;
+        // Before the constructor has made it, show() runs from Follower.
+        this.creator?.setAvailable(this.props.Plugins !== undefined);
         this.showCatalog();
         const shape = shapeOf(this.list);
         if (shape !== this.shape) {
@@ -415,6 +426,191 @@ export class AddedPlugins extends Follower {
         scrim.append(dialog);
         this.element.append(scrim);
     }
+}
+
+/**
+ * Creator Mode, as the extension's creatorGroup: the AI service (provider,
+ * model, address and key, saved by the core) and a sentence it turns into a
+ * plugin, installed off.
+ */
+class CreatorGroup {
+    readonly element: HTMLElement;
+    private readonly summary: HTMLElement;
+    private readonly provider: HTMLSelectElement;
+    private readonly model: HTMLInputElement;
+    private readonly address: HTMLInputElement;
+    private readonly key: HTMLInputElement;
+    private readonly save: HTMLButtonElement;
+    private readonly request: HTMLInputElement;
+    private readonly create: HTMLButtonElement;
+    private settings: CreatorSettings | null = null;
+    private available = false;
+    private loaded = false;
+    private busy = false;
+
+    constructor(
+        private readonly bridge: Bridge,
+        private readonly toast: (text: string) => void,
+    ) {
+        this.element = element('div', 'nokta-prefs-group nokta-prefs-creator');
+        const head = element('div', 'nokta-prefs-group-head');
+        head.append(element('h2', 'nokta-prefs-group-title', _('Create with AI')));
+        const card = element('div', 'nokta-prefs-card');
+        this.element.append(
+            head,
+            element(
+                'p',
+                'nokta-prefs-group-description',
+                _(
+                    "Describe a plugin and the AI service you pick writes it. Your words and Nokta's plugin guide go to that service. What it writes starts off: read it before you turn it on.",
+                ),
+            ),
+            card,
+        );
+
+        this.provider = element('select', 'nokta-prefs-select');
+        for (const [value, name] of CREATOR_PROVIDERS) {
+            const option = element('option', '', _(name)); // i18n: runtime
+            option.value = value;
+            this.provider.append(option);
+        }
+        this.provider.addEventListener('change', () => this.placeholders());
+        this.model = textInput();
+        this.address = textInput();
+        this.key = textInput();
+        this.key.type = 'password';
+        this.key.autocomplete = 'off';
+        this.save = button(_('Save'), () => void this.saveService());
+        this.request = textInput();
+        this.request.placeholder = _('What should the plugin show?');
+        this.request.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') void this.start();
+        });
+        this.request.addEventListener('input', () => this.sensitive());
+        this.create = button(_('Create'), () => void this.start(), ' nokta-prefs-suggested');
+
+        const serviceRow = this.row(_('AI service'), '', this.provider);
+        this.summary = serviceRow.querySelector('.nokta-prefs-subtitle') as HTMLElement;
+        const ask = element('div', 'nokta-prefs-item nokta-prefs-feed-add nokta-prefs-creator-ask');
+        ask.append(this.request, this.create);
+        const askRow = element('div', 'nokta-prefs-row nokta-prefs-list');
+        askRow.append(ask);
+        card.append(
+            serviceRow,
+            this.row(_('Model'), null, this.model),
+            this.row(_('Address'), null, this.address),
+            this.row(_('API key'), _('The key is kept on this computer, readable only by you'), this.key, this.save),
+            askRow,
+        );
+        this.placeholders();
+        this.sensitive();
+    }
+
+    /** The core came or went: reads the service the first time it is there. */
+    setAvailable(available: boolean): void {
+        this.available = available;
+        if (available && !this.loaded) {
+            this.loaded = true;
+            void this.load();
+        }
+        if (!available) this.loaded = false;
+        this.sensitive();
+    }
+
+    /** A row with its title, a subtitle unless null, and its controls. */
+    private row(title: string, subtitle: string | null, ...controls: HTMLElement[]): HTMLElement {
+        const row = element('div', 'nokta-prefs-row');
+        const label = element('div', 'nokta-prefs-label');
+        label.append(element('span', 'nokta-prefs-title', title));
+        if (subtitle !== null) label.append(element('span', 'nokta-prefs-subtitle', subtitle));
+        const control = element('div', 'nokta-prefs-control');
+        control.append(...controls);
+        row.append(label, control);
+        return row;
+    }
+
+    private async load(): Promise<void> {
+        try {
+            const json = await this.bridge.call('Plugins1', 'Creator');
+            this.show(creatorFrom(typeof json === 'string' ? json : '{}'));
+        } catch (error) {
+            this.toast(message(error));
+        }
+    }
+
+    private show(settings: CreatorSettings): void {
+        this.settings = settings;
+        this.provider.value = settings.provider;
+        this.model.value = settings.model;
+        this.address.value = settings.baseUrl;
+        this.key.value = '';
+        this.summary.textContent = creatorSummary(settings);
+        this.placeholders();
+        this.sensitive();
+    }
+
+    /** What an empty field means for the service picked. */
+    private placeholders(): void {
+        const anthropic = this.provider.value === 'anthropic';
+        const defaultModel = anthropic ? (this.settings?.defaultModel ?? '') : '';
+        this.model.placeholder = defaultModel ? format(_('Model (empty: %s)'), defaultModel) : _('Model');
+        this.address.placeholder = anthropic ? _('Address (empty: Anthropic)') : _('Address, like https://api.openai.com/v1');
+        this.key.placeholder = this.settings?.hasKey ? _('API key (empty: keep the saved one)') : _('API key');
+    }
+
+    private sensitive(): void {
+        const idle = this.available && !this.busy;
+        for (const control of [this.provider, this.model, this.address, this.key, this.save, this.request]) {
+            control.disabled = !idle;
+        }
+        this.create.disabled = !idle || this.settings?.ready !== true || this.request.value.trim() === '';
+    }
+
+    private async saveService(): Promise<void> {
+        this.save.disabled = true;
+        try {
+            await this.bridge.call(
+                'Plugins1',
+                'SetCreator',
+                this.provider.value,
+                this.model.value.trim(),
+                this.address.value.trim(),
+                this.key.value.trim(),
+            );
+            this.toast(_('Saved'));
+            await this.load();
+        } catch (error) {
+            this.toast(message(error));
+        } finally {
+            this.sensitive();
+        }
+    }
+
+    private async start(): Promise<void> {
+        const text = this.request.value.trim();
+        if (!text || this.create.disabled) return;
+        this.busy = true;
+        this.create.textContent = _('Writing…');
+        this.sensitive();
+        try {
+            const id = await this.bridge.call('Plugins1', 'Create', text);
+            this.request.value = '';
+            this.toast(format(_('Created %s. Read it, then turn it on.'), String(id)));
+        } catch (error) {
+            this.toast(message(error));
+        } finally {
+            this.busy = false;
+            this.create.textContent = _('Create');
+            this.sensitive();
+        }
+    }
+}
+
+function textInput(): HTMLInputElement {
+    const input = element('input', 'nokta-prefs-text');
+    input.type = 'text';
+    input.spellcheck = false;
+    return input;
 }
 
 /** The plugins to start from. */
