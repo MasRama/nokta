@@ -97,7 +97,7 @@ docs: explain the Just Perfection clock setting
 
 Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`,
 `chore`. Scopes: `media`, `lyrics`, `settings`, `osd`, `devices`, `timer`,
-`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `downloads`, `system`, `updates`, `tour`, `screenshots`, `privacy`, `themes`, `panel`, `i18n`, `app`, `contracts`, `extension`, `desktop`, `packaging`, `core`. A breaking change gets a `!` after the
+`activities`, `weather`, `calendar`, `shelf`, `clipboard`, `downloads`, `system`, `updates`, `tour`, `screenshots`, `privacy`, `themes`, `panel`, `i18n`, `app`, `contracts`, `extension`, `desktop`, `plugins`, `cli`, `packaging`, `core`. A breaking change gets a `!` after the
 scope and a `BREAKING CHANGE:` footer.
 
 ## Releases

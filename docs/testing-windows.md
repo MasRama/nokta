@@ -139,6 +139,11 @@ Tick what works. For anything that does not, see
       behind the open player, and in the preview.
 - [ ] The buttons to open the config file and to reset work.
 - [ ] Behavior → **Show the tour again** shows the tour on the notch.
+- [ ] Plugins → Added → **Add from Folder…** with the `site-status`
+      example: it is added off. Turn it on, set its address to
+      `http://127.0.0.1:9/`: a red alert says it is down and `down` shows
+      in the closed notch. **Open the plugins folder** opens Explorer
+      there. Remove asks first.
 
 ### Language
 
@@ -171,6 +176,11 @@ Open a **new** PowerShell window after installing:
 - [ ] `nokta timer 2m Tea`, `nokta alarm` a few minutes from now, then
       `nokta timer clear`.
 - [ ] `nokta settings` opens the settings window.
+- [ ] `nokta plugin install <folder>` with the `hello` example from the
+      source (`examples\plugins\hello`), then `nokta plugin enable hello`:
+      home shows its row and a click on it opens a page of two links. `nokta
+      plugin list` shows it `on ok`; `nokta plugin remove hello` takes it
+      away.
 - [ ] Quit Nokta from the tray: `nokta activity set x --title x` says it
       cannot reach Nokta.
 

@@ -146,6 +146,9 @@ on Windows).
   and Escape. Or have it open on a click instead of on hover.
 - **Every monitor** has its own notch, and alerts show on the one you are
   working on.
+- **[Plugins](#plugins).** Turn off what is built in that you do not use,
+  and add your own cards: a small program in any language prints what the
+  notch shows.
 
 ## Install
 
@@ -442,6 +445,31 @@ kernels that let users watch it), so nothing polls. Turn it off with
 `[system] memory_alert = false`. Over a fullscreen app it shows only with
 `fullscreen_alerts = "all"`.
 
+### Plugins
+
+A plugin puts a card of your own in the notch: a build that is running, a
+site that went down, the glasses of water you drank today. It is a folder
+with a `plugin.toml` and a program in any language that prints the card as
+JSON; Nokta runs it every so often, or keeps it running. A card can have a
+row in home with up to two buttons, a list it opens, a badge in the closed
+notch and an alert.
+
+Add one in the settings window (**Plugins → Added → Add from Folder…**) or
+with the `nokta` command:
+
+```sh
+nokta plugin install ~/my-plugins/site-status   # copied in, and off
+nokta plugin enable site-status
+nokta plugin list                                # what each one is doing
+nokta plugin run site-status                     # run it now
+nokta plugin remove site-status
+```
+
+A new plugin starts off, so you can read it before it runs. Plugins run as
+you, with your files and your network: add only ones you trust.
+[docs/plugins.md](docs/plugins.md) is how to write one, with three examples
+to copy in [`examples/plugins`](examples/plugins).
+
 ## Settings
 
 The Settings tile in home opens a page in the notch with the themes,
@@ -456,7 +484,8 @@ The **Plugins** page lists what is built in: the weather, the calendar,
 the focus timer, the clipboard, lyrics, notifications, downloads, the file
 shelf, live activities, system popups, device alerts, the privacy dots,
 calls, the memory alert and the update check. Each has its own switch, so
-you can turn off what you do not use, and opens on its own settings.
+you can turn off what you do not use, and opens on its own settings. Under
+**Added** are the [plugins](#plugins) you add yourself.
 
 <p align="center">
   <img src="docs/images/settings-page.png" width="49%" alt="The settings page in the notch: the themes, three switches and the motion speed">
@@ -747,6 +776,12 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   meanwhile; Nokta's own dots and call view leave it out.
   On Windows Nokta does the same with Windows' own loopback recording of
   the speakers.
+- **Plugins.** Nokta sends nothing for a plugin. A plugin you add runs as
+  you and can do what any program you run can, including reading your
+  files and using the network; what it sends is up to the plugin. Its
+  switch and options are kept in `~/.config/nokta/plugins.toml`, its files
+  and what it keeps in `~/.local/share/nokta/plugins/`, and both go when
+  you remove it.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.
@@ -814,7 +849,7 @@ Nokta has two parts:
 - **`noktad`**, a small Rust daemon. It follows your media players (MPRIS),
   fetches lyrics and the weather, watches the battery (UPower),
   Bluetooth (BlueZ) and system updates (PackageKit), runs the focus timer, keeps the shelf and the
-  clipboard history, and reads your settings.
+  clipboard history, runs your plugins, and reads your settings.
 - **A frontend** that draws the notch and talks to the daemon. On Linux it
   is a GNOME Shell extension, and they talk over D-Bus. On Windows it is
   one app, Nokta.exe, that draws the notch in WebView2 and runs the
