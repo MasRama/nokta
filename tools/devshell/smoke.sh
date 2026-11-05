@@ -850,6 +850,53 @@ wait_for "the finished update ends as done" \
     "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text, one('nokta-osd-detail')?.text])"
 wait_for "the clock comes back after the update" "$FIND shown('nokta-clock') && !shown('nokta-activity-badge')" 10
 
+# An add-on plugin, installed from a folder the way Settings and `nokta
+# plugin install` do: it starts off, and once on its card alerts, puts a badge
+# in the closed notch, a row in the panel, and its items on a page.
+PLUGIN_SRC="$STATE/smoke-plugin"
+mkdir -p "$PLUGIN_SRC"
+printf 'api = 1\nid = "smoke-card"\nname = "Smoke card"\n\n[run]\ncommand = ["./card.sh"]\nevery = 60\n' > "$PLUGIN_SRC/plugin.toml"
+cat > "$PLUGIN_SRC/card.sh" << 'EOF'
+#!/bin/sh
+echo '{"title":"Smoke card","detail":"Two links","tone":"teal","badge":"7","items":[{"title":"Smoke one","open":"https://example.com/1"},{"title":"Smoke two","open":"https://example.com/2"}],"actions":[{"label":"Again","run":"again"}],"alert":{"id":"smoke-1","title":"Smoke card says hi","detail":"From a plugin"}}'
+EOF
+chmod +x "$PLUGIN_SRC/card.sh"
+plugins() {
+    method=$1
+    shift
+    gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins --method "io.nokta.Plugins1.$method" "$@" > /dev/null
+}
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.Install "$PLUGIN_SRC" | grep -q "'smoke-card'" || fail "the plugin did not install"
+holds "a new plugin starts off: no badge" "$FIND !shown('nokta-plugin-badge')" 2
+plugins SetEnabled smoke-card true
+wait_for "a plugin's alert shows once it is on" \
+    "$FIND shown('nokta-osd') && one('nokta-osd-text').text === 'Smoke card says hi' && one('nokta-osd-detail').text === 'From a plugin'" 10 \
+    "$FIND JSON.stringify([shown('nokta-osd'), one('nokta-osd-text')?.text])"
+sleep 0.5
+"$HERE/shot.sh" smoke-plugin-alert > /dev/null
+wait_for "its badge then sits in the closed notch" \
+    "$FIND shown('nokta-plugin-badge') && one('nokta-plugin-badge-label').text === '7' && !shown('nokta-osd')" 15
+"$HERE/shot.sh" smoke-plugin-badge > /dev/null
+"$HERE/hover.sh" on > /dev/null
+# 32 px closed, 128 px for the date, toggles and tiles, 46 px for the card.
+wait_for "the panel grows a row for the card, with its button" \
+    "$FIND shown('nokta-panel-plugin') && one('nokta-panel-plugin-title').text === 'Smoke card' && find(one('nokta-panel-plugin'), 'nokta-panel-join')[0].label === 'Again' && Math.round(one('nokta-body').height) === 229" 5 \
+    "$FIND JSON.stringify([one('nokta-panel-plugin-title')?.text, Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-plugin-panel > /dev/null
+js "$FIND one('nokta-panel-plugin-open').emit('clicked', 1); true" > /dev/null
+# Two rows of 36 px, 4 px apart, under the page's header.
+wait_for "the card opens its items as a page" \
+    "$FIND shown('nokta-plugin-page') && find(Main.layoutManager.uiGroup, 'nokta-plugin-item-title').filter((a) => a.mapped).map((a) => a.text).join() === 'Smoke one,Smoke two' && Math.round(one('nokta-body').height) === 142" 5 \
+    "$FIND JSON.stringify([shown('nokta-plugin-page'), Math.round(one('nokta-body').height)])"
+"$HERE/shot.sh" smoke-plugin-page > /dev/null
+"$HERE/hover.sh" off > /dev/null
+wait_for "the notch closes over the badge" "$FIND shown('nokta-plugin-badge') && !any('nokta-plugin-page')" 5
+plugins Remove smoke-card
+wait_for "removing the plugin takes its badge away" "$FIND shown('nokta-clock') && !shown('nokta-plugin-badge')" 10
+[ ! -e "$STATE/data/nokta/plugins/smoke-card" ] || fail "removing the plugin left its folder"
+ok "removing the plugin deletes its folder"
+
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a
