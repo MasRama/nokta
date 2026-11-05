@@ -116,6 +116,27 @@ impl Client {
         }
     }
 
+    /// The catalog's plugins, as `Plugins1.Catalog` gives them (JSON).
+    pub async fn plugin_catalog(&self) -> Result<String, CallError> {
+        match self.ask(Request::PluginCatalog).await? {
+            Some(serde_json::Value::String(catalog)) => Ok(catalog),
+            _ => Err(CallError::Unreachable("it did not send the catalog".into())),
+        }
+    }
+
+    /// Answers the plugin's id.
+    pub async fn plugin_install_from_catalog(&self, id: &str) -> Result<String, CallError> {
+        match self
+            .ask(Request::PluginInstallFromCatalog { id: id.into() })
+            .await?
+        {
+            Some(serde_json::Value::String(id)) => Ok(id),
+            _ => Err(CallError::Unreachable(
+                "it did not say the plugin's id".into(),
+            )),
+        }
+    }
+
     pub async fn plugin_remove(&self, id: &str) -> Result<(), CallError> {
         self.call(Request::PluginRemove { id: id.into() }).await
     }

@@ -342,3 +342,56 @@ async fn plugins_are_installed_from_a_relative_folder_listed_and_removed() {
     assert!(out.status.success(), "{out:?}");
     assert!(!daemon.paths().plugins_dir.join("hello").exists());
 }
+
+#[tokio::test]
+async fn a_plugin_is_installed_from_the_catalog_by_its_id_and_listed() {
+    use sha2::{Digest, Sha256};
+
+    const MANIFEST: &str =
+        "api = 1\nid = \"water\"\nname = \"Water\"\nversion = \"1.1.0\"\n[run]\ncommand = [\"./water.sh\"]\nevery = 60\n";
+    let server = MockServer::start().await;
+    let index = serde_json::json!({
+        "api": 1,
+        "plugins": [{
+            "id": "water", "name": "Water", "version": "1.1.0", "unix": true,
+            "files": [{
+                "path": "plugin.toml",
+                "size": MANIFEST.len(),
+                "sha256": hex::encode(Sha256::digest(MANIFEST.as_bytes())),
+            }],
+        }],
+    });
+    Mock::given(path("/index.json"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(index.to_string()))
+        .mount(&server)
+        .await;
+    Mock::given(path("/plugins/water/plugin.toml"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(MANIFEST))
+        .mount(&server)
+        .await;
+    let bus = TestBus::start();
+    let mut options = Daemon::options(&bus, "http://127.0.0.1:9");
+    options.plugin_catalog_url = server.uri();
+    let daemon = Daemon::start_with(&bus, options, None).await;
+
+    let out = nokta_async(bus.address(), &["plugin", "catalog"]).await;
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "water  1.1.0  Water\nInstall one with: nokta plugin install ID\n"
+    );
+    // No folder of that name here, so the id is looked up in the catalog.
+    let out = nokta_async(bus.address(), &["plugin", "install", "water"]).await;
+    assert!(out.status.success(), "{out:?}");
+    assert!(String::from_utf8_lossy(&out.stdout).contains("from the catalog"));
+    assert!(daemon
+        .paths()
+        .plugins_dir
+        .join("water/plugin.toml")
+        .exists());
+    let out = nokta_async(bus.address(), &["plugin", "catalog"]).await;
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Water  installed"));
+
+    let out = nokta_async(bus.address(), &["plugin", "update", "nope"]).await;
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("no plugin nope"));
+}

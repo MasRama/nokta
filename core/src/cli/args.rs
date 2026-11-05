@@ -51,9 +51,16 @@ pub enum Cli {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PluginCli {
     List,
-    /// Copies a plugin folder in; it starts off.
+    /// The catalog's plugins, and which are installed or have an update.
+    Catalog,
+    /// Copies a plugin folder in, or gets the catalog's plugin of that id
+    /// when there is no such folder; it starts off.
     Install {
         path: String,
+    },
+    /// Gets the catalog's newest of an installed plugin.
+    Update {
+        id: String,
     },
     Remove {
         id: String,
@@ -171,6 +178,8 @@ fn parse_plugin(words: &[&str]) -> Result<PluginCli, String> {
     };
     match words {
         ["list"] => Ok(PluginCli::List),
+        ["catalog"] => Ok(PluginCli::Catalog),
+        ["update", plugin] => Ok(PluginCli::Update { id: id(plugin)? }),
         ["install", path] => Ok(PluginCli::Install {
             path: (*path).to_owned(),
         }),
@@ -190,13 +199,16 @@ fn parse_plugin(words: &[&str]) -> Result<PluginCli, String> {
                 action: o.take("--action").unwrap_or_default(),
             })
         }
-        ["install", ..] => {
-            Err("plugin install needs one folder, like: nokta plugin install ./hello".into())
-        }
-        [verb @ ("remove" | "enable" | "disable" | "run"), ..] => Err(format!(
+        ["install", ..] => Err(
+            "plugin install needs one folder or catalog id, like: nokta plugin install ./hello"
+                .into(),
+        ),
+        [verb @ ("remove" | "enable" | "disable" | "run" | "update"), ..] => Err(format!(
             "plugin {verb} needs one plugin id, like: nokta plugin {verb} hello"
         )),
-        _ => Err("plugin takes list, install, remove, enable, disable or run".into()),
+        _ => Err(
+            "plugin takes list, catalog, install, update, remove, enable, disable or run".into(),
+        ),
     }
 }
 
