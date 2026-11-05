@@ -144,6 +144,8 @@ Tick what works. For anything that does not, see
       `http://127.0.0.1:9/`: a red alert says it is down and `down` shows
       in the closed notch. **Open the plugins folder** opens Explorer
       there. Remove asks first.
+- [ ] Plugins → Catalog → **Browse** lists the catalog; **Install** on
+      one adds it to Added, off, and runs once it is turned on.
 
 ### Language
 

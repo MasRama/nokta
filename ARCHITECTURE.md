@@ -386,6 +386,11 @@ examples/plugins/   plugins to copy: hello, site-status, water
   and an update keeps its switch and options) and removes one with its
   data and its saved table. `watch.rs` hears folders and both files
   change, so a plugin written in place shows up without a restart.
+  `catalog.rs` reads the catalog (`index.json` on the `catalog` branch of
+  MasRama/nokta-plugins, `NOKTA_PLUGIN_CATALOG_URL` in tests), downloads
+  a plugin's files into `cache_dir/plugins/<id>`, each checked against its
+  listed size and SHA-256 and only plain relative paths, then installs the
+  folder through `install.rs`. Nothing is fetched until the user asks.
   Nokta never loads a plugin's code into its own process.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
@@ -439,7 +444,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Downloads1` | `/io/nokta/Downloads` | signal `Finished(uri s, name s, icon s, size t, thumbnail s)` (thumbnail is a PNG path, empty for a file that is not a picture) |
 | `io.nokta.System1` | `/io/nokta/System` | `Usage (dttddd)`: CPU 0-1, memory used and total bytes, temperature °C (NaN when unknown), download and upload bytes/s, all zero while nobody watches; `Watch()`, `Unwatch()`; signal `MemoryLow(used t, total t, app s)` |
 | `io.nokta.Updates1` | `/io/nokta/Updates` | `Latest` (`s`, the newer release's version, empty when none), `ReleaseUrl` (`s`); `Check()`, `Install()` |
-| `io.nokta.Plugins1` | `/io/nokta/Plugins` | `Plugins` (`a(sbsss)`: id, enabled, status, message, info as JSON), `Cards` (`a(ss)`: id, card as JSON); `SetEnabled(id s, enabled b)`, `SetOption(id s, key s, value s)`, `Run(id s, action s)`, `Install(path s) → id s`, `Remove(id s)`; signal `Alert(id s, title s, detail s, icon s, tone s, important b)` |
+| `io.nokta.Plugins1` | `/io/nokta/Plugins` | `Plugins` (`a(sbsss)`: id, enabled, status, message, info as JSON), `Cards` (`a(ss)`: id, card as JSON); `SetEnabled(id s, enabled b)`, `SetOption(id s, key s, value s)`, `Run(id s, action s)`, `Install(path s) → id s`, `Remove(id s)`, `Catalog() → catalog s` (JSON), `InstallFromCatalog(id s) → id s`; signal `Alert(id s, title s, detail s, icon s, tone s, important b)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -625,7 +630,8 @@ How both sides stay honest:
   about to start, and `Alert` as a `plugin` or `plugin-important` alert.
   An icon the shell cannot find falls back to Nokta's plugin icon. The
   settings window's Plugins page lists them under Added
-  (`prefs/plugins.ts`), with their options drawn from `info`.
+  (`prefs/plugins.ts`), with their options drawn from `info`, and the
+  catalog under Catalog once Browse is pressed.
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source, ends the shelf's helper and puts the clock back.
 

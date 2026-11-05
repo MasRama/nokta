@@ -661,11 +661,14 @@ that matches its sum is installed, one that does not, or one without
 
 `smoke.sh` installs a plugin from a folder over `Plugins1`, checks that it
 starts off, turns it on, and reads its alert, its badge, its panel row and
-its page; removing it takes the badge and the folder away.
+its page; removing it takes the badge and the folder away. It then
+publishes the plugin in a fake catalog: a file whose SHA-256 is wrong
+installs nothing, and the right one installs executable and off.
 `core/src/features/plugins/tests.rs` covers the manifest, the card, the
 runner (both kinds, and one that fails or is too slow) and the service
 from install to remove;
-`core/tests/cli.rs` runs `nokta plugin` against a private bus.
+`core/tests/cli.rs` runs `nokta plugin` against a private bus, the catalog
+included.
 
 - [ ] `nokta plugin install examples/plugins/hello`, then `nokta plugin
       list`: `hello off off`. `nokta plugin enable hello`: home shows
@@ -683,6 +686,12 @@ from install to remove;
       listed without a restart; a broken `plugin.toml` shows why in red.
 - [ ] A plugin that prints garbage or sleeps past its `timeout`: its row
       in Added says it failed, and the notch shows nothing for it.
+- [ ] Settings → Plugins → Catalog: nothing is fetched until **Browse**
+      (it becomes Refresh). **Install** on one adds it to Added, off, with
+      a toast; an older version of one you have shows **Update**.
+      Offline, Browse shows a toast and the list stays as it was.
+- [ ] `nokta plugin catalog` lists the same plugins with their state;
+      `nokta plugin install <id>` and `nokta plugin update <id>` work.
 
 ### Screen recordings
 
