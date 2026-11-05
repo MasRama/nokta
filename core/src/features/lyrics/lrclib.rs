@@ -190,7 +190,11 @@ pub struct Client {
 
 impl Client {
     pub fn new(base_url: &str, user_agent: &str) -> Client {
-        let http = http::client(|b| b.user_agent(user_agent).timeout(TIMEOUT));
+        Client::with_timeout(base_url, user_agent, TIMEOUT)
+    }
+
+    fn with_timeout(base_url: &str, user_agent: &str, timeout: Duration) -> Client {
+        let http = http::client(|b| b.user_agent(user_agent).timeout(timeout));
         Client {
             http,
             base_url: base_url.trim_end_matches('/').to_owned(),
@@ -199,8 +203,9 @@ impl Client {
 
     pub async fn lookup(&self, q: &Query) -> Result<Lookup, FetchError> {
         let candidates = clean::candidates(&q.artist, &q.title);
-        // `/api/get` answers 503 when it is busy asking upstream sources about a
-        // track it does not have; search may still know it.
+        // `/api/get` answers 503, or nothing in time, when it is busy asking
+        // upstream sources about a track it does not have; search may still
+        // know it.
         let mut busy = None;
         if let Some(best) = candidates.first() {
             if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) {
@@ -214,6 +219,10 @@ impl Client {
                     Ok(None) => {}
                     Err(FetchError::Status(status)) if status.is_server_error() => {
                         busy = Some(FetchError::Status(status));
+                    }
+                    // It can also just sit on a guess that names no song.
+                    Err(FetchError::Http(err)) if err.is_timeout() => {
+                        busy = Some(FetchError::Http(err));
                     }
                     Err(err) => return Err(err),
                 }
@@ -581,6 +590,30 @@ mod tests {
                 text: "busy".into()
             }])
         );
+    }
+
+    #[tokio::test]
+    async fn a_get_that_times_out_falls_back_to_search() {
+        let server = MockServer::start().await;
+        // LRCLIB can sit on a `get` for a track it does not have.
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404).set_delay(Duration::from_secs(5)))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([record(
+                368.0,
+                Some("[00:03.00]slow"),
+                None,
+                false
+            )])))
+            .mount(&server)
+            .await;
+        let c = Client::with_timeout(&server.uri(), UA, Duration::from_millis(200));
+        assert!(matches!(
+            c.lookup(&query(369)).await.unwrap(),
+            Lookup::Synced(_)
+        ));
     }
 
     #[tokio::test]
