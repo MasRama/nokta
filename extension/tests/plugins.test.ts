@@ -8,6 +8,8 @@ import {
     catalogFrom,
     catalogState,
     cardsFrom,
+    creatorFrom,
+    creatorSummary,
     homeCards,
     newerVersion,
     optionText,
@@ -176,6 +178,30 @@ test('the catalog is read from its JSON, and each row knows what it offers', () 
         ['update', 'install', 'unsupported', 'install'],
     );
     assert.equal(catalogState({ ...catalog[0], version: '1.0.0' }, installed), 'installed');
+});
+
+test('Creator Mode reads its service and says what it still needs', () => {
+    const anthropic = creatorFrom(
+        JSON.stringify({ provider: 'anthropic', model: '', default_model: 'claude-opus-5-5', base_url: '', has_key: true, ready: true }),
+    );
+    assert.deepEqual(anthropic, {
+        provider: 'anthropic',
+        model: '',
+        defaultModel: 'claude-opus-5-5',
+        baseUrl: '',
+        hasKey: true,
+        ready: true,
+    });
+    assert.equal(creatorSummary(anthropic), 'Anthropic · claude-opus-5-5');
+    assert.equal(creatorSummary({ ...anthropic, hasKey: false }), 'Needs an API key');
+
+    const openai = creatorFrom(JSON.stringify({ provider: 'openai', model: 'gpt-x', has_key: true }));
+    assert.equal(creatorSummary(openai), 'Needs the address of the service');
+    assert.equal(creatorSummary({ ...openai, baseUrl: 'https://example.com/v1' }), 'OpenAI-compatible · gpt-x');
+    assert.equal(creatorSummary({ ...openai, baseUrl: 'https://example.com/v1', model: '' }), 'Needs a model');
+
+    assert.equal(creatorFrom('not json').provider, 'anthropic');
+    assert.equal(creatorFrom(JSON.stringify({ provider: 'other' })).provider, 'anthropic');
 });
 
 test('a version is newer by its numbers, one by one', () => {

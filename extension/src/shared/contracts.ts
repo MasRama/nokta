@@ -280,6 +280,9 @@ export const PLUGINS_METHODS = {
     Remove: 's',
     Catalog: '',
     InstallFromCatalog: 's',
+    Creator: '',
+    SetCreator: 'ssss',
+    Create: 's',
 } as const;
 
 /** io.nokta.Plugins1 signals and the D-Bus signature of their arguments. */

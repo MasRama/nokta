@@ -170,6 +170,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
             });
             page.add(installed.group);
             page.add(installed.catalog);
+            page.add(installed.creator);
             stack.add_named(page, spec.name);
             continue;
         }
