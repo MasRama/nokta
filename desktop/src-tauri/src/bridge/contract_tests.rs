@@ -331,3 +331,33 @@ fn clipboard() {
         &super::clipboard::props(&published),
     );
 }
+
+#[test]
+fn plugins() {
+    use nokta_core::features::plugins::{PluginAlert, PluginRow, PluginsState};
+    let state = PluginsState {
+        plugins: vec![PluginRow {
+            id: "hello".into(),
+            enabled: true,
+            status: "ok".into(),
+            message: String::new(),
+            info: "{}".into(),
+        }],
+        cards: vec![("hello".into(), "{\"title\":\"Hi\"}".into())],
+    };
+    check(super::plugins::INTERFACE, &super::plugins::props(&state));
+    let alert = PluginAlert {
+        id: "down".into(),
+        title: "Down".into(),
+        detail: String::new(),
+        icon: String::new(),
+        tone: "red".into(),
+        important: true,
+    };
+    let types = signal_args(super::plugins::INTERFACE, super::plugins::ALERT);
+    let args = super::plugins::alert_args(&alert);
+    assert_eq!(types.len(), args.len(), "{types:?} and {args:?}");
+    for (signature, value) in types.iter().zip(&args) {
+        assert!(fits(signature, value), "{value} is not {signature}");
+    }
+}
