@@ -935,6 +935,35 @@ plugins Remove smoke-card
 [ ! -e "$STATE/data/nokta/plugins/smoke-card" ] || fail "removing the catalog plugin left its folder"
 ok "a plugin installs from the catalog, checked, and starts off"
 
+# Creator Mode against a stand-in for the AI service (fake-ai.py answers
+# with the same plugin): the key is saved readable only by the user, and
+# what the model wrote installs off.
+AI_PORT=$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+python3 "$HERE/fake-ai.py" "$AI_PORT" "$PLUGIN_SRC" > /dev/null 2>&1 &
+AI_PID=$!
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.SetCreator anthropic "" "http://127.0.0.1:$AI_PORT" smoke-key > /dev/null ||
+    fail "Creator Mode did not take its AI service"
+[ "$(stat -c %a "$STATE/config/nokta/creator.toml")" = 600 ] || fail "creator.toml is readable by others"
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.Creator | grep -q '"ready":true' || fail "Creator Mode is not ready with a key"
+if gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.Creator | grep -q smoke-key; then
+    fail "Creator answers its API key"
+fi
+created=""
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    created=$(gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+        --method io.nokta.Plugins1.Create "a card that says smoke" 2> /dev/null) && break
+    sleep 0.3
+done
+kill "$AI_PID" 2> /dev/null || true
+echo "$created" | grep -q "'smoke-card'" || fail "Creator Mode did not install what the model wrote: $created"
+[ -x "$STATE/data/nokta/plugins/smoke-card/card.sh" ] || fail "the written plugin's command is not executable"
+holds "a written plugin starts off" "$FIND !shown('nokta-plugin-badge')" 2
+plugins Remove smoke-card
+ok "Creator Mode writes a plugin through the AI service and installs it off"
+
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a
