@@ -23,9 +23,10 @@ const posted = (
 
 const mounted: MonitorNotch[] = [];
 
-async function mount(settings: Props = {}) {
+async function mount(settings: Props = {}, others: Record<string, Props> = {}) {
     vi.useFakeTimers();
-    const bridge = new MockBridge({ Settings1: { ...QUIET, ...settings } });
+    const bridge = new MockBridge({ ...others, Settings1: { ...QUIET, ...settings } });
+    const openUri = vi.fn();
     const root = document.createElement('div');
     document.body.append(root);
     let pointer: (inside: boolean) => void = () => {};
@@ -37,6 +38,7 @@ async function mount(settings: Props = {}) {
             setHit: () => {},
             onPointer: (cb) => (pointer = cb),
             onFullscreen: (cb) => (fullscreen = cb),
+            openUri,
         },
         root,
         STILL,
@@ -52,7 +54,7 @@ async function mount(settings: Props = {}) {
             .map((b) => b.textContent);
     const calls = () => bridge.calls.filter((c) => c.iface === 'Notifications1').map((c) => [c.method, ...c.args]);
     const post = (...args: unknown[]) => bridge.signal('Notifications1', 'Posted', ...args);
-    return { bridge, notch, view, shows, text, buttons, calls, post, pointer: (on: boolean) => pointer(on), fullscreen: (on: boolean) => fullscreen(on) };
+    return { bridge, notch, view, shows, text, buttons, calls, post, openUri, pointer: (on: boolean) => pointer(on), fullscreen: (on: boolean) => fullscreen(on) };
 }
 
 afterEach(() => {
@@ -169,5 +171,47 @@ describe("another app's toast", () => {
         expect(shows()).toBe(true);
         bridge.signal('Downloads1', 'Finished', 'file:///C:/d/a.pdf', 'a.pdf', 'x-office-document', 1000, '');
         expect(drawn()).toContain('nokta-download');
+    });
+});
+
+describe('a focus session', () => {
+    const focus = (state: string): Props => ({
+        State: state,
+        Phase: state === 'idle' ? '' : 'focus',
+        DurationUs: 1_500_000_000,
+        RemainingUs: 1_000_000_000,
+        TimestampUs: Date.now() * 1000,
+        Sessions: 0,
+        LongBreak: false,
+        Clocks: [],
+    });
+
+    it('holds toasts back and sums them up after, after the timer alert', async () => {
+        const settings = { Notifications: { duration_ms: 5000 }, Behavior: { alert_duration_ms: 2000 } };
+        const { bridge, post, shows, text, buttons, openUri, view } = await mount(settings, { Timer1: focus('running') });
+        post(...posted('41'));
+        post('42', 'Slack.app', 'Slack', 'Dev', 'PR merged', '', false, []);
+        post(...posted('43'));
+        expect(shows()).toBe(false);
+        bridge.set('Timer1', focus('idle'));
+        expect(shows()).toBe(false);
+        vi.advanceTimersByTime(2300);
+        expect(shows()).toBe(true);
+        expect(text('title').textContent).toBe('3 notifications while you focused');
+        expect(text('detail').textContent).toBe('WhatsApp 2 · Slack 1');
+        expect(buttons()).toEqual(['Show']);
+        view().querySelector<HTMLElement>('.nokta-notification-main')!.click();
+        expect(openUri).toHaveBeenCalledWith('ms-actioncenter:');
+    });
+
+    it('shows toasts as usual with quiet_notifications off, and sums nothing up', async () => {
+        const settings = { Timer: { quiet_notifications: false } };
+        const { bridge, post, shows, text } = await mount(settings, { Timer1: focus('running') });
+        post(...posted('41'));
+        expect(shows()).toBe(true);
+        expect(text('title').textContent).toBe('Rani');
+        bridge.set('Timer1', focus('idle'));
+        vi.advanceTimersByTime(10_000);
+        expect(shows()).toBe(false);
     });
 });

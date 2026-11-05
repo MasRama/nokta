@@ -17,6 +17,7 @@ import { PEEK_MS, shouldPeek, type PeekTrack } from '@ext/features/media/logic/p
 import type { MediaSnapshot } from '@ext/features/media/logic/snapshot.js';
 import { downloadButtons, type Download, type DownloadButton } from '@ext/features/downloads/logic/download.js';
 import { MAX_BUTTONS } from '@ext/features/notifications/logic/actions.js';
+import { digestLines, FocusDigest } from '@ext/features/notifications/logic/digest.js';
 import { notificationLines } from '@ext/features/notifications/logic/content.js';
 import { stackBadge, stackCount } from '@ext/features/notifications/logic/stack.js';
 import { NotificationTimer } from '@ext/features/notifications/logic/timer.js';
@@ -36,6 +37,7 @@ import {
     indicatorClock,
     msUntilClockChange,
 } from '@ext/features/timer/logic/clocks.js';
+import { wantsQuiet } from '@ext/features/timer/logic/quiet.js';
 import { formatRemaining, msUntilNextSecond, phaseColor, remainingAt } from '@ext/features/timer/logic/timer.js';
 import { tourAfter, tourStep } from '@ext/features/tour/logic/steps.js';
 import { updateRow } from '@ext/features/updates/logic/update.js';
@@ -142,9 +144,14 @@ export interface TourEnds {
     done(): void;
 }
 
+/** Windows' notification center, where the toasts the notch held back during focus wait. */
+const NOTIFICATION_CENTER = 'ms-actioncenter:';
+/** The focus digest waits this long past the alert duration, for the timer's own alert to go first. */
+const DIGEST_DELAY_MS = 300;
+
 /** What a home tile opens on Windows, for the tiles that open one of its panels (desktop/src-tauri/src/links.rs). */
 const TILE_URIS: Partial<Record<HomeTile, string>> = {
-    notifications: 'ms-actioncenter:',
+    notifications: NOTIFICATION_CENTER,
     screenshot: 'ms-screenclip:',
 };
 
@@ -220,6 +227,11 @@ export class MonitorNotch {
     private shownToast: { toast: Toast; count: number } | null = null;
     /** The event whose reminder shows as a notification, for its Join button. */
     private shownReminder: string | null = null;
+    /** The focus digest shows as a notification; a click opens the notification center. */
+    private shownDigest = false;
+    /** Counts the toasts held back while a focus session keeps notifications quiet. */
+    private readonly focusDigest = new FocusDigest();
+    private digestTimeout = 0;
     /** Which message the message timer times. */
     private message: 'download' | 'notification' = 'download';
     private readonly alerts: Alerts;
@@ -727,6 +739,7 @@ export class MonitorNotch {
         this.shownDownload = download;
         this.shownToast = null;
         this.shownReminder = null;
+        this.shownDigest = false;
         this.message = 'download';
         const buttons = downloadButtons(this.settings.behavior.fileShelf);
         const picture = downloadPicture(download, fileUrlOf);
@@ -754,6 +767,11 @@ export class MonitorNotch {
     private showToast(toast: Toast): void {
         // Over a fullscreen app Windows holds its banner back, and so does the notch.
         if (this.inFullscreen) return;
+        // Focus keeps the notch quiet; the digest sums the toast up after.
+        if (this.focusDigest.quiet) {
+            this.focusDigest.add(toast.app);
+            return;
+        }
         const { durationMs, showBody } = this.settings.notifications;
         const text = { title: asMarkup(toast.title), body: asMarkup(toast.body), app: asMarkup(toast.app) };
         const { title, detail } = notificationLines(text, showBody);
@@ -765,6 +783,7 @@ export class MonitorNotch {
         this.shownToast = { toast, count };
         this.shownDownload = null;
         this.shownReminder = null;
+        this.shownDigest = false;
         this.message = 'notification';
         this.notificationView.show({
             title,
@@ -781,6 +800,12 @@ export class MonitorNotch {
 
     /** A click on the toast, or on its button at `button`, opens what it opens and closes it. */
     private onNotificationPress(button: number | null): void {
+        if (this.shownDigest) {
+            this.messageTimer.hide();
+            this.machine.close();
+            this.host.openUri?.(NOTIFICATION_CENTER);
+            return;
+        }
         const reminder = this.shownReminder;
         if (reminder !== null) {
             this.messageTimer.hide();
@@ -804,6 +829,7 @@ export class MonitorNotch {
             this.shownDownload = null;
             this.shownToast = null;
             this.shownReminder = null;
+            this.shownDigest = false;
         }
         this.redraw();
     }
@@ -1101,6 +1127,7 @@ export class MonitorNotch {
 
     private showReminder(id: string, alert: EventAlert): void {
         this.shownReminder = id;
+        this.shownDigest = false;
         this.shownToast = null;
         this.shownDownload = null;
         this.message = 'notification';
@@ -1201,6 +1228,32 @@ export class MonitorNotch {
     private onTimer(): void {
         this.applyIndicator();
         this.onHome();
+        this.onQuietFocus(wantsQuiet(this.timer.snapshot, this.settings.timer.quietNotifications));
+    }
+
+    /** When quiet focus ends, sums up the toasts it held back, after the timer's own alert. */
+    private onQuietFocus(quiet: boolean): void {
+        if (this.focusDigest.update(quiet) !== 'end') return;
+        const lines = digestLines(this.focusDigest.take());
+        if (!lines) return;
+        window.clearTimeout(this.digestTimeout);
+        this.digestTimeout = window.setTimeout(
+            () => this.showDigest(lines),
+            this.settings.behavior.alertDurationMs + DIGEST_DELAY_MS,
+        );
+    }
+
+    private showDigest(lines: { title: string; detail: string }): void {
+        if (this.inFullscreen) return;
+        this.shownDigest = true;
+        this.shownToast = null;
+        this.shownDownload = null;
+        this.shownReminder = null;
+        this.message = 'notification';
+        this.notificationView.show({ ...lines, picture: null, round: false, buttons: [_('Show')], badge: null });
+        this.messageTimer.show(this.settings.notifications.durationMs);
+        this.redraw();
+        this.alert('accent', 'kick');
     }
 
     /** A focus session or a break ran out. */
@@ -1525,7 +1578,7 @@ export class MonitorNotch {
             appearance,
             notificationButtons:
                 this.message === 'notification' &&
-                (this.shownReminder !== null || (this.shownToast?.toast.buttons.length ?? 0) > 0),
+                (this.shownReminder !== null || this.shownDigest || (this.shownToast?.toast.buttons.length ?? 0) > 0),
             panelHeight: panelHeight(appearance.height, this.homeRows),
             pageHeight: subPageHeight(this.pageBodyHeight()),
             expandedExtra:

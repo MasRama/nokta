@@ -51,7 +51,7 @@ afterEach(() => {
 describe('the settings on Windows', () => {
     it("keeps the extension's rows, without GNOME's", () => {
         const names = rows().map((row) => `${row.table}.${row.key}`);
-        const hidden = ['behavior.move_clock', 'behavior.all_monitors', 'behavior.gestures', 'timer.quiet_notifications', 'activities.auto_progress'];
+        const hidden = ['behavior.move_clock', 'behavior.all_monitors', 'behavior.gestures', 'activities.auto_progress'];
         for (const row of allRows()) {
             const name = `${row.table}.${row.key}`;
             expect(names.includes(name)).toBe(!hidden.includes(name));
