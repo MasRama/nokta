@@ -28,6 +28,7 @@ import {
 } from './features/calendar/index.js';
 import { batteryLevel, deviceAlert, DevicesClient, isBatteryWarning, type AlertSignal } from './features/devices/index.js';
 import { downloadButtons, DownloadsClient, type Download, type DownloadButton } from './features/downloads/index.js';
+import { homeCards, PluginsClient, type PluginAlert } from './features/plugins/index.js';
 import { memoryAlert, SystemClient } from './features/system/index.js';
 import { UpdatesClient, updateRow } from './features/updates/index.js';
 import { LyricsClient } from './features/lyrics/index.js';
@@ -63,6 +64,8 @@ import {
 import {
     Caffeine,
     MAX_PANEL_ACTIVITIES,
+    MAX_PANEL_PLUGINS,
+    MAX_PLUGIN_ACTIONS,
     MAX_PANEL_EVENTS,
     type PanelContent,
     type QuickToggle,
@@ -163,6 +166,7 @@ class Session {
         (kind, label) => this.onClockDone(kind, label),
     );
     private readonly activities = new ActivitiesClient((ended) => this.onActivityEnded(ended));
+    private readonly plugins = new PluginsClient((alert) => this.onPluginAlert(alert));
     private readonly weather = new WeatherClient();
     private readonly shelf = new ShelfClient();
     private readonly shelfCoordinator: ShelfCoordinator;
@@ -201,6 +205,7 @@ class Session {
     private readonly lyricsId: number;
     private readonly timerId: number;
     private readonly activitiesId: number;
+    private readonly pluginsId: number;
     private readonly weatherId: number;
     private readonly calendarId: number;
     private readonly meetingLinksId: number;
@@ -322,6 +327,7 @@ class Session {
         this.lyricsId = this.lyrics.onChanged(() => this.notches.forEach((n) => n.onLyrics()));
         this.timerId = this.timer.onChanged(() => this.onTimer());
         this.activitiesId = this.activities.onChanged(() => this.notches.forEach((n) => n.onActivities()));
+        this.pluginsId = this.plugins.onChanged(() => this.notches.forEach((n) => n.onPlugins()));
         this.weatherId = this.weather.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
         this.calendarId = this.calendar.onChanged(() => this.onCalendar());
         this.meetingLinksId = this.meetingLinks.onChanged(() => this.notches.forEach((n) => n.onPanelContent()));
@@ -396,6 +402,7 @@ class Session {
         this.lyrics.disconnect(this.lyricsId);
         this.timer.disconnect(this.timerId);
         this.activities.disconnect(this.activitiesId);
+        this.plugins.disconnect(this.pluginsId);
         this.weather.disconnect(this.weatherId);
         this.calendar.disconnect(this.calendarId);
         this.meetingLinks.disconnect(this.meetingLinksId);
@@ -415,6 +422,7 @@ class Session {
         this.lyrics.destroy();
         this.timer.destroy();
         this.activities.destroy();
+        this.plugins.destroy();
         this.weather.destroy();
         this.shelf.destroy();
         this.clipboard.destroy();
@@ -481,6 +489,7 @@ class Session {
             lyrics: () => this.lyrics.attach(connection, cancellable),
             timer: () => this.timer.attach(connection, cancellable),
             activities: () => this.activities.attach(connection, cancellable),
+            plugins: () => this.plugins.attach(connection, cancellable),
             weather: () => this.weather.attach(connection, cancellable),
             shelf: () => this.shelf.attach(connection, cancellable),
             clipboard: () => this.clipboard.attach(connection, cancellable),
@@ -504,6 +513,7 @@ class Session {
         this.lyrics.detach();
         this.timer.detach();
         this.activities.detach();
+        this.plugins.detach();
         this.weather.detach();
         this.shelf.detach();
         this.clipboard.detach();
@@ -660,6 +670,11 @@ class Session {
             shelf: this.shelfSource,
             clipboard: this.clipboardSource,
             system: this.systemSource,
+            plugins: {
+                cards: () => this.plugins.cards(),
+                run: (id: string, action: string) => this.plugins.run(id, action),
+                open: (uri: string) => this.openUri(uri),
+            },
             countdown: { text: () => this.countdownText },
             systemStyle: { dark: () => this.interfaceSettings.get_string('color-scheme') === 'prefer-dark' },
         };
@@ -1033,6 +1048,7 @@ class Session {
             recording: this.panelRecording(),
             call: this.panelCall(),
             activities: this.panelActivities(),
+            plugins: this.panelPlugins(),
             notificationCount: notificationCount(),
             focusActive: this.timer.snapshot().state !== 'idle',
             clocks: this.panelClocks(),
@@ -1131,6 +1147,30 @@ class Session {
                 fraction: activity.progress < 0 ? null : Math.min(activity.progress, 1),
                 elapsed: formatElapsed(now - activity.startedUs),
             }));
+    }
+
+    private panelPlugins(): PanelContent['plugins'] {
+        return homeCards(this.plugins.cards())
+            .slice(0, MAX_PANEL_PLUGINS)
+            .map((card) => ({
+                id: card.id,
+                icon: card.icon,
+                color: card.color,
+                title: card.title,
+                detail: card.detail,
+                badge: card.badge,
+                fraction: card.progress,
+                actions: card.actions.slice(0, MAX_PLUGIN_ACTIONS).map((a) => a.label),
+                hasItems: card.items.length > 0,
+            }));
+    }
+
+    /** A plugin asked for an alert: in its tone, and over a fullscreen app only when it is important. */
+    private onPluginAlert(alert: PluginAlert): void {
+        const content = { fraction: null, text: alert.title, detail: alert.detail, urgent: false };
+        const kind = alert.important ? 'plugin-important' : 'plugin';
+        const { alertDurationMs } = this.settings.behavior;
+        this.showOsd(-1, kind, content, iconFor(alert.icon), alertDurationMs, { color: alert.color }, this.motion(kind));
     }
 
     // Notifications

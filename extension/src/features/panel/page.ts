@@ -12,6 +12,7 @@ import { iconFor } from '../../shared/icons.js';
 export class SubPage {
     readonly actor: St.BoxLayout;
     private readonly actions: St.BoxLayout;
+    private readonly label: St.Label;
 
     constructor(title: string, body: Clutter.Actor, onBack: () => void) {
         this.actor = setVertical(new St.BoxLayout({ style_class: 'nokta-subpage' }));
@@ -22,20 +23,25 @@ export class SubPage {
             can_focus: true,
         });
         back.connect('clicked', onBack);
-        const label = new St.Label({
+        this.label = new St.Label({
             style_class: 'nokta-subpage-title',
             text: title,
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
         this.actions = new St.BoxLayout({ style_class: 'nokta-subpage-actions', y_align: Clutter.ActorAlign.CENTER });
         const header = new St.BoxLayout({ style_class: 'nokta-subpage-header' });
         header.add_child(back);
-        header.add_child(label);
+        header.add_child(this.label);
         header.add_child(this.actions);
         this.actor.add_child(header);
         this.actor.add_child(body);
+    }
+
+    /** For a page that shows one of several things. */
+    setTitle(title: string): void {
+        this.label.text = title;
     }
 
     /** Puts a button at the header's right end. */

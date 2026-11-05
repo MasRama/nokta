@@ -8,6 +8,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import type { ActivitiesClient, Activity } from './features/activities/index.js';
 import { ClipboardPage, type ClipboardEntry } from './features/clipboard/index.js';
 import { SystemPage, type Usage } from './features/system/index.js';
+import { badgeCard, PluginPage, type PluginCard } from './features/plugins/index.js';
 import { NotchGestures } from './features/gestures/index.js';
 import {
     LYRIC_ROW_EXTRA,
@@ -50,6 +51,7 @@ import {
     MAX_PANEL_ACTIVITIES,
     MAX_PANEL_CLOCKS,
     MAX_PANEL_EVENTS,
+    MAX_PANEL_PLUGINS,
     NotchMenu,
     panelHeight,
     shownControls,
@@ -132,7 +134,7 @@ const VIEW_SCALE_FROM = 0.96;
 const ALERT_KICK = 0.06;
 
 /** The pages that home's tiles open. */
-type PageName = 'clipboard' | 'timer' | 'settings' | 'system';
+type PageName = 'clipboard' | 'timer' | 'settings' | 'system' | 'plugin';
 
 /** A notification the notch shows. */
 export interface NotchNotification {
@@ -211,6 +213,15 @@ export interface SystemSource {
     unwatch(): void;
 }
 
+/** The add-on plugins' cards; owned by the session. */
+export interface PluginsSource {
+    cards(): readonly PluginCard[];
+    /** Runs the plugin `id` with one of its card's actions. */
+    run(id: string, action: string): void;
+    /** Opens an http(s) address from a card. */
+    open(uri: string): void;
+}
+
 /** The clients every notch reads; owned by the session. */
 export interface NotchSources {
     settings: SettingsClient;
@@ -227,6 +238,7 @@ export interface NotchSources {
     shelf: ShelfSource;
     clipboard: ClipboardSource;
     system: SystemSource;
+    plugins: PluginsSource;
     /** The closed notch's countdown to a meeting, `5 min` ... `Now`; null when none is near. */
     countdown: { text(): string | null };
     /** Whether the system's style is dark, for themes that follow it. */
@@ -327,6 +339,10 @@ export class MonitorNotch implements ShelfNotch {
     private readonly settingsSubPage: SubPage;
     private readonly systemPage = new SystemPage();
     private readonly systemSubPage: SubPage;
+    private readonly pluginPage: PluginPage;
+    private readonly pluginSubPage: SubPage;
+    /** The plugin whose list the plugin page shows. */
+    private pluginId = '';
     /** Holds the pages; the one open shows. */
     private readonly pages = new St.Widget({ layout_manager: new Clutter.BinLayout() });
     private readonly menu: NotchMenu;
@@ -401,6 +417,8 @@ export class MonitorNotch implements ShelfNotch {
                 hideCall: () => sources.call.hide(),
                 installUpdate: () => panel.installUpdate(),
                 openRelease: () => this.onPanelClick(() => panel.openRelease()),
+                openPlugin: (id) => this.openPlugin(id),
+                pluginAction: (id, index) => this.onPluginAction(id, index),
             },
         );
         this.menu = new NotchMenu({
@@ -442,10 +460,13 @@ export class MonitorNotch implements ShelfNotch {
         });
         this.settingsSubPage = new SubPage(_('Settings'), this.settingsPage.actor, () => this.setPage(null));
         this.systemSubPage = new SubPage(_('System'), this.systemPage.actor, () => this.setPage(null));
+        this.pluginPage = new PluginPage((uri) => this.onPanelClick(() => sources.plugins.open(uri)));
+        this.pluginSubPage = new SubPage('', this.pluginPage.actor, () => this.setPage(null));
         this.pages.add_child(this.clipboardSubPage.actor);
         this.pages.add_child(this.timerSubPage.actor);
         this.pages.add_child(this.settingsSubPage.actor);
         this.pages.add_child(this.systemSubPage.actor);
+        this.pages.add_child(this.pluginSubPage.actor);
         // Under the cover and the title, above the seek bar: the lyric row, or the lyrics view in its place.
         this.expanded.actor.insert_child_at_index(this.lyricLine.actor, 1);
         this.expanded.actor.insert_child_at_index(this.lyricsSheet.actor, 2);
@@ -550,6 +571,7 @@ export class MonitorNotch implements ShelfNotch {
         this.onMedia();
         this.onTimer();
         this.onActivities();
+        this.onPlugins();
         this.onShelf();
         this.onClipboard();
         this.onPrivacy();
@@ -606,6 +628,7 @@ export class MonitorNotch implements ShelfNotch {
         if (this.page === 'system') this.sources.system.unwatch();
         this.systemPage.destroy();
         this.systemSubPage.destroy();
+        this.pluginSubPage.destroy();
         this.pages.destroy();
         this.privacyDots.destroy();
         this.progress.destroy();
@@ -714,6 +737,46 @@ export class MonitorNotch implements ShelfNotch {
         this.applyIndicator();
     }
 
+    /** The add-on plugins' cards changed. */
+    onPlugins(): void {
+        if (this.destroyed) return;
+        const cards = this.sources.plugins.cards();
+        const badge = badgeCard(cards);
+        if (badge) this.indicators.each((set) => set.plugin.update(badge));
+        if (this.page === 'plugin') {
+            const card = cards.find((c) => c.id === this.pluginId);
+            if (card && card.items.length > 0) {
+                const before = this.pluginPage.height;
+                this.pluginSubPage.setTitle(card.title || card.name);
+                this.pluginPage.show(card);
+                if (this.pluginPage.height !== before) this.resizePage();
+            } else {
+                this.setPage(null);
+            }
+        }
+        if (this.drawn === 'panel') this.refreshPanel();
+        this.applyIndicator();
+    }
+
+    /** A plugin card's row in home was clicked: its list. */
+    private openPlugin(id: string): void {
+        const card = this.sources.plugins.cards().find((c) => c.id === id);
+        if (!card || card.items.length === 0) return;
+        this.pluginId = id;
+        this.pluginSubPage.setTitle(card.title || card.name);
+        this.pluginPage.show(card);
+        this.setPage('plugin');
+    }
+
+    /** A plugin card's button: a link closes the notch and opens; anything else goes to the plugin. */
+    private onPluginAction(id: string, index: number): void {
+        const { plugins } = this.sources;
+        const action = plugins.cards().find((c) => c.id === id)?.actions[index];
+        if (!action) return;
+        if (action.open) this.onPanelClick(() => plugins.open(action.open));
+        else plugins.run(id, action.run);
+    }
+
     /** The countdown to a meeting changed, started or ended. */
     onCountdown(): void {
         if (this.destroyed) return;
@@ -773,11 +836,13 @@ export class MonitorNotch implements ShelfNotch {
         this.timerSubPage.actor.set_size(width, subPageHeight(this.timerPage.height));
         this.settingsSubPage.actor.set_size(width, subPageHeight(this.settingsPage.height));
         this.systemSubPage.actor.set_size(width, subPageHeight(this.systemPage.height));
+        this.pluginSubPage.actor.set_size(width, subPageHeight(this.pluginPage.height));
         const shown = this.page ?? 'clipboard';
         this.clipboardSubPage.actor.visible = shown === 'clipboard';
         this.timerSubPage.actor.visible = shown === 'timer';
         this.settingsSubPage.actor.visible = shown === 'settings';
         this.systemSubPage.actor.visible = shown === 'system';
+        this.pluginSubPage.actor.visible = shown === 'plugin';
         this.pages.set_size(...this.sizeFor('page'));
     }
 
@@ -1264,6 +1329,7 @@ export class MonitorNotch implements ShelfNotch {
             clock: indicatorClock(this.sources.timer.clocks(), GLib.get_monotonic_time()) !== null,
             activity: this.liveActivities().length > 0,
             meeting: this.sources.countdown.text() !== null,
+            plugin: badgeCard(this.sources.plugins.cards()) !== null,
             shelf: this.sources.shelf.items().length > 0,
         });
         if (indicator !== this.indicator) {
@@ -1532,6 +1598,7 @@ export class MonitorNotch implements ShelfNotch {
             timer: this.timerPage,
             settings: this.settingsPage,
             system: this.systemPage,
+            plugin: this.pluginPage,
         };
         const page = pages[this.page ?? 'clipboard'].height;
         const lyrics = this.lyricsOpen ? SHEET_EXTRA_HEIGHT : this.lyricsAvailable() ? LYRIC_ROW_EXTRA : 0;
@@ -1871,6 +1938,7 @@ function trackKey(snapshot: { playerId: string; title: string; artists: readonly
 function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
     const activities = Math.min(content.activities.length, MAX_PANEL_ACTIVITIES);
     const clocks = Math.min(content.clocks.length, MAX_PANEL_CLOCKS);
+    const plugins = Math.min(content.plugins.length, MAX_PANEL_PLUGINS);
     const events = Math.min(content.events.length, MAX_PANEL_EVENTS);
     const event: PanelRow[] = events > 0 ? ['event', ...Array<PanelRow>(events - 1).fill('agenda')] : [];
     const recording: PanelRow[] = content.recording !== null ? ['recording'] : [];
@@ -1888,6 +1956,7 @@ function panelRowsFor(content: PanelContent, shelf: boolean): PanelRow[] {
         ...Array<PanelRow>(activities).fill('activity'),
         ...Array<PanelRow>(clocks).fill('clock'),
         ...update,
+        ...Array<PanelRow>(plugins).fill('plugin'),
         ...files,
         ...toggles,
         ...tiles,

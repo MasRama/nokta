@@ -13,12 +13,24 @@ export type FullscreenAlerts = (typeof FULLSCREEN_ALERTS)[number];
  * (battery low or critical), `device` every other one; `focus` a focus
  * session or break ending; `clock` a countdown or alarm done; `calendar` a
  * reminder or an event starting; `activity` a live activity ending;
- * `download` a finished download; `memory` memory almost full; `osd` volume, brightness, the lock keys
+ * `download` a finished download; `memory` memory almost full; `plugin` an
+ * add-on plugin's alert (`plugin-important` one it marks important); `osd` volume, brightness, the lock keys
  * and the keyboard layout.
  */
-export type AlertKind = 'battery' | 'device' | 'focus' | 'clock' | 'calendar' | 'activity' | 'download' | 'memory' | 'osd';
+export type AlertKind =
+    | 'battery'
+    | 'device'
+    | 'focus'
+    | 'clock'
+    | 'calendar'
+    | 'activity'
+    | 'download'
+    | 'memory'
+    | 'plugin'
+    | 'plugin-important'
+    | 'osd';
 
-const IMPORTANT: readonly AlertKind[] = ['battery', 'focus', 'clock', 'calendar'];
+const IMPORTANT: readonly AlertKind[] = ['battery', 'focus', 'clock', 'calendar', 'plugin-important'];
 
 /** Whether an alert of `kind` shows in a notch whose monitor is fullscreen. */
 export function showsOverFullscreen(kind: AlertKind, setting: FullscreenAlerts): boolean {

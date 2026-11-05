@@ -8,6 +8,7 @@ const ROWS: Readonly<Record<Indicator, PanelRow | 'focus-tile'>> = {
     clock: 'clock',
     activity: 'activity',
     meeting: 'event',
+    plugin: 'plugin',
     shelf: 'shelf',
     timer: 'focus-tile',
 };

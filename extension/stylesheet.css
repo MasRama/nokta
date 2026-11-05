@@ -674,6 +674,51 @@
     font-feature-settings: "tnum";
 }
 
+/* An add-on plugin's card in home (panel/view.ts PluginRow). */
+.nokta-panel-plugin {
+    height: 36px;
+    spacing: 8px;
+}
+
+.nokta-panel-plugin-body {
+    spacing: 10px;
+}
+
+.nokta-panel-plugin-text {
+    spacing: 2px;
+}
+
+.nokta-panel-plugin-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-panel-plugin-detail,
+.nokta-panel-plugin-badge {
+    font-size: 11px;
+    font-feature-settings: "tnum";
+}
+
+.nokta-panel-plugin-badge {
+    font-weight: 700;
+    padding-left: 6px;
+}
+
+/* A plugin's badge in the closed notch (plugins/badge.ts). */
+.nokta-plugin-badge {
+    spacing: 5px;
+}
+
+.nokta-plugin-badge-icon {
+    icon-size: 14px;
+}
+
+.nokta-plugin-badge-label {
+    font-size: 13px;
+    font-weight: 700;
+    font-feature-settings: "tnum";
+}
+
 /* A countdown, stopwatch or alarm in home: one line. */
 .nokta-panel-clock,
 .nokta-panel-call,
@@ -983,6 +1028,47 @@
 
 .nokta-subpage-actions {
     spacing: 2px;
+}
+
+/* A plugin card's list (plugins/page.ts). */
+.nokta-plugin-page {
+    spacing: 4px;
+}
+
+.nokta-plugin-item {
+    padding: 0 8px;
+    border-radius: 10px;
+}
+
+.nokta-plugin-item:hover,
+.nokta-plugin-item:focus {
+    background-color: rgba(128, 128, 128, 0.18);
+}
+
+.nokta-theme-paper .nokta-plugin-item:hover,
+.nokta-theme-paper .nokta-plugin-item:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.nokta-plugin-item-box {
+    spacing: 10px;
+}
+
+.nokta-plugin-item-icon {
+    icon-size: 16px;
+}
+
+.nokta-plugin-item-text {
+    spacing: 1px;
+}
+
+.nokta-plugin-item-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-plugin-item-detail {
+    font-size: 11px;
 }
 
 .nokta-clip-page,

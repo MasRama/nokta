@@ -7,6 +7,8 @@ export type PanelRow =
     | 'recording'
     | 'call'
     | 'activity'
+    /** An add-on plugin's card. */
+    | 'plugin'
     | 'clock'
     | 'update'
     | 'shelf'
@@ -29,6 +31,7 @@ const ROW_HEIGHT: Record<Exclude<PanelRow, 'date' | 'agenda'>, number> = {
     recording: 26,
     call: 26,
     activity: 36,
+    plugin: 36,
     clock: 26,
     update: 26,
     shelf: 44,

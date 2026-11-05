@@ -121,8 +121,9 @@ test('each indicator has its widget, and the focus timer and the clocks share on
     assert.equal(slotFor('activity'), 'badge');
     assert.equal(slotFor('meeting'), 'countdown');
     assert.equal(slotFor('shelf'), 'shelf');
+    assert.equal(slotFor('plugin'), 'plugin');
     // In the order they sit over the clock.
-    assert.deepEqual(INDICATOR_SLOTS, ['recording', 'call', 'timer', 'badge', 'shelf', 'countdown']);
+    assert.deepEqual(INDICATOR_SLOTS, ['recording', 'call', 'timer', 'badge', 'plugin', 'shelf', 'countdown']);
 });
 
 test('daemon_titles_are_translated_where_they_arrive', () => {

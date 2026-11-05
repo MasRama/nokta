@@ -25,6 +25,24 @@ export interface PanelActivity {
     elapsed: string;
 }
 
+/** An add-on plugin's card, as one panel row shows it. */
+export interface PanelPlugin {
+    id: string;
+    icon: string;
+    /** Its tone, `#rrggbb`. */
+    color: string;
+    title: string;
+    detail: string;
+    /** Shown at the right of the detail, like `3`; may be empty. */
+    badge: string;
+    /** 0 to 1, or null for no bar. */
+    fraction: number | null;
+    /** The labels of its buttons, at most MAX_PLUGIN_ACTIONS. */
+    actions: readonly string[];
+    /** It has a list to open. */
+    hasItems: boolean;
+}
+
 /** A countdown, stopwatch or alarm, as one panel row shows it. */
 export interface PanelClock {
     id: string;
@@ -99,6 +117,8 @@ export interface PanelContent {
     call: PanelCall | null;
     /** Newest first; the panel shows the first MAX_PANEL_ACTIVITIES. */
     activities: readonly PanelActivity[];
+    /** The add-on plugins' cards; the panel shows the first MAX_PANEL_PLUGINS. */
+    plugins: readonly PanelPlugin[];
     /** How many wait in GNOME's message list; null when GNOME does not say. */
     notificationCount: number | null;
     /** A focus session or a break is set. */
@@ -118,6 +138,8 @@ export interface PanelContent {
 export const MAX_PANEL_EVENTS = 5;
 export const MAX_PANEL_ACTIVITIES = 3;
 export const MAX_PANEL_CLOCKS = 3;
+export const MAX_PANEL_PLUGINS = 3;
+export const MAX_PLUGIN_ACTIONS = 2;
 
 export interface PanelHandlers {
     openCalendar(): void;
@@ -139,6 +161,10 @@ export interface PanelHandlers {
     hideCall(): void;
     installUpdate(): void;
     openRelease(): void;
+    /** Opens the plugin's list. */
+    openPlugin(id: string): void;
+    /** One of the plugin card's buttons, by its place. */
+    pluginAction(id: string, index: number): void;
 }
 
 /** Each toggle's icon, name and tone. */
@@ -212,6 +238,105 @@ class ActivityRow {
         this.chip.setLight(light);
         this.track.style = `background-color: ${withAlpha(foreground, 0.2)};`;
         this.fill.style = `background-color: ${foreground};`;
+    }
+}
+
+/**
+ * An add-on plugin's card: its icon chip in the card's tone, title, detail
+ * and badge, a thin bar when it has progress, and up to two buttons. A card
+ * with a list opens it on a click.
+ */
+class PluginRow {
+    readonly actor: St.BoxLayout;
+    readonly chip = new IconChip('#ffffff');
+    private readonly body: St.Button;
+    private readonly title: St.Label;
+    private readonly detail: St.Label;
+    private readonly badge: St.Label;
+    private readonly track: St.Widget;
+    private readonly fill: St.Widget;
+    private readonly buttons: St.Button[] = [];
+    private plugin: PanelPlugin | null = null;
+    private foreground = '#ffffff';
+
+    constructor(handlers: Pick<PanelHandlers, 'openPlugin' | 'pluginAction'>) {
+        this.title = new St.Label({ style_class: 'nokta-panel-plugin-title', x_expand: true });
+        this.detail = new St.Label({ style_class: 'nokta-panel-plugin-detail', x_expand: true });
+        this.badge = new St.Label({ style_class: 'nokta-panel-plugin-badge' });
+        for (const label of [this.title, this.detail]) label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+        this.detail.opacity = SECONDARY;
+        const second = new St.BoxLayout({ x_expand: true });
+        second.add_child(this.detail);
+        second.add_child(this.badge);
+        this.track = new St.Widget({
+            style_class: 'nokta-panel-activity-track',
+            layout_manager: new Clutter.BinLayout(),
+            x_expand: true,
+        });
+        this.fill = new St.Widget({ style_class: 'nokta-panel-activity-fill', x_expand: true, y_expand: true });
+        this.fill.set_pivot_point(0, 0.5);
+        this.track.add_child(this.fill);
+        const text = setVertical(
+            new St.BoxLayout({ style_class: 'nokta-panel-plugin-text', x_expand: true, y_align: Clutter.ActorAlign.CENTER }),
+        );
+        text.add_child(this.title);
+        text.add_child(second);
+        text.add_child(this.track);
+        const inner = new St.BoxLayout({ style_class: 'nokta-panel-plugin-body', x_expand: true });
+        inner.add_child(this.chip.actor);
+        inner.add_child(text);
+        this.body = new St.Button({ style_class: 'nokta-panel-plugin-open', child: inner, x_expand: true });
+        this.body.connect('clicked', () => {
+            if (this.plugin?.hasItems) handlers.openPlugin(this.plugin.id);
+        });
+        this.actor = new St.BoxLayout({ style_class: 'nokta-panel-plugin', visible: false });
+        this.actor.add_child(this.body);
+        for (let i = 0; i < MAX_PLUGIN_ACTIONS; i++) {
+            const button = new St.Button({ style_class: 'nokta-panel-join', y_align: Clutter.ActorAlign.CENTER, can_focus: true });
+            button.connect('clicked', () => {
+                if (this.plugin) handlers.pluginAction(this.plugin.id, i);
+            });
+            this.buttons.push(button);
+            this.actor.add_child(button);
+        }
+    }
+
+    show(plugin: PanelPlugin | undefined): void {
+        this.plugin = plugin ?? null;
+        this.actor.visible = plugin !== undefined;
+        if (!plugin) return;
+        this.chip.gicon = iconFor(plugin.icon);
+        this.chip.setTone(plugin.color);
+        this.title.text = plugin.title;
+        this.detail.text = plugin.detail;
+        this.detail.visible = plugin.detail !== '';
+        this.badge.text = plugin.badge;
+        this.badge.visible = plugin.badge !== '';
+        this.badge.style = `color: ${plugin.color};`;
+        this.track.visible = plugin.fraction !== null;
+        this.fill.scale_x = plugin.fraction ?? 0;
+        this.body.reactive = plugin.hasItems;
+        this.body.can_focus = plugin.hasItems;
+        this.buttons.forEach((button, i) => {
+            const label = plugin.actions[i];
+            button.visible = label !== undefined;
+            if (label === undefined) return;
+            button.label = label;
+            button.style = `background-color: ${withAlpha(plugin.color, 0.22)}; color: ${plugin.color};`;
+        });
+        this.paintTrack();
+    }
+
+    setColors({ foreground, light }: ControlColors): void {
+        this.chip.setLight(light);
+        this.foreground = foreground;
+        this.paintTrack();
+    }
+
+    private paintTrack(): void {
+        const color = this.plugin?.color ?? this.foreground;
+        this.track.style = `background-color: ${withAlpha(this.foreground, 0.2)};`;
+        this.fill.style = `background-color: ${color};`;
     }
 }
 
@@ -504,8 +629,8 @@ class EventRow {
 /**
  * Home, the open notch's other page and the only one while nothing plays:
  * the date and weather, the next event, a screen recording, a call, live
- * activities, clocks, a newer Nokta, then the quick toggles and a row of
- * tiles.
+ * activities, clocks, a newer Nokta, add-on plugins' cards, then the quick
+ * toggles and a row of tiles.
  */
 export class HomePanel {
     readonly actor: St.BoxLayout;
@@ -520,6 +645,7 @@ export class HomePanel {
     private readonly call: CallRow;
     private readonly activities: ActivityRow[] = [];
     private readonly clocks: ClockRow[] = [];
+    private readonly plugins: PluginRow[] = [];
     private readonly update: UpdateRow;
     private readonly toggles = new Map<QuickToggle, TogglePill>();
     private readonly tiles = new Map<HomeTile, Tile>();
@@ -603,6 +729,11 @@ export class HomePanel {
             this.actor.add_child(row.actor);
         }
         this.actor.add_child(this.update.actor);
+        for (let i = 0; i < MAX_PANEL_PLUGINS; i++) {
+            const row = new PluginRow(handlers);
+            this.plugins.push(row);
+            this.actor.add_child(row.actor);
+        }
         this.actor.add_child(this.controls);
     }
 
@@ -623,6 +754,7 @@ export class HomePanel {
         this.activities.forEach((row, i) => row.show(content.activities[i]));
         this.clocks.forEach((row, i) => row.show(content.clocks[i]));
         this.update.show(content.update);
+        this.plugins.forEach((row, i) => row.show(content.plugins[i]));
         for (const [which, pill] of this.toggles) pill.set(content.toggles[which] === true);
         this.tiles.get('notifications')?.set(false, notificationBadge(content.notificationCount));
         this.tiles.get('focus')?.set(content.focusActive);
@@ -635,6 +767,7 @@ export class HomePanel {
         for (const tile of this.tiles.values()) tile.setColors(colors);
         for (const row of this.activities) row.setColors(colors);
         for (const row of this.clocks) row.chip.setLight(colors.light);
+        for (const row of this.plugins) row.setColors(colors);
         for (const row of [this.recording, this.call, this.update]) row.chip.setLight(colors.light);
     }
 
@@ -654,6 +787,8 @@ export class HomePanel {
                 return shown(this.clocks.find((row) => row.actor.visible)?.chip.actor);
             case 'activity':
                 return shown(this.activities.find((row) => row.actor.visible)?.chip.actor);
+            case 'plugin':
+                return shown(this.plugins.find((row) => row.actor.visible)?.chip.actor);
             case 'focus-tile': {
                 const focus = this.tiles.get('focus');
                 return focus?.actor.visible ? focus.circleActor : null;
