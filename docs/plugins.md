@@ -17,6 +17,10 @@ and `water` (a plugin that keeps running and hears its buttons).
 
 - Settings → Plugins → Added → **Add from Folder…**, or
   `nokta plugin install path/to/folder`.
+- From the [catalog](#share-it-in-the-catalog): Settings → Plugins →
+  Catalog → **Browse**, or `nokta plugin catalog` and then
+  `nokta plugin install <id>`. `nokta plugin update <id>` installs the
+  catalog's newer version and keeps its switch and options.
 - Turn it on with its switch, or `nokta plugin enable <id>`.
 - `nokta plugin run <id>` runs it now; `nokta plugin list` says what each
   one is doing and why one failed.
@@ -128,3 +132,18 @@ each button pressed reaches it as a line on its standard input:
 
 Flush after each line. If it exits, Nokta starts it again after a second,
 then waiting longer each time it keeps failing.
+
+## Share it in the catalog
+
+The catalog is [MasRama/nokta-plugins](https://github.com/MasRama/nokta-plugins):
+one folder per plugin under `plugins/`, sent as a pull request and read by
+a person before it is merged. Its `catalog` branch publishes `index.json`,
+which lists every file of every plugin with its size and SHA-256, and the
+files themselves. Nokta asks for the catalog only when you press Browse or
+run `nokta plugin catalog`. It downloads a plugin's files one by one,
+installs nothing if one does not match `index.json`, and then installs the
+folder as **Add from Folder…** does: off, until you turn it on.
+
+A plugin from the catalog can also be added from a folder, so try yours
+from a folder first. Settings shows **Update** when the catalog has a
+newer `version` of a plugin you have with the same id.

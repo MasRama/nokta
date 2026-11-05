@@ -463,12 +463,22 @@ nokta plugin enable site-status
 nokta plugin list                                # what each one is doing
 nokta plugin run site-status                     # run it now
 nokta plugin remove site-status
+nokta plugin catalog                             # the plugins others shared
+nokta plugin install days-until                  # one from the catalog, off
+nokta plugin update days-until                   # its newer version
 ```
 
 A new plugin starts off, so you can read it before it runs. Plugins run as
 you, with your files and your network: add only ones you trust.
 [docs/plugins.md](docs/plugins.md) is how to write one, with three examples
 to copy in [`examples/plugins`](examples/plugins).
+
+Shared plugins are in the catalog,
+[MasRama/nokta-plugins](https://github.com/MasRama/nokta-plugins), where each
+is read before it is merged. Settings → Plugins → Catalog → **Browse** lists
+them with **Install**, or **Update** when it has a newer version of one you
+have. Nokta checks every file it downloads against the catalog's SHA-256
+before it installs the plugin.
 
 ## Settings
 
@@ -485,7 +495,8 @@ the focus timer, the clipboard, lyrics, notifications, downloads, the file
 shelf, live activities, system popups, device alerts, the privacy dots,
 calls, the memory alert and the update check. Each has its own switch, so
 you can turn off what you do not use, and opens on its own settings. Under
-**Added** are the [plugins](#plugins) you add yourself.
+**Added** are the [plugins](#plugins) you add yourself, and under
+**Catalog** the ones others shared.
 
 <p align="center">
   <img src="docs/images/settings-page.png" width="49%" alt="The settings page in the notch: the themes, three switches and the motion speed">
@@ -781,7 +792,9 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   files and using the network; what it sends is up to the plugin. Its
   switch and options are kept in `~/.config/nokta/plugins.toml`, its files
   and what it keeps in `~/.local/share/nokta/plugins/`, and both go when
-  you remove it.
+  you remove it. Nokta asks GitHub for the plugin catalog only when you
+  press Browse, or run `nokta plugin catalog`, `install <id>` or
+  `update`; downloads wait in `~/.cache/nokta/plugins/` until installed.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.
