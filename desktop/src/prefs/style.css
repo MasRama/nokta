@@ -381,6 +381,25 @@ button:disabled {
     color: var(--danger);
 }
 
+.nokta-prefs-suggested {
+    background: var(--ember);
+    box-shadow: none;
+    color: var(--on-ember);
+}
+
+.nokta-prefs-suggested:hover:not(:disabled) {
+    background: #ff7f58;
+}
+
+.nokta-prefs-button:disabled {
+    opacity: 0.5;
+}
+
+.nokta-prefs-dim {
+    color: var(--dim);
+    white-space: nowrap;
+}
+
 .nokta-prefs-icon-button {
     display: inline-flex;
     align-items: center;

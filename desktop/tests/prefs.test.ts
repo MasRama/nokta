@@ -15,9 +15,9 @@ const find = (name: string) => rows().find((row) => `${row.table}.${row.key}` ==
 
 const windows: SettingsWindow[] = [];
 
-async function mount(settings: Props = {}) {
+async function mount(settings: Props = {}, answers: Record<string, unknown> = {}) {
     vi.useFakeTimers();
-    const bridge = new MockBridge({ Settings1: settings });
+    const bridge = new MockBridge({ Settings1: settings }, answers);
     const pickPicture = vi.fn(() => Promise.resolve<string | null>('C:\\Users\\me\\Pictures\\beach.jpg'));
     const openConfig = vi.fn();
     const showTour = vi.fn(() => Promise.resolve());
@@ -275,8 +275,8 @@ describe('added plugins on Windows', () => {
         Cards: [],
     });
 
-    async function mountPlugins(props: Props) {
-        const mounted = await mount();
+    async function mountPlugins(props: Props, answers: Record<string, unknown> = {}) {
+        const mounted = await mount({}, answers);
         mounted.bridge.set('Plugins1', props);
         const item = () => mounted.root.querySelector<HTMLElement>('[data-plugin="site-status"]')!;
         const pluginCalls = () => mounted.bridge.calls.filter((c) => c.iface === 'Plugins1').map((c) => [c.method, ...c.args]);
@@ -337,5 +337,30 @@ describe('added plugins on Windows', () => {
         const examples = [...root.querySelectorAll<HTMLButtonElement>('.nokta-prefs-button')].find((b) => b.textContent === 'Examples')!;
         examples.click();
         expect(openUri).toHaveBeenCalledWith(expect.stringContaining('examples/plugins'));
+    });
+
+    it('asks the catalog only on Browse, then installs or updates from it', async () => {
+        const listing = (id: string, version: string, runs_here = true) => ({ id, name: id, version, runs_here });
+        const catalog = JSON.stringify([
+            listing('site-status', '1.1.0'),
+            listing('days-until', '1.0.0'),
+            listing('mac-battery', '0.2.0', false),
+        ]);
+        const { root, pluginCalls } = await mountPlugins(plugins(false), { 'Plugins1.Catalog': catalog });
+        const group = root.querySelector<HTMLElement>('.nokta-prefs-catalog')!;
+        expect(pluginCalls().some(([method]) => method === 'Catalog')).toBe(false);
+        expect(group.textContent).toContain('Press Browse to see the plugins');
+        const browse = group.querySelector<HTMLButtonElement>('.nokta-prefs-group-actions .nokta-prefs-button')!;
+        browse.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(browse.textContent).toBe('Refresh');
+        const control = (id: string) => group.querySelector(`[data-plugin="${id}"] .nokta-prefs-control`)!;
+        expect(control('mac-battery').textContent).toBe('Not for this system');
+        control('site-status').querySelector<HTMLButtonElement>('button')!.click();
+        control('days-until').querySelector<HTMLButtonElement>('button')!.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(pluginCalls()).toContainEqual(['InstallFromCatalog', 'site-status']);
+        expect(pluginCalls()).toContainEqual(['InstallFromCatalog', 'days-until']);
+        expect(root.textContent).toContain('Updated');
     });
 });

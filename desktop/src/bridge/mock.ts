@@ -10,7 +10,13 @@ export class MockBridge implements Bridge {
     private readonly changed = new Listeners<[Props]>();
     private readonly signals = new Listeners<unknown[]>();
 
-    constructor(initial: Record<string, Props> = {}) {
+    /**
+     * @param answers What a method answers, by `Interface.Method`; others answer null.
+     */
+    constructor(
+        initial: Record<string, Props> = {},
+        private readonly answers: Record<string, unknown> = {},
+    ) {
         for (const [iface, props] of Object.entries(initial)) this.state.set(iface, { ...props });
     }
 
@@ -41,7 +47,7 @@ export class MockBridge implements Bridge {
             const current = (this.state.get(iface)?.[name] ?? {}) as Props;
             this.set(iface, { [name]: { ...current, [key]: value } });
         }
-        return Promise.resolve(null);
+        return Promise.resolve(this.answers[`${iface}.${method}`] ?? null);
     }
 
     onSignal(iface: string, signal: string, cb: (...args: unknown[]) => void): () => void {
