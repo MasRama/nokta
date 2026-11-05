@@ -148,7 +148,8 @@ on Windows).
   working on.
 - **[Plugins](#plugins).** Turn off what is built in that you do not use,
   and add your own cards: a small program in any language prints what the
-  notch shows.
+  notch shows. Or describe one in a sentence and have an AI service of
+  your choice write it.
 
 ## Install
 
@@ -480,6 +481,25 @@ them with **Install**, or **Update** when it has a newer version of one you
 have. Nokta checks every file it downloads against the catalog's SHA-256
 before it installs the plugin.
 
+#### Create with AI
+
+Describe a plugin in a sentence, like "how many glasses of water I drank
+today, with a + button", and an AI service you pick writes it: Anthropic's
+Claude, or any service with an OpenAI-compatible API (OpenAI, OpenRouter, a
+local Ollama or LM Studio). Set it up once under Settings → Plugins →
+**Create with AI** with your own API key, or with the `nokta` command:
+
+```sh
+nokta plugin creator --provider anthropic --key-stdin     # then paste the key
+nokta plugin creator --provider openai --url http://localhost:11434/v1 \
+    --model qwen3-coder --key-stdin                         # any OpenAI-compatible API
+nokta plugin create how many glasses of water I drank today, with a + button
+```
+
+What it writes is installed off, under an id no plugin of yours has. Read
+it in the plugins folder before you turn it on: it is a program that runs
+as you, like any plugin.
+
 ## Settings
 
 The Settings tile in home opens a page in the notch with the themes,
@@ -795,6 +815,13 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   you remove it. Nokta asks GitHub for the plugin catalog only when you
   press Browse, or run `nokta plugin catalog`, `install <id>` or
   `update`; downloads wait in `~/.cache/nokta/plugins/` until installed.
+- **Create with AI.** Nothing is sent until you press Create (or run
+  `nokta plugin create`). Then your sentence and Nokta's plugin guide go to
+  the AI service you set up, with your API key; nothing else of yours does.
+  The service, model, address and key are kept in
+  `~/.config/nokta/creator.toml` (on Windows `%APPDATA%\nokta\creator.toml`),
+  readable only by you; the key is never shown again, not even in the
+  settings window.
 - **Caches.** Cover art that a player offers as a web address is
   downloaded to `~/.cache/nokta/art/`. Lyrics are cached in
   `~/.cache/nokta/lyrics/`.
