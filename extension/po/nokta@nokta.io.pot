@@ -282,7 +282,7 @@ msgstr ""
 msgid "Screen recording"
 msgstr ""
 
-#: src/features/panel/view.ts ../desktop/src/views/activity.ts
+#: src/features/panel/view.ts src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts ../desktop/src/views/activity.ts
 msgid "Update"
 msgstr ""
 
@@ -1350,6 +1350,54 @@ msgid "Added. Turn it on when you are ready."
 msgstr ""
 
 #: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Catalog"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Plugins shared on github.com/MasRama/nokta-plugins. Nokta checks every file against the catalog before it installs one."
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Browse"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Press Browse to see the plugins"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Nokta asks the catalog only then"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "The catalog has no plugins yet"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Version"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Installed"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Not for this system"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Install"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Updated"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
+msgid "Refresh"
+msgstr ""
+
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "No plugins added yet"
 msgstr ""
 
@@ -1359,10 +1407,6 @@ msgstr ""
 
 #: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Add one from a folder, or write your own: see the examples"
-msgstr ""
-
-#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
-msgid "Version"
 msgstr ""
 
 #: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
@@ -1590,11 +1634,11 @@ msgid "The secret iCal address of a Google, Outlook or iCloud calendar"
 msgstr ""
 
 #: ../desktop/src/prefs/plugins.ts
-msgid "Examples"
+msgid "Website"
 msgstr ""
 
 #: ../desktop/src/prefs/plugins.ts
-msgid "Website"
+msgid "Examples"
 msgstr ""
 
 #: ../desktop/src/prefs/rows.ts
