@@ -1477,8 +1477,25 @@ gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Clipboard --m
 BANNERS="new imports.gi.Gio.Settings({ schema_id: 'org.gnome.desktop.notifications' }).get_boolean('show-banners')"
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut starts focus and banners go quiet" "$FIND shown('nokta-timer') && !($BANNERS)" 10
+# What comes during quiet focus is summed up once it ends, after the time
+# the timer's own alert would take.
+for n in 1 2; do
+    gdbus call --session --dest org.gnome.Shell \
+        --object-path /org/freedesktop/Notifications \
+        --method org.freedesktop.Notifications.Notify \
+        "Nokta smoke" "uint32 0" "mail-unread-symbolic" "During focus $n" "Held back" \
+        "@as []" "@a{sv} {}" "int32 -1" > /dev/null
+done
+holds "notifications stay quiet during focus" "$FIND !shown('nokta-notification')" 1
 "$HERE/keys.sh" Super_L Alt_L f
 wait_for "the shortcut stops the timer and banners come back" "$FIND shown('nokta-clock') && $BANNERS" 10
+wait_for "the focus digest counts what came during focus" \
+    "$FIND shown('nokta-notification') && one('nokta-notification-title').text === '2 notifications while you focused' && one('nokta-notification-detail').text === 'Nokta smoke 2'" 10 \
+    "$FIND JSON.stringify([shown('nokta-notification'), one('nokta-notification-title')?.text, one('nokta-notification-detail')?.text])"
+sleep 0.4
+"$HERE/shot.sh" smoke-focus-digest > /dev/null
+js "$FIND one('nokta-notification-close').emit('clicked', 1); true" > /dev/null
+wait_for "the focus digest goes away" "$FIND !shown('nokta-notification') && width() === 180" 10
 
 # On GNOME 49 and later the virtual Super key of the shortcut steps can
 # leave the overview open, which hides every window.
