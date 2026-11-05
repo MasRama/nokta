@@ -53,6 +53,12 @@ export const NOKTA_ICONS = [
     'keyboard',
     'fullscreen',
     'update',
+    'plugin',
+    'weather',
+    'download',
+    'shelf',
+    'activity',
+    'eye',
 ] as const;
 export type NoktaIcon = (typeof NOKTA_ICONS)[number];
 
