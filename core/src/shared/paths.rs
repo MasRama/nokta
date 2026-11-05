@@ -42,6 +42,10 @@ pub struct Paths {
     pub clipboard_dir: PathBuf,
     /// The folder finished downloads land in; none outside a real session.
     pub downloads_dir: Option<PathBuf>,
+    /// The add-on plugins, one folder each.
+    pub plugins_dir: PathBuf,
+    /// Which plugins are on and their options, next to `config_file`.
+    pub plugins_file: PathBuf,
 }
 
 impl Paths {
@@ -55,6 +59,8 @@ impl Paths {
             system_thumbnails: Some(cache_home.join("thumbnails")),
             clipboard_dir: cache_home.join("nokta").join("clipboard"),
             downloads_dir: None,
+            plugins_dir: data_home.join("nokta").join("plugins"),
+            plugins_file: config_home.join("nokta").join("plugins.toml"),
         }
     }
 
@@ -106,6 +112,8 @@ impl Paths {
                     lyrics_offsets_file: support.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
                     downloads_dir: Some(home.join("Downloads")),
+                    plugins_dir: support.join("plugins"),
+                    plugins_file: support.join("plugins.toml"),
                 }
             }
             System::Windows => {
@@ -119,6 +127,8 @@ impl Paths {
                     lyrics_offsets_file: roaming.join("lyrics-offsets.toml"),
                     system_thumbnails: None,
                     downloads_dir: dir("USERPROFILE").map(|home| home.join("Downloads")),
+                    plugins_dir: roaming.join("plugins"),
+                    plugins_file: roaming.join("plugins.toml"),
                 }
             }
         })
@@ -171,6 +181,8 @@ mod tests {
             paths.system_thumbnails.as_deref(),
             Some(Path::new("/k/thumbnails"))
         );
+        assert_eq!(paths.plugins_dir, Path::new("/d/nokta/plugins"));
+        assert_eq!(paths.plugins_file, Path::new("/c/nokta/plugins.toml"));
     }
 
     #[test]
@@ -277,6 +289,11 @@ mod tests {
         assert_eq!(
             paths.lyrics_offsets_file,
             roaming.join("nokta").join("lyrics-offsets.toml")
+        );
+        assert_eq!(paths.plugins_dir, roaming.join("nokta").join("plugins"));
+        assert_eq!(
+            paths.plugins_file,
+            roaming.join("nokta").join("plugins.toml")
         );
         assert!(Paths::for_system(System::Windows, env(&vars[..1])).is_err());
     }

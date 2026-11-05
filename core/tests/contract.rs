@@ -130,6 +130,7 @@ async fn daemon_matches_contracts() {
         ("io.nokta.Shelf1.xml", "/io/nokta/Shelf"),
         ("io.nokta.Clipboard1.xml", "/io/nokta/Clipboard"),
         ("io.nokta.Downloads1.xml", "/io/nokta/Downloads"),
+        ("io.nokta.Plugins1.xml", "/io/nokta/Plugins"),
         ("io.nokta.System1.xml", "/io/nokta/System"),
         ("io.nokta.Updates1.xml", "/io/nokta/Updates"),
     ] {

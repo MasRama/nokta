@@ -1,5 +1,6 @@
 //! The services that run on every system: settings, lyrics, the timer, live
-//! activities, the weather, the file shelf, the clipboard and downloads.
+//! activities, the weather, the file shelf, the clipboard, downloads and
+//! add-on plugins.
 //! Media players and device alerts are system sources; the platform part of
 //! `app` starts them and hands the media state in.
 
@@ -13,13 +14,14 @@ use crate::features::clipboard;
 use crate::features::downloads;
 use crate::features::lyrics::{self, cache::Cache, lrclib};
 use crate::features::media::MediaState;
+use crate::features::plugins;
 use crate::features::settings::{self, Config, Store};
 use crate::features::shelf;
 use crate::features::timer::logic::{Lengths, Phase, Snapshot};
 use crate::features::timer::{self, service::Command};
 use crate::features::weather::{self, openmeteo};
 use crate::shared::clock::{monotonic_us, wall_us};
-use crate::shared::paths::Paths;
+use crate::shared::paths::{Paths, System};
 
 pub struct Services {
     pub config: watch::Receiver<Config>,
@@ -34,6 +36,7 @@ pub struct Services {
     pub clipboard: clipboard::service::Handle,
     /// Files that finished downloading.
     pub downloads: mpsc::Receiver<downloads::service::Finished>,
+    pub plugins: plugins::service::Handle,
     /// Watches config.toml as long as the services live.
     _config_watcher: Option<notify::RecommendedWatcher>,
 }
@@ -108,6 +111,14 @@ impl Services {
             paths.cache_dir.join("downloads"),
         );
 
+        let plugins = plugins::service::spawn(
+            plugins::service::Dirs {
+                plugins_dir: paths.plugins_dir.clone(),
+                saved_file: paths.plugins_file.clone(),
+            },
+            System::current(),
+        );
+
         Services {
             config,
             config_file: paths.config_file.clone(),
@@ -128,6 +139,7 @@ impl Services {
             shelf,
             clipboard,
             downloads,
+            plugins,
             _config_watcher: config_watcher,
         }
     }
