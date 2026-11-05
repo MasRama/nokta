@@ -472,3 +472,179 @@ done"#,
         assert!(err.is_err());
     }
 }
+
+mod catalog {
+    use tokio::sync::{mpsc, oneshot};
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::super::catalog::{self, sha256_hex, valid_path, Client};
+    use super::super::service::{self, Command, Dirs};
+    use crate::shared::paths::System;
+
+    const MANIFEST: &str =
+        "api = 1\nid = \"hello\"\nname = \"Hello\"\nversion = \"1.2.0\"\n[run]\ncommand = [\"./hello.sh\"]\nevery = 60\n";
+    const SCRIPT: &str = "#!/bin/sh\necho '{\"title\":\"Hi\"}'\n";
+
+    fn file(path: &str, data: &str, executable: bool) -> serde_json::Value {
+        serde_json::json!({
+            "path": path,
+            "size": data.len(),
+            "sha256": sha256_hex(data.as_bytes()),
+            "executable": executable,
+        })
+    }
+
+    fn hello(files: Vec<serde_json::Value>) -> serde_json::Value {
+        serde_json::json!({
+            "id": "hello", "name": "Hello", "version": "1.2.0",
+            "description": "Says hi", "unix": true, "windows": false, "files": files,
+        })
+    }
+
+    fn index(plugins: Vec<serde_json::Value>) -> String {
+        serde_json::json!({ "api": 1, "plugins": plugins }).to_string()
+    }
+
+    #[test]
+    fn paths_stay_inside_the_plugin_folder() {
+        for good in ["plugin.toml", "bin/run.sh", "a_b-c.1/x.py"] {
+            assert!(valid_path(good), "{good}");
+        }
+        for bad in [
+            "",
+            "../x",
+            "a/../b",
+            "/etc/passwd",
+            ".hidden",
+            "a/.git/config",
+            "a//b",
+            "a\\b",
+            "C:x",
+            "a b",
+        ] {
+            assert!(!valid_path(bad), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_bad_entry_is_left_out_and_the_rest_listed() {
+        let good = hello(vec![file("plugin.toml", MANIFEST, false)]);
+        let mut no_manifest = hello(vec![file("hello.sh", SCRIPT, true)]);
+        no_manifest["id"] = "no-manifest".into();
+        let mut escapes = hello(vec![
+            file("plugin.toml", MANIFEST, false),
+            file("../evil.sh", SCRIPT, true),
+        ]);
+        escapes["id"] = "escapes".into();
+        let mut no_sum = hello(vec![file("plugin.toml", MANIFEST, false)]);
+        no_sum["id"] = "no-sum".into();
+        no_sum["files"][0]["sha256"] = "abc".into();
+        let text = index(vec![
+            good.clone(),
+            no_manifest,
+            escapes,
+            no_sum,
+            serde_json::json!({"id": 3}),
+            good,
+        ]);
+        let listings = catalog::parse(&text).unwrap();
+        let ids: Vec<&str> = listings.iter().map(|l| l.id.as_str()).collect();
+        assert_eq!(ids, ["hello"], "one of each id, only the good ones");
+        assert!(listings[0].runs_on(System::Linux));
+        assert!(!listings[0].runs_on(System::Windows));
+
+        let json = catalog::to_json(&listings, System::Windows);
+        assert!(json.contains("\"runs_here\":false") && !json.contains("sha256"));
+        assert!(catalog::parse(r#"{"api": 2, "plugins": []}"#).is_err());
+        assert!(catalog::parse("nope").is_err());
+    }
+
+    async fn ask<T>(
+        commands: &mpsc::Sender<Command>,
+        make: impl FnOnce(oneshot::Sender<Result<T, String>>) -> Command,
+    ) -> Result<T, String> {
+        let (reply, answer) = oneshot::channel();
+        commands.send(make(reply)).await.unwrap();
+        answer.await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn installs_a_checked_plugin_and_refuses_one_that_does_not_match() {
+        let server = MockServer::start().await;
+        let files = vec![
+            file("plugin.toml", MANIFEST, false),
+            file("hello.sh", SCRIPT, true),
+        ];
+        Mock::given(method("GET"))
+            .and(path("/index.json"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(index(vec![hello(files)])))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/plugins/hello/plugin.toml"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(MANIFEST))
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/plugins/hello/hello.sh"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(SCRIPT))
+            .up_to_n_times(1)
+            .mount(&server)
+            .await;
+
+        let home = tempfile::tempdir().unwrap();
+        let dirs = Dirs {
+            plugins_dir: home.path().join("data/plugins"),
+            saved_file: home.path().join("config/plugins.toml"),
+        };
+        let handle = service::spawn(dirs.clone(), System::Linux);
+        let source = catalog::Source {
+            client: Client::new(&format!("{}/", server.uri()), "Nokta/test"),
+            staging: home.path().join("cache/plugins"),
+        };
+
+        let catalog_json = source.browse().await.unwrap();
+        assert!(catalog_json.contains("\"version\":\"1.2.0\""));
+        assert_eq!(
+            source.install(&handle.commands, "hello").await.as_deref(),
+            Ok("hello")
+        );
+        let installed = dirs.plugins_dir.join("hello/hello.sh");
+        assert_eq!(std::fs::read_to_string(&installed).unwrap(), SCRIPT);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&installed).unwrap().permissions().mode();
+            assert_eq!(mode & 0o111, 0o111, "an executable file stays executable");
+        }
+        let state = handle.state.borrow().clone();
+        assert!(!state.plugins[0].enabled, "a catalog plugin starts off too");
+        assert!(
+            !home.path().join("cache/plugins/hello").exists(),
+            "the download is cleaned up"
+        );
+
+        // The script changed after the index was written: nothing changes.
+        ask(&handle.commands, |reply| Command::SetEnabled {
+            id: "hello".into(),
+            enabled: true,
+            reply,
+        })
+        .await
+        .unwrap();
+        Mock::given(method("GET"))
+            .and(path("/plugins/hello/hello.sh"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(SCRIPT.replace("Hi", "Ha")))
+            .mount(&server)
+            .await;
+        let err = source.install(&handle.commands, "hello").await.unwrap_err();
+        assert!(err.contains("did not match"), "{err}");
+        assert_eq!(std::fs::read_to_string(&installed).unwrap(), SCRIPT);
+        assert!(
+            handle.state.borrow().plugins[0].enabled,
+            "it keeps its switch"
+        );
+        assert!(source.install(&handle.commands, "nope").await.is_err());
+    }
+}

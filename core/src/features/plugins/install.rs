@@ -8,9 +8,9 @@ use std::path::{Path, PathBuf};
 use super::manifest::{self, Manifest};
 
 /// A plugin folder may hold this many files…
-const MAX_FILES: usize = 500;
+pub const MAX_FILES: usize = 500;
 /// …and this many bytes.
-const MAX_BYTES: u64 = 20 * 1024 * 1024;
+pub const MAX_BYTES: u64 = 20 * 1024 * 1024;
 
 /// Reads the `plugin.toml` in `dir`.
 pub fn read_manifest(dir: &Path) -> Result<Manifest, String> {

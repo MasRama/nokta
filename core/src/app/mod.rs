@@ -29,6 +29,8 @@ pub struct RunOptions {
     pub open_meteo: OpenMeteoUrls,
     /// Where noktad asks for Nokta's latest release.
     pub github_api_url: String,
+    /// Where the plugin catalog is published.
+    pub plugin_catalog_url: String,
     /// What records the music for the bars that follow it: `pw-record`.
     pub recorder: String,
 }

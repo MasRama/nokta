@@ -36,6 +36,7 @@ impl Daemon {
             },
             // Tests that want releases point this at their own server.
             github_api_url: "http://127.0.0.1:9".into(),
+            plugin_catalog_url: "http://127.0.0.1:9".into(),
             // Tests that want the bars to follow the music bring their own.
             recorder: "/nonexistent/pw-record".into(),
         }
