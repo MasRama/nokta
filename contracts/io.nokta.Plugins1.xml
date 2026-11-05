@@ -1,0 +1,75 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- Nokta contract v1. Object path: /io/nokta/Plugins. Bus name: io.nokta.Nokta. -->
+<node>
+  <interface name="io.nokta.Plugins1">
+    <!--
+      The installed add-on plugins, by name: id, enabled, status, message and
+      info. status is off, running (started, nothing printed yet), ok, error
+      (message says why), broken (its plugin.toml; message says why) or
+      unsupported (no command for this system). info is a JSON object: name,
+      description, version, author, homepage, icon, every, dir, runs_here
+      and options (each with key, title, subtitle, type, default, value, and
+      min and max or choices).
+    -->
+    <property name="Plugins" type="a(sbsss)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!--
+      What the running plugins show, in the order of Plugins: id and a card
+      as JSON. A card has title, detail, icon, tone, progress (0 to 1, or
+      absent), badge (for the closed notch, empty for none), items (title,
+      detail, icon, open) and actions (label, and open or run). open is
+      always an http or https address. Only cards with a title or a badge
+      are listed.
+    -->
+    <property name="Cards" type="a(ss)" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
+    <!-- Turns the plugin id on or off. Fails for an unknown, broken or unsupported one. -->
+    <method name="SetEnabled">
+      <arg name="id" type="s" direction="in"/>
+      <arg name="enabled" type="b" direction="in"/>
+    </method>
+    <!--
+      Sets one of the plugin's options; value is text: true or false, a
+      whole number, or the text or choice. Fails with InvalidArgs when it
+      does not fit.
+    -->
+    <method name="SetOption">
+      <arg name="id" type="s" direction="in"/>
+      <arg name="key" type="s" direction="in"/>
+      <arg name="value" type="s" direction="in"/>
+    </method>
+    <!--
+      Runs the plugin now with action, the run of one of its card's actions,
+      or empty to refresh it. Returns at once. Fails when it is off.
+    -->
+    <method name="Run">
+      <arg name="id" type="s" direction="in"/>
+      <arg name="action" type="s" direction="in"/>
+    </method>
+    <!--
+      Copies the plugin folder at path (with its plugin.toml) into Nokta's
+      plugins folder, replacing one with the same id, and returns its id. A
+      new plugin starts off.
+    -->
+    <method name="Install">
+      <arg name="path" type="s" direction="in"/>
+      <arg name="id" type="s" direction="out"/>
+    </method>
+    <!-- Stops the plugin id and deletes its folder and its options. -->
+    <method name="Remove">
+      <arg name="id" type="s" direction="in"/>
+    </method>
+    <!-- A plugin's card asked for an alert; each alert id shows once. -->
+    <signal name="Alert">
+      <arg name="id" type="s"/>
+      <arg name="title" type="s"/>
+      <arg name="detail" type="s"/>
+      <arg name="icon" type="s"/>
+      <arg name="tone" type="s"/>
+      <arg name="important" type="b"/>
+    </signal>
+  </interface>
+</node>

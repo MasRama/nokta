@@ -7,6 +7,7 @@ pub mod devices;
 pub mod downloads;
 pub mod lyrics;
 pub mod media;
+pub mod plugins;
 pub mod settings;
 pub mod shelf;
 pub mod system;

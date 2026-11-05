@@ -1050,6 +1050,68 @@ async fn a_finished_download_is_announced() {
     );
 }
 
+#[tokio::test]
+async fn a_plugin_is_installed_turned_on_and_shows_its_card() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, NO_LRCLIB).await;
+    let source = tempfile::tempdir().unwrap();
+    std::fs::write(
+        source.path().join("plugin.toml"),
+        "api = 1\nid = \"hello\"\nname = \"Hello\"\n[run]\ncommand = [\"./hello.sh\"]\nevery = 60\n",
+    )
+    .unwrap();
+    let script = source.path().join("hello.sh");
+    std::fs::write(
+        &script,
+        "#!/bin/sh\necho '{\"title\":\"Hello\",\"badge\":\"1\"}'\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let conn = bus.connect().await;
+    let p = properties(&conn, "/io/nokta/Plugins").await;
+    let plugins = zbus::Proxy::new(&conn, NAME, "/io/nokta/Plugins", "io.nokta.Plugins1")
+        .await
+        .unwrap();
+    let id: String = plugins
+        .call("Install", &(source.path().display().to_string(),))
+        .await
+        .unwrap();
+    assert_eq!(id, "hello");
+    assert!(daemon.paths().plugins_dir.join("hello/hello.sh").exists());
+    let rows = <Vec<(String, bool, String, String, String)>>::try_from(
+        get(&p, "io.nokta.Plugins1", "Plugins").await,
+    )
+    .unwrap();
+    assert_eq!((rows[0].0.as_str(), rows[0].1), ("hello", false));
+
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let () = plugins.call("SetEnabled", &("hello", true)).await.unwrap();
+    let cards = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let cards =
+                <Vec<(String, String)>>::try_from(get(&p, "io.nokta.Plugins1", "Cards").await)
+                    .unwrap();
+            if !cards.is_empty() {
+                return cards;
+            }
+            changes.next().await;
+        }
+    })
+    .await
+    .expect("a card within 5 s");
+    assert_eq!(cards[0].0, "hello");
+    assert!(cards[0].1.contains("\"badge\":\"1\""), "{}", cards[0].1);
+
+    let err = plugins
+        .call::<_, _, ()>("SetOption", &("hello", "nothing", "1"))
+        .await
+        .unwrap_err();
+    assert!(err.to_string().contains("InvalidArgs"), "{err}");
+}
+
 type Usage = (f64, u64, u64, f64, f64, f64);
 
 fn usage(changed: &HashMap<String, OwnedValue>) -> Usage {

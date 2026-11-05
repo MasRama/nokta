@@ -15,6 +15,7 @@ use crate::features::devices;
 use crate::features::downloads;
 use crate::features::lyrics;
 use crate::features::media::{self, art::ArtCache};
+use crate::features::plugins;
 use crate::features::settings;
 use crate::features::shelf;
 use crate::features::system as system_monitor;
@@ -95,6 +96,7 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     shelf::dbus::serve(&conn, services.shelf).await?;
     clipboard::dbus::serve(&conn, services.clipboard).await?;
     downloads::dbus::serve(&conn, services.downloads).await?;
+    plugins::dbus::serve(&conn, services.plugins).await?;
     let monitor = system_monitor::service::spawn(
         std::sync::Arc::new(system_monitor::sample::Proc::new()),
         super::services::follow(services.config.clone(), |c| c.system.clone()),
