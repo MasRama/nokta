@@ -648,3 +648,240 @@ mod catalog {
         assert!(source.install(&handle.commands, "nope").await.is_err());
     }
 }
+
+mod creator {
+    use wiremock::matchers::{body_partial_json, header, method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    use super::super::creator::{
+        self, anthropic_text, free_id, openai_text, status_error, write_draft, Creator, Draft,
+        Settings,
+    };
+    use super::super::service::{self, Dirs};
+    use crate::shared::paths::System;
+
+    const MANIFEST: &str = "api = 1\nid = \"days-left\"\nname = \"Days left\"\nversion = \"0.1.0\"\nauthor = \"Creator Mode\"\n\n[run]\ncommand = [\"./days.sh\"]\nevery = 3600\n";
+    const SCRIPT: &str = "#!/bin/sh\necho '{\"title\":\"12 days left\"}'\n";
+
+    fn draft_json() -> String {
+        serde_json::json!({
+            "id": "days-left",
+            "files": [
+                {"path": "plugin.toml", "content": MANIFEST, "executable": false},
+                {"path": "days.sh", "content": SCRIPT, "executable": true},
+            ]
+        })
+        .to_string()
+    }
+
+    fn draft(files: serde_json::Value) -> Draft {
+        serde_json::from_value(serde_json::json!({"id": "x", "files": files})).unwrap()
+    }
+
+    #[test]
+    fn an_id_is_made_valid_and_never_one_the_user_has() {
+        let taken = vec!["days-left".to_owned(), "days-left-2".to_owned()];
+        assert_eq!(free_id("days-left", &[]), "days-left");
+        assert_eq!(free_id("days-left", &taken), "days-left-3");
+        assert_eq!(free_id("Bitcoin Price!", &[]), "bitcoin-price");
+        assert_eq!(free_id("-", &[]), "my-plugin");
+        assert!(free_id(&"a".repeat(80), &[]).len() <= 40);
+    }
+
+    #[test]
+    fn a_draft_is_checked_like_a_folder_and_takes_a_free_id() {
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("draft");
+        let good: Draft = serde_json::from_str(&draft_json()).unwrap();
+        assert_eq!(
+            write_draft(&good, &["days-left".to_owned()], &dir).as_deref(),
+            Ok("days-left-2")
+        );
+        let toml = std::fs::read_to_string(dir.join("plugin.toml")).unwrap();
+        assert!(toml.contains("id = \"days-left-2\""), "{toml}");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = |p| std::fs::metadata(dir.join(p)).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode("days.sh"), 0o755);
+            assert_eq!(mode("plugin.toml"), 0o644);
+        }
+
+        let escape = draft(serde_json::json!([
+            {"path": "plugin.toml", "content": MANIFEST, "executable": false},
+            {"path": "../evil.sh", "content": SCRIPT, "executable": true},
+        ]));
+        assert!(write_draft(&escape, &[], &dir).is_err());
+        let no_manifest = draft(serde_json::json!([
+            {"path": "days.sh", "content": SCRIPT, "executable": true},
+        ]));
+        assert!(write_draft(&no_manifest, &[], &dir).is_err());
+        let no_run = draft(serde_json::json!([
+            {"path": "plugin.toml", "content": "api = 1\nid = \"x1\"\nname = \"X\"\n", "executable": false},
+        ]));
+        assert!(
+            write_draft(&no_run, &[], &dir).is_err(),
+            "Nokta's own checks run"
+        );
+    }
+
+    #[test]
+    fn the_settings_keep_the_key_private() {
+        let home = tempfile::tempdir().unwrap();
+        let file = home.path().join("nokta/creator.toml");
+        let creator = Creator::new(file.clone(), home.path().join("cache"), "Nokta/test");
+        assert!(creator.settings().missing().is_some());
+        creator
+            .configure("anthropic", "", "", "sk-ant-secret")
+            .unwrap();
+        let settings = creator.settings();
+        assert_eq!(settings.model(), creator::ANTHROPIC_MODEL);
+        assert!(settings.missing().is_none());
+        let json = settings.to_json();
+        assert!(
+            json.contains("\"has_key\":true") && !json.contains("secret"),
+            "{json}"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&file).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600);
+        }
+        // An empty key keeps the saved one; another provider needs an address.
+        creator
+            .configure("openai", "deepseek-chat", "", "")
+            .unwrap();
+        let settings = creator.settings();
+        assert_eq!(settings.api_key, "sk-ant-secret");
+        assert!(settings.missing().is_some());
+        assert!(creator.configure("gemini", "", "", "").is_err());
+        assert!(creator.configure("openai", "m", "ftp://x", "").is_err());
+        std::fs::write(&file, "provider = 3").unwrap();
+        assert_eq!(creator.settings(), Settings::default());
+    }
+
+    #[test]
+    fn answers_are_read_and_refusals_say_so() {
+        let text = serde_json::json!({
+            "stop_reason": "end_turn",
+            "content": [{"type": "thinking", "thinking": ""}, {"type": "text", "text": "{}"}]
+        });
+        assert_eq!(anthropic_text(&text).as_deref(), Ok("{}"));
+        let refused = serde_json::json!({"stop_reason": "refusal", "content": []});
+        assert!(anthropic_text(&refused).unwrap_err().contains("declined"));
+        let long = serde_json::json!({"stop_reason": "max_tokens", "content": []});
+        assert!(anthropic_text(&long).unwrap_err().contains("too long"));
+        let chat = serde_json::json!({"choices": [{"finish_reason": "stop", "message": {"content": "{}"}}]});
+        assert_eq!(openai_text(&chat).as_deref(), Ok("{}"));
+        let cut = serde_json::json!({"choices": [{"finish_reason": "length", "message": {"content": "{"}}]});
+        assert!(openai_text(&cut).is_err());
+        assert!(
+            status_error(401, r#"{"error":{"message":"invalid x-api-key"}}"#)
+                .starts_with("the AI service did not accept the API key: invalid")
+        );
+        assert_eq!(status_error(418, "teapot"), "the AI service answered 418");
+    }
+
+    #[tokio::test]
+    async fn anthropic_writes_a_plugin_that_installs_off() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/messages"))
+            .and(header("x-api-key", "sk-test"))
+            .and(header("anthropic-version", "2026-10-21"))
+            .and(body_partial_json(serde_json::json!({
+                "model": "claude-opus-5-5",
+                "output_config": {"format": {"type": "json_schema"}}
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "stop_reason": "end_turn",
+                "content": [{"type": "text", "text": draft_json()}]
+            })))
+            .expect(1)
+            .mount(&server)
+            .await;
+
+        let home = tempfile::tempdir().unwrap();
+        let dirs = Dirs {
+            plugins_dir: home.path().join("data/plugins"),
+            saved_file: home.path().join("config/plugins.toml"),
+        };
+        let handle = service::spawn(dirs.clone(), System::Linux);
+        let creator = Creator::new(
+            home.path().join("config/creator.toml"),
+            home.path().join("cache/plugins"),
+            "Nokta/test",
+        );
+        creator
+            .configure("anthropic", "", &server.uri(), "sk-test")
+            .unwrap();
+        let id = creator
+            .create(&handle.commands, &[], "how many days until my exam")
+            .await
+            .unwrap();
+        assert_eq!(id, "days-left");
+        assert_eq!(
+            std::fs::read_to_string(dirs.plugins_dir.join("days-left/days.sh")).unwrap(),
+            SCRIPT
+        );
+        let state = handle.state.borrow().clone();
+        assert!(!state.plugins[0].enabled, "a written plugin starts off");
+        assert!(!home.path().join("cache/plugins/creator").exists());
+        assert!(creator.create(&handle.commands, &[], "  ").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn an_openai_compatible_api_works_too_and_a_busy_one_is_tried_again() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .respond_with(ResponseTemplate::new(529).insert_header("retry-after", "0"))
+            .up_to_n_times(1)
+            .mount(&server)
+            .await;
+        Mock::given(method("POST"))
+            .and(path("/v1/chat/completions"))
+            .and(header("authorization", "Bearer sk-other"))
+            .and(body_partial_json(serde_json::json!({
+                "model": "deepseek-chat",
+                "response_format": {"type": "json_object"}
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+                "choices": [{
+                    "finish_reason": "stop",
+                    "message": {"content": format!("```json\n{}\n```", draft_json())}
+                }]
+            })))
+            .mount(&server)
+            .await;
+
+        let home = tempfile::tempdir().unwrap();
+        let dirs = Dirs {
+            plugins_dir: home.path().join("data/plugins"),
+            saved_file: home.path().join("config/plugins.toml"),
+        };
+        let handle = service::spawn(dirs, System::Linux);
+        let creator = Creator::new(
+            home.path().join("config/creator.toml"),
+            home.path().join("cache/plugins"),
+            "Nokta/test",
+        );
+        creator
+            .configure(
+                "openai",
+                "deepseek-chat",
+                &format!("{}/v1/", server.uri()),
+                "sk-other",
+            )
+            .unwrap();
+        let taken = vec!["days-left".to_owned()];
+        assert_eq!(
+            creator
+                .create(&handle.commands, &taken, "days until my exam")
+                .await
+                .as_deref(),
+            Ok("days-left-2")
+        );
+    }
+}

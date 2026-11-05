@@ -103,6 +103,11 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
             client: plugins::catalog::Client::new(&options.plugin_catalog_url, USER_AGENT),
             staging: paths.cache_dir.join("plugins"),
         },
+        plugins::creator::Creator::new(
+            paths.plugins_file.with_file_name("creator.toml"),
+            paths.cache_dir.join("plugins"),
+            USER_AGENT,
+        ),
     )
     .await?;
     let monitor = system_monitor::service::spawn(
