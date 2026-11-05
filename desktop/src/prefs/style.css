@@ -403,6 +403,49 @@ button:disabled {
     margin-left: 6px;
 }
 
+/* The Plugins page: a built-in's head with its icon and switch, its settings under it */
+
+.nokta-prefs-plugin + .nokta-prefs-plugin {
+    border-top: 1px solid var(--line);
+}
+
+.nokta-prefs-plugin-head {
+    flex-wrap: nowrap;
+}
+
+.nokta-prefs-plugin-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+.nokta-prefs-plugin-off .nokta-prefs-plugin-icon {
+    color: var(--faint);
+}
+
+.nokta-prefs-plugin-chevron {
+    color: var(--dim);
+    transition: transform 160ms ease;
+}
+
+.nokta-prefs-plugin-open .nokta-prefs-plugin-chevron {
+    transform: rotate(180deg);
+}
+
+.nokta-prefs-plugin-off .nokta-prefs-plugin-chevron {
+    opacity: 0.4;
+}
+
+.nokta-prefs-plugin-details {
+    margin: 0 0 6px 50px;
+    border-top: 1px solid var(--line);
+}
+
 /* Messages and the reset dialog */
 
 .nokta-prefs-toasts {

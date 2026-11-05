@@ -4,7 +4,7 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 
-import { appearanceFrom, rowMin, rowValue, SETTINGS_PAGES, type Row } from '../features/settings/index.js';
+import { appearanceFrom, rowMin, rowValue, SETTINGS_PAGES, type Group, type Row } from '../features/settings/index.js';
 import { pageIcon, previewModel } from './logic/look.js';
 import { BRAND_LOGO, brandCss, PREFS_CLASS, PREFS_CSS } from './logic/style.js';
 import { NotchPreview } from './preview.js';
@@ -130,6 +130,39 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
         page.add(banner);
 
         if (spec.name === 'appearance') page.add(lookGroup(preview, gallery));
+        const addRow = (row: Row, add: (widget: Gtk.Widget) => void) => {
+            const setting: SettingRow = buildRow(row, (value) =>
+                queue(row, value, () => setting.show(rowValue(row, service.tables))),
+            );
+            setting.show(rowValue(row, {}));
+            setting.widget.sensitive = false;
+            rows.push(setting);
+            add(setting.widget);
+        };
+        if (spec.name === 'plugins') {
+            const group = new Adw.PreferencesGroup({
+                title: _('Built in'),
+                description: _('Part of Nokta. Turn off what you do not use; open one for its settings.'),
+            });
+            for (const groupSpec of spec.groups) {
+                const [first, ...others] = groupSpec.rows;
+                const rest = groupSpec.master ? others : groupSpec.rows;
+                const widget = builtInRow(groupSpec, path, rest.length > 0);
+                if (groupSpec.master) {
+                    const setting: SettingRow = masterRow(first, widget, (value) =>
+                        queue(first, value, () => setting.show(rowValue(first, service.tables))),
+                    );
+                    setting.show(rowValue(first, {}));
+                    setting.widget.sensitive = false;
+                    rows.push(setting);
+                }
+                if (widget instanceof Adw.ExpanderRow) for (const row of rest) addRow(row, (w) => widget.add_row(w));
+                group.add(widget);
+            }
+            page.add(group);
+            stack.add_named(page, spec.name);
+            continue;
+        }
         for (const groupSpec of spec.groups) {
             const group = new Adw.PreferencesGroup({
                 title: _(groupSpec.title), // i18n: runtime
@@ -138,13 +171,7 @@ export function fillWindow(window: Adw.PreferencesWindow, path: string, showTour
             for (const row of groupSpec.rows) {
                 // The gallery above picks the theme.
                 if (row.table === 'appearance' && row.key === 'theme') continue;
-                const setting: SettingRow = buildRow(row, (value) =>
-                    queue(row, value, () => setting.show(rowValue(row, service.tables))),
-                );
-                setting.show(rowValue(row, {}));
-                setting.widget.sensitive = false;
-                rows.push(setting);
-                group.add(setting.widget);
+                addRow(row, (widget) => group.add(widget));
             }
             page.add(group);
         }
@@ -237,8 +264,7 @@ function sidebar(stack: Gtk.Stack, content: Adw.NavigationPage, path: string): G
         const box = new Gtk.Box({ spacing: 12 });
         const icon = pageIcon(spec.name);
         // Found by name in a search path GTK would not recolor them; as files it does.
-        const file = Gio.File.new_for_path(GLib.build_filenamev([path, 'icons', `nokta-${icon}-symbolic.svg`]));
-        box.append(icon ? new Gtk.Image({ gicon: Gio.FileIcon.new(file) }) : new Gtk.Image({ icon_name: spec.icon }));
+        box.append(icon ? noktaImage(path, icon) : new Gtk.Image({ icon_name: spec.icon }));
         box.append(new Gtk.Label({ label: _(spec.title), xalign: 0, hexpand: true })); // i18n: runtime
         list.append(new Gtk.ListBoxRow({ child: box }));
     }
@@ -255,6 +281,55 @@ function sidebar(stack: Gtk.Stack, content: Adw.NavigationPage, path: string): G
     });
     list.select_row(list.get_row_at_index(0));
     return new Gtk.ScrolledWindow({ child: list, hscrollbar_policy: Gtk.PolicyType.NEVER, vexpand: true });
+}
+
+/** Nokta's icon `name` from the extension's `path`, loaded as a file so GTK recolors it. */
+function noktaImage(path: string, name: string): Gtk.Image {
+    const file = Gio.File.new_for_path(GLib.build_filenamev([path, 'icons', `nokta-${name}-symbolic.svg`]));
+    return new Gtk.Image({ gicon: Gio.FileIcon.new(file) });
+}
+
+/**
+ * A built-in on the Plugins page: its icon, name and what it does, and its
+ * settings inside when it has any; one with none is a plain switch row.
+ */
+function builtInRow(group: Group, path: string, expands: boolean): Adw.ExpanderRow | Adw.SwitchRow {
+    const title = _(group.title); // i18n: runtime
+    const subtitle = _(group.description ?? ''); // i18n: runtime
+    const row = expands
+        ? new Adw.ExpanderRow({ title, subtitle, show_enable_switch: group.master === true })
+        : new Adw.SwitchRow({ title, subtitle });
+    if (group.icon) row.add_prefix(noktaImage(path, group.icon));
+    return row;
+}
+
+/**
+ * The built-in's on/off switch, its row's own: an expander's folds it and
+ * hides its settings while off.
+ */
+function masterRow(row: Row, widget: Adw.ExpanderRow | Adw.SwitchRow, onChange: (value: GLib.Variant) => void): SettingRow {
+    const property = widget instanceof Adw.ExpanderRow ? 'enable-expansion' : 'active';
+    const get = () => (widget instanceof Adw.ExpanderRow ? widget.enable_expansion : widget.active);
+    const set = (on: boolean) => {
+        if (widget instanceof Adw.ExpanderRow) widget.enable_expansion = on;
+        else widget.active = on;
+    };
+    let showing = false;
+    widget.connect(`notify::${property}`, () => {
+        if (!showing) onChange(new GLib.Variant('b', get()));
+    });
+    return {
+        row,
+        widget,
+        show: (value) => {
+            showing = true;
+            try {
+                set(value === true);
+            } finally {
+                showing = false;
+            }
+        },
+    };
 }
 
 /** The live preview over the theme gallery, first on Appearance; the Theme group follows it. */

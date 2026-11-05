@@ -6,6 +6,7 @@ import { paletteFor, type Palette, type PictureState, type ThemeColors } from '.
 const PAGE_ICONS: Record<string, NoktaIcon> = {
     appearance: 'dark-style',
     behavior: 'settings',
+    plugins: 'plugin',
     home: 'home',
 };
 

@@ -667,7 +667,27 @@ msgid "Move GNOME's clock to the right"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
+msgid "Music"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Bars that follow the music"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Records what plays to measure it; GNOME may show its microphone indicator meanwhile"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Plugins"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
 msgid "Weather"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "The weather next to the date when the notch opens"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
@@ -703,6 +723,10 @@ msgid "Calendar"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
+msgid "Your next events and a reminder before they start"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
 msgid "Show events"
 msgstr ""
 
@@ -734,236 +758,12 @@ msgstr ""
 msgid "From the reminder, the closed notch shows the minutes left"
 msgstr ""
 
-#: src/features/settings/logic/schema.ts
-msgid "Keep a clipboard history"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Text and pictures you copy, in memory only"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Entries to keep"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Besides the pinned ones"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Music"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Show lyrics"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Look up lyrics online"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Sends artist, title, album and duration to lrclib.net"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Romanize lyrics"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "A line in Latin letters under Korean and Japanese lines"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Bars that follow the music"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Records what plays to measure it; GNOME may show its microphone indicator meanwhile"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "System popups"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Volume and brightness in the notch"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Instead of GNOME's popup"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "How long"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Milliseconds after the last change"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Caps Lock"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Num Lock"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Keyboard layout"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "The new layout when you switch"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Notifications in the notch"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Instead of GNOME's banner"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Milliseconds; hovering keeps it open"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Show the message"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Off shows only who sent it and the app"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Screenshot previews"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Open a new screenshot, show it in Files or keep it on the shelf"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Downloads"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Show finished downloads"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Open the file, show it in Files or keep it on the shelf"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Folder"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Empty for the system's download folder"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Warn when memory is almost full"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Names the app that uses the most"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Live activities"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Show live activities"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Builds, downloads and anything run with the nokta command"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "End after no update for"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Minutes"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Downloads and updates"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Progress that apps show on the dock, and system updates"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts ../desktop/src/views/shelf.ts
-msgid "File shelf"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Keep files on the notch"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Drop files on the notch, then drag them out again into any app"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Device alerts"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Show device alerts"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Bluetooth audio, charger and battery"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Milliseconds"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Privacy"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Privacy dots"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Green while the camera is on, orange while the microphone or screen is used"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Calls"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "While the microphone is on: the app and how long, with a mute button in home"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Updates"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Tell me when a new Nokta is out"
-msgstr ""
-
-#: src/features/settings/logic/schema.ts
-msgid "Asks github.com once a day and sends nothing else"
-msgstr ""
-
 #: src/features/settings/logic/schema.ts src/features/timer/toggle.ts
 msgid "Focus timer"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Focus sessions with breaks, countdowns, stopwatches and alarms"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
@@ -984,6 +784,10 @@ msgstr ""
 
 #: src/features/settings/logic/schema.ts
 msgid "Long break length"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Minutes"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts
@@ -1012,6 +816,266 @@ msgstr ""
 
 #: src/features/settings/logic/schema.ts
 msgid "Starts focus or stops the timer, like <Super><Alt>f; empty for none"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "What you copy, to paste again from the notch"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Keep a clipboard history"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Text and pictures you copy, in memory only"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Entries to keep"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Besides the pinned ones"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Lyrics"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Synced lyrics under the playing song"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show lyrics"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Look up lyrics online"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Sends artist, title, album and duration to lrclib.net"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Romanize lyrics"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "A line in Latin letters under Korean and Japanese lines"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Banners in the notch, with their buttons"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Notifications in the notch"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Instead of GNOME's banner"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "How long"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Milliseconds; hovering keeps it open"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show the message"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Off shows only who sent it and the app"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Screenshot previews"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Open a new screenshot, show it in Files or keep it on the shelf"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Downloads"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "A file that finishes downloading, ready to open"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show finished downloads"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Open the file, show it in Files or keep it on the shelf"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Folder"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Empty for the system's download folder"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts ../desktop/src/views/shelf.ts
+msgid "File shelf"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Park files on the notch and drag them out again"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Keep files on the notch"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Drop files on the notch, then drag them out again into any app"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Live activities"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Builds, downloads and updates while they run"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show live activities"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Builds, downloads and anything run with the nokta command"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "End after no update for"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Downloads and updates"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Progress that apps show on the dock, and system updates"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "System popups"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Volume, brightness and keyboard changes"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Volume and brightness in the notch"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Instead of GNOME's popup"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Milliseconds after the last change"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Caps Lock"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Num Lock"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Keyboard layout"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "The new layout when you switch"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Device alerts"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Bluetooth audio, charger and battery"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Show device alerts"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Milliseconds"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Privacy dots"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "A dot while the camera, microphone or screen is in use"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Green while the camera is on, orange while the microphone or screen is used"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Calls"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "The app and the time while the microphone is on"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "While the microphone is on: the app and how long, with a mute button in home"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Memory alert"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "A warning when memory is almost full"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Warn when memory is almost full"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Names the app that uses the most"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Updates"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Tells you when a new Nokta is out"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Tell me when a new Nokta is out"
+msgstr ""
+
+#: src/features/settings/logic/schema.ts
+msgid "Asks github.com once a day and sends nothing else"
 msgstr ""
 
 #: src/features/settings/logic/schema.ts src/features/tour/logic/steps.ts
@@ -1261,6 +1325,14 @@ msgstr ""
 
 #: src/prefs/window.ts
 msgid "How to Install"
+msgstr ""
+
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
+msgid "Built in"
+msgstr ""
+
+#: src/prefs/window.ts ../desktop/src/prefs/window.ts
+msgid "Part of Nokta. Turn off what you do not use; open one for its settings."
 msgstr ""
 
 #: src/prefs/window.ts ../desktop/src/prefs/window.ts

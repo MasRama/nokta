@@ -228,7 +228,7 @@ Notifications**, pick the app and turn off **Show notification banners**;
 its notifications stay in Windows' notification centre.
 
 Windows has no system calendar Nokta can read, so give it the calendars
-yourself: in the settings window's **Behavior** page, under **Calendar**,
+yourself: in the settings window's **Plugins** page, under **Calendar**,
 add up to five secret iCal addresses. In Google Calendar it is in the
 calendar's settings under **Integrate calendar → Secret address in iCal
 format**; in Outlook, **Settings → Calendar → Shared calendars → Publish a
@@ -451,6 +451,12 @@ as do the menu a right click on the notch opens, `nokta settings` and the
 Extensions app. A change shows in the notch right away. The window is
 dark whatever your system style, and its Appearance page starts with a
 preview of the notch in the theme you pick.
+
+The **Plugins** page lists what is built in: the weather, the calendar,
+the focus timer, the clipboard, lyrics, notifications, downloads, the file
+shelf, live activities, system popups, device alerts, the privacy dots,
+calls, the memory alert and the update check. Each has its own switch, so
+you can turn off what you do not use, and opens on its own settings.
 
 <p align="center">
   <img src="docs/images/settings-page.png" width="49%" alt="The settings page in the notch: the themes, three switches and the motion speed">
