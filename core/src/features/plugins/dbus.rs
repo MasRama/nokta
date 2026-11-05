@@ -2,11 +2,11 @@
 
 use std::path::PathBuf;
 
-use tokio::sync::{mpsc, oneshot, watch};
+use tokio::sync::{mpsc, watch};
 use zbus::object_server::SignalEmitter;
 use zbus::{fdo, Connection};
 
-use super::service::{Command, Handle};
+use super::service::{self, Command, Handle, Reply};
 use super::PluginsState;
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
 
@@ -81,23 +81,10 @@ struct PluginsInterface {
     state: watch::Receiver<PluginsState>,
 }
 
-fn stopped() -> fdo::Error {
-    fdo::Error::Failed("the plugins service has stopped".into())
-}
-
 impl PluginsInterface {
-    async fn ask<T>(
-        &self,
-        command: impl FnOnce(oneshot::Sender<Result<T, String>>) -> Command,
-    ) -> fdo::Result<T> {
-        let (reply, answer) = oneshot::channel();
-        self.commands
-            .send(command(reply))
+    async fn ask<T>(&self, command: impl FnOnce(Reply<T>) -> Command) -> fdo::Result<T> {
+        service::ask(&self.commands, command)
             .await
-            .map_err(|_| stopped())?;
-        answer
-            .await
-            .map_err(|_| stopped())?
             .map_err(fdo::Error::InvalidArgs)
     }
 }
