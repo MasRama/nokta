@@ -5,6 +5,7 @@
 
 pub mod card;
 pub mod catalog;
+pub mod creator;
 #[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod install;

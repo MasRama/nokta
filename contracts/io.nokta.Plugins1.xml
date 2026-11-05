@@ -79,6 +79,33 @@
       <arg name="id" type="s" direction="in"/>
       <arg name="id" type="s" direction="out"/>
     </method>
+    <!--
+      Creator Mode's AI service as a JSON object: provider ("anthropic" or
+      "openai"), model, default_model, base_url, has_key and ready. The key
+      itself never leaves noktad.
+    -->
+    <method name="Creator">
+      <arg name="creator" type="s" direction="out"/>
+    </method>
+    <!--
+      Sets Creator Mode's AI service, saved in creator.toml readable only by
+      the user. An empty api_key keeps the saved key.
+    -->
+    <method name="SetCreator">
+      <arg name="provider" type="s" direction="in"/>
+      <arg name="model" type="s" direction="in"/>
+      <arg name="base_url" type="s" direction="in"/>
+      <arg name="api_key" type="s" direction="in"/>
+    </method>
+    <!--
+      Has the model write the plugin the request describes and installs it
+      off, under an id no installed plugin has. Can take minutes. Answers
+      its id.
+    -->
+    <method name="Create">
+      <arg name="request" type="s" direction="in"/>
+      <arg name="id" type="s" direction="out"/>
+    </method>
     <!-- A plugin's card asked for an alert; each alert id shows once. -->
     <signal name="Alert">
       <arg name="id" type="s"/>

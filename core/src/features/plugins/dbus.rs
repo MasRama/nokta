@@ -7,6 +7,7 @@ use zbus::object_server::SignalEmitter;
 use zbus::{fdo, Connection};
 
 use super::catalog::Source;
+use super::creator::Creator;
 use super::service::{self, Command, Handle, Reply};
 use super::PluginsState;
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
@@ -16,7 +17,12 @@ pub const INTERFACE: &str = "io.nokta.Plugins1";
 
 type Row = (String, bool, String, String, String);
 
-pub async fn serve(conn: &Connection, handle: Handle, catalog: Source) -> zbus::Result<()> {
+pub async fn serve(
+    conn: &Connection,
+    handle: Handle,
+    catalog: Source,
+    creator: Creator,
+) -> zbus::Result<()> {
     let Handle {
         commands,
         state,
@@ -29,6 +35,7 @@ pub async fn serve(conn: &Connection, handle: Handle, catalog: Source) -> zbus::
                 commands,
                 state: state.clone(),
                 catalog,
+                creator,
             },
         )
         .await?;
@@ -82,6 +89,7 @@ struct PluginsInterface {
     commands: mpsc::Sender<Command>,
     state: watch::Receiver<PluginsState>,
     catalog: Source,
+    creator: Creator,
 }
 
 impl PluginsInterface {
@@ -144,6 +152,42 @@ impl PluginsInterface {
     async fn install_from_catalog(&self, id: String) -> fdo::Result<String> {
         self.catalog
             .install(&self.commands, &id)
+            .await
+            .map_err(fdo::Error::Failed)
+    }
+
+    /// Creator Mode's service as JSON, without its key.
+    #[zbus(out_args("creator"))]
+    fn creator(&self) -> String {
+        self.creator.settings().to_json()
+    }
+
+    /// Sets Creator Mode's service; an empty key keeps the saved one.
+    fn set_creator(
+        &self,
+        provider: String,
+        model: String,
+        base_url: String,
+        api_key: String,
+    ) -> fdo::Result<()> {
+        self.creator
+            .configure(&provider, &model, &base_url, &api_key)
+            .map_err(fdo::Error::InvalidArgs)
+    }
+
+    /// Has the model write the plugin `request` describes, and installs it
+    /// off; answers its id.
+    #[zbus(out_args("id"))]
+    async fn create(&self, request: String) -> fdo::Result<String> {
+        let taken: Vec<String> = self
+            .state
+            .borrow()
+            .plugins
+            .iter()
+            .map(|p| p.id.clone())
+            .collect();
+        self.creator
+            .create(&self.commands, &taken, &request)
             .await
             .map_err(fdo::Error::Failed)
     }
