@@ -657,6 +657,33 @@ that matches its sum is installed, one that does not, or one without
 - [ ] `[updates] check = false`: the row goes away and does not come back
       after `systemctl --user restart nokta` and a minute's wait.
 
+### Plugins
+
+`smoke.sh` installs a plugin from a folder over `Plugins1`, checks that it
+starts off, turns it on, and reads its alert, its badge, its panel row and
+its page; removing it takes the badge and the folder away.
+`core/src/features/plugins/tests.rs` covers the manifest, the card, the
+runner (both kinds, and one that fails or is too slow) and the service
+from install to remove;
+`core/tests/cli.rs` runs `nokta plugin` against a private bus.
+
+- [ ] `nokta plugin install examples/plugins/hello`, then `nokta plugin
+      list`: `hello off off`. `nokta plugin enable hello`: home shows
+      `Good morning, …`; a click opens a page of its two links.
+- [ ] `site-status` with its address set to `http://127.0.0.1:9/` in the
+      settings window: a red important alert `127.0.0.1:9 is down`, then
+      `down` in the closed notch. Its **Check** button runs it again.
+- [ ] `water`: **+1** counts up at once and the bar under the row grows;
+      `nokta plugin list` shows it `on ok`. Kill its `python3`: it comes
+      back within a few seconds.
+- [ ] Settings → Plugins → Added: **Add from Folder…** adds one, off, with
+      a toast; its options save to `~/.config/nokta/plugins.toml`; Remove
+      asks first, then the row, the folder and its table are gone.
+- [ ] Write a plugin in place under `~/.local/share/nokta/plugins/`: it is
+      listed without a restart; a broken `plugin.toml` shows why in red.
+- [ ] A plugin that prints garbage or sleeps past its `timeout`: its row
+      in Added says it failed, and the notch shows nothing for it.
+
 ### Screen recordings
 
 `smoke.sh` tells GNOME's screenshot UI that it records (there is no
@@ -747,7 +774,8 @@ banner for a fake file.
 - [ ] Plugins lists every built-in with its icon. Its switch turns the
       feature off in `config.toml`; one with settings opens on them while
       it is on and folds while it is off. File shelf, Privacy dots, Calls,
-      Memory alert and Updates are plain switches.
+      Memory alert and Updates are plain switches. Under it, Added lists
+      the installed plugins (see [Plugins](#plugins)).
 - [ ] Change a switch and a number (`click.sh`; the first click may only
       focus the window): `config.toml` changes with its comments kept, the
       notch follows, and `noktad.log` shows one `set` per change even after

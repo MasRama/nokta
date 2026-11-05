@@ -44,7 +44,7 @@ core/               crate nokta-core, binaries noktad and nokta
   src/app/          composition: start the features; on Linux serve them and own the bus name
   src/cli/          the `nokta` command: arguments, its client (D-Bus on Linux, a pipe on Windows)
   src/features/     media, lyrics, settings, devices, timer, activities, weather,
-                    calendar, shelf, clipboard, downloads, system, updates
+                    calendar, shelf, clipboard, downloads, system, updates, plugins
   src/shared/       paths, monotonic clock, hashing, atomic file writes, picture
                     thumbnails, D-Bus helpers
   tests/            integration tests on a private bus, contract test
@@ -56,7 +56,7 @@ extension/          GNOME Shell extension nokta@nokta.io
   src/prefs.ts      the settings window (GTK 4 and libadwaita), with src/prefs/
   src/features/     media, lyrics, settings, osd, devices, timer, privacy,
                     notifications, panel, activities, weather, calendar, shelf,
-                    clipboard, downloads, system, updates, tour
+                    clipboard, downloads, system, updates, tour, plugins
   src/shelf-helper/ the shelf's helper window, a GTK 4 program run with gjs
   src/shared/       notch shape, springs and layout, clock, top bar, keybindings,
                     keyboard focus, D-Bus helpers, icons, dim levels
@@ -72,7 +72,8 @@ desktop/            Nokta for Windows: a Tauri 2 app
   tests/            Vitest tests of the page's own modules
   scripts/          screenshots of the page in Chrome
 tools/windows/      the Windows smoke's screenshot script
-docs/               manual test checklist, screenshots
+docs/               manual test checklist, the plugin contract, screenshots
+examples/plugins/   plugins to copy: hello, site-status, water
 ```
 
 ### Feature rules
@@ -366,6 +367,26 @@ docs/               manual test checklist, screenshots
   match, unpacks it with `tar` and runs its `install.sh`, reporting the
   activity `update:nokta` meanwhile. The release job publishes
   `SHA256SUMS` from 0.11 on.
+- **plugins** runs the add-on plugins (contract: `docs/plugins.md`, API 1).
+  Each is a folder in `plugins_dir` (`$XDG_DATA_HOME/nokta/plugins/`) with
+  a `plugin.toml` (`manifest.rs`, pure) naming a program in any language;
+  which ones are on and the options the user set are in `plugins.toml`
+  next to `config.toml` (`saved.rs`), so config.toml stays Nokta's own.
+  `runner.rs` runs each one that is on out of process, as the user, in its
+  folder, with its options and its data folder (`.data/<id>`, kept across
+  updates) in its environment: with `every` above 0 it runs, prints one
+  JSON object and exits, and runs again after `every` seconds or when a
+  button asks; with `every = 0` it keeps running, prints a line per change
+  and hears buttons as `{"action":…}` lines on stdin, and is started again
+  with a growing wait when it exits. A run past `timeout` is killed, and
+  output past 64 KiB fails it. `card.rs` (pure) reads the output into a
+  card and drops what does not fit: links other than `http(s)`, long text,
+  more than 8 items or 2 buttons. An alert goes out once per id as the
+  `Alert` signal. `install.rs` copies a folder in (a new plugin starts off,
+  and an update keeps its switch and options) and removes one with its
+  data and its saved table. `watch.rs` hears folders and both files
+  change, so a plugin written in place shows up without a restart.
+  Nokta never loads a plugin's code into its own process.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
   Windows), writes a commented
@@ -418,6 +439,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Downloads1` | `/io/nokta/Downloads` | signal `Finished(uri s, name s, icon s, size t, thumbnail s)` (thumbnail is a PNG path, empty for a file that is not a picture) |
 | `io.nokta.System1` | `/io/nokta/System` | `Usage (dttddd)`: CPU 0-1, memory used and total bytes, temperature °C (NaN when unknown), download and upload bytes/s, all zero while nobody watches; `Watch()`, `Unwatch()`; signal `MemoryLow(used t, total t, app s)` |
 | `io.nokta.Updates1` | `/io/nokta/Updates` | `Latest` (`s`, the newer release's version, empty when none), `ReleaseUrl` (`s`); `Check()`, `Install()` |
+| `io.nokta.Plugins1` | `/io/nokta/Plugins` | `Plugins` (`a(sbsss)`: id, enabled, status, message, info as JSON), `Cards` (`a(ss)`: id, card as JSON); `SetEnabled(id s, enabled b)`, `SetOption(id s, key s, value s)`, `Run(id s, action s)`, `Install(path s) → id s`, `Remove(id s)`; signal `Alert(id s, title s, detail s, icon s, tone s, important b)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -595,6 +617,15 @@ How both sides stay honest:
   started again if it dies, three times at most. The shell moves it before
   resizing it, since a window off every monitor never draws and so never
   takes a new size.
+- **Plugins** (`features/plugins`). The cards from `Plugins1.Cards` are
+  drawn with the notch's own parts, never a plugin's markup: up to three
+  rows in home after the update row (`panel/view.ts`, `PluginRow`), a page
+  of a card's items (`plugins/page.ts`), the first badge in the closed
+  notch after the focus timer, the clocks, live activities and a meeting
+  about to start, and `Alert` as a `plugin` or `plugin-important` alert.
+  An icon the shell cannot find falls back to Nokta's plugin icon. The
+  settings window's Plugins page lists them under Added
+  (`prefs/plugins.ts`), with their options drawn from `info`.
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source, ends the shelf's helper and puts the clock back.
 
@@ -861,6 +892,10 @@ WebView2 and runs the core's services itself, with no D-Bus.
   `\\.\pipe\nokta-<user SID>`, one JSON line each way (`cli/pipe.rs`),
   where Linux has D-Bus. The app answers in `win/cli.rs` with the calls the
   page makes. Windows' default rights on a pipe let only its owner write.
+- Plugins run in the app's core like on Linux, with the `windows` command
+  of their `plugin.toml`. `Plugins1` is a bridge interface, and the page
+  draws the cards in `views/plugin.ts` and the Added group in
+  `prefs/plugins.ts`; `nokta plugin` goes over the pipe.
 - Updates: home's Update calls `Updates1.Install`, which starts
   `bin\nokta.exe update --yes` (`win/update.rs`) as noktad starts `nokta
   update` on Linux. It downloads `Nokta_<version>_x64-setup.exe`, checks
