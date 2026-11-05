@@ -4,6 +4,7 @@
 //! with its own parts, the same on every system.
 
 pub mod card;
+pub mod catalog;
 #[cfg(target_os = "linux")]
 pub mod dbus;
 pub mod install;

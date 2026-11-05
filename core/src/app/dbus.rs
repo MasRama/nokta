@@ -96,7 +96,15 @@ pub async fn run(paths: Paths, options: RunOptions) -> anyhow::Result<()> {
     shelf::dbus::serve(&conn, services.shelf).await?;
     clipboard::dbus::serve(&conn, services.clipboard).await?;
     downloads::dbus::serve(&conn, services.downloads).await?;
-    plugins::dbus::serve(&conn, services.plugins).await?;
+    plugins::dbus::serve(
+        &conn,
+        services.plugins,
+        plugins::catalog::Source {
+            client: plugins::catalog::Client::new(&options.plugin_catalog_url, USER_AGENT),
+            staging: paths.cache_dir.join("plugins"),
+        },
+    )
+    .await?;
     let monitor = system_monitor::service::spawn(
         std::sync::Arc::new(system_monitor::sample::Proc::new()),
         super::services::follow(services.config.clone(), |c| c.system.clone()),

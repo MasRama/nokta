@@ -6,6 +6,7 @@ use tokio::sync::{mpsc, watch};
 use zbus::object_server::SignalEmitter;
 use zbus::{fdo, Connection};
 
+use super::catalog::Source;
 use super::service::{self, Command, Handle, Reply};
 use super::PluginsState;
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
@@ -15,7 +16,7 @@ pub const INTERFACE: &str = "io.nokta.Plugins1";
 
 type Row = (String, bool, String, String, String);
 
-pub async fn serve(conn: &Connection, handle: Handle) -> zbus::Result<()> {
+pub async fn serve(conn: &Connection, handle: Handle, catalog: Source) -> zbus::Result<()> {
     let Handle {
         commands,
         state,
@@ -27,6 +28,7 @@ pub async fn serve(conn: &Connection, handle: Handle) -> zbus::Result<()> {
             PluginsInterface {
                 commands,
                 state: state.clone(),
+                catalog,
             },
         )
         .await?;
@@ -79,6 +81,7 @@ fn properties(state: &PluginsState) -> PropertyList {
 struct PluginsInterface {
     commands: mpsc::Sender<Command>,
     state: watch::Receiver<PluginsState>,
+    catalog: Source,
 }
 
 impl PluginsInterface {
@@ -128,6 +131,21 @@ impl PluginsInterface {
 
     async fn remove(&self, id: String) -> fdo::Result<()> {
         self.ask(|reply| Command::Remove { id, reply }).await
+    }
+
+    /// The catalog's plugins as JSON; asks the catalog each time.
+    #[zbus(out_args("catalog"))]
+    async fn catalog(&self) -> fdo::Result<String> {
+        self.catalog.browse().await.map_err(fdo::Error::Failed)
+    }
+
+    /// Installs or updates a plugin from the catalog; answers its id.
+    #[zbus(out_args("id"))]
+    async fn install_from_catalog(&self, id: String) -> fdo::Result<String> {
+        self.catalog
+            .install(&self.commands, &id)
+            .await
+            .map_err(fdo::Error::Failed)
     }
 
     #[zbus(signal)]
