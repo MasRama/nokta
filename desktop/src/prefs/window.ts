@@ -126,7 +126,7 @@ export class SettingsWindow {
             const section = element('section', 'nokta-prefs-page');
             if (page.name === 'appearance') section.append(this.lookGroup());
             if (page.name === 'plugins') {
-                section.append(this.builtIns(page.groups), this.added.element, this.added.catalogElement);
+                section.append(this.builtIns(page.groups), this.added.element, this.added.catalogElement, this.added.creatorElement);
             } else for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
             if (page.name === 'behavior') section.append(this.tourGroup(), this.configGroup());
             this.content.append(section);

@@ -15,7 +15,7 @@ export class MockBridge implements Bridge {
      */
     constructor(
         initial: Record<string, Props> = {},
-        private readonly answers: Record<string, unknown> = {},
+        readonly answers: Record<string, unknown> = {},
     ) {
         for (const [iface, props] of Object.entries(initial)) this.state.set(iface, { ...props });
     }

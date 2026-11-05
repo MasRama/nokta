@@ -306,7 +306,7 @@ describe('added plugins on Windows', () => {
         expect(text.value).toBe('https://example.com');
         text.value = 'https://nokta.io';
         text.dispatchEvent(new Event('input'));
-        expect(pluginCalls()).toEqual([]);
+        expect(pluginCalls().filter(([method]) => method === 'SetOption')).toEqual([]);
         await vi.advanceTimersByTimeAsync(1000);
         expect(pluginCalls()).toContainEqual(['SetOption', 'site-status', 'url', 'https://nokta.io']);
         item().querySelector<HTMLButtonElement>('.nokta-prefs-plugin-details .nokta-prefs-switch')!.click();
@@ -362,5 +362,36 @@ describe('added plugins on Windows', () => {
         expect(pluginCalls()).toContainEqual(['InstallFromCatalog', 'site-status']);
         expect(pluginCalls()).toContainEqual(['InstallFromCatalog', 'days-until']);
         expect(root.textContent).toContain('Updated');
+    });
+
+    it('saves the AI service and creates a plugin from a sentence', async () => {
+        const creator = JSON.stringify({ provider: 'anthropic', model: '', default_model: 'claude-opus-5-5', base_url: '', has_key: false, ready: false });
+        const { root, bridge, pluginCalls } = await mountPlugins(plugins(false), { 'Plugins1.Creator': creator, 'Plugins1.Create': 'water-2' });
+        await vi.advanceTimersByTimeAsync(0);
+        const group = root.querySelector<HTMLElement>('.nokta-prefs-creator')!;
+        expect(group.textContent).toContain('Needs an API key');
+        const inputs = [...group.querySelectorAll<HTMLInputElement>('input')];
+        const [model, , key, request] = inputs;
+        expect(model.placeholder).toBe('Model (empty: claude-opus-5-5)');
+        expect(key.type).toBe('password');
+        const create = [...group.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Create')!;
+        request.value = 'how much water I drank';
+        request.dispatchEvent(new Event('input'));
+        expect(create.disabled).toBe(true);
+
+        key.value = ' sk-test ';
+        bridge.answers['Plugins1.Creator'] = JSON.stringify({ ...JSON.parse(creator), has_key: true, ready: true });
+        [...group.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Save')!.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(pluginCalls()).toContainEqual(['SetCreator', 'anthropic', '', '', 'sk-test']);
+        expect(group.textContent).toContain('Anthropic · claude-opus-5-5');
+        expect(key.value).toBe('');
+
+        expect(create.disabled).toBe(false);
+        create.click();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(pluginCalls()).toContainEqual(['Create', 'how much water I drank']);
+        expect(root.textContent).toContain('Created water-2. Read it, then turn it on.');
+        expect(request.value).toBe('');
     });
 });
