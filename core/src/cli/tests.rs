@@ -269,6 +269,48 @@ fn plugin_commands_name_a_plugin_or_a_folder() {
     assert!(plugin("plugin run water --what x").is_err());
     assert!(plugin("plugin").unwrap_err().contains("list"));
     assert!(plugin("plugin dance").is_err());
+    assert_eq!(
+        plugin("plugin create the price of bitcoin"),
+        Ok(PluginCli::Create {
+            request: "the price of bitcoin".into()
+        })
+    );
+    assert!(plugin("plugin create").unwrap_err().contains("description"));
+    assert_eq!(
+        plugin("plugin creator"),
+        Ok(PluginCli::Creator {
+            provider: None,
+            model: None,
+            url: None,
+            key_stdin: false
+        })
+    );
+    assert_eq!(
+        plugin("plugin creator --provider openai --url https://x/v1 --model m --key-stdin"),
+        Ok(PluginCli::Creator {
+            provider: Some("openai".into()),
+            model: Some("m".into()),
+            url: Some("https://x/v1".into()),
+            key_stdin: true
+        })
+    );
+    assert!(
+        plugin("plugin creator --key sk-x").is_err(),
+        "a key is never an argument"
+    );
+}
+
+#[test]
+fn plugin_creator_says_what_is_set_and_never_the_key() {
+    let ready = super::plugin::creator_text(
+        r#"{"provider":"anthropic","model":"","default_model":"claude-opus-5-5","base_url":"","has_key":true,"ready":true}"#,
+    );
+    assert!(ready.contains("Anthropic") && ready.contains("claude-opus-5-5 (default)"));
+    assert!(ready.contains("API key  set") && ready.contains("Ready"));
+    let not = super::plugin::creator_text(
+        r#"{"provider":"openai","model":"","default_model":"","base_url":"","has_key":false,"ready":false}"#,
+    );
+    assert!(not.contains("not set") && not.contains("--key-stdin"));
 }
 
 #[test]

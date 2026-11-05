@@ -137,6 +137,48 @@ impl Client {
         }
     }
 
+    /// Creator Mode's service, as `Plugins1.Creator` gives it (JSON).
+    pub async fn plugin_creator(&self) -> Result<String, CallError> {
+        match self.ask(Request::PluginCreator).await? {
+            Some(serde_json::Value::String(creator)) => Ok(creator),
+            _ => Err(CallError::Unreachable(
+                "it did not say how Creator Mode is set".into(),
+            )),
+        }
+    }
+
+    /// An empty `api_key` keeps the saved one.
+    pub async fn plugin_set_creator(
+        &self,
+        provider: &str,
+        model: &str,
+        base_url: &str,
+        api_key: &str,
+    ) -> Result<(), CallError> {
+        self.call(Request::PluginSetCreator {
+            provider: provider.into(),
+            model: model.into(),
+            base_url: base_url.into(),
+            api_key: api_key.into(),
+        })
+        .await
+    }
+
+    /// Answers the new plugin's id; takes as long as the model does.
+    pub async fn plugin_create(&self, request: &str) -> Result<String, CallError> {
+        match self
+            .ask(Request::PluginCreate {
+                request: request.into(),
+            })
+            .await?
+        {
+            Some(serde_json::Value::String(id)) => Ok(id),
+            _ => Err(CallError::Unreachable(
+                "it did not say the plugin's id".into(),
+            )),
+        }
+    }
+
     pub async fn plugin_remove(&self, id: &str) -> Result<(), CallError> {
         self.call(Request::PluginRemove { id: id.into() }).await
     }

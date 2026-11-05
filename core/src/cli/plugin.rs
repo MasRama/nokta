@@ -98,3 +98,38 @@ pub fn newer(installed: &str, available: &str) -> bool {
     }
     false
 }
+
+/// What `nokta plugin creator` prints for `Plugins1.Creator`'s JSON.
+pub fn creator_text(creator_json: &str) -> String {
+    let creator: serde_json::Value = serde_json::from_str(creator_json).unwrap_or_default();
+    let text = |key: &str| creator[key].as_str().unwrap_or_default().to_owned();
+    let provider = match text("provider").as_str() {
+        "openai" => "OpenAI-compatible",
+        _ => "Anthropic",
+    };
+    let model = match (text("model"), text("default_model")) {
+        (model, _) if !model.is_empty() => model,
+        (_, default) if !default.is_empty() => format!("{default} (default)"),
+        _ => "not set".into(),
+    };
+    let url = match text("base_url") {
+        url if url.is_empty() => "default".into(),
+        url => url,
+    };
+    let key = if creator["has_key"].as_bool() == Some(true) {
+        "set"
+    } else {
+        "not set"
+    };
+    let mut out =
+        format!("Service  {provider}\nModel    {model}\nAddress  {url}\nAPI key  {key}\n");
+    if creator["ready"].as_bool() == Some(true) {
+        out.push_str("Ready: nokta plugin create \"what the plugin shows\"\n");
+    } else {
+        out.push_str(
+            "Set it up with: nokta plugin creator --provider anthropic --key-stdin\n\
+             or: nokta plugin creator --provider openai --url https://api.example.com/v1 --model NAME --key-stdin\n",
+        );
+    }
+    out
+}

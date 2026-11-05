@@ -141,6 +141,63 @@ async fn plugin(command: PluginCli) -> ExitCode {
         PluginCli::Run { id, action } => {
             call(|nokta| async move { nokta.plugin_run(&id, &action).await }).await
         }
+        PluginCli::Create { request } => {
+            call(|nokta| async move {
+                eprintln!("Writing the plugin; this can take a minute or two…");
+                let id = nokta.plugin_create(&request).await?;
+                println!(
+                    "Created {id}. It is off: read it first (nokta plugin list, or Settings → Plugins), then turn it on with: nokta plugin enable {id}"
+                );
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Creator {
+            provider: None,
+            model: None,
+            url: None,
+            key_stdin: false,
+        } => {
+            call(|nokta| async move {
+                print!("{}", super::plugin::creator_text(&nokta.plugin_creator().await?));
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Creator {
+            provider,
+            model,
+            url,
+            key_stdin,
+        } => {
+            let key = if key_stdin {
+                if std::io::IsTerminal::is_terminal(&std::io::stdin()) {
+                    eprintln!("API key (then Enter):");
+                }
+                let mut line = String::new();
+                if std::io::stdin().read_line(&mut line).is_err() || line.trim().is_empty() {
+                    eprintln!("nokta: no API key on standard input");
+                    return ExitCode::FAILURE;
+                }
+                line.trim().to_owned()
+            } else {
+                String::new()
+            };
+            call(|nokta| async move {
+                let now: serde_json::Value =
+                    serde_json::from_str(&nokta.plugin_creator().await?).unwrap_or_default();
+                let old = |k: &str| now[k].as_str().unwrap_or_default().to_owned();
+                let provider = provider.unwrap_or_else(|| old("provider"));
+                let model = model.unwrap_or_else(|| old("model"));
+                let url = url.unwrap_or_else(|| old("base_url"));
+                nokta
+                    .plugin_set_creator(&provider, &model, &url, &key)
+                    .await?;
+                print!("{}", super::plugin::creator_text(&nokta.plugin_creator().await?));
+                Ok(())
+            })
+            .await
+        }
     }
 }
 

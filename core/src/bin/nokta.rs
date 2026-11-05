@@ -18,6 +18,8 @@ Usage:
   nokta plugin update ID
   nokta plugin enable | disable | remove ID
   nokta plugin run ID [--action NAME]
+  nokta plugin create DESCRIPTION
+  nokta plugin creator [--provider anthropic|openai] [--model NAME] [--url URL] [--key-stdin]
   nokta settings
   nokta update [--yes | --check]
   nokta --version | --help
@@ -39,7 +41,10 @@ a plugin's folder in, or gets the plugin with that id from the catalog when
 there is no such folder; either starts off, and enable turns it on. catalog
 lists the catalog's plugins (github.com/MasRama/nokta-plugins); update gets
 the newest of one. run runs it now, telling it --action as if its button
-was pressed. list says what each one is doing.
+was pressed. list says what each one is doing. create has Creator Mode
+write a plugin from a sentence with your own AI service's key; it starts
+off so you can read it first. creator shows that service, or sets it:
+--key-stdin reads the API key from standard input.
 
 settings opens Nokta's settings window.
 

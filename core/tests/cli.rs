@@ -395,3 +395,79 @@ async fn a_plugin_is_installed_from_the_catalog_by_its_id_and_listed() {
     assert_eq!(out.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&out.stderr).contains("no plugin nope"));
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn creator_mode_takes_a_key_on_stdin_and_writes_a_plugin_that_starts_off() {
+    use std::io::Write;
+
+    const MANIFEST: &str = "api = 1\nid = \"btc\"\nname = \"Bitcoin\"\nversion = \"0.1.0\"\n[run]\ncommand = [\"./btc.sh\"]\nevery = 300\n";
+    let draft = serde_json::json!({
+        "id": "btc",
+        "files": [
+            {"path": "plugin.toml", "content": MANIFEST, "executable": false},
+            {"path": "btc.sh", "content": "#!/bin/sh\necho '{}'\n", "executable": true},
+        ],
+    });
+    let server = MockServer::start().await;
+    Mock::given(path("/v1/messages"))
+        .and(wiremock::matchers::header("x-api-key", "sk-from-stdin"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "stop_reason": "end_turn",
+            "content": [{"type": "text", "text": draft.to_string()}],
+        })))
+        .mount(&server)
+        .await;
+    let bus = TestBus::start();
+    let daemon = Daemon::start(&bus, "http://127.0.0.1:9").await;
+
+    let out = nokta_async(bus.address(), &["plugin", "create", "bitcoin price"]).await;
+    assert_eq!(out.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("API key"),
+        "{out:?}"
+    );
+
+    let address = bus.address().to_owned();
+    let url = server.uri();
+    let out = tokio::task::spawn_blocking(move || {
+        let mut child = Command::new(NOKTA)
+            .args([
+                "plugin",
+                "creator",
+                "--provider",
+                "anthropic",
+                "--url",
+                &url,
+                "--key-stdin",
+            ])
+            .env("DBUS_SESSION_BUS_ADDRESS", &address)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"sk-from-stdin\n")
+            .unwrap();
+        child.wait_with_output().unwrap()
+    })
+    .await
+    .unwrap();
+    let text = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{out:?}");
+    assert!(
+        text.contains("API key  set") && !text.contains("sk-from"),
+        "{text}"
+    );
+
+    let out = nokta_async(bus.address(), &["plugin", "create", "bitcoin price"]).await;
+    assert!(out.status.success(), "{out:?}");
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Created btc. It is off"));
+    let plugins = &daemon.paths().plugins_dir;
+    assert!(plugins.join("btc/btc.sh").exists());
+    let out = nokta_async(bus.address(), &["plugin", "list"]).await;
+    assert!(String::from_utf8_lossy(&out.stdout).starts_with("btc  off"));
+}

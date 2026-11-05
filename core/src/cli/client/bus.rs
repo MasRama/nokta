@@ -104,6 +104,30 @@ impl Client {
         Ok(self.plugins.call("InstallFromCatalog", &(id,)).await?)
     }
 
+    /// Creator Mode's service, as `Plugins1.Creator` gives it (JSON).
+    pub async fn plugin_creator(&self) -> Result<String, CallError> {
+        Ok(self.plugins.call("Creator", &()).await?)
+    }
+
+    /// An empty `api_key` keeps the saved one.
+    pub async fn plugin_set_creator(
+        &self,
+        provider: &str,
+        model: &str,
+        base_url: &str,
+        api_key: &str,
+    ) -> Result<(), CallError> {
+        Ok(self
+            .plugins
+            .call("SetCreator", &(provider, model, base_url, api_key))
+            .await?)
+    }
+
+    /// Answers the new plugin's id; takes as long as the model does.
+    pub async fn plugin_create(&self, request: &str) -> Result<String, CallError> {
+        Ok(self.plugins.call("Create", &(request,)).await?)
+    }
+
     pub async fn plugin_remove(&self, id: &str) -> Result<(), CallError> {
         Ok(self.plugins.call("Remove", &(id,)).await?)
     }

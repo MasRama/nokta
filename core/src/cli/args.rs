@@ -74,6 +74,18 @@ pub enum PluginCli {
         id: String,
         action: String,
     },
+    /// Creator Mode writes the plugin `request` describes; it starts off.
+    Create {
+        request: String,
+    },
+    /// Shows Creator Mode's AI service, or sets what is given; the key is
+    /// read from standard input so it stays out of the shell's history.
+    Creator {
+        provider: Option<String>,
+        model: Option<String>,
+        url: Option<String>,
+        key_stdin: bool,
+    },
 }
 
 pub fn parse(args: &[String]) -> Result<Cli, String> {
@@ -199,6 +211,22 @@ fn parse_plugin(words: &[&str]) -> Result<PluginCli, String> {
                 action: o.take("--action").unwrap_or_default(),
             })
         }
+        ["create", words @ ..] if !words.is_empty() => Ok(PluginCli::Create {
+            request: words.join(" "),
+        }),
+        ["creator", rest @ ..] => {
+            let mut o = Options::read(rest, &["--provider", "--model", "--url"], &["--key-stdin"])?;
+            Ok(PluginCli::Creator {
+                provider: o.take("--provider"),
+                model: o.take("--model"),
+                url: o.take("--url"),
+                key_stdin: o.flag("--key-stdin"),
+            })
+        }
+        ["create"] => Err(
+            "plugin create needs a description, like: nokta plugin create \"the price of bitcoin\""
+                .into(),
+        ),
         ["install", ..] => Err(
             "plugin install needs one folder or catalog id, like: nokta plugin install ./hello"
                 .into(),
@@ -207,7 +235,7 @@ fn parse_plugin(words: &[&str]) -> Result<PluginCli, String> {
             "plugin {verb} needs one plugin id, like: nokta plugin {verb} hello"
         )),
         _ => Err(
-            "plugin takes list, catalog, install, update, remove, enable, disable or run".into(),
+            "plugin takes list, catalog, install, update, remove, enable, disable, run, create or creator".into(),
         ),
     }
 }
