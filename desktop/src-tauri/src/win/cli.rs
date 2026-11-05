@@ -102,6 +102,10 @@ async fn answer(app: &AppHandle, request: Request) -> Result<Value, String> {
         Request::Settings => done(super::settings_window::open(app).map_err(|err| err.to_string())),
         Request::PluginList => Ok(core.plugin_rows()),
         Request::PluginInstall { path } => core.plugins("Install", &[json!(path)]).await,
+        Request::PluginCatalog => core.plugins("Catalog", &[]).await,
+        Request::PluginInstallFromCatalog { id } => {
+            core.plugins("InstallFromCatalog", &[json!(id)]).await
+        }
         Request::PluginRemove { id } => core.plugins("Remove", &[json!(id)]).await,
         Request::PluginEnable { id, enabled } => {
             core.plugins("SetEnabled", &[json!(id), json!(enabled)])

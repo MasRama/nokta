@@ -103,6 +103,7 @@ pub struct Core {
     clipboard_commands: mpsc::Sender<ClipCommand>,
     plugins: watch::Receiver<PluginsState>,
     plugin_commands: mpsc::Sender<plugins::service::Command>,
+    plugin_catalog: plugins::catalog::Source,
     /// The files the page may open.
     known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
@@ -490,6 +491,10 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         clipboard_commands: services.clipboard.commands.clone(),
         plugins: services.plugins.state.clone(),
         plugin_commands: services.plugins.commands.clone(),
+        plugin_catalog: plugins::catalog::Source {
+            client: plugins::catalog::Client::new(plugins::catalog::DEFAULT_URL, USER_AGENT),
+            staging: paths.cache_dir.join("plugins"),
+        },
         known,
         _services: Mutex::new(services),
     }
@@ -909,6 +914,11 @@ async fn plugins_call(core: &Core, method: &str, args: &[Value]) -> Result<Value
         ("Remove", [Value::String(id)]) => {
             let id = id.clone();
             ask(commands, |reply| PluginCommand::Remove { id, reply }).await?;
+        }
+        ("Catalog", []) => return core.plugin_catalog.browse().await.map(Value::String),
+        ("InstallFromCatalog", [Value::String(id)]) => {
+            let id = core.plugin_catalog.install(commands, id).await?;
+            return Ok(Value::String(id));
         }
         _ => {
             return Err(format!(
