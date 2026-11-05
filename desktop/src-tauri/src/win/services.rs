@@ -16,6 +16,7 @@ use nokta_core::features::downloads::service::Finished;
 use nokta_core::features::lyrics::{self, LyricsState};
 use nokta_core::features::media::art::ArtCache;
 use nokta_core::features::media::{gsmtc, loopback, MediaState};
+use nokta_core::features::plugins::{self, PluginsState};
 use nokta_core::features::settings::picture::Prepared;
 use nokta_core::features::settings::{Config, Writer};
 use nokta_core::features::shelf::{self, model::Item, service::Thumbnails};
@@ -35,10 +36,10 @@ use tokio::sync::{mpsc, oneshot, watch};
 use crate::bridge::{
     activities as activities_props, calendar as calendar_props, clipboard as clipboard_bridge,
     devices as devices_bridge, downloads as downloads_bridge, lyrics as lyrics_props, media, nokta,
-    notifications as notifications_bridge, osd as osd_bridge, privacy as privacy_props,
-    screenshots as screenshots_bridge, settings, shelf as shelf_bridge, system as system_props,
-    timer as timer_props, toggles as toggles_props, updates as updates_props,
-    weather as weather_props, Props,
+    notifications as notifications_bridge, osd as osd_bridge, plugins as plugins_bridge,
+    privacy as privacy_props, screenshots as screenshots_bridge, settings, shelf as shelf_bridge,
+    system as system_props, timer as timer_props, toggles as toggles_props,
+    updates as updates_props, weather as weather_props, Props,
 };
 use crate::files::KnownFiles;
 use crate::layout::{self, NotchSizes};
@@ -100,6 +101,8 @@ pub struct Core {
     shelf_commands: mpsc::Sender<shelf::service::Command>,
     clipboard: watch::Receiver<Published>,
     clipboard_commands: mpsc::Sender<ClipCommand>,
+    plugins: watch::Receiver<PluginsState>,
+    plugin_commands: mpsc::Sender<plugins::service::Command>,
     /// The files the page may open.
     known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
@@ -166,6 +169,18 @@ impl Core {
     /// Calls `Timer1.method(args)`, as the page does.
     pub async fn timer(&self, method: &str, args: &[Value]) -> Result<Value, String> {
         timer_call(self, method, args).await
+    }
+
+    /// Calls `Plugins1.method(args)`, as the page does.
+    pub async fn plugins(&self, method: &str, args: &[Value]) -> Result<Value, String> {
+        plugins_call(self, method, args).await
+    }
+
+    /// The `Plugins` property, for `nokta plugin list`.
+    pub fn plugin_rows(&self) -> Value {
+        plugins_bridge::props(&self.plugins.borrow())
+            .remove("Plugins")
+            .unwrap_or_default()
     }
 
     /// Puts files dropped on the notch on the shelf.
@@ -422,6 +437,21 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         services.config.clone(),
         services.clipboard.state.clone(),
     );
+    forward(
+        app.clone(),
+        services.plugins.state.clone(),
+        plugins_bridge::INTERFACE,
+        plugins_bridge::props,
+    );
+    let plugin_alerts = std::mem::replace(&mut services.plugins.alerts, mpsc::channel(1).1);
+    forward_signal(
+        app.clone(),
+        plugin_alerts,
+        To::Front,
+        plugins_bridge::INTERFACE,
+        plugins_bridge::ALERT,
+        plugins_bridge::alert_args,
+    );
     forward_signal(
         app.clone(),
         super::notifications::spawn(services.config.clone(), &paths.cache_dir),
@@ -458,6 +488,8 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
         shelf_commands: services.shelf.commands.clone(),
         clipboard: services.clipboard.state.clone(),
         clipboard_commands: services.clipboard.commands.clone(),
+        plugins: services.plugins.state.clone(),
+        plugin_commands: services.plugins.commands.clone(),
         known,
         _services: Mutex::new(services),
     }
@@ -657,6 +689,7 @@ pub fn bridge_props(core: State<'_, Core>, interface: String) -> Result<Props, S
             &core.shelf_thumbnails.borrow(),
         )),
         clipboard_bridge::INTERFACE => Ok(clipboard_bridge::props(&core.clipboard.borrow())),
+        plugins_bridge::INTERFACE => Ok(plugins_bridge::props(&core.plugins.borrow())),
         timer_props::INTERFACE => {
             let (mono, wall) = (monotonic_us(), wall_us());
             let mut props = timer_props::props(&core.timer.borrow(), mono, wall);
@@ -754,6 +787,7 @@ pub async fn bridge_call(
         }
         (shelf_bridge::INTERFACE, method, args) => shelf_call(&core, method, args).await,
         (clipboard_bridge::INTERFACE, method, args) => clipboard_call(&core, method, args).await,
+        (plugins_bridge::INTERFACE, method, args) => plugins_call(&core, method, args).await,
         (notifications_bridge::INTERFACE, "Activate", args) => {
             let (id, button) = notifications_bridge::activation(args)
                 .ok_or("Activate takes a notification and a button")?;
@@ -834,6 +868,55 @@ async fn clipboard_call(core: &Core, method: &str, args: &[Value]) -> Result<Val
         .send(command)
         .await
         .map_err(stopped)?;
+    Ok(Value::Null)
+}
+
+/// Calls `Plugins1.method(args)`; an Install answers with the new
+/// plugin's id.
+async fn plugins_call(core: &Core, method: &str, args: &[Value]) -> Result<Value, String> {
+    use plugins::service::{ask, Command as PluginCommand};
+
+    let commands = &core.plugin_commands;
+    match (method, args) {
+        ("SetEnabled", [Value::String(id), Value::Bool(enabled)]) => {
+            let (id, enabled) = (id.clone(), *enabled);
+            ask(commands, |reply| PluginCommand::SetEnabled {
+                id,
+                enabled,
+                reply,
+            })
+            .await?;
+        }
+        ("SetOption", [Value::String(id), Value::String(key), Value::String(value)]) => {
+            let (id, key, value) = (id.clone(), key.clone(), value.clone());
+            ask(commands, |reply| PluginCommand::SetOption {
+                id,
+                key,
+                value,
+                reply,
+            })
+            .await?;
+        }
+        ("Run", [Value::String(id), Value::String(action)]) => {
+            let (id, action) = (id.clone(), action.clone());
+            ask(commands, |reply| PluginCommand::Run { id, action, reply }).await?;
+        }
+        ("Install", [Value::String(path)]) => {
+            let path = std::path::PathBuf::from(path);
+            let id = ask(commands, |reply| PluginCommand::Install { path, reply }).await?;
+            return Ok(Value::String(id));
+        }
+        ("Remove", [Value::String(id)]) => {
+            let id = id.clone();
+            ask(commands, |reply| PluginCommand::Remove { id, reply }).await?;
+        }
+        _ => {
+            return Err(format!(
+                "no method Plugins1.{method} for {} arguments",
+                args.len()
+            ))
+        }
+    }
     Ok(Value::Null)
 }
 

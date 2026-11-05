@@ -6,7 +6,7 @@ use std::io;
 
 use nokta_core::cli::pipe::{self, Answer, Request, MAX_LINE};
 use nokta_core::features::activities::model::Update;
-use serde_json::json;
+use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{NamedPipeServer, ServerOptions};
@@ -61,8 +61,9 @@ async fn talk(pipe: NamedPipeServer, app: AppHandle) {
     }
 }
 
-async fn answer(app: &AppHandle, request: Request) -> Result<(), String> {
+async fn answer(app: &AppHandle, request: Request) -> Result<Value, String> {
     let core = app.state::<Core>();
+    let done = |result: Result<(), String>| result.map(|()| Value::Null);
     match request {
         Request::ActivitySet {
             id,
@@ -77,25 +78,35 @@ async fn answer(app: &AppHandle, request: Request) -> Result<(), String> {
                 icon,
                 progress,
             };
-            core.set_activity(id, update).await
+            done(core.set_activity(id, update).await)
         }
         Request::ActivityEnd {
             id,
             success,
             message,
-        } => core.end_activity(id, success, message).await,
+        } => done(core.end_activity(id, success, message).await),
+        // The clock's id is for the page; nokta does not need it.
         Request::AddCountdown { label, duration_us } => {
             let args = [json!(label), json!(duration_us)];
-            core.timer("AddCountdown", &args).await.map(drop)
+            core.timer("AddCountdown", &args).await.map(|_| Value::Null)
         }
-        Request::AddStopwatch { label } => {
-            core.timer("AddStopwatch", &[json!(label)]).await.map(drop)
-        }
+        Request::AddStopwatch { label } => core
+            .timer("AddStopwatch", &[json!(label)])
+            .await
+            .map(|_| Value::Null),
         Request::AddAlarm { label, unix_us } => {
             let args = [json!(label), json!(unix_us)];
-            core.timer("AddAlarm", &args).await.map(drop)
+            core.timer("AddAlarm", &args).await.map(|_| Value::Null)
         }
-        Request::ClearClocks => core.timer("ClearClocks", &[]).await.map(drop),
-        Request::Settings => super::settings_window::open(app).map_err(|err| err.to_string()),
+        Request::ClearClocks => core.timer("ClearClocks", &[]).await.map(|_| Value::Null),
+        Request::Settings => done(super::settings_window::open(app).map_err(|err| err.to_string())),
+        Request::PluginList => Ok(core.plugin_rows()),
+        Request::PluginInstall { path } => core.plugins("Install", &[json!(path)]).await,
+        Request::PluginRemove { id } => core.plugins("Remove", &[json!(id)]).await,
+        Request::PluginEnable { id, enabled } => {
+            core.plugins("SetEnabled", &[json!(id), json!(enabled)])
+                .await
+        }
+        Request::PluginRun { id, action } => core.plugins("Run", &[json!(id), json!(action)]).await,
     }
 }
