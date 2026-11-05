@@ -70,7 +70,7 @@ break_minutes = 5        # break that follows a focus session, 0 to 60; 0 = no b
 long_break_minutes = 15  # break after every few focus sessions, 1 to 60
 sessions_before_long_break = 4  # focus sessions before a long break, 0 to 12; 0 = never
 sound = true             # play a sound when a focus session, a break, a countdown or an alarm ends
-quiet_notifications = true  # no notification banners while a focus session runs
+quiet_notifications = true  # no notification banners while a focus session runs, and a summary of them after
 shortcut = "<Super><Alt>f"  # starts focus or stops the timer; "" = no shortcut
 
 [notifications]

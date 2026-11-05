@@ -3,10 +3,12 @@ export {
     notificationCount,
     openMessageList,
     takeOverBanners,
+    trayNotifications,
     watchScreenshots,
     type TrayNotification,
 } from './hook.js';
 export { notificationButtons } from './logic/actions.js';
+export { arrivedSince, digestLines, FocusDigest } from './logic/digest.js';
 export { notificationLines, takesBanner } from './logic/content.js';
 export {
     isRecordingBanner,
