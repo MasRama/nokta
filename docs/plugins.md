@@ -21,6 +21,10 @@ and `water` (a plugin that keeps running and hears its buttons).
   Catalog → **Browse**, or `nokta plugin catalog` and then
   `nokta plugin install <id>`. `nokta plugin update <id>` installs the
   catalog's newer version and keeps its switch and options.
+- Have an AI service write it: Settings → Plugins → **Create with AI**, or
+  `nokta plugin create <what it shows>` once `nokta plugin creator` is set
+  up. The service gets your sentence and this page, and Nokta installs what
+  it writes, off: read it before you turn it on.
 - Turn it on with its switch, or `nokta plugin enable <id>`.
 - `nokta plugin run <id>` runs it now; `nokta plugin list` says what each
   one is doing and why one failed.

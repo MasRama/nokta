@@ -146,6 +146,10 @@ Tick what works. For anything that does not, see
       there. Remove asks first.
 - [ ] Plugins → Catalog → **Browse** lists the catalog; **Install** on
       one adds it to Added, off, and runs once it is turned on.
+- [ ] Plugins → Create with AI with a real key: **Create** writes a plugin
+      that is added off, with a toast; turned on, its PowerShell command
+      runs and its card shows. `nokta plugin creator` shows the same
+      service, with the key only as `set`.
 
 ### Language
 

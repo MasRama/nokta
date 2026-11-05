@@ -391,6 +391,13 @@ examples/plugins/   plugins to copy: hello, site-status, water
   a plugin's files into `cache_dir/plugins/<id>`, each checked against its
   listed size and SHA-256 and only plain relative paths, then installs the
   folder through `install.rs`. Nothing is fetched until the user asks.
+  `creator.rs` is Creator Mode: it sends the user's sentence with
+  `docs/plugins.md` (built in) to Anthropic's Messages API or an
+  OpenAI-compatible `chat/completions`, as the user set it up in
+  `creator.toml` (written `0600`, the key never answered back), asks for
+  JSON (a schema for Anthropic), checks each file's path and size, gives the
+  plugin an id no installed one has, writes it to `cache_dir/plugins/` and
+  installs it through `install.rs`, off.
   Nokta never loads a plugin's code into its own process.
 - **settings** reads `config.toml` (`$XDG_CONFIG_HOME/nokta/` on Linux,
   `~/Library/Application Support/nokta/` on macOS, `%APPDATA%\nokta\` on
@@ -444,7 +451,7 @@ files in `contracts/` are the full definition; this is the overview.
 | `io.nokta.Downloads1` | `/io/nokta/Downloads` | signal `Finished(uri s, name s, icon s, size t, thumbnail s)` (thumbnail is a PNG path, empty for a file that is not a picture) |
 | `io.nokta.System1` | `/io/nokta/System` | `Usage (dttddd)`: CPU 0-1, memory used and total bytes, temperature °C (NaN when unknown), download and upload bytes/s, all zero while nobody watches; `Watch()`, `Unwatch()`; signal `MemoryLow(used t, total t, app s)` |
 | `io.nokta.Updates1` | `/io/nokta/Updates` | `Latest` (`s`, the newer release's version, empty when none), `ReleaseUrl` (`s`); `Check()`, `Install()` |
-| `io.nokta.Plugins1` | `/io/nokta/Plugins` | `Plugins` (`a(sbsss)`: id, enabled, status, message, info as JSON), `Cards` (`a(ss)`: id, card as JSON); `SetEnabled(id s, enabled b)`, `SetOption(id s, key s, value s)`, `Run(id s, action s)`, `Install(path s) → id s`, `Remove(id s)`, `Catalog() → catalog s` (JSON), `InstallFromCatalog(id s) → id s`; signal `Alert(id s, title s, detail s, icon s, tone s, important b)` |
+| `io.nokta.Plugins1` | `/io/nokta/Plugins` | `Plugins` (`a(sbsss)`: id, enabled, status, message, info as JSON), `Cards` (`a(ss)`: id, card as JSON); `SetEnabled(id s, enabled b)`, `SetOption(id s, key s, value s)`, `Run(id s, action s)`, `Install(path s) → id s`, `Remove(id s)`, `Catalog() → catalog s` (JSON), `InstallFromCatalog(id s) → id s`, `Creator() → creator s` (JSON), `SetCreator(provider s, model s, base_url s, api_key s)`, `Create(request s) → id s`; signal `Alert(id s, title s, detail s, icon s, tone s, important b)` |
 
 Every property emits `PropertiesChanged`. Changes that belong together, such
 as a new track, go out in one signal so the UI never shows a new title with
@@ -630,8 +637,9 @@ How both sides stay honest:
   about to start, and `Alert` as a `plugin` or `plugin-important` alert.
   An icon the shell cannot find falls back to Nokta's plugin icon. The
   settings window's Plugins page lists them under Added
-  (`prefs/plugins.ts`), with their options drawn from `info`, and the
-  catalog under Catalog once Browse is pressed.
+  (`prefs/plugins.ts`), with their options drawn from `info`, the
+  catalog under Catalog once Browse is pressed, and Create with AI (its
+  call waits up to 5.5 minutes, as the AI service may take that long).
 - `disable()` destroys every actor, disconnects every signal, removes every
   main-loop source, ends the shelf's helper and puts the clock back.
 
@@ -900,8 +908,8 @@ WebView2 and runs the core's services itself, with no D-Bus.
   page makes. Windows' default rights on a pipe let only its owner write.
 - Plugins run in the app's core like on Linux, with the `windows` command
   of their `plugin.toml`. `Plugins1` is a bridge interface, and the page
-  draws the cards in `views/plugin.ts` and the Added group in
-  `prefs/plugins.ts`; `nokta plugin` goes over the pipe.
+  draws the cards in `views/plugin.ts` and the Added, Catalog and Create
+  with AI groups in `prefs/plugins.ts`; `nokta plugin` goes over the pipe.
 - Updates: home's Update calls `Updates1.Install`, which starts
   `bin\nokta.exe update --yes` (`win/update.rs`) as noktad starts `nokta
   update` on Linux. It downloads `Nokta_<version>_x64-setup.exe`, checks

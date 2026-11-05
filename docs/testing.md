@@ -663,12 +663,15 @@ that matches its sum is installed, one that does not, or one without
 starts off, turns it on, and reads its alert, its badge, its panel row and
 its page; removing it takes the badge and the folder away. It then
 publishes the plugin in a fake catalog: a file whose SHA-256 is wrong
-installs nothing, and the right one installs executable and off.
+installs nothing, and the right one installs executable and off. Then
+Creator Mode asks a stand-in AI service (`fake-ai.py`): `creator.toml` is
+`0600`, `Creator` never answers the key, and what the model wrote installs
+executable and off.
 `core/src/features/plugins/tests.rs` covers the manifest, the card, the
 runner (both kinds, and one that fails or is too slow) and the service
 from install to remove;
 `core/tests/cli.rs` runs `nokta plugin` against a private bus, the catalog
-included.
+included, and Creator Mode with the key on standard input.
 
 - [ ] `nokta plugin install examples/plugins/hello`, then `nokta plugin
       list`: `hello off off`. `nokta plugin enable hello`: home shows
@@ -692,6 +695,15 @@ included.
       Offline, Browse shows a toast and the list stays as it was.
 - [ ] `nokta plugin catalog` lists the same plugins with their state;
       `nokta plugin install <id>` and `nokta plugin update <id>` work.
+- [ ] Settings → Plugins → Create with AI, with a real Anthropic key:
+      **Save** shows `Anthropic · claude-opus-5-5`; `~/.config/nokta/
+      creator.toml` is `-rw-------`. Describe a plugin and **Create**: the
+      button says Writing… for up to a few minutes, then a toast names the
+      new plugin, which is in Added, off. Read its files, turn it on: its
+      card shows.
+- [ ] The same with an OpenAI-compatible service (e.g. a local Ollama at
+      `http://localhost:11434/v1`), and once with a wrong key: a toast says
+      the key was not accepted, and nothing is installed.
 
 ### Screen recordings
 
