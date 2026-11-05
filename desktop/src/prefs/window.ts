@@ -9,6 +9,7 @@ import { Follower } from '../follower.js';
 import { icon } from '../icons.js';
 import { windowsPages, type PrefGroup, type PrefPage, type PrefRow } from './logic.js';
 import { NotchPreview, ThemeGallery } from './look.js';
+import { AddedPlugins, type PluginsHost } from './plugins.js';
 import { buildRow, type RowHost, type SettingRow, type SettingValue } from './rows.js';
 import WORDMARK from '../../../extension/icons/nokta-wordmark-reverse.svg?raw';
 
@@ -17,7 +18,7 @@ export const SEND_DELAY_MS = 250;
 /** How long a message stays. */
 const TOAST_MS = 5000;
 
-export interface PrefsHost extends RowHost {
+export interface PrefsHost extends RowHost, PluginsHost {
     /** Opens config.toml in the app Windows opens it with. */
     openConfig(): void;
     /** Shows the first-run tour again in the primary monitor's notch. */
@@ -93,6 +94,7 @@ export class SettingsWindow {
     private readonly confirm: HTMLElement;
     private readonly preview: NotchPreview;
     private readonly gallery: ThemeGallery;
+    private readonly added: AddedPlugins;
 
     constructor(
         private readonly bridge: Bridge,
@@ -101,6 +103,7 @@ export class SettingsWindow {
         private readonly pages: readonly PrefPage[] = windowsPages(),
     ) {
         this.settings = new SettingsTables(bridge, () => this.showAll());
+        this.added = new AddedPlugins(bridge, host, (text) => this.toast(text));
         this.preview = new NotchPreview((path) => host.fileUrl(path));
         const themeRow = pages.flatMap((page) => page.groups.flatMap((group) => group.rows)).find(isTheme);
         const theme: SettingRow | null = themeRow ? { row: themeRow, element: document.body, show: () => this.showLook() } : null;
@@ -122,7 +125,7 @@ export class SettingsWindow {
             this.navs.set(page.name, nav);
             const section = element('section', 'nokta-prefs-page');
             if (page.name === 'appearance') section.append(this.lookGroup());
-            if (page.name === 'plugins') section.append(this.builtIns(page.groups));
+            if (page.name === 'plugins') section.append(this.builtIns(page.groups), this.added.element);
             else for (const group of page.groups) section.append(this.group(group.title, group.description, group.rows));
             if (page.name === 'behavior') section.append(this.tourGroup(), this.configGroup());
             this.content.append(section);
@@ -136,7 +139,7 @@ export class SettingsWindow {
     }
 
     async start(): Promise<void> {
-        await this.settings.attach();
+        await Promise.all([this.settings.attach(), this.added.attach()]);
     }
 
     /** Sends what is still waiting and stops following the settings. */
@@ -146,6 +149,7 @@ export class SettingsWindow {
             send();
         }
         this.settings.detach();
+        this.added.detach();
     }
 
     /** Shows the page named `name`. */

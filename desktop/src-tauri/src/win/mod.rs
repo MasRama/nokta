@@ -51,6 +51,8 @@ pub fn run() {
             settings_window::open_settings,
             settings_window::open_config,
             settings_window::pick_picture,
+            settings_window::pick_plugin_folder,
+            settings_window::open_plugins_folder,
             tour::tour_wanted,
             tour::tour_done,
             tour::show_tour,
@@ -73,6 +75,7 @@ pub fn run() {
             app.manage(core);
             cli::start(app.handle().clone());
             app.manage(settings_window::ConfigFile(paths.config_file.clone()));
+            app.manage(settings_window::PluginsFolder(paths.plugins_dir.clone()));
             app.manage(tour::StateFile(
                 paths.config_file.with_file_name("state.toml"),
             ));

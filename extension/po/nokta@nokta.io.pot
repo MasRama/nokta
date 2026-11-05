@@ -1325,19 +1325,19 @@ msgstr ""
 msgid "Nokta is not running"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Added"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Plugins run as you and can read your files: only add ones you trust. A new one starts off."
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Open the plugins folder"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Add from Folder…"
 msgstr ""
 
@@ -1345,11 +1345,11 @@ msgstr ""
 msgid "Add a Plugin"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Added. Turn it on when you are ready."
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "No plugins added yet"
 msgstr ""
 
@@ -1357,19 +1357,19 @@ msgstr ""
 msgid "Nokta's service is not running"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Add one from a folder, or write your own: see the examples"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Version"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "About"
 msgstr ""
 
-#: src/prefs/plugins.ts src/prefs/rows.ts ../desktop/src/prefs/rows.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/shelf.ts
+#: src/prefs/plugins.ts src/prefs/rows.ts ../desktop/src/prefs/plugins.ts ../desktop/src/prefs/rows.ts ../desktop/src/views/clipboard.ts ../desktop/src/views/shelf.ts
 msgid "Remove"
 msgstr ""
 
@@ -1377,15 +1377,15 @@ msgstr ""
 msgid "Remove this plugin"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Deletes its folder and its settings"
 msgstr ""
 
-#: src/prefs/plugins.ts
+#: src/prefs/plugins.ts ../desktop/src/prefs/plugins.ts
 msgid "Remove this plugin?"
 msgstr ""
 
-#: src/prefs/plugins.ts src/prefs/window.ts ../desktop/src/prefs/window.ts
+#: src/prefs/plugins.ts src/prefs/window.ts ../desktop/src/prefs/plugins.ts ../desktop/src/prefs/window.ts
 msgid "Cancel"
 msgstr ""
 
@@ -1587,6 +1587,14 @@ msgstr ""
 
 #: ../desktop/src/prefs/logic.ts
 msgid "The secret iCal address of a Google, Outlook or iCloud calendar"
+msgstr ""
+
+#: ../desktop/src/prefs/plugins.ts
+msgid "Examples"
+msgstr ""
+
+#: ../desktop/src/prefs/plugins.ts
+msgid "Website"
 msgstr ""
 
 #: ../desktop/src/prefs/rows.ts

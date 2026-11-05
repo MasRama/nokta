@@ -109,6 +109,16 @@ export function openSettings(): void {
     if (inTauri()) void invoke('open_settings').catch((err: unknown) => console.warn('open_settings:', err));
 }
 
+/** Asks for a plugin's folder; null when cancelled or outside the app. */
+export async function pickPluginFolder(): Promise<string | null> {
+    return inTauri() ? invoke<string | null>('pick_plugin_folder') : null;
+}
+
+/** Opens the plugins folder in Explorer. */
+export function openPluginsFolder(): void {
+    if (inTauri()) void invoke('open_plugins_folder').catch((err: unknown) => console.warn('open_plugins_folder:', err));
+}
+
 /** Opens config.toml in the app Windows opens it with. */
 export function openConfig(): void {
     if (inTauri()) void invoke('open_config').catch((err: unknown) => console.warn('open_config:', err));
