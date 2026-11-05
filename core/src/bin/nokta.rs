@@ -13,8 +13,9 @@ Usage:
   nokta timer clear
   nokta stopwatch [LABEL...]
   nokta alarm HH:MM [LABEL...]
-  nokta plugin list
-  nokta plugin install FOLDER
+  nokta plugin list | catalog
+  nokta plugin install FOLDER | ID
+  nokta plugin update ID
   nokta plugin enable | disable | remove ID
   nokta plugin run ID [--action NAME]
   nokta settings
@@ -34,8 +35,11 @@ stopwatch starts a stopwatch. alarm rings at the next HH:MM on the local
 24-hour clock, today or tomorrow. The notch shows them all, at most 6.
 
 plugin installs and runs add-on plugins (docs/plugins.md). install copies
-a plugin's folder in, off; enable turns it on. run runs it now, telling it
---action as if its button was pressed. list says what each one is doing.
+a plugin's folder in, or gets the plugin with that id from the catalog when
+there is no such folder; either starts off, and enable turns it on. catalog
+lists the catalog's plugins (github.com/MasRama/nokta-plugins); update gets
+the newest of one. run runs it now, telling it --action as if its button
+was pressed. list says what each one is doing.
 
 settings opens Nokta's settings window.
 

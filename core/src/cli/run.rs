@@ -89,6 +89,34 @@ async fn plugin(command: PluginCli) -> ExitCode {
             })
             .await
         }
+        PluginCli::Catalog => {
+            call(|nokta| async move {
+                let catalog = nokta.plugin_catalog().await?;
+                let installed = nokta.plugin_list().await?;
+                print!("{}", super::plugin::catalog_table(&catalog, &installed));
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Update { id } => {
+            call(|nokta| async move {
+                let id = nokta.plugin_install_from_catalog(&id).await?;
+                println!("Updated {id}.");
+                Ok(())
+            })
+            .await
+        }
+        PluginCli::Install { path }
+            if !std::path::Path::new(&path).exists()
+                && crate::features::plugins::manifest::valid_id(&path) =>
+        {
+            call(|nokta| async move {
+                let id = nokta.plugin_install_from_catalog(&path).await?;
+                println!("Installed {id} from the catalog. It is off; turn it on with: nokta plugin enable {id}");
+                Ok(())
+            })
+            .await
+        }
         PluginCli::Install { path } => {
             // Nokta runs in a folder of its own.
             let absolute = std::path::absolute(&path).ok();

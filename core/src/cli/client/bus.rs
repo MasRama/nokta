@@ -94,6 +94,16 @@ impl Client {
         Ok(self.plugins.call("Install", &(path,)).await?)
     }
 
+    /// The catalog's plugins, as `Plugins1.Catalog` gives them (JSON).
+    pub async fn plugin_catalog(&self) -> Result<String, CallError> {
+        Ok(self.plugins.call("Catalog", &()).await?)
+    }
+
+    /// Answers the plugin's id.
+    pub async fn plugin_install_from_catalog(&self, id: &str) -> Result<String, CallError> {
+        Ok(self.plugins.call("InstallFromCatalog", &(id,)).await?)
+    }
+
     pub async fn plugin_remove(&self, id: &str) -> Result<(), CallError> {
         Ok(self.plugins.call("Remove", &(id,)).await?)
     }

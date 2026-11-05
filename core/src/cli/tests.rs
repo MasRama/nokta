@@ -219,6 +219,12 @@ fn plugin_commands_name_a_plugin_or_a_folder() {
         Err(err) => Err(err),
     };
     assert_eq!(plugin("plugin list"), Ok(PluginCli::List));
+    assert_eq!(plugin("plugin catalog"), Ok(PluginCli::Catalog));
+    assert_eq!(
+        plugin("plugin update water"),
+        Ok(PluginCli::Update { id: "water".into() })
+    );
+    assert!(plugin("plugin update").unwrap_err().contains("plugin id"));
     assert_eq!(
         plugin("plugin install ./hello"),
         Ok(PluginCli::Install {
@@ -293,4 +299,45 @@ bad          off  broken       no plugin.toml
 "
     );
     assert!(table(&[]).contains("nokta plugin install"));
+}
+
+#[test]
+fn the_catalog_says_what_is_installed_and_what_has_an_update() {
+    use super::plugin::{catalog_table, newer};
+
+    let catalog = r#"[
+        {"id":"water","name":"Water","version":"1.2.0","runs_here":true},
+        {"id":"site-status","name":"Site status","version":"1.0.0","runs_here":true},
+        {"id":"hello","name":"Hello","version":"1.0.0","runs_here":true},
+        {"id":"mac-only","name":"Mac only","version":"0.1","runs_here":false}
+    ]"#;
+    let installed = [
+        (
+            "water".to_owned(),
+            true,
+            "ok".to_owned(),
+            String::new(),
+            r#"{"version":"1.1.9"}"#.to_owned(),
+        ),
+        (
+            "site-status".to_owned(),
+            false,
+            "off".to_owned(),
+            String::new(),
+            r#"{"version":"1.0.0"}"#.to_owned(),
+        ),
+    ];
+    assert_eq!(
+        catalog_table(catalog, &installed),
+        "\
+water        1.2.0  Water  update from 1.1.9
+site-status  1.0.0  Site status  installed
+hello        1.0.0  Hello
+mac-only     0.1    Mac only  not for this system
+Install one with: nokta plugin install ID
+"
+    );
+    assert!(catalog_table("[]", &[]).contains("no plugins"));
+    assert!(newer("1.0.0", "1.0.1") && newer("1.9", "1.10") && newer("v1.0", "2"));
+    assert!(!newer("1.0.0", "1.0") && !newer("1.2.0", "1.1.9") && !newer("1.0.0", "1.0.0-beta"));
 }

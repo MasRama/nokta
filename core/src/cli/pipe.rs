@@ -44,6 +44,12 @@ pub enum Request {
     PluginInstall {
         path: String,
     },
+    /// Answers the catalog, as `Plugins1.Catalog` gives it (JSON text).
+    PluginCatalog,
+    /// Answers the plugin's id.
+    PluginInstallFromCatalog {
+        id: String,
+    },
     PluginRemove {
         id: String,
     },
