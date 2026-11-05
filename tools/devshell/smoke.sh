@@ -897,6 +897,44 @@ wait_for "removing the plugin takes its badge away" "$FIND shown('nokta-clock') 
 [ ! -e "$STATE/data/nokta/plugins/smoke-card" ] || fail "removing the plugin left its folder"
 ok "removing the plugin deletes its folder"
 
+# The same plugin from the catalog (run.sh points noktad at
+# $STATE/lrclib/catalog): each file is checked against index.json, and one
+# that does not match installs nothing.
+CATALOG="$STATE/lrclib/catalog"
+mkdir -p "$CATALOG/plugins/smoke-card"
+cp "$PLUGIN_SRC/plugin.toml" "$PLUGIN_SRC/card.sh" "$CATALOG/plugins/smoke-card/"
+catalog_index() {
+    python3 - "$CATALOG" "$1" << 'PY'
+import hashlib, json, os, sys
+root, sha = sys.argv[1], sys.argv[2]
+files = []
+for name in ("plugin.toml", "card.sh"):
+    data = open(os.path.join(root, "plugins", "smoke-card", name), "rb").read()
+    digest = hashlib.sha256(data).hexdigest() if sha == "right" else "0" * 64
+    files.append({"path": name, "size": len(data), "sha256": digest, "executable": name == "card.sh"})
+plugin = {"id": "smoke-card", "name": "Smoke card", "version": "1.0.0", "unix": True, "files": files}
+json.dump({"api": 1, "plugins": [plugin]}, open(os.path.join(root, "index.json"), "w"))
+PY
+}
+catalog_index wrong
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.Catalog | grep -q '"id":"smoke-card"' || fail "the catalog does not list the plugin"
+ok "the catalog lists the plugin"
+if gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.InstallFromCatalog smoke-card > /dev/null 2>&1; then
+    fail "a file that does not match the catalog was installed"
+fi
+[ ! -e "$STATE/data/nokta/plugins/smoke-card" ] || fail "a refused catalog plugin left its folder"
+ok "a file that does not match the catalog installs nothing"
+catalog_index right
+gdbus call --session --dest io.nokta.Nokta --object-path /io/nokta/Plugins \
+    --method io.nokta.Plugins1.InstallFromCatalog smoke-card | grep -q "'smoke-card'" || fail "the catalog plugin did not install"
+[ -x "$STATE/data/nokta/plugins/smoke-card/card.sh" ] || fail "the catalog plugin's command is not executable"
+holds "a plugin from the catalog starts off too" "$FIND !shown('nokta-plugin-badge')" 2
+plugins Remove smoke-card
+[ ! -e "$STATE/data/nokta/plugins/smoke-card" ] || fail "removing the catalog plugin left its folder"
+ok "a plugin installs from the catalog, checked, and starts off"
+
 # Fake events in the date menu's event source fill the panel's agenda, the
 # first one's reminder (5 minutes before, by default) shows in the notch, and
 # the closed notch then counts down to it. fake-eds.js gives that event a

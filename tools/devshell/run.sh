@@ -93,7 +93,7 @@ BUSCONF
     # LRCLIB, Open-Meteo and GitHub stand-in: http.server ignores the query,
     # so /api/get always answers with this record, /v1/search with Jakarta and
     # /v1/forecast with the same weather, on every run. GitHub has no release
-    # until the smoke test writes one.
+    # until the smoke test writes one, nor a plugin catalog (/catalog).
     cp "$HERE/lyrics.json" "$STATE/lrclib/api/get"
     cp "$HERE/place.json" "$STATE/lrclib/v1/search"
     cp "$HERE/forecast.json" "$STATE/lrclib/v1/forecast"
@@ -218,7 +218,7 @@ if [ "$START_DAEMON" = 1 ]; then
     wait_name org.gnome.evolution.dataserver.Sources5
     DBUS_SYSTEM_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" NOKTA_LRCLIB_URL="http://127.0.0.1:$PORT" \
         NOKTA_OPEN_METEO_URL="http://127.0.0.1:$PORT" NOKTA_OPEN_METEO_GEOCODING_URL="http://127.0.0.1:$PORT" \
-        NOKTA_GITHUB_API_URL="http://127.0.0.1:$PORT" \
+        NOKTA_GITHUB_API_URL="http://127.0.0.1:$PORT" NOKTA_PLUGIN_CATALOG_URL="http://127.0.0.1:$PORT/catalog" \
         "$NOKTAD" > "$STATE/noktad.log" 2>&1 &
     PIDS="$PIDS $!"
     echo "$!" > "$STATE/noktad.pid"
