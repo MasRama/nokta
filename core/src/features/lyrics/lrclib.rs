@@ -6,12 +6,18 @@
 //! overloaded or the length is outside what `get` accepts. A search result
 //! counts only if its title and artist match the candidate and its duration
 //! is within [`DURATION_TOLERANCE_S`] of the playing track.
+//!
+//! When nothing matches that closely (a cover, a live take, another edit),
+//! each song title is searched without an artist and the closest record is
+//! taken: one whose artist the video names, else, for a cover, one within
+//! [`COVER_TOLERANCE_S`]. Records with synced lyrics, then the nearest
+//! length, win. Its timing can be off; the user's offset fixes that.
 
 use std::time::Duration;
 
 use serde::Deserialize;
 
-use super::clean::{self, normalized, Candidate};
+use super::clean::{self, names_artist, names_song, normalized, Candidate};
 use super::{lrc, Lookup};
 use crate::shared::http;
 
@@ -19,6 +25,12 @@ use crate::shared::http;
 pub const DURATION_TOLERANCE_S: f64 = 2.0;
 /// `/api/get` rejects longer durations with 400; search still works for them.
 const MAX_GET_DURATION_S: u64 = 3600;
+/// How far a cover that does not name the original artist may be from the
+/// original's length.
+pub const COVER_TOLERANCE_S: f64 = 15.0;
+/// Song titles searched without an artist when nothing else matched; LRCLIB
+/// rate-limits busy clients.
+pub const MAX_TITLE_SEARCHES: usize = 2;
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// What to look up. `duration_s == 0` means the player did not report a length.
@@ -70,6 +82,25 @@ impl Record {
                     .is_some_and(|d| (d - duration_s as f64).abs() <= DURATION_TOLERANCE_S))
     }
 
+    fn has_lyrics(&self) -> bool {
+        !self.instrumental
+            && [&self.synced_lyrics, &self.plain_lyrics]
+                .iter()
+                .any(|l| l.as_deref().is_some_and(|l| !l.trim().is_empty()))
+    }
+
+    fn has_synced(&self) -> bool {
+        self.synced_lyrics
+            .as_deref()
+            .is_some_and(|l| !l.trim().is_empty())
+    }
+
+    /// How far its length is from the playing one; unknown is far.
+    fn distance_s(&self, duration_s: u64) -> f64 {
+        self.duration
+            .map_or(f64::INFINITY, |d| (d - duration_s as f64).abs())
+    }
+
     fn into_lookup(self) -> Lookup {
         if self.instrumental {
             return Lookup::Instrumental;
@@ -86,6 +117,68 @@ impl Record {
             return Lookup::Plain;
         }
         Lookup::NotFound
+    }
+}
+
+/// (names the artist, has synced lyrics, distance from the playing length)
+type Rank = (bool, bool, f64);
+
+/// The record nearest to the playing track among those offered; see the
+/// module docs.
+struct Closest<'q> {
+    q: &'q Query,
+    /// What the player says, where the original artist may be named.
+    text: String,
+    cover: bool,
+    best: Option<(Rank, Record)>,
+}
+
+impl<'q> Closest<'q> {
+    fn new(q: &'q Query) -> Closest<'q> {
+        Closest {
+            q,
+            text: format!("{} {}", q.title, q.artist),
+            cover: clean::is_cover(&q.title),
+            best: None,
+        }
+    }
+
+    /// Keeps `record` if it is the song `title` and nearer than the best so far.
+    fn offer(&mut self, record: Record, title: &str) {
+        if !record.has_lyrics() || !names_song(&record.track_name, title) {
+            return;
+        }
+        let duration_s = self.q.duration_s;
+        let named = names_artist(&self.text, &record.artist_name);
+        let distance = record.distance_s(duration_s);
+        let close = if duration_s == 0 {
+            named
+        } else if named {
+            distance <= duration_s as f64 / 2.0
+        } else {
+            self.cover && distance <= COVER_TOLERANCE_S
+        };
+        if !close {
+            return;
+        }
+        let rank = (named, record.has_synced(), distance);
+        let better = self.best.as_ref().is_none_or(|(b, _)| {
+            (rank.0, rank.1) > (b.0, b.1) || ((rank.0, rank.1) == (b.0, b.1) && rank.2 < b.2)
+        });
+        if better {
+            self.best = Some((rank, record));
+        }
+    }
+
+    /// A synced record by the artist the player names is as close as it gets.
+    fn settled(&self) -> bool {
+        self.best
+            .as_ref()
+            .is_some_and(|((named, synced, _), _)| *named && *synced)
+    }
+
+    fn into_record(self) -> Option<Record> {
+        self.best.map(|(_, record)| record)
     }
 }
 
@@ -126,20 +219,51 @@ impl Client {
                 }
             }
         }
+        let mut closest = Closest::new(q);
         for candidate in &candidates {
-            let records = self.search(candidate).await?;
-            if let Some(record) = records
-                .into_iter()
-                .find(|r| r.matches(candidate, q.duration_s))
-            {
+            let mut exact = None;
+            for record in self.search(candidate).await? {
+                if exact.is_none() && record.matches(candidate, q.duration_s) {
+                    exact = Some(record);
+                } else {
+                    closest.offer(record, &candidate.title);
+                }
+            }
+            if let Some(record) = exact {
                 return Ok(record.into_lookup());
             }
+        }
+        if !closest.settled() {
+            for title in clean::song_titles(&candidates)
+                .into_iter()
+                .take(MAX_TITLE_SEARCHES)
+            {
+                for record in self.search_title(title).await? {
+                    closest.offer(record, title);
+                }
+                if closest.settled() {
+                    break;
+                }
+            }
+        }
+        if let Some(record) = closest.into_record() {
+            return Ok(record.into_lookup());
         }
         match busy {
             // Not "not found": that would be cached for a week.
             Some(err) => Err(err),
             None => Ok(Lookup::NotFound),
         }
+    }
+
+    async fn search_title(&self, title: &str) -> Result<Vec<Record>, FetchError> {
+        let resp = self
+            .http
+            .get(format!("{}/api/search", self.base_url))
+            .query(&[("track_name", title)])
+            .send()
+            .await?;
+        Ok(checked(resp)?.json().await?)
     }
 
     async fn get(&self, q: &Query) -> Result<Option<Record>, FetchError> {
@@ -187,9 +311,10 @@ fn checked(resp: reqwest::Response) -> Result<reqwest::Response, FetchError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::features::lyrics::clean::MAX_CANDIDATES;
     use crate::features::lyrics::{Line, Lookup};
     use serde_json::json;
-    use wiremock::matchers::{header, method, path, query_param};
+    use wiremock::matchers::{header, method, path, query_param, query_param_is_missing};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     const UA: &str = "Nokta/0.0.0 (https://github.com/MasRama/nokta)";
@@ -306,7 +431,30 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn search_outside_tolerance_is_not_found() {
+    async fn another_length_of_the_song_is_the_closest_match() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                record(100.0, Some("[00:01.00]far"), None, false),
+                record(300.0, Some("[00:01.00]near"), None, false),
+            ])))
+            .mount(&server)
+            .await;
+        assert_eq!(
+            client(&server).await.lookup(&query(369)).await.unwrap(),
+            Lookup::Synced(vec![Line {
+                start_us: 1_000_000,
+                text: "near".into()
+            }])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_length_off_by_more_than_half_is_not_the_song() {
         let server = MockServer::start().await;
         Mock::given(path("/api/get"))
             .respond_with(ResponseTemplate::new(404))
@@ -314,7 +462,7 @@ mod tests {
             .await;
         Mock::given(path("/api/search"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!([record(
-                300.0,
+                100.0,
                 Some("[00:01.00]x"),
                 None,
                 false
@@ -513,6 +661,221 @@ mod tests {
         assert_eq!(
             client(&server).await.lookup(&query(369)).await.unwrap(),
             Lookup::NotFound
+        );
+    }
+
+    fn cover(title: &str, duration_s: u64) -> Query {
+        Query {
+            artist: "Tami Aulia".into(),
+            title: title.into(),
+            album: String::new(),
+            duration_s,
+        }
+    }
+
+    fn found(
+        title: &str,
+        artist: &str,
+        duration: f64,
+        synced: Option<&str>,
+        plain: Option<&str>,
+    ) -> serde_json::Value {
+        json!({"trackName": title, "artistName": artist, "duration": duration,
+               "instrumental": false, "syncedLyrics": synced, "plainLyrics": plain})
+    }
+
+    fn first_line(lookup: Lookup) -> String {
+        match lookup {
+            Lookup::Synced(lines) => lines[0].text.clone(),
+            other => panic!("expected synced lyrics, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_cover_gets_the_lyrics_of_the_song_it_covers() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        // Searching the other side of the dash finds a song called "Tulus".
+        Mock::given(path("/api/search"))
+            .and(query_param("track_name", "Tulus"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([found(
+                "Tulus",
+                "Radja",
+                229.0,
+                Some("[00:01.00]radja"),
+                None
+            )])))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("track_name", "Hati-Hati di Jalan"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                found(
+                    "Hati-hati di jalan",
+                    "Tulus",
+                    4.0,
+                    Some("[00:01.00]junk"),
+                    None
+                ),
+                found("Hati-Hati di Jalan", "Tulus", 240.0, None, Some("plain")),
+                found(
+                    "Hati-Hati di Jalan",
+                    "Tulus",
+                    242.0,
+                    Some("[00:12.00]synced"),
+                    None
+                ),
+                found(
+                    "Hati Hati Di Jalan",
+                    "Coffee Shop",
+                    230.0,
+                    Some("[00:01.00]other"),
+                    None
+                ),
+            ])))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .with_priority(10)
+            .mount(&server)
+            .await;
+        let got = client(&server)
+            .await
+            .lookup(&cover(
+                "Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)",
+                230,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(first_line(got), "synced");
+    }
+
+    #[tokio::test]
+    async fn a_cover_naming_the_artist_costs_no_extra_searches() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .expect(1)
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("artist_name", "Tulus"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([found(
+                "Hati-Hati di Jalan",
+                "Tulus",
+                242.0,
+                Some("[00:12.00]synced"),
+                None
+            )])))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param_is_missing("artist_name"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .expect(0)
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .with_priority(10)
+            .mount(&server)
+            .await;
+        let got = client(&server)
+            .await
+            .lookup(&cover(
+                "Hati-Hati di Jalan - Tulus (Cover by Tami Aulia)",
+                230,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(first_line(got), "synced");
+        // The length was too far off for the exact search, but its answer is
+        // the song: nothing is searched again without the artist.
+        let requests = server.received_requests().await.unwrap();
+        assert!(
+            requests.len() <= 1 + MAX_CANDIDATES,
+            "{} requests",
+            requests.len()
+        );
+    }
+
+    #[tokio::test]
+    async fn a_cover_not_naming_the_artist_searches_at_most_two_titles() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param_is_missing("artist_name"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .expect(..=MAX_TITLE_SEARCHES as u64)
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+            .mount(&server)
+            .await;
+        let got = client(&server)
+            .await
+            .lookup(&cover("Satu - Dua - Tiga | Empat - Lima (Cover)", 230))
+            .await
+            .unwrap();
+        assert_eq!(got, Lookup::NotFound);
+    }
+
+    #[tokio::test]
+    async fn a_youtube_titled_record_counts_as_the_song() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([found(
+                "TULUS - Hati-Hati di Jalan (Official Music Video)",
+                "Tulus",
+                262.0,
+                Some("[00:12.00]video"),
+                None
+            )])))
+            .mount(&server)
+            .await;
+        let got = client(&server)
+            .await
+            .lookup(&cover("TAMI AULIA | HATI-HATI DI JALAN - TULUS", 231))
+            .await
+            .unwrap();
+        assert_eq!(first_line(got), "video");
+    }
+
+    #[tokio::test]
+    async fn a_cover_that_does_not_name_the_artist_needs_a_close_length() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                found("Sial", "Cokelat", 307.0, Some("[00:01.00]cokelat"), None),
+                found("Sial", "Mahalini", 244.0, Some("[00:01.00]mahalini"), None),
+            ])))
+            .mount(&server)
+            .await;
+        let c = client(&server).await;
+        assert_eq!(
+            first_line(c.lookup(&cover("Sial (Cover)", 250)).await.unwrap()),
+            "mahalini"
+        );
+        assert_eq!(
+            c.lookup(&cover("Sial (Cover)", 275)).await.unwrap(),
+            Lookup::NotFound,
+            "neither length is close"
         );
     }
 
