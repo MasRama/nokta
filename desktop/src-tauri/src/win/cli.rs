@@ -106,6 +106,22 @@ async fn answer(app: &AppHandle, request: Request) -> Result<Value, String> {
         Request::PluginInstallFromCatalog { id } => {
             core.plugins("InstallFromCatalog", &[json!(id)]).await
         }
+        Request::PluginCreator => core.plugins("Creator", &[]).await,
+        Request::PluginSetCreator {
+            provider,
+            model,
+            base_url,
+            api_key,
+        } => {
+            let args = [
+                json!(provider),
+                json!(model),
+                json!(base_url),
+                json!(api_key),
+            ];
+            core.plugins("SetCreator", &args).await
+        }
+        Request::PluginCreate { request } => core.plugins("Create", &[json!(request)]).await,
         Request::PluginRemove { id } => core.plugins("Remove", &[json!(id)]).await,
         Request::PluginEnable { id, enabled } => {
             core.plugins("SetEnabled", &[json!(id), json!(enabled)])

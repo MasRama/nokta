@@ -104,6 +104,7 @@ pub struct Core {
     plugins: watch::Receiver<PluginsState>,
     plugin_commands: mpsc::Sender<plugins::service::Command>,
     plugin_catalog: plugins::catalog::Source,
+    plugin_creator: plugins::creator::Creator,
     /// The files the page may open.
     known: Arc<Mutex<KnownFiles>>,
     /// Keeps the services and their watchers alive.
@@ -495,6 +496,11 @@ pub fn start(app: &AppHandle, paths: &Paths) -> Core {
             client: plugins::catalog::Client::new(plugins::catalog::DEFAULT_URL, USER_AGENT),
             staging: paths.cache_dir.join("plugins"),
         },
+        plugin_creator: plugins::creator::Creator::new(
+            paths.plugins_file.with_file_name("creator.toml"),
+            paths.cache_dir.join("plugins"),
+            USER_AGENT,
+        ),
         known,
         _services: Mutex::new(services),
     }
@@ -918,6 +924,27 @@ async fn plugins_call(core: &Core, method: &str, args: &[Value]) -> Result<Value
         ("Catalog", []) => return core.plugin_catalog.browse().await.map(Value::String),
         ("InstallFromCatalog", [Value::String(id)]) => {
             let id = core.plugin_catalog.install(commands, id).await?;
+            return Ok(Value::String(id));
+        }
+        ("Creator", []) => return Ok(Value::String(core.plugin_creator.settings().to_json())),
+        (
+            "SetCreator",
+            [Value::String(provider), Value::String(model), Value::String(base_url), Value::String(api_key)],
+        ) => core
+            .plugin_creator
+            .configure(provider, model, base_url, api_key)?,
+        ("Create", [Value::String(request)]) => {
+            let taken: Vec<String> = core
+                .plugins
+                .borrow()
+                .plugins
+                .iter()
+                .map(|p| p.id.clone())
+                .collect();
+            let id = core
+                .plugin_creator
+                .create(commands, &taken, request)
+                .await?;
             return Ok(Value::String(id));
         }
         _ => {
