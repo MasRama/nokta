@@ -208,7 +208,8 @@ impl Client {
         // know it.
         let mut busy = None;
         if let Some(best) = candidates.first() {
-            if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) {
+            // `get` only answers within 2 s of the original, which a cover never is.
+            if (1..=MAX_GET_DURATION_S).contains(&q.duration_s) && !clean::is_cover(&q.title) {
                 let exact = Query {
                     artist: best.artist.clone(),
                     title: best.title.clone(),
@@ -617,6 +618,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_cover_skips_get() {
+        let server = MockServer::start().await;
+        // A cover is never within get's 2 s of the original.
+        Mock::given(path("/api/get"))
+            .respond_with(ResponseTemplate::new(404))
+            .expect(0)
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([found(
+                "Sial",
+                "Mahalini",
+                244.0,
+                Some("[00:01.00]sial"),
+                None
+            )])))
+            .mount(&server)
+            .await;
+        let got = client(&server)
+            .await
+            .lookup(&cover("Mahalini - Sial (Acoustic Cover)", 250))
+            .await
+            .unwrap();
+        assert_eq!(first_line(got), "sial");
+    }
+
+    #[tokio::test]
     async fn busy_get_with_empty_search_is_an_error_not_not_found() {
         let server = MockServer::start().await;
         Mock::given(path("/api/get"))
@@ -792,7 +820,7 @@ mod tests {
         let server = MockServer::start().await;
         Mock::given(path("/api/get"))
             .respond_with(ResponseTemplate::new(404))
-            .expect(1)
+            .expect(0)
             .mount(&server)
             .await;
         Mock::given(path("/api/search"))
@@ -830,7 +858,7 @@ mod tests {
         // the song: nothing is searched again without the artist.
         let requests = server.received_requests().await.unwrap();
         assert!(
-            requests.len() <= 1 + MAX_CANDIDATES,
+            requests.len() <= MAX_CANDIDATES,
             "{} requests",
             requests.len()
         );
