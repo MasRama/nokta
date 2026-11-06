@@ -1,11 +1,13 @@
 //! Keeps `LyricsState` in step with the active track: the user's own `.lrc`
 //! file first, then the cache, then LRCLIB, and never publishes a result for
-//! a track that is no longer playing. The lines go out shifted by the
-//! user's offset for the track, kept in `lyrics-offsets.toml`.
+//! a track that is no longer playing. A lookup that fails (LRCLIB busy or
+//! rate-limiting, no network) is tried again after [`RETRY_DELAYS`] while
+//! the track plays. The lines go out shifted by the user's offset for the
+//! track, kept in `lyrics-offsets.toml`.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use futures_util::future::BoxFuture;
 use tokio::sync::{mpsc, oneshot, watch};
@@ -29,6 +31,13 @@ impl LyricsSource for Client {
         Box::pin(Client::lookup(self, q))
     }
 }
+
+/// How long to wait before each new try of a failed lookup.
+pub const RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_secs(30),
+    Duration::from_secs(2 * 60),
+    Duration::from_secs(10 * 60),
+];
 
 /// `SetOffset` with no track, or with lyrics off: there is nothing to keep it for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,6 +63,7 @@ pub fn spawn(
     source: Arc<dyn LyricsSource>,
     local_dir: PathBuf,
     offsets_file: PathBuf,
+    retry: Vec<Duration>,
 ) -> Handle {
     let (tx, state) = watch::channel(LyricsState::default());
     let (commands, commands_rx) = mpsc::channel(8);
@@ -61,6 +71,7 @@ pub fn spawn(
         cache: Arc::new(cache),
         local_dir,
         offsets_file,
+        retry: retry.into(),
     };
     tokio::spawn(run(media, enabled, commands_rx, files, source, tx));
     Handle { state, commands }
@@ -70,6 +81,7 @@ struct Files {
     cache: Arc<Cache>,
     local_dir: PathBuf,
     offsets_file: PathBuf,
+    retry: Arc<[Duration]>,
 }
 
 struct Request {
@@ -121,6 +133,9 @@ async fn run(
     let mut offsets = load_offsets(&files.offsets_file).await;
     let (done_tx, mut done_rx) = mpsc::unbounded_channel::<(TrackKey, LyricsState)>();
     let mut current: Option<Current> = None;
+    // Counts track changes, so a retry knows its track is gone, even when
+    // the same track comes back and has its own lookup.
+    let (generation_tx, generation) = watch::channel(0u64);
     loop {
         let wanted = {
             let is_enabled = *enabled.borrow_and_update();
@@ -132,11 +147,12 @@ async fn run(
             }
         };
         if wanted.as_ref().map(|r| &r.key) != current.as_ref().map(|c| &c.key) {
+            generation_tx.send_modify(|g| *g += 1);
             current = match wanted {
                 Some(request) => Some(Current {
                     offset_ms: offsets.get(&request.key.offset_name()),
                     key: request.key.clone(),
-                    found: start(request, &files, &source, &done_tx).await,
+                    found: start(request, &files, &source, &done_tx, generation.clone()).await,
                 }),
                 None => None,
             };
@@ -186,12 +202,14 @@ async fn load_offsets(file: &Path) -> Offsets {
 }
 
 /// What is known about the track right away: the user's own lyrics, a
-/// cached answer, or else loading while LRCLIB is asked.
+/// cached answer, or else loading while LRCLIB is asked, again after each
+/// of `files.retry` until the track changes (`generation` moves on).
 async fn start(
     request: Request,
     files: &Files,
     source: &Arc<dyn LyricsSource>,
     done: &mpsc::UnboundedSender<(TrackKey, LyricsState)>,
+    generation: watch::Receiver<u64>,
 ) -> LyricsState {
     // The lyrics folder, a song's own folder and the cache can sit on a
     // slow disk or mount: read them off the async runtime.
@@ -209,28 +227,39 @@ async fn start(
         return state;
     }
     let (cache, source, done) = (files.cache.clone(), source.clone(), done.clone());
+    let retry = files.retry.clone();
+    let mine = *generation.borrow();
     tokio::spawn(async move {
         let Request { key, query, .. } = request;
-        let state = match source.lookup(&query).await {
-            Ok(lookup) => {
-                let (cache, key, to_store) = (cache.clone(), key.clone(), lookup.clone());
-                let stored =
-                    tokio::task::spawn_blocking(move || cache.put(&key, &to_store, now_unix()))
-                        .await;
-                if let Ok(Err(err)) = stored {
-                    tracing::warn!(%err, "cannot write the lyrics cache");
+        let mut delays = retry.iter();
+        loop {
+            match source.lookup(&query).await {
+                Ok(lookup) => {
+                    let (cache, at, to_store) = (cache.clone(), key.clone(), lookup.clone());
+                    let stored =
+                        tokio::task::spawn_blocking(move || cache.put(&at, &to_store, now_unix()))
+                            .await;
+                    if let Ok(Err(err)) = stored {
+                        tracing::warn!(%err, "cannot write the lyrics cache");
+                    }
+                    let _ = done.send((key, LyricsState::from(lookup)));
+                    return;
                 }
-                LyricsState::from(lookup)
-            }
-            Err(err) => {
-                tracing::info!(%err, title = %query.title, "lyrics lookup failed");
-                LyricsState {
-                    status: Status::Error,
-                    ..LyricsState::default()
+                Err(err) => {
+                    tracing::info!(%err, title = %query.title, "lyrics lookup failed");
+                    let error = LyricsState {
+                        status: Status::Error,
+                        ..LyricsState::default()
+                    };
+                    let _ = done.send((key.clone(), error));
                 }
             }
-        };
-        let _ = done.send((key, state));
+            let Some(delay) = delays.next() else { return };
+            tokio::time::sleep(*delay).await;
+            if *generation.borrow() != mine {
+                return;
+            }
+        }
     });
     LyricsState {
         status: Status::Loading,
@@ -325,6 +354,11 @@ mod tests {
 
     /// Starts the service on the files in `dir`, as after a restart.
     fn start_in(dir: Arc<tempfile::TempDir>, enabled: bool) -> Harness {
+        start_with(dir, enabled, Vec::new())
+    }
+
+    /// Starts the service with failed lookups tried again after `retry`.
+    fn start_with(dir: Arc<tempfile::TempDir>, enabled: bool, retry: Vec<Duration>) -> Harness {
         let (media, media_rx) = watch::channel(MediaState::default());
         let (enabled_tx, enabled_rx) = watch::channel(enabled);
         let (req_tx, req_rx) = mpsc::unbounded_channel();
@@ -336,6 +370,7 @@ mod tests {
             source,
             dir.path().join("lyrics"),
             offsets_file(&dir),
+            retry,
         );
         Harness {
             media,
@@ -545,6 +580,92 @@ mod tests {
         h.media.send_replace(refreshed);
         h.no_request().await;
         assert_eq!(h.lyrics.borrow().status, Status::Synced);
+    }
+
+    fn busy() -> FetchError {
+        FetchError::Status(reqwest::StatusCode::TOO_MANY_REQUESTS)
+    }
+
+    fn retrying() -> Harness {
+        let retry = vec![Duration::from_millis(20), Duration::from_millis(20)];
+        start_with(Arc::new(tempfile::tempdir().unwrap()), true, retry)
+    }
+
+    #[tokio::test]
+    async fn a_failed_lookup_is_tried_again() {
+        let mut h = retrying();
+        h.media.send_replace(playing("A"));
+        let (_, reply) = h.next_request().await;
+        reply.send(Err(busy())).unwrap();
+        h.wait("error", |s| s.status == Status::Error).await;
+        let (q, reply) = h.next_request().await;
+        assert_eq!(q.title, "A");
+        reply.send(Ok(synced("second try"))).unwrap();
+        let s = h.wait("lyrics", |s| s.status == Status::Synced).await;
+        assert_eq!(s.lines[0].text, "second try");
+        assert_eq!(
+            h.cache.get(&key("A"), now_unix()),
+            Some(synced("second try"))
+        );
+    }
+
+    #[tokio::test]
+    async fn retries_stop_after_the_last_delay() {
+        let mut h = retrying();
+        h.media.send_replace(playing("A"));
+        for _ in 0..3 {
+            let (_, reply) = h.next_request().await;
+            reply.send(Err(busy())).unwrap();
+        }
+        h.wait("error", |s| s.status == Status::Error).await;
+        h.no_request().await;
+    }
+
+    #[tokio::test]
+    async fn another_track_ends_the_retries() {
+        let mut h = retrying();
+        h.media.send_replace(playing("A"));
+        let (_, reply) = h.next_request().await;
+        h.media.send_replace(playing("B"));
+        let (q, reply_b) = h.next_request().await;
+        assert_eq!(q.title, "B");
+        reply.send(Err(busy())).unwrap();
+        reply_b.send(Ok(synced("b"))).unwrap();
+        h.wait("B", |s| s.status == Status::Synced).await;
+        h.no_request().await;
+    }
+
+    #[tokio::test]
+    async fn a_track_that_comes_back_is_looked_up_once() {
+        let retry = vec![Duration::from_millis(100)];
+        let mut h = start_with(Arc::new(tempfile::tempdir().unwrap()), true, retry);
+        h.media.send_replace(playing("A"));
+        let (_, reply) = h.next_request().await;
+        reply.send(Err(busy())).unwrap();
+        h.wait("error", |s| s.status == Status::Error).await;
+        h.media.send_replace(playing("B"));
+        let (_, reply_b) = h.next_request().await;
+        h.media.send_replace(playing("A"));
+        let (q, reply_a) = h.next_request().await;
+        assert_eq!(q.title, "A");
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        h.no_request().await;
+        drop((reply_b, reply_a));
+    }
+
+    #[tokio::test]
+    async fn turning_lyrics_off_ends_the_retries() {
+        // Long enough for the switch to land before the retry would.
+        let retry = vec![Duration::from_millis(100)];
+        let mut h = start_with(Arc::new(tempfile::tempdir().unwrap()), true, retry);
+        h.media.send_replace(playing("A"));
+        let (_, reply) = h.next_request().await;
+        reply.send(Err(busy())).unwrap();
+        h.wait("error", |s| s.status == Status::Error).await;
+        h.enabled.send_replace(false);
+        h.wait("none", |s| s.status == Status::None).await;
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        h.no_request().await;
     }
 
     fn starts(state: &LyricsState) -> Vec<i64> {
