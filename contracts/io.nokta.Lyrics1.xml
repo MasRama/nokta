@@ -7,8 +7,10 @@
     <property name="Status" type="s" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
-    <!-- (start_us, text) pairs sorted by start; empty unless Status is "synced".
-         Already shifted by OffsetMs (start - offset, not below 0). -->
+    <!-- (start_us, text) pairs sorted by start. For "synced", already shifted by
+         OffsetMs (start - offset, not below 0). For "plain", the lines in order,
+         each starting at 0 and never shifted; an empty line between verses.
+         Empty for every other Status. -->
     <property name="Lines" type="a(xs)" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>

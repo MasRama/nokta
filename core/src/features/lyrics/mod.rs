@@ -25,7 +25,8 @@ pub struct Line {
 #[serde(tag = "kind", content = "lines", rename_all = "kebab-case")]
 pub enum Lookup {
     Synced(Vec<Line>),
-    Plain,
+    /// Lyrics without timing, line by line; a blank line between verses.
+    Plain(Vec<String>),
     Instrumental,
     NotFound,
 }
@@ -57,8 +58,9 @@ impl Status {
     }
 }
 
-/// Lyrics for the active track. `lines` is only filled when `status` is
-/// `Synced`, and is already shifted by `offset_ms`.
+/// Lyrics for the active track. `lines` is filled when `status` is
+/// `Synced`, already shifted by `offset_ms`, or `Plain`, each starting at 0
+/// and never shifted.
 #[derive(Clone, Debug, PartialEq, Default)]
 pub struct LyricsState {
     pub status: Status,
@@ -71,7 +73,12 @@ impl From<Lookup> for LyricsState {
     fn from(lookup: Lookup) -> LyricsState {
         let (status, lines) = match lookup {
             Lookup::Synced(lines) => (Status::Synced, lines),
-            Lookup::Plain => (Status::Plain, Vec::new()),
+            Lookup::Plain(text) => (
+                Status::Plain,
+                text.into_iter()
+                    .map(|text| Line { start_us: 0, text })
+                    .collect(),
+            ),
             Lookup::Instrumental => (Status::Instrumental, Vec::new()),
             Lookup::NotFound => (Status::NotFound, Vec::new()),
         };

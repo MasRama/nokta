@@ -99,10 +99,40 @@ mod tests {
     }
 
     #[test]
+    fn plain_lyrics_keep_their_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = Cache::new(dir.path().to_owned());
+        let lookup = Lookup::Plain(vec!["one".into(), String::new(), "two".into()]);
+        cache.put(&key(), &lookup, T).unwrap();
+        assert_eq!(cache.get(&key(), T), Some(lookup));
+    }
+
+    #[test]
+    fn an_old_plain_entry_without_its_text_is_a_miss() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = Cache::new(dir.path().to_owned());
+        cache.put(&key(), &Lookup::NotFound, T).unwrap();
+        let file = std::fs::read_dir(dir.path())
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        std::fs::write(
+            file,
+            r#"{"fetched_at":1800000000,"lookup":{"kind":"plain"}}"#,
+        )
+        .unwrap();
+        assert_eq!(cache.get(&key(), T), None);
+    }
+
+    #[test]
     fn corrupt_cache_file_is_a_miss() {
         let dir = tempfile::tempdir().unwrap();
         let cache = Cache::new(dir.path().to_owned());
-        cache.put(&key(), &Lookup::Plain, T).unwrap();
+        cache
+            .put(&key(), &Lookup::Plain(vec!["a".into()]), T)
+            .unwrap();
         let file = std::fs::read_dir(dir.path())
             .unwrap()
             .next()

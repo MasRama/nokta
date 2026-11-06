@@ -105,18 +105,19 @@ impl Record {
         if self.instrumental {
             return Lookup::Instrumental;
         }
-        if let Some(synced) = self.synced_lyrics.filter(|s| !s.trim().is_empty()) {
-            let lines = lrc::parse(&synced);
-            return if lines.is_empty() {
-                Lookup::Plain
-            } else {
-                Lookup::Synced(lines)
-            };
+        if let Some(synced) = self.synced_lyrics.as_deref() {
+            let lines = lrc::parse(synced);
+            if !lines.is_empty() {
+                return Lookup::Synced(lines);
+            }
         }
-        if self.plain_lyrics.is_some_and(|p| !p.trim().is_empty()) {
-            return Lookup::Plain;
-        }
-        Lookup::NotFound
+        // Synced text without a timestamp is plain text too.
+        let plain = [&self.plain_lyrics, &self.synced_lyrics]
+            .into_iter()
+            .flatten()
+            .map(|text| lrc::plain_lines(text))
+            .find(|lines| !lines.is_empty());
+        plain.map_or(Lookup::NotFound, Lookup::Plain)
     }
 }
 
@@ -403,14 +404,18 @@ mod tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(record(
                 369.0,
                 None,
-                Some("words"),
+                Some("first words\n\n\nsecond words\n"),
                 false,
             )))
             .mount(&server)
             .await;
         assert_eq!(
             client(&server).await.lookup(&query(369)).await.unwrap(),
-            Lookup::Plain
+            Lookup::Plain(vec![
+                "first words".into(),
+                String::new(),
+                "second words".into()
+            ])
         );
     }
 

@@ -290,7 +290,11 @@ fn known(
 fn publish(tx: &watch::Sender<LyricsState>, current: Option<&Current>) {
     let next = current.map_or_else(LyricsState::default, |c| LyricsState {
         status: c.found.status,
-        lines: offsets::shift(&c.found.lines, c.offset_ms),
+        lines: match c.found.status {
+            // Plain lyrics have no timing to move.
+            Status::Plain => c.found.lines.clone(),
+            _ => offsets::shift(&c.found.lines, c.offset_ms),
+        },
         offset_ms: c.offset_ms,
     });
     tx.send_if_modified(|current| {
@@ -743,6 +747,21 @@ mod tests {
             "{}",
             h.saved()
         );
+    }
+
+    #[tokio::test]
+    async fn plain_lyrics_are_published_in_order_and_never_shifted() {
+        let mut h = start(true);
+        h.media.send_replace(playing("A"));
+        let (_, reply) = h.next_request().await;
+        reply
+            .send(Ok(Lookup::Plain(vec!["one".into(), "two".into()])))
+            .unwrap();
+        let s = h.wait("plain", |s| s.status == Status::Plain).await;
+        let texts: Vec<&str> = s.lines.iter().map(|l| l.text.as_str()).collect();
+        assert_eq!((texts, starts(&s)), (vec!["one", "two"], vec![0, 0]));
+        assert_eq!(h.set_offset(-1_000).await, Ok(-1_000));
+        assert_eq!(starts(&h.lyrics.borrow()), [0, 0]);
     }
 
     #[tokio::test]
