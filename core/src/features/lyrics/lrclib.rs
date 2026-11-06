@@ -50,11 +50,33 @@ pub enum FetchError {
     Status(reqwest::StatusCode),
 }
 
+/// Another version of the lyrics the user can pick for a track.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Alternative {
+    /// LRCLIB's record id.
+    pub id: i64,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    /// 0 when LRCLIB does not know it.
+    pub duration_ms: i64,
+    pub synced: bool,
+    /// What choosing it shows.
+    pub lookup: Lookup,
+}
+
+/// The most alternatives `Client::alternatives` gives.
+pub const MAX_ALTERNATIVES: usize = 20;
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
     #[serde(default)]
+    id: i64,
+    #[serde(default)]
     track_name: String,
+    #[serde(default)]
+    album_name: Option<String>,
     #[serde(default)]
     artist_name: String,
     #[serde(default)]
@@ -99,6 +121,18 @@ impl Record {
     fn distance_s(&self, duration_s: u64) -> f64 {
         self.duration
             .map_or(f64::INFINITY, |d| (d - duration_s as f64).abs())
+    }
+
+    fn into_alternative(self) -> Alternative {
+        Alternative {
+            id: self.id,
+            title: self.track_name.clone(),
+            artist: self.artist_name.clone(),
+            album: self.album_name.clone().unwrap_or_default(),
+            duration_ms: self.duration.map_or(0, |d| (d * 1000.0).round() as i64),
+            synced: self.has_synced(),
+            lookup: self.into_lookup(),
+        }
     }
 
     fn into_lookup(self) -> Lookup {
@@ -249,7 +283,7 @@ impl Client {
                 .into_iter()
                 .take(MAX_TITLE_SEARCHES)
             {
-                for record in self.search_title(title).await? {
+                for record in self.search_by("track_name", title).await? {
                     closest.offer(record, title);
                 }
                 if closest.settled() {
@@ -267,11 +301,82 @@ impl Client {
         }
     }
 
-    async fn search_title(&self, title: &str) -> Result<Vec<Record>, FetchError> {
+    /// Every version of the track's lyrics LRCLIB has, for the user to pick
+    /// from: by its free-text search and its song titles, each record once,
+    /// the song by an artist the player names first, then the song by
+    /// others, then other titles; synced before plain, then by length.
+    pub async fn alternatives(&self, q: &Query) -> Result<Vec<Alternative>, FetchError> {
+        let candidates = clean::candidates(&q.artist, &q.title);
+        let titles: Vec<&str> = clean::song_titles(&candidates)
+            .into_iter()
+            .take(MAX_TITLE_SEARCHES)
+            .collect();
+        let mut records: Vec<Record> = Vec::new();
+        let mut failed = None;
+        let free = candidates
+            .first()
+            .map(|c| format!("{} {}", c.artist, c.title).trim().to_owned());
+        let searches = free
+            .iter()
+            .map(|text| ("q", text.as_str()))
+            .chain(titles.iter().map(|title| ("track_name", *title)));
+        for (field, value) in searches {
+            match self.search_by(field, value).await {
+                Ok(found) => {
+                    for record in found {
+                        if record.has_lyrics() && !records.iter().any(|r| r.id == record.id) {
+                            records.push(record);
+                        }
+                    }
+                }
+                Err(err) => failed = Some(err),
+            }
+        }
+        if let (true, Some(err)) = (records.is_empty(), failed) {
+            return Err(err);
+        }
+        let text = format!("{} {}", q.title, q.artist);
+        let rank = |r: &Record| {
+            let song = titles.iter().any(|t| names_song(&r.track_name, t))
+                || candidates
+                    .iter()
+                    .any(|c| names_song(&r.track_name, &c.title));
+            let by_artist = song && names_artist(&text, &r.artist_name);
+            (!by_artist, !song, !r.has_synced())
+        };
+        records.sort_by(|a, b| {
+            rank(a).cmp(&rank(b)).then(
+                a.distance_s(q.duration_s)
+                    .total_cmp(&b.distance_s(q.duration_s)),
+            )
+        });
+        Ok(records
+            .into_iter()
+            .take(MAX_ALTERNATIVES)
+            .map(Record::into_alternative)
+            .collect())
+    }
+
+    /// One record's lyrics by its LRCLIB id; a record that is gone is not found.
+    pub async fn by_id(&self, id: i64) -> Result<Lookup, FetchError> {
+        let resp = self
+            .http
+            .get(format!("{}/api/get/{id}", self.base_url))
+            .send()
+            .await?;
+        if resp.status() == reqwest::StatusCode::NOT_FOUND {
+            return Ok(Lookup::NotFound);
+        }
+        let record: Record = checked(resp)?.json().await?;
+        Ok(record.into_lookup())
+    }
+
+    /// Searches by one field: `q` for free text, `track_name` for a title.
+    async fn search_by(&self, field: &str, value: &str) -> Result<Vec<Record>, FetchError> {
         let resp = self
             .http
             .get(format!("{}/api/search", self.base_url))
-            .query(&[("track_name", title)])
+            .query(&[(field, value)])
             .send()
             .await?;
         Ok(checked(resp)?.json().await?)
@@ -647,6 +752,84 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(first_line(got), "sial");
+    }
+
+    #[tokio::test]
+    async fn alternatives_are_every_version_with_lyrics_best_first() {
+        let server = MockServer::start().await;
+        let rec = |id: i64,
+                   title: &str,
+                   artist: &str,
+                   duration: f64,
+                   synced: Option<&str>,
+                   plain: Option<&str>| {
+            json!({"id": id, "trackName": title, "artistName": artist, "albumName": "",
+                   "duration": duration, "instrumental": false,
+                   "syncedLyrics": synced, "plainLyrics": plain})
+        };
+        Mock::given(path("/api/search"))
+            .and(query_param("q", "Mahalini Sial"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                rec(1, "Sial", "Mahalini", 300.0, Some("[00:01.00]far"), None),
+                rec(2, "Sial", "Mahalini", 245.0, None, Some("plain")),
+                rec(3, "Sial", "Mahalini", 244.0, Some("[00:01.00]near"), None),
+                rec(4, "Sial", "Mahalini", 244.0, None, None),
+            ])))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/search"))
+            .and(query_param("track_name", "Sial"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                rec(3, "Sial", "Mahalini", 244.0, Some("[00:01.00]near"), None),
+                rec(5, "Sial", "Cokelat", 307.0, Some("[00:01.00]other"), None),
+                rec(6, "Bukan Sial", "Someone", 244.0, Some("[00:01.00]x"), None),
+            ])))
+            .mount(&server)
+            .await;
+        let q = Query {
+            artist: "Mahalini".into(),
+            title: "Sial".into(),
+            album: String::new(),
+            duration_s: 244,
+        };
+        let got = client(&server).await.alternatives(&q).await.unwrap();
+        let ids: Vec<i64> = got.iter().map(|a| a.id).collect();
+        // The song by its artist first, synced before plain and by length;
+        // then the song by others; then other titles. No lyrics, no entry.
+        assert_eq!(ids, [3, 1, 2, 5, 6]);
+        let near = &got[0];
+        assert_eq!(
+            (
+                near.title.as_str(),
+                near.artist.as_str(),
+                near.duration_ms,
+                near.synced
+            ),
+            ("Sial", "Mahalini", 244_000, true)
+        );
+        assert_eq!(first_line(near.lookup.clone()), "near");
+        assert!(!got[2].synced);
+    }
+
+    #[tokio::test]
+    async fn a_record_is_fetched_by_its_id() {
+        let server = MockServer::start().await;
+        Mock::given(path("/api/get/42"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(record(
+                369.0,
+                Some("[00:05.00]by id"),
+                None,
+                false,
+            )))
+            .mount(&server)
+            .await;
+        Mock::given(path("/api/get/43"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+        let c = client(&server).await;
+        assert_eq!(first_line(c.by_id(42).await.unwrap()), "by id");
+        assert_eq!(c.by_id(43).await.unwrap(), Lookup::NotFound);
     }
 
     #[tokio::test]
