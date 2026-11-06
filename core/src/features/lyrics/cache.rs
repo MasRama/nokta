@@ -1,8 +1,9 @@
-//! On-disk cache of lyrics lookups, one JSON file per track.
+//! On-disk cache of lyrics lookups, one JSON file per track, and of the
+//! LRCLIB records the user picked, one per record.
 
 use std::fs;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -27,20 +28,36 @@ impl Cache {
     }
 
     pub fn get(&self, key: &TrackKey, now_unix: u64) -> Option<Lookup> {
-        let text = fs::read_to_string(self.file(key)).ok()?;
+        self.read(&self.file(key), now_unix)
+    }
+
+    pub fn put(&self, key: &TrackKey, lookup: &Lookup, now_unix: u64) -> io::Result<()> {
+        self.write(&self.file(key), lookup, now_unix)
+    }
+
+    /// The lyrics of the LRCLIB record with this id.
+    pub fn get_record(&self, id: i64, now_unix: u64) -> Option<Lookup> {
+        self.read(&self.record_file(id), now_unix)
+    }
+
+    pub fn put_record(&self, id: i64, lookup: &Lookup, now_unix: u64) -> io::Result<()> {
+        self.write(&self.record_file(id), lookup, now_unix)
+    }
+
+    fn read(&self, file: &Path, now_unix: u64) -> Option<Lookup> {
+        let text = fs::read_to_string(file).ok()?;
         let entry: Entry = serde_json::from_str(&text).ok()?;
         let expired = entry.lookup == Lookup::NotFound
             && now_unix.saturating_sub(entry.fetched_at) > NOT_FOUND_TTL_S;
         (!expired).then_some(entry.lookup)
     }
 
-    pub fn put(&self, key: &TrackKey, lookup: &Lookup, now_unix: u64) -> io::Result<()> {
+    fn write(&self, file: &Path, lookup: &Lookup, now_unix: u64) -> io::Result<()> {
         fs::create_dir_all(&self.dir)?;
         let entry = Entry {
             fetched_at: now_unix,
             lookup: lookup.clone(),
         };
-        let file = self.file(key);
         let tmp = file.with_extension("json.tmp");
         fs::write(&tmp, serde_json::to_vec(&entry)?)?;
         fs::rename(tmp, file)
@@ -48,6 +65,10 @@ impl Cache {
 
     fn file(&self, key: &TrackKey) -> PathBuf {
         self.dir.join(format!("{}.json", key.cache_name()))
+    }
+
+    fn record_file(&self, id: i64) -> PathBuf {
+        self.dir.join(format!("record-{id}.json"))
     }
 }
 
@@ -72,6 +93,18 @@ mod tests {
         }]);
         cache.put(&key(), &lookup, T).unwrap();
         assert_eq!(cache.get(&key(), T + 10), Some(lookup));
+    }
+
+    #[test]
+    fn a_record_is_kept_apart_from_the_track() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = Cache::new(dir.path().to_owned());
+        let lookup = Lookup::Plain(vec!["picked".into()]);
+        assert_eq!(cache.get_record(42, T), None);
+        cache.put_record(42, &lookup, T).unwrap();
+        assert_eq!(cache.get_record(42, T + 10), Some(lookup));
+        assert_eq!(cache.get_record(43, T), None);
+        assert_eq!(cache.get(&key(), T), None);
     }
 
     #[test]

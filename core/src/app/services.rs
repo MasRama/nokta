@@ -76,10 +76,13 @@ impl Services {
         let lyrics = lyrics::service::spawn(
             media,
             lyrics_enabled(config.clone()),
-            Cache::new(paths.cache_dir.join("lyrics")),
+            lyrics::service::Storage {
+                cache: Cache::new(paths.cache_dir.join("lyrics")),
+                local_dir: paths.lyrics_dir.clone(),
+                offsets_file: paths.lyrics_offsets_file.clone(),
+                choices_file: paths.lyrics_choices_file.clone(),
+            },
             Arc::new(lrclib::Client::new(lrclib_base_url, USER_AGENT)),
-            paths.lyrics_dir.clone(),
-            paths.lyrics_offsets_file.clone(),
             lyrics::service::RETRY_DELAYS.to_vec(),
         );
 

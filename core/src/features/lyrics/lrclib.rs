@@ -34,7 +34,7 @@ pub const MAX_TITLE_SEARCHES: usize = 2;
 const TIMEOUT: Duration = Duration::from_secs(10);
 
 /// What to look up. `duration_s == 0` means the player did not report a length.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Query {
     pub artist: String,
     pub title: String,
