@@ -66,7 +66,10 @@ on Windows).
   style: the cover, the title and the lines around the one being sung,
   over the cover's colors drifting slowly. A song LRCLIB only has as plain
   text offers "Read the lyrics" instead: a click shows the whole text in
-  the lyrics view, to scroll through. Moving the pointer shows the
+  the lyrics view, to scroll through. Wrong lyrics? The search button on
+  the left of the lyrics view lists the other versions LRCLIB has for the
+  song; pick one and Nokta keeps it for that song, or pick "Automatic" to
+  go back. Moving the pointer shows the
   seek bar and the play buttons; Space plays or pauses, and Escape, × or
   a click elsewhere closes it.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
@@ -835,6 +838,9 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   the file does not list what you listen to. A song set back to "On time"
   leaves the file. It stays after `uninstall.sh --purge`, like your own
   `.lrc` files next to it.
+- **Picked lyrics.** Lyrics you pick from the list for a song are kept in
+  `~/.local/share/nokta/lyrics-choices.toml` the same way: a hash of the
+  song and the LRCLIB record's number. "Automatic" removes the line.
 
 ## Troubleshooting
 
@@ -846,7 +852,9 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
   reach, Nokta tries again while the song plays. Songs played on YouTube in
   a browser work too: Nokta drops "(Official Music Video)" and the like,
   reads the artist from the title, and finds a cover's lyrics by the song
-  it covers; their timing may need the `−` and `+`.
+  it covers; their timing may need the `−` and `+`. When Nokta shows the
+  wrong song's lyrics, pick the right ones with the search button in the
+  lyrics view.
 - **Your own lyrics.** Put a synced `.lrc` file next to a local music file
   with the same name (`Song.flac` and `Song.lrc`), or name it
   `Artist - Title.lrc` and put it in `~/.local/share/nokta/lyrics/`. Your

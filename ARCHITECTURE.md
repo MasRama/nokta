@@ -239,6 +239,16 @@ examples/plugins/   plugins to copy: hello, site-status, water
   of a file's own `[offset:]`, so the extension never shifts anything.
   `SetOffset` stores the offset for the current track whatever its status,
   so it also applies to lyrics still loading, and fails with no track.
+  `Search` lists the track's versions on LRCLIB (a free-text search and
+  title searches, each record with lyrics once, the song by its artist
+  first), and the service keeps that list so `Choose(id)` shows a listed
+  version without asking LRCLIB again; an unlisted id is fetched with
+  `/api/get/{id}`. A pick is kept per track like the offset, in
+  `lyrics-choices.toml`, records are cached by id, and a pick wins over the
+  user's `.lrc` file, the cache and the lookup; `Choose(0)` forgets it.
+  Each track change or pick moves a generation counter, and a lookup's
+  answer from an older generation is dropped, so a slow automatic lookup
+  never replaces a pick. `Choice` says which record is shown (0 for none).
   Romanizing Korean and Japanese lines (`[lyrics] romanize`) is the
   extension's own, offline: `features/lyrics/logic/romanize.ts`. So are
   the full-screen lyrics (`features/lyrics/fullscreen.ts`): an actor over
