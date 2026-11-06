@@ -950,7 +950,8 @@
     font-weight: 600;
 }
 
-.nokta-lyrics-step .nokta-button-icon {
+.nokta-lyrics-step .nokta-button-icon,
+.nokta-lyrics-other-button .nokta-button-icon {
     icon-size: 14px;
 }
 
@@ -1281,4 +1282,52 @@
 
 .nokta-settings-chevron {
     icon-size: 14px;
+}
+
+/* The other lyrics of a track, to pick from. */
+.nokta-lyrics-versions {
+    padding-top: 4px;
+}
+
+.nokta-lyrics-version-list {
+    spacing: 2px;
+}
+
+.nokta-lyrics-version {
+    padding: 3px 10px;
+    border-radius: 10px;
+}
+
+.nokta-lyrics-version:hover,
+.nokta-lyrics-version:focus {
+    background-color: rgba(128, 128, 128, 0.18);
+}
+
+.nokta-theme-paper .nokta-lyrics-version:hover,
+.nokta-theme-paper .nokta-lyrics-version:focus {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.nokta-lyrics-version-content {
+    spacing: 10px;
+}
+
+.nokta-lyrics-version-title {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.nokta-lyrics-version-detail {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.nokta-lyrics-version-check {
+    icon-size: 14px;
+}
+
+.nokta-lyrics-version-note {
+    font-size: 12px;
+    font-weight: 600;
+    padding-top: 10px;
 }
