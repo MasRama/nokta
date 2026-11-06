@@ -222,8 +222,11 @@ examples/plugins/   plugins to copy: hello, site-status, water
   artist, within 15 s; synced lyrics first, then the nearest length. It
   reuses the records the exact searches found and searches at most two
   titles without an artist, since LRCLIB rate-limits. Such a match can be
-  off in time; the user's offset fixes that. LRCLIB results are cached per
-  track; "not found" for 7 days, errors not at all. The user's timing per track
+  off in time; the user's offset fixes that. A cover skips `get`, which
+  only answers within 2 s of the original. LRCLIB results are cached per
+  track; "not found" for 7 days, errors not at all: a failed lookup (busy,
+  rate-limited, offline) is tried again after 30 s, 2 min and 10 min while
+  the track plays. The user's timing per track
   (`SetOffset`, from the lyrics view) is kept in `lyrics-offsets.toml` next
   to the lyrics folder (`$XDG_DATA_HOME/nokta/`, `Application Support` on
   macOS, `%APPDATA%` on Windows), keyed by a hash of the track that does
