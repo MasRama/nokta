@@ -35,6 +35,8 @@ pub struct Paths {
     pub lyrics_dir: PathBuf,
     /// The lyric timing set per song from the lyrics view, next to `lyrics_dir`.
     pub lyrics_offsets_file: PathBuf,
+    /// The lyrics picked per song from the lyrics view, next to `lyrics_dir`.
+    pub lyrics_choices_file: PathBuf,
     /// The freedesktop thumbnail cache that Files fills; Linux only.
     pub system_thumbnails: Option<PathBuf>,
     /// Thumbnails of copied pictures, emptied at start: in the runtime
@@ -56,6 +58,7 @@ impl Paths {
             cache_dir: cache_home.join("nokta"),
             lyrics_dir: data_home.join("nokta").join("lyrics"),
             lyrics_offsets_file: data_home.join("nokta").join("lyrics-offsets.toml"),
+            lyrics_choices_file: data_home.join("nokta").join("lyrics-choices.toml"),
             system_thumbnails: Some(cache_home.join("thumbnails")),
             clipboard_dir: cache_home.join("nokta").join("clipboard"),
             downloads_dir: None,
@@ -110,6 +113,7 @@ impl Paths {
                     cache_dir,
                     lyrics_dir: support.join("lyrics"),
                     lyrics_offsets_file: support.join("lyrics-offsets.toml"),
+                    lyrics_choices_file: support.join("lyrics-choices.toml"),
                     system_thumbnails: None,
                     downloads_dir: Some(home.join("Downloads")),
                     plugins_dir: support.join("plugins"),
@@ -125,6 +129,7 @@ impl Paths {
                     cache_dir,
                     lyrics_dir: roaming.join("lyrics"),
                     lyrics_offsets_file: roaming.join("lyrics-offsets.toml"),
+                    lyrics_choices_file: roaming.join("lyrics-choices.toml"),
                     system_thumbnails: None,
                     downloads_dir: dir("USERPROFILE").map(|home| home.join("Downloads")),
                     plugins_dir: roaming.join("plugins"),
@@ -176,6 +181,10 @@ mod tests {
         assert_eq!(
             paths.lyrics_offsets_file,
             Path::new("/d/nokta/lyrics-offsets.toml")
+        );
+        assert_eq!(
+            paths.lyrics_choices_file,
+            Path::new("/d/nokta/lyrics-choices.toml")
         );
         assert_eq!(
             paths.system_thumbnails.as_deref(),
@@ -271,6 +280,13 @@ mod tests {
                 .join("nokta")
                 .join("lyrics-offsets.toml")
         );
+        assert_eq!(
+            paths.lyrics_choices_file,
+            library
+                .join("Application Support")
+                .join("nokta")
+                .join("lyrics-choices.toml")
+        );
         assert!(Paths::for_system(System::MacOs, env(&[])).is_err());
     }
 
@@ -289,6 +305,10 @@ mod tests {
         assert_eq!(
             paths.lyrics_offsets_file,
             roaming.join("nokta").join("lyrics-offsets.toml")
+        );
+        assert_eq!(
+            paths.lyrics_choices_file,
+            roaming.join("nokta").join("lyrics-choices.toml")
         );
         assert_eq!(paths.plugins_dir, roaming.join("nokta").join("plugins"));
         assert_eq!(

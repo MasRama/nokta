@@ -1,6 +1,7 @@
 //! Feature `lyrics`: synced lyrics for the current track.
 
 pub mod cache;
+pub mod choices;
 mod clean;
 #[cfg(target_os = "linux")]
 pub mod dbus;
@@ -67,6 +68,9 @@ pub struct LyricsState {
     pub lines: Vec<Line>,
     /// The user's timing for the track; positive shows the lyrics earlier.
     pub offset_ms: i64,
+    /// The LRCLIB record the user picked for the track, 0 for the lyrics
+    /// Nokta finds itself.
+    pub choice: i64,
 }
 
 impl From<Lookup> for LyricsState {
@@ -85,7 +89,7 @@ impl From<Lookup> for LyricsState {
         LyricsState {
             status,
             lines,
-            offset_ms: 0,
+            ..LyricsState::default()
         }
     }
 }
