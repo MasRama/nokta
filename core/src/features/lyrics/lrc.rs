@@ -2,6 +2,28 @@
 
 use super::Line;
 
+/// Lyrics without timing as lines: trailing spaces gone, at most one blank
+/// line between verses and none around them.
+pub fn plain_lines(text: &str) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim_end();
+        let blank = line.trim().is_empty();
+        if blank && lines.last().is_none_or(|l: &String| l.is_empty()) {
+            continue;
+        }
+        lines.push(if blank {
+            String::new()
+        } else {
+            line.to_owned()
+        });
+    }
+    if lines.last().is_some_and(String::is_empty) {
+        lines.pop();
+    }
+    lines
+}
+
 /// Parses LRC text into lines sorted by start time. A line with several timestamps yields one
 /// [`Line`] per timestamp. `[offset:+N]` (milliseconds) makes every line start N ms earlier.
 /// Metadata tags and lines without a timestamp are skipped; empty lyric lines are kept.
@@ -59,6 +81,20 @@ fn digits(s: &str) -> Option<i64> {
         return None;
     }
     s.parse().ok()
+}
+
+#[cfg(test)]
+mod plain_tests {
+    use super::plain_lines;
+
+    #[test]
+    fn plain_text_keeps_one_blank_line_between_verses() {
+        assert_eq!(
+            plain_lines("\n\n  Verse one  \r\nline two\n\n\n\nVerse two\n\n"),
+            ["  Verse one", "line two", "", "Verse two"]
+        );
+        assert!(plain_lines(" \n\n").is_empty());
+    }
 }
 
 #[cfg(test)]
