@@ -226,7 +226,10 @@ examples/plugins/   plugins to copy: hello, site-status, water
   only answers within 2 s of the original. LRCLIB results are cached per
   track; "not found" for 7 days, errors not at all: a failed lookup (busy,
   rate-limited, offline) is tried again after 30 s, 2 min and 10 min while
-  the track plays. The user's timing per track
+  the track plays. Plain (unsynced) lyrics keep their text: `Lines` holds
+  it for "plain", each line at 0 and never shifted, and the extension shows
+  it as a scrolling text in the lyrics view (`sheet.ts`), where the timing
+  row and full-screen button make no sense. The user's timing per track
   (`SetOffset`, from the lyrics view) is kept in `lyrics-offsets.toml` next
   to the lyrics folder (`$XDG_DATA_HOME/nokta/`, `Application Support` on
   macOS, `%APPDATA%` on Windows), keyed by a hash of the track that does

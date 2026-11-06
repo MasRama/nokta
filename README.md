@@ -64,7 +64,9 @@ on Windows).
   kitte), worked out on your computer; kanji stay as they are. The
   button in the corner of the lyrics view puts them full screen, karaoke
   style: the cover, the title and the lines around the one being sung,
-  over the cover's colors drifting slowly. Moving the pointer shows the
+  over the cover's colors drifting slowly. A song LRCLIB only has as plain
+  text offers "Read the lyrics" instead: a click shows the whole text in
+  the lyrics view, to scroll through. Moving the pointer shows the
   seek bar and the play buttons; Space plays or pauses, and Escape, × or
   a click elsewhere closes it.
 - **System popups.** Volume, brightness, the microphone, Caps Lock, Num
@@ -839,11 +841,12 @@ see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 - **The notch shows only a clock while music plays.** Check that the daemon
   runs: `systemctl --user status nokta`. Its log is in
   `journalctl --user -u nokta`.
-- **No lyrics.** LRCLIB does not know every song, and only time-synced
-  lyrics are shown. A song that was not found is not looked up again for 7
-  days. Songs played on YouTube in a browser work too: Nokta drops
-  "(Official Music Video)" and the like and reads the artist from the
-  title.
+- **No lyrics.** LRCLIB does not know every song. A song that was not
+  found is not looked up again for 7 days; when LRCLIB was busy or out of
+  reach, Nokta tries again while the song plays. Songs played on YouTube in
+  a browser work too: Nokta drops "(Official Music Video)" and the like,
+  reads the artist from the title, and finds a cover's lyrics by the song
+  it covers; their timing may need the `−` and `+`.
 - **Your own lyrics.** Put a synced `.lrc` file next to a local music file
   with the same name (`Song.flac` and `Song.lrc`), or name it
   `Artist - Title.lrc` and put it in `~/.local/share/nokta/lyrics/`. Your

@@ -185,6 +185,11 @@ must curve inward, the notch must be centered, and no text may be clipped.
       `Hati-Hati di Jalan - Tulus (Cover by …)` from the singer's channel:
       the original song's synced lyrics show; the lyrics view's `−` and
       `+` line them up when the cover's timing differs.
+- [ ] Lyrics without timing (the smoke test serves the second song's
+      record with no `syncedLyrics`): the row says `Read the lyrics` with
+      `Lyrics without timing` under it; a click shows the whole text at
+      336 px, the wheel scrolls a long one, the footer has the note
+      instead of `−`/`+` and no full-screen button. A click closes it.
 - [ ] Synced lyrics: the line lights up from left to right and ends lit
       when the next line starts; the next line shows dimmed under it. A new
       line slides up and fades in. The intro and empty lines show `♪`, fully
