@@ -18,3 +18,18 @@ export function visibleLyric(
     const text = index >= 0 ? lines[index][1].trim() : '';
     return text || BREAK;
 }
+
+/** What the open player has to show: synced lines, plain text, or nothing. */
+export type LyricsKind = 'synced' | 'plain' | null;
+
+export function lyricsKind(status: string, lines: LyricLines, showLyrics: boolean): LyricsKind {
+    if (!showLyrics) return null;
+    if (status === 'synced' && lines.length > 0) return 'synced';
+    if (status === 'plain' && lines.some(([, text]) => text.trim() !== '')) return 'plain';
+    return null;
+}
+
+/** Lyrics without timing as one text, a line per row. */
+export function plainText(lines: LyricLines): string {
+    return lines.map(([, text]) => text).join('\n');
+}

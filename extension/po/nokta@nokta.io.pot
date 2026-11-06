@@ -186,6 +186,10 @@ msgstr ""
 msgid "Show the lyrics earlier"
 msgstr ""
 
+#: src/features/lyrics/sheet.ts src/monitor-notch.ts
+msgid "Lyrics without timing"
+msgstr ""
+
 #: src/features/lyrics/sheet.ts
 msgid "Full-screen lyrics"
 msgstr ""
@@ -1357,6 +1361,10 @@ msgstr ""
 #: src/features/updates/logic/update.ts
 #, c-format
 msgid "Nokta %s is available"
+msgstr ""
+
+#: src/monitor-notch.ts
+msgid "Read the lyrics"
 msgstr ""
 
 #: src/prefs/plugins.ts

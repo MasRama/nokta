@@ -134,6 +134,12 @@ msgstr "Tampilkan lirik lebih awal"
 msgid "Full-screen lyrics"
 msgstr "Lirik layar penuh"
 
+msgid "Read the lyrics"
+msgstr "Baca liriknya"
+
+msgid "Lyrics without timing"
+msgstr "Lirik tanpa timing"
+
 msgid "Player"
 msgstr "Pemutar"
 
