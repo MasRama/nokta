@@ -80,6 +80,7 @@ impl Services {
             Arc::new(lrclib::Client::new(lrclib_base_url, USER_AGENT)),
             paths.lyrics_dir.clone(),
             paths.lyrics_offsets_file.clone(),
+            lyrics::service::RETRY_DELAYS.to_vec(),
         );
 
         let (commands, state, finished) = timer::service::spawn(timer_lengths(config.clone()));
