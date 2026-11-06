@@ -930,8 +930,24 @@
 }
 
 /* The lyrics view's timing row: −, the offset, +. */
-.nokta-lyrics-footer {
+.nokta-lyrics-footer,
+.nokta-lyrics-timing {
     spacing: 6px;
+}
+
+/* Lyrics without timing: the whole text, to scroll through. */
+.nokta-lyrics-plain {
+    padding-top: 4px;
+}
+
+.nokta-lyrics-plain-text {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.nokta-lyrics-plain-note {
+    font-size: 12px;
+    font-weight: 600;
 }
 
 .nokta-lyrics-step .nokta-button-icon {

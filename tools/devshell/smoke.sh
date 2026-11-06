@@ -198,6 +198,31 @@ js "delete global._noktaFullscreen; true" > /dev/null
 wait_for "the player opens again under the pointer" \
     "$FIND shown('nokta-expanded') && !shown('nokta-lyrics-sheet') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5 \
     "$FIND JSON.stringify([shown('nokta-expanded'), shown('nokta-lyrics-sheet'), shown('nokta-lyric'), Math.round(one('nokta-body')?.height ?? -1)])"
+# LRCLIB knows the next song only as text: the lyric row offers it, and a
+# click opens it in the lyrics view to scroll through, at the same 336 px,
+# with a note in place of the timing row and no full-screen button. Back
+# on the first song, its synced lyrics come back from the cache.
+python3 -c 'import json, sys; r = json.load(open(sys.argv[1])); r["syncedLyrics"] = None; print(json.dumps(r))' \
+    "$HERE/lyrics.json" > "$STATE/lrclib/api/get"
+gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/mpris/MediaPlayer2 \
+    --method org.mpris.MediaPlayer2.Player.Next > /dev/null
+wait_for "lyrics without timing offer themselves in the lyric row" \
+    "$FIND one('nokta-lyric')?.text === 'Read the lyrics' && one('nokta-lyric-next').text === 'Lyrics without timing' && Math.round(one('nokta-body').height) === 194" 10 \
+    "$FIND JSON.stringify([one('nokta-lyric')?.text, one('nokta-lyric-next')?.text, Math.round(one('nokta-body')?.height ?? -1)])"
+js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
+wait_for "a click shows the whole text, with no timing and no full-screen button" \
+    "$FIND shown('nokta-lyrics-plain') && one('nokta-lyrics-plain-text').text.split(String.fromCharCode(10)).length === 4 && one('nokta-lyrics-plain-text').text.startsWith('Streetlights hum a quiet tune') && shown('nokta-lyrics-plain-note') && !shown('nokta-lyrics-timing') && !shown('nokta-lyrics-fullscreen-button') && !shown('nokta-lyrics-current') && Math.round(one('nokta-body').height) === 336" 5 \
+    "$FIND JSON.stringify([shown('nokta-lyrics-plain'), one('nokta-lyrics-plain-text')?.text, shown('nokta-lyrics-plain-note'), shown('nokta-lyrics-timing'), shown('nokta-lyrics-fullscreen-button'), Math.round(one('nokta-body')?.height ?? -1)])"
+"$HERE/shot.sh" smoke-lyrics-plain > /dev/null
+js "$FIND one('nokta-lyrics-plain-button').emit('clicked', 1); true" > /dev/null
+wait_for "a click on the text closes it" \
+    "$FIND !shown('nokta-lyrics-plain') && shown('nokta-lyric') && Math.round(one('nokta-body').height) === 194" 5
+cp "$HERE/lyrics.json" "$STATE/lrclib/api/get"
+gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/mpris/MediaPlayer2 \
+    --method org.mpris.MediaPlayer2.Player.Previous > /dev/null
+wait_for "the first song's synced lyrics come back" \
+    "$FIND shown('nokta-lyric') && one('nokta-lyric').text !== 'Read the lyrics' && one('nokta-lyric').text.length > 0" 10 \
+    "$FIND one('nokta-lyric')?.text"
 # The grid button at the player's top right opens home, whose music button
 # goes back to the player.
 js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null

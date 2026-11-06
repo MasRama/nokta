@@ -19,7 +19,9 @@ import {
     fullscreenLines,
     LyricsFullscreen,
     lyricWindow,
+    lyricsKind,
     nextLyric,
+    plainText,
     romanize,
     type FullscreenFrame,
     SHEET_EXTRA_HEIGHT,
@@ -1832,6 +1834,25 @@ export class MonitorNotch implements ShelfNotch {
         const playing = snapshot.playbackStatus === 'Playing';
         const progress = lineProgress(lyrics.lines, position, snapshot.rate);
         const romanized = (line: string): string | null => (settings.lyrics.romanize ? romanize(line) : null);
+        const kind = lyricsKind(lyrics.status, lyrics.lines, settings.behavior.showLyrics);
+        if (this.lyricsOpen && kind === 'plain') {
+            this.lyricLine.show(null);
+            this.lyricsSheet.showPlain(plainText(lyrics.lines));
+            return;
+        }
+        if (kind === 'plain') {
+            // Nothing to follow: the row offers the text, which opens in the lyrics view.
+            this.lyricLine.show({
+                text: _('Read the lyrics'),
+                next: _('Lyrics without timing'),
+                romanized: null,
+                index: PLAIN_INDEX,
+                fraction: 1,
+                msLeft: 0,
+                playing: false,
+            });
+            return;
+        }
         if (this.lyricsOpen) {
             this.lyricLine.show(null);
             const around = lyricWindow(lyrics.lines, position, SHEET_ROWS);
@@ -1847,9 +1868,12 @@ export class MonitorNotch implements ShelfNotch {
         );
     }
 
-    /** What the full-screen lyrics show now; null closes them. */
+    /** What the full-screen lyrics show now; null closes them, as do lyrics without timing. */
     private fullscreenFrame(): FullscreenFrame | null {
-        if (this.destroyed || !this.lyricsAvailable()) return null;
+        const { status, lines } = this.sources.lyrics;
+        if (this.destroyed || lyricsKind(status, lines, this.sources.settings.behavior.showLyrics) !== 'synced') {
+            return null;
+        }
         const { media, lyrics, settings } = this.sources;
         const snapshot = media.snapshot();
         const position = this.positionNow();
@@ -1871,9 +1895,10 @@ export class MonitorNotch implements ShelfNotch {
         };
     }
 
+    /** Whether the open player has lyrics to show, synced or plain. */
     private lyricsAvailable(): boolean {
         const { status, lines } = this.sources.lyrics;
-        return status === 'synced' && lines.length > 0 && this.sources.settings.behavior.showLyrics;
+        return lyricsKind(status, lines, this.sources.settings.behavior.showLyrics) !== null;
     }
 
     /** Opens or closes the lyrics view; the open notch grows or shrinks with it. */
@@ -1929,6 +1954,9 @@ export class MonitorNotch implements ShelfNotch {
         this.panelTickId = 0;
     }
 }
+
+/** The lyric row's index while it offers plain lyrics: no line, so it never slides. */
+const PLAIN_INDEX = -2;
 
 /** What tells one track from the next, for closing the lyrics view. */
 function trackKey(snapshot: { playerId: string; title: string; artists: readonly string[] }): string {
