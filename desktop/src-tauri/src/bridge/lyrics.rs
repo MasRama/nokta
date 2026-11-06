@@ -17,5 +17,6 @@ pub fn props(s: &LyricsState) -> Props {
     props.insert("Status".into(), json!(s.status.as_str()));
     props.insert("Lines".into(), Value::Array(lines));
     props.insert("OffsetMs".into(), json!(s.offset_ms));
+    props.insert("Choice".into(), json!(s.choice));
     props
 }

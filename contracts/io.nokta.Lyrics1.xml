@@ -20,11 +20,32 @@
     <property name="OffsetMs" type="x" access="read">
       <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
     </property>
+    <!-- The LRCLIB record id the user picked for the current track with Choose,
+         0 for the lyrics Nokta finds itself (and with no track). -->
+    <property name="Choice" type="x" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="true"/>
+    </property>
     <!-- Sets OffsetMs for the current track (clamped to +-30000; 0 forgets it) and
          publishes it with the shifted Lines in one PropertiesChanged before returning.
          Fails when there is no track or lyrics are off. -->
     <method name="SetOffset">
       <arg name="offset_ms" type="x" direction="in"/>
+    </method>
+    <!-- Every version of the current track's lyrics on LRCLIB that has lyrics,
+         at most 20: the song by the track's artist first, then the song by others,
+         then other titles; synced before plain, then nearest in length. Each is
+         (id, title, artist, album, duration_ms, synced); duration_ms is 0 when
+         unknown. Takes up to a few seconds. Fails when there is no track, lyrics
+         are off, or LRCLIB cannot be reached. -->
+    <method name="Search">
+      <arg name="versions" type="a(xsssxb)" direction="out"/>
+    </method>
+    <!-- Shows the record with this id (from Search) for the current track from now
+         on, also after a restart, over the user's own .lrc file; 0 or less forgets
+         the pick. Publishes Choice with the record's lyrics, or "loading" while they
+         are fetched, before returning. Fails when there is no track or lyrics are off. -->
+    <method name="Choose">
+      <arg name="id" type="x" direction="in"/>
     </method>
   </interface>
 </node>
