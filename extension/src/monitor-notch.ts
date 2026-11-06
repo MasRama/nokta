@@ -276,6 +276,11 @@ export class MonitorNotch implements ShelfNotch {
         () => this.setLyricsOpen(false),
         (offsetMs) => this.sources.lyrics.setOffset(offsetMs),
         () => this.lyricsFullscreen.open(this.monitorIndex),
+        {
+            search: () => this.sources.lyrics.search(),
+            choose: (id) => this.sources.lyrics.choose(id),
+            choice: () => this.sources.lyrics.choice,
+        },
     );
     private readonly lyricsFullscreen = new LyricsFullscreen(() => this.fullscreenFrame(), {
         playPause: () => this.sources.media.playPause(),

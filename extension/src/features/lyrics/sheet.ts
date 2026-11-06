@@ -6,6 +6,7 @@ import { setVertical } from '../../shared/compat.js';
 import { FillLabel } from './fill.js';
 import type { LineProgress } from './logic/karaoke.js';
 import { offsetLabel, stepOffset } from './logic/offset.js';
+import { versionDetail, type LyricsVersion } from './logic/versions.js';
 import { BREAK } from './logic/visible.js';
 import { romanizedRows, type LyricWindow } from './logic/window.js';
 import { iconFor } from '../../shared/icons.js';
@@ -36,6 +37,10 @@ const FADE = [255, 150, 95, 60];
  *
  * Lyrics without timing show as text to scroll through instead, with a
  * note in place of the timing row and no full-screen button.
+ *
+ * The search button on the left of the timing row swaps the lines for the
+ * other versions of the track's lyrics on LRCLIB; a click on one shows it
+ * from then on, "Automatic" goes back to the lyrics Nokta finds itself.
  */
 export class LyricsSheet {
     readonly actor: St.BoxLayout;
@@ -49,14 +54,30 @@ export class LyricsSheet {
     private readonly plain: St.ScrollView;
     private readonly plainLabel: St.Label;
     private readonly plainNote: St.Label;
+    private readonly versions: St.ScrollView;
+    private readonly versionList: St.BoxLayout;
+    private readonly versionsNote: St.Label;
+    private readonly other: St.Button;
+    private readonly otherIcon: St.Icon;
     private shown: number | null = null;
     private offsetMs = 0;
+    private plainShown = false;
+    private picking = false;
+    /** Counts searches, so an answer for one the user left is dropped. */
+    private searches = 0;
+    private destroyed = false;
 
     /**
      * `onClose` for a click on the lines, `onOffset` with the timing a footer
-     * click asks for, `onFullscreen` for the full-screen button.
+     * click asks for, `onFullscreen` for the full-screen button, `picker`
+     * to list the other lyrics and pick one.
      */
-    constructor(onClose: () => void, onOffset: (offsetMs: number) => void, onFullscreen: () => void) {
+    constructor(
+        onClose: () => void,
+        onOffset: (offsetMs: number) => void,
+        onFullscreen: () => void,
+        private readonly picker: VersionPicker,
+    ) {
         this.box = setVertical(new St.BoxLayout({ style_class: 'nokta-lyrics-sheet', x_expand: true }));
         const middle = Math.floor(SHEET_ROWS / 2);
         for (let i = 0; i < SHEET_ROWS; i++) {
@@ -108,6 +129,18 @@ export class LyricsSheet {
         });
         this.plain.set_child(plainBox);
 
+        this.versionList = setVertical(new St.BoxLayout({ style_class: 'nokta-lyrics-version-list', x_expand: true }));
+        this.versions = new St.ScrollView({
+            style_class: 'nokta-lyrics-versions',
+            x_expand: true,
+            height: LINES_HEIGHT,
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+            overlay_scrollbars: true,
+            visible: false,
+        });
+        this.versions.set_child(this.versionList);
+
         this.offsetText = new St.Label({ style_class: 'nokta-lyrics-offset-label', text: offsetLabel(0) });
         const footer = new St.BoxLayout({
             style_class: 'nokta-lyrics-footer',
@@ -144,6 +177,14 @@ export class LyricsSheet {
             visible: false,
         });
         footer.add_child(this.plainNote);
+        this.versionsNote = new St.Label({
+            style_class: 'nokta-lyrics-plain-note',
+            text: _('Choose the lyrics'),
+            y_align: Clutter.ActorAlign.CENTER,
+            opacity: FADE[1],
+            visible: false,
+        });
+        footer.add_child(this.versionsNote);
 
         // The timing buttons stay centred: a spacer as wide as the corner the full-screen button sits in.
         this.fullscreen = footerButton('view-fullscreen-symbolic', _('Full-screen lyrics'), onFullscreen);
@@ -152,14 +193,29 @@ export class LyricsSheet {
         this.fullscreen.x_align = Clutter.ActorAlign.END;
         this.fullscreen.x_expand = true;
         corner.add_child(this.fullscreen);
+        // The search button in the left corner, as wide as the right one.
+        this.otherIcon = new St.Icon({ gicon: iconFor('edit-find-symbolic'), style_class: 'nokta-button-icon' });
+        this.other = new St.Button({
+            style_class: 'nokta-button nokta-lyrics-other-button',
+            child: this.otherIcon,
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+            accessible_name: _('Other lyrics'),
+        });
+        this.other.connect('clicked', () => (this.picking ? this.closePicker() : this.openPicker()));
+        const left = new St.Widget({ layout_manager: new Clutter.BinLayout(), x_expand: true });
+        this.other.x_align = Clutter.ActorAlign.START;
+        this.other.x_expand = true;
+        left.add_child(this.other);
         const bottom = new St.BoxLayout({ x_expand: true, height: FOOTER_HEIGHT });
-        bottom.add_child(new St.Widget({ x_expand: true }));
+        bottom.add_child(left);
         bottom.add_child(footer);
         bottom.add_child(corner);
 
         this.actor = setVertical(new St.BoxLayout({ x_expand: true, visible: false }));
         this.actor.add_child(this.lines);
         this.actor.add_child(this.plain);
+        this.actor.add_child(this.versions);
         this.actor.add_child(bottom);
     }
 
@@ -205,23 +261,89 @@ export class LyricsSheet {
         this.plain.vadjustment.value = 0;
     }
 
-    /** Forgets the last line, so the next show() does not slide, and scrolls plain text back up. */
+    /**
+     * Forgets the last line, so the next show() does not slide, scrolls plain
+     * text back up and leaves the list of other lyrics.
+     */
     reset(): void {
         this.shown = null;
         this.box.remove_all_transitions();
         this.box.translation_y = 0;
         this.plain.vadjustment.value = 0;
+        this.closePicker();
     }
 
     private setPlain(plain: boolean): void {
-        this.lines.visible = !plain;
-        this.timing.visible = !plain;
-        this.fullscreen.visible = !plain;
+        if (plain === this.plainShown) return;
+        this.plainShown = plain;
+        this.layout();
+    }
+
+    /** Shows the lines, the plain text or the other lyrics, with their footer. */
+    private layout(): void {
+        const lines = !this.picking && !this.plainShown;
+        const plain = !this.picking && this.plainShown;
+        this.lines.visible = lines;
+        this.timing.visible = lines;
+        this.fullscreen.visible = lines;
         this.plain.visible = plain;
         this.plainNote.visible = plain;
+        this.versions.visible = this.picking;
+        this.versionsNote.visible = this.picking;
+        this.otherIcon.gicon = iconFor(this.picking ? 'go-previous-symbolic' : 'edit-find-symbolic');
+        this.other.accessible_name = this.picking ? _('Back to the lyrics') : _('Other lyrics');
+    }
+
+    private openPicker(): void {
+        this.picking = true;
+        this.layout();
+        const search = ++this.searches;
+        this.fillVersions([], _('Searching…'));
+        this.versions.vadjustment.value = 0;
+        void this.picker.search().then((found) => {
+            if (this.destroyed || !this.picking || search !== this.searches) return;
+            if (found === null) this.fillVersions([], _('Could not search for lyrics'));
+            else this.fillVersions(found, found.length === 0 ? _('No other lyrics found') : null);
+        });
+    }
+
+    private closePicker(): void {
+        this.searches++;
+        if (!this.picking) return;
+        this.picking = false;
+        this.layout();
+    }
+
+    /** "Automatic" and the versions found, the shown one marked, then `note` if any. */
+    private fillVersions(found: readonly LyricsVersion[], note: string | null): void {
+        this.versionList.destroy_all_children();
+        const choice = this.picker.choice();
+        const pick = (id: number): void => {
+            if (id !== choice) this.picker.choose(id);
+            this.closePicker();
+        };
+        this.versionList.add_child(
+            versionRow(_('Automatic'), _('The lyrics Nokta finds itself'), choice <= 0, () => pick(0)),
+        );
+        for (const version of found) {
+            const title = version.title || _('Unknown title');
+            this.versionList.add_child(
+                versionRow(title, versionDetail(version), version.id === choice, () => pick(version.id)),
+            );
+        }
+        if (note === null) return;
+        this.versionList.add_child(
+            new St.Label({
+                style_class: 'nokta-lyrics-version-note',
+                text: note,
+                x_align: Clutter.ActorAlign.CENTER,
+                opacity: FADE[1],
+            }),
+        );
     }
 
     destroy(): void {
+        this.destroyed = true;
         this.current.destroy();
         this.actor.destroy();
     }
@@ -237,4 +359,49 @@ function footerButton(icon: string, name: string, onClick: () => void): St.Butto
     });
     button.connect('clicked', onClick);
     return button;
+}
+
+/** How the lyrics view lists the other lyrics of a track and picks one. */
+export interface VersionPicker {
+    /** Every version found, best first; null when the search failed. */
+    search(): Promise<LyricsVersion[] | null>;
+    /** Shows the version with this id from now on; 0 for the lyrics Nokta finds itself. */
+    choose(id: number): void;
+    /** The version shown now, 0 for the lyrics Nokta finds itself. */
+    choice(): number;
+}
+
+/** One version in the list: its title over its details, a check on the one shown. */
+function versionRow(title: string, detail: string, chosen: boolean, onClick: () => void): St.Button {
+    const titleLabel = new St.Label({ style_class: 'nokta-lyrics-version-title', text: title, x_expand: true });
+    titleLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+    const detailLabel = new St.Label({
+        style_class: 'nokta-lyrics-version-detail',
+        text: detail,
+        x_expand: true,
+        opacity: FADE[1],
+    });
+    detailLabel.clutter_text.ellipsize = Pango.EllipsizeMode.END;
+    const text = setVertical(new St.BoxLayout({ x_expand: true, y_align: Clutter.ActorAlign.CENTER }));
+    text.add_child(titleLabel);
+    text.add_child(detailLabel);
+    const content = new St.BoxLayout({ style_class: 'nokta-lyrics-version-content', x_expand: true });
+    content.add_child(text);
+    content.add_child(
+        new St.Icon({
+            gicon: iconFor('object-select-symbolic'),
+            style_class: 'nokta-lyrics-version-check',
+            y_align: Clutter.ActorAlign.CENTER,
+            opacity: chosen ? 255 : 0,
+        }),
+    );
+    const row = new St.Button({
+        style_class: chosen ? 'nokta-lyrics-version nokta-lyrics-version-chosen' : 'nokta-lyrics-version',
+        child: content,
+        x_expand: true,
+        can_focus: true,
+        accessible_name: `${title}, ${detail}`,
+    });
+    row.connect('clicked', onClick);
+    return row;
 }

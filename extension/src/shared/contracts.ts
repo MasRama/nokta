@@ -79,11 +79,14 @@ export interface LyricsProps {
     Status: string;
     Lines: Array<[number, string]>;
     OffsetMs: number;
+    Choice: number;
 }
 
 /** io.nokta.Lyrics1 methods and the D-Bus signature of their arguments. */
 export const LYRICS_METHODS = {
     SetOffset: 'x',
+    Search: '',
+    Choose: 'x',
 } as const;
 
 export type LyricsStatus =

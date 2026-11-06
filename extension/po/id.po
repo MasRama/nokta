@@ -1350,3 +1350,36 @@ msgstr[0] "%d lainnya"
 
 msgid "The notch holds notifications while you focus and sums them up after"
 msgstr "Notch menahan notifikasi selama kamu fokus, lalu menampilkan ringkasannya setelah selesai"
+
+msgid "Synced"
+msgstr "Sinkron"
+
+msgid "No timing"
+msgstr "Tanpa timing"
+
+msgid "Choose the lyrics"
+msgstr "Pilih liriknya"
+
+msgid "Other lyrics"
+msgstr "Lirik lain"
+
+msgid "Back to the lyrics"
+msgstr "Kembali ke lirik"
+
+msgid "Searching…"
+msgstr "Mencari…"
+
+msgid "Could not search for lyrics"
+msgstr "Gagal mencari lirik"
+
+msgid "No other lyrics found"
+msgstr "Tidak ada lirik lain"
+
+msgid "Automatic"
+msgstr "Otomatis"
+
+msgid "The lyrics Nokta finds itself"
+msgstr "Lirik yang dicari Nokta sendiri"
+
+msgid "Unknown title"
+msgstr "Judul tidak diketahui"

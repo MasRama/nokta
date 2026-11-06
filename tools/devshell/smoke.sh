@@ -139,7 +139,8 @@ sleep 0.5
 "$HERE/shot.sh" smoke-lyrics-offset > /dev/null
 js "$FIND one('nokta-lyrics-offset').emit('clicked', 1); true" > /dev/null
 wait_for "a click on the label puts the lyrics back on time" \
-    "$FIND one('nokta-lyrics-offset-label').text === 'On time' && shown('nokta-lyrics-current')" 5
+    "$FIND one('nokta-lyrics-offset-label').text === 'On time' && shown('nokta-lyrics-current')" 5 \
+    "$FIND JSON.stringify([one('nokta-lyrics-offset-label')?.text, shown('nokta-lyrics-current')])"
 lyrics_prop OffsetMs | grep -q "<int64 0>" || fail "OffsetMs is not 0: $(lyrics_prop OffsetMs)"
 lyrics_prop Lines | grep -q "15000000" || fail "the lines did not move back: $(lyrics_prop Lines)"
 ok "the offset is back to 0"
@@ -223,6 +224,44 @@ gdbus call --session --dest org.mpris.MediaPlayer2.noktafake --object-path /org/
 wait_for "the first song's synced lyrics come back" \
     "$FIND shown('nokta-lyric') && one('nokta-lyric').text !== 'Read the lyrics' && one('nokta-lyric').text.length > 0" 10 \
     "$FIND one('nokta-lyric')?.text"
+# The lyrics view's search button lists the song's other lyrics on LRCLIB,
+# "Automatic" first and checked; a pick shows at once, is kept in
+# lyrics-choices.toml, and "Automatic" brings the first lyrics back.
+python3 - "$STATE/lrclib/api/search" <<'PY'
+import json, sys
+picked = "\n".join(f"[{m:02d}:{s:02d}.00] Picked line {i + 1}" for i, (m, s) in enumerate(divmod(t, 60) for t in range(0, 200, 20)))
+json.dump([
+    {"id": 101, "trackName": "Midnight Static (Live)", "artistName": "The Paper Lanterns", "albumName": "Live at the Pier",
+     "duration": 212, "instrumental": False, "plainLyrics": "Picked", "syncedLyrics": picked},
+    {"id": 102, "trackName": "Midnight Static", "artistName": "Echo Choir", "albumName": None,
+     "duration": 0, "instrumental": False, "plainLyrics": "Sung by a choir\nOn the midnight line", "syncedLyrics": None},
+], open(sys.argv[1], "w"))
+PY
+VERSIONS="find(Main.layoutManager.uiGroup, 'nokta-lyrics-version').filter((a) => a.mapped)"
+js "$FIND one('nokta-lyric-button').emit('clicked', 1); true" > /dev/null
+wait_for "the lyrics view has a search button for other lyrics" "$FIND shown('nokta-lyrics-other-button') && shown('nokta-lyrics-current')" 5
+js "$FIND one('nokta-lyrics-other-button').emit('clicked', 1); true" > /dev/null
+wait_for "it lists Automatic, checked, then the other lyrics, in the lines' place" \
+    "$FIND ${VERSIONS}.length === 3 && ${VERSIONS}[0].has_style_class_name('nokta-lyrics-version-chosen') && ${VERSIONS}[1].accessible_name === 'Midnight Static (Live), The Paper Lanterns · 3:32 · Synced' && ${VERSIONS}[2].accessible_name === 'Midnight Static, Echo Choir · No timing' && !shown('nokta-lyrics-current') && !shown('nokta-lyrics-timing') && !shown('nokta-lyrics-fullscreen-button') && shown('nokta-lyrics-other-button') && Math.round(one('nokta-body').height) === 336" 10 \
+    "$FIND JSON.stringify([${VERSIONS}.map((a) => a.accessible_name), shown('nokta-lyrics-current'), find(Main.layoutManager.uiGroup, 'nokta-lyrics-version-note').map((a) => a.text), Math.round(one('nokta-body')?.height ?? -1)])"
+"$HERE/shot.sh" smoke-lyrics-versions > /dev/null
+js "$FIND ${VERSIONS}[1].emit('clicked', 1); true" > /dev/null
+wait_for "a pick shows its lyrics at once and is kept" \
+    "$FIND !shown('nokta-lyrics-versions') && shown('nokta-lyrics-current') && one('nokta-lyrics-current').text.startsWith('Picked line') && shown('nokta-lyrics-timing')" 5 \
+    "$FIND JSON.stringify([shown('nokta-lyrics-versions'), one('nokta-lyrics-current')?.text])"
+grep -q '= 101' "$STATE/data/nokta/lyrics-choices.toml" || fail "the pick was not kept in lyrics-choices.toml"
+"$HERE/shot.sh" smoke-lyrics-picked > /dev/null
+js "$FIND one('nokta-lyrics-other-button').emit('clicked', 1); true" > /dev/null
+wait_for "the list checks the pick" \
+    "$FIND ${VERSIONS}.length === 3 && ${VERSIONS}[1].has_style_class_name('nokta-lyrics-version-chosen') && !${VERSIONS}[0].has_style_class_name('nokta-lyrics-version-chosen')" 10 \
+    "$FIND JSON.stringify(${VERSIONS}.map((a) => [a.accessible_name, a.style_class]))"
+js "$FIND ${VERSIONS}[0].emit('clicked', 1); true" > /dev/null
+wait_for "Automatic brings the first lyrics back" \
+    "$FIND shown('nokta-lyrics-current') && !one('nokta-lyrics-current').text.startsWith('Picked line') && one('nokta-lyrics-current').text.length > 0" 5 \
+    "$FIND one('nokta-lyrics-current')?.text"
+if grep -q '= 101' "$STATE/data/nokta/lyrics-choices.toml"; then fail "Automatic did not forget the pick"; fi
+js "$FIND one('nokta-lyrics-sheet-button').emit('clicked', 1); true" > /dev/null
+wait_for "a click on the lines closes the view" "$FIND !shown('nokta-lyrics-sheet') && shown('nokta-lyric')" 5
 # The grid button at the player's top right opens home, whose music button
 # goes back to the player.
 js "$FIND one('nokta-grid-button').emit('clicked', 1); true" > /dev/null
