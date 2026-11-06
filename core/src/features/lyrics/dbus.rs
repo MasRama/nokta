@@ -3,7 +3,8 @@
 use tokio::sync::{mpsc, oneshot, watch};
 use zbus::{fdo, Connection};
 
-use super::service::{Command, Handle};
+use super::lrclib::Alternative;
+use super::service::{Command, Handle, SearchError};
 use super::LyricsState;
 use crate::shared::dbus::{owned, spawn_change_forwarder, PropertyList};
 
@@ -37,6 +38,7 @@ fn properties(s: &LyricsState) -> PropertyList {
         ("Status", owned(s.status.as_str())),
         ("Lines", owned(lines(s))),
         ("OffsetMs", owned(s.offset_ms)),
+        ("Choice", owned(s.choice)),
     ]
 }
 
@@ -62,8 +64,12 @@ impl LyricsInterface {
         self.state.borrow().offset_ms
     }
 
+    #[zbus(property)]
+    fn choice(&self) -> i64 {
+        self.state.borrow().choice
+    }
+
     async fn set_offset(&self, offset_ms: i64) -> fdo::Result<()> {
-        let stopped = || fdo::Error::Failed("the lyrics service has stopped".into());
         let (done, answer) = oneshot::channel();
         self.commands
             .send(Command::SetOffset(offset_ms, done))
@@ -76,4 +82,42 @@ impl LyricsInterface {
             )),
         }
     }
+
+    /// Every version of the current track's lyrics on LRCLIB, best first:
+    /// (id, title, artist, album, duration_ms, synced).
+    #[zbus(out_args("versions"))]
+    async fn search(&self) -> fdo::Result<Vec<(i64, String, String, String, i64, bool)>> {
+        let (done, answer) = oneshot::channel();
+        self.commands
+            .send(Command::Search(done))
+            .await
+            .map_err(|_| stopped())?;
+        match answer.await.map_err(|_| stopped())? {
+            Ok(found) => Ok(found.into_iter().map(row).collect()),
+            Err(err @ SearchError::NoTrack) => Err(fdo::Error::Failed(err.to_string())),
+            Err(err) => Err(fdo::Error::Failed(format!("cannot search lyrics: {err}"))),
+        }
+    }
+
+    /// Shows the version with this id for the current track from now on;
+    /// 0 for the lyrics Nokta finds itself.
+    async fn choose(&self, id: i64) -> fdo::Result<()> {
+        let (done, answer) = oneshot::channel();
+        self.commands
+            .send(Command::Choose(id, done))
+            .await
+            .map_err(|_| stopped())?;
+        match answer.await.map_err(|_| stopped())? {
+            Ok(_) => Ok(()),
+            Err(_) => Err(fdo::Error::Failed("no track to choose lyrics for".into())),
+        }
+    }
+}
+
+fn stopped() -> fdo::Error {
+    fdo::Error::Failed("the lyrics service has stopped".into())
+}
+
+fn row(a: Alternative) -> (i64, String, String, String, i64, bool) {
+    (a.id, a.title, a.artist, a.album, a.duration_ms, a.synced)
 }

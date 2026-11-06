@@ -263,6 +263,84 @@ async fn set_offset_shifts_the_lines_in_one_signal_and_keeps_them() {
     );
 }
 
+type Version = (i64, String, String, String, i64, bool);
+
+#[tokio::test]
+async fn search_lists_other_lyrics_and_choose_shows_and_keeps_one() {
+    let bus = TestBus::start();
+    let lrclib = MockServer::start().await;
+    Mock::given(path("/api/get"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "duration": 200.0, "instrumental": false,
+            "plainLyrics": "hello", "syncedLyrics": "[00:01.50]hello"
+        })))
+        .mount(&lrclib)
+        .await;
+    Mock::given(path("/api/search"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {"id": 7, "trackName": "Song 1", "artistName": "Artist", "albumName": "Live",
+             "duration": 210.0, "instrumental": false,
+             "plainLyrics": "other", "syncedLyrics": "[00:02.00]other"},
+            {"id": 8, "trackName": "Song 1", "artistName": "Someone", "duration": 200.0,
+             "instrumental": true, "plainLyrics": null, "syncedLyrics": null}
+        ])))
+        .mount(&lrclib)
+        .await;
+    let daemon = Daemon::start(&bus, &lrclib.uri()).await;
+    let conn = bus.connect().await;
+    let lyrics = zbus::Proxy::new(&conn, NAME, "/io/nokta/Lyrics", "io.nokta.Lyrics1")
+        .await
+        .unwrap();
+    let no_track: zbus::Result<Vec<Version>> = lyrics.call("Search", &()).await;
+    assert!(no_track.is_err(), "no track to search for");
+
+    let _player = FakePlayer::start(bus.address(), "a", "Playing", Meta::new(1)).await;
+    let p = properties(&conn, "/io/nokta/Lyrics").await;
+    for _ in 0..250 {
+        if String::try_from(get(&p, "io.nokta.Lyrics1", "Status").await).unwrap() == "synced" {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert_eq!(
+        i64::try_from(get(&p, "io.nokta.Lyrics1", "Choice").await).unwrap(),
+        0
+    );
+
+    let found: Vec<Version> = lyrics.call("Search", &()).await.unwrap();
+    assert_eq!(
+        found,
+        [(
+            7,
+            "Song 1".to_owned(),
+            "Artist".to_owned(),
+            "Live".to_owned(),
+            210_000,
+            true
+        )],
+        "only versions with lyrics"
+    );
+    let mut changes = p.receive_properties_changed().await.unwrap();
+    let _: () = lyrics.call("Choose", &(7i64,)).await.unwrap();
+    let changed = next_change_with(&mut changes, "Choice").await;
+    assert_eq!(
+        i64::try_from(changed["Choice"].try_clone().unwrap()).unwrap(),
+        7
+    );
+    let lines = Vec::<(i64, String)>::try_from(changed["Lines"].try_clone().unwrap()).unwrap();
+    assert_eq!(
+        lines,
+        [(2_000_000, "other".to_owned())],
+        "in the same signal"
+    );
+    let saved = std::fs::read_to_string(daemon.paths().lyrics_choices_file).unwrap();
+    assert!(saved.contains("= 7"), "{saved}");
+
+    let _: () = lyrics.call("Choose", &(0i64,)).await.unwrap();
+    let lines = Vec::<(i64, String)>::try_from(get(&p, "io.nokta.Lyrics1", "Lines").await).unwrap();
+    assert_eq!(lines, [(1_500_000, "hello".to_owned())], "back to its own");
+}
+
 #[tokio::test]
 async fn settings_reload_emits_change() {
     let bus = TestBus::start();
