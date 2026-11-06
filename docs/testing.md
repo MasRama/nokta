@@ -190,6 +190,15 @@ must curve inward, the notch must be centered, and no text may be clipped.
       `Lyrics without timing` under it; a click shows the whole text at
       336 px, the wheel scrolls a long one, the footer has the note
       instead of `−`/`+` and no full-screen button. A click closes it.
+- [ ] Other lyrics (the smoke test serves two versions from
+      `build/devshell/lrclib/api/search`): the search button left of `−`
+      lists `Automatic` (checked) and the versions with artist, length and
+      `Synced` or `No timing`, at the same 336 px; a click on one shows it
+      at once and `build/devshell/data/nokta/lyrics-choices.toml` has one
+      line; the list then checks it, and `Automatic` brings the first
+      lyrics back and empties the file. *(real session)*: a song whose
+      lyrics are wrong, pick the right version, play another song and come
+      back: the pick stays, also after `systemctl --user restart nokta`.
 - [ ] Synced lyrics: the line lights up from left to right and ends lit
       when the next line starts; the next line shows dimmed under it. A new
       line slides up and fades in. The intro and empty lines show `♪`, fully
