@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.13.0](https://github.com/MasRama/nokta/compare/v0.12.0...v0.13.0) (2026-11-06)
+
+
+### Features
+
+* **desktop:** hold toasts back during focus and sum them up on Windows ([68faa73](https://github.com/MasRama/nokta/commit/68faa734de3c3d7f582a9842546863ff474504d9))
+* **lyrics:** keep the text of lyrics without timing ([815d7b1](https://github.com/MasRama/nokta/commit/815d7b1a4b50d5227bdba8e15c7e846f594fe183))
+* **lyrics:** list other versions of a track's lyrics on LRCLIB ([b395168](https://github.com/MasRama/nokta/commit/b39516871ed05561b141a54a20f0bde1a255da0e))
+* **lyrics:** pick other lyrics from the lyrics view ([2a11d35](https://github.com/MasRama/nokta/commit/2a11d354a8916b8b9fdec8aa178b3d075f077042))
+* **lyrics:** read cover and piped YouTube titles ([b68a39b](https://github.com/MasRama/nokta/commit/b68a39bd4a114768e8e69dea0fffec3b9d11933b))
+* **lyrics:** read lyrics without timing in the lyrics view ([bc46ee2](https://github.com/MasRama/nokta/commit/bc46ee280a914731aa1b191afe4609a4d7b17cec))
+* **lyrics:** remember another version of the lyrics picked for a track ([8c3096d](https://github.com/MasRama/nokta/commit/8c3096d3291af795cd3431b49fc21ee38a746ddd))
+* **lyrics:** Search, Choose and Choice on io.nokta.Lyrics1 ([ae22ff0](https://github.com/MasRama/nokta/commit/ae22ff0d13634700eafc0ab17bc6a7622e2359da))
+* **lyrics:** take the closest LRCLIB record when none matches exactly ([56e0c1e](https://github.com/MasRama/nokta/commit/56e0c1ee698b27f39bdcf29939e2f0f8ab040402))
+* **lyrics:** try a failed lookup again while the track plays ([58b45ca](https://github.com/MasRama/nokta/commit/58b45ca86563d44efa095cebccbdf65b667d7ad0))
+* **notifications:** sum up the notifications a focus session kept quiet ([221a5cd](https://github.com/MasRama/nokta/commit/221a5cdf5b04e85e398aff6d8e330f204ea301f2))
+
+
+### Bug Fixes
+
+* **lyrics:** search when LRCLIB's get times out ([b498c2f](https://github.com/MasRama/nokta/commit/b498c2f268c7f87c63c85d41a139c52aae68d8b1))
+
+
+### Performance Improvements
+
+* **lyrics:** skip LRCLIB's get for a cover ([58d3fc9](https://github.com/MasRama/nokta/commit/58d3fc9096374f3e0facfc30094506ca4f9c5398))
+
 ## [0.12.0](https://github.com/MasRama/nokta/compare/v0.11.1...v0.12.0) (2026-11-05)
 
 
