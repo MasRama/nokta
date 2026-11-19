@@ -35,7 +35,7 @@ rusqlite = { version = "0.43", features = ["bundled"] }
 # The same as the core's, to hear the database change.
 notify = "8.2.1"
 # The same as the core's, for the calendar feeds' clock and zone.
-jiff = "0.2.38"
+jiff = "1.0.0"
 # `net` and `io-util` for the nokta command's pipe.
 tokio = { version = "1.54.1", features = ["macros", "rt", "sync", "net", "io-util"] }
 tracing = "0.1.44"
@@ -68,7 +68,7 @@ windows = { version = "0.62", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 # `#[implement]` names `windows_core` itself.
-windows-core = "0.62"
+windows-core = "0.100"
 
 
 [target.'cfg(windows)'.build-dependencies]
