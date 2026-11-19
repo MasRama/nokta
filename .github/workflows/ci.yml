@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The Release workflow dispatches this for release-please's pull request:
+  # a pull request opened with GITHUB_TOKEN starts no workflow by itself,
+  # and main requires these checks before it merges.
+  workflow_dispatch:
 
 permissions:
   contents: read
